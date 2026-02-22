@@ -1,0 +1,220 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@source "../../../packages/ui/src";
+@source "../../../packages/config/src";
+
+@custom-variant dark (&:is(.dark *));
+
+@font-face {
+  font-family: 'ABC Marfa';
+  src: url('./assets/fonts/ABCMarfaVariableVF-Trial.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ABC Marfa Mono';
+  src: url('./assets/fonts/ABCMarfaMonoVariable-Trial.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply m-0;
+  font-family: 'ABC Marfa', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.09px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: 'ABC Marfa Mono', source-code-pro, Menlo, Monaco, Consolas,
+    monospace;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Brimble design tokens */
+  --color-brimble-black: var(--brimble-black);
+  --color-brimble-air-gray: var(--brimble-air-gray);
+  --color-brimble-light-gray: var(--brimble-light-gray);
+  --color-brimble-accent-blue: #006fff;
+  --color-brimble-surface: var(--brimble-surface);
+  --color-brimble-accent: #f5a623;
+
+  /* Dashboard semantic color utilities */
+  --color-dash-bg: var(--dash-bg);
+  --color-dash-bg-elevated: var(--dash-bg-elevated);
+  --color-dash-text-strong: var(--dash-text-strong);
+  --color-dash-text-body: var(--dash-text-body);
+  --color-dash-text-faded: var(--dash-text-faded);
+  --color-dash-text-extra-faded: var(--dash-text-extra-faded);
+  --color-dash-border: var(--dash-border);
+  --color-dash-border-soft: var(--dash-border-soft);
+  --color-dash-btn-outline-bg: var(--dash-btn-outline-bg);
+  --color-dash-btn-outline-border: var(--dash-btn-outline-border);
+  --color-dash-btn-outline-text: var(--dash-btn-outline-text);
+
+  --font-family-body: 'ABC Marfa', sans-serif;
+  --font-family-mono: 'ABC Marfa Mono', monospace;
+}
+
+:root {
+  /* Brimble color primitives */
+  --brimble-black: #222528;
+  --brimble-air-gray: #fafafa;
+  --brimble-light-gray: #f6f8f7;
+  --brimble-surface: #f5f7f7;
+
+  /* Dashboard semantic tokens */
+  --dash-bg: #ffffff;
+  --dash-bg-elevated: #fafafa;
+  --dash-text-strong: #23252a;
+  --dash-text-body: #535358;
+  --dash-text-faded: #7a7c81;
+  --dash-text-extra-faded: #b6b8bd;
+  --dash-border: #d9dadd;
+  --dash-border-soft: #e6e5e5;
+  --dash-btn-outline-bg: #ffffff;
+  --dash-btn-outline-border: #d1d1db;
+  --dash-btn-outline-text: #535358;
+
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+
+  /* Brimble dark primitives */
+  --brimble-black: #e8eaed;
+  --brimble-air-gray: #1a1c1e;
+  --brimble-light-gray: #2a2d30;
+  --brimble-surface: #222528;
+
+  /* Dashboard dark tokens */
+  --dash-bg: #202022;
+  --dash-bg-elevated: #29292a;
+  --dash-text-strong: #ffffff;
+  --dash-text-body: #bdbcbc;
+  --dash-text-faded: #757877;
+  --dash-text-extra-faded: #757877;
+  --dash-border: #454545;
+  --dash-border-soft: #454545;
+  --dash-btn-outline-bg: #29292a;
+  --dash-btn-outline-border: #454545;
+  --dash-btn-outline-text: #e8eaed;
+}
+
+.create-new-project-card {
+  background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='14' x2='14' y2='0' stroke='%23d9dadd' stroke-width='0.5'/%3E%3C/svg%3E");
+  background-size: 14px 14px;
+}
+
+.dark .create-new-project-card {
+  background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='14' x2='14' y2='0' stroke='%23454545' stroke-width='0.5'/%3E%3C/svg%3E");
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+}
