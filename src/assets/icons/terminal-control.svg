@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 9.93415 9.93415" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path id="Control" d="M4.9668 0.207031C7.59564 0.207031 9.72739 2.33799 9.72754 4.9668C9.72754 7.59573 7.59573 9.72754 4.9668 9.72754C2.33799 9.72739 0.207031 7.59564 0.207031 4.9668C0.207181 2.33808 2.33808 0.207181 4.9668 0.207031Z" fill="var(--fill-0, #303038)" stroke="url(#paint0_linear_0_122)" stroke-width="0.413923"/>
+<defs>
+<linearGradient id="paint0_linear_0_122" x1="4.96707" y1="0" x2="4.96707" y2="9.93415" gradientUnits="userSpaceOnUse">
+<stop stop-color="#3E3F44"/>
+<stop offset="0.44" stop-color="#303038"/>
+</linearGradient>
+</defs>
+</svg>

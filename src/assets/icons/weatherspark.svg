@@ -1,0 +1,14 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 47 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="weather_spark_logo.svg">
+<g clip-path="url(#clip0_0_116)">
+<rect width="47" height="48" rx="13.1091" fill="var(--fill-0, #4977CB)"/>
+<path id="Vector" d="M23.5 48C36.4787 48 47 37.2548 47 24C47 10.7452 36.4787 0 23.5 0C10.5213 0 0 10.7452 0 24C0 37.2548 10.5213 48 23.5 48Z" fill="var(--fill-0, #4977CB)"/>
+<path id="Vector_2" d="M24.9707 6H32.3145L20.5645 21H33.7832L14.6895 42L24.9707 24H14.6895L24.9707 6Z" fill="var(--fill-0, white)"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_0_116">
+<rect width="47" height="48" rx="13.1091" fill="white"/>
+</clipPath>
+</defs>
+</svg>

@@ -1,0 +1,267 @@
+export const siteConfig = {
+  name: "Brimble",
+  description:
+    "Ship faster with Brimble: the all-in-one platform to deploy, scale, and manage every part of your stack.",
+  navLinks: [
+    { label: "Pricing", href: "/pricing" },
+    { label: "Domains", href: "/domains" },
+    { label: "Docs", href: "https://docs.brimble.io" },
+  ],
+  hero: {
+    heading: "Deploy Full-Stack Apps",
+    subtitle:
+      "Brimble gives developers the tools to Build, Launch, and Scale Apps— without managing servers or piecing together providers.",
+    primaryCta: "Get started for free",
+    secondaryCta: "Read documentation",
+  },
+  codePreview: {
+    heading: "Ship full stack apps & MCP servers in seconds.",
+    descriptions: [
+      "No complex setup is required. Connect your repo and deploy instantly with zero-config builds for all major frameworks.",
+      "We provide endpoints to all the popular LLMs. Provision MySQL, Postgres, Redis and more in seconds.",
+    ],
+  },
+  steps: [
+    {
+      title: "Application Hosting",
+      description:
+        "Deploy and scale web apps instantly with zero DevOps setup.",
+    },
+    {
+      title: "Database Hosting",
+      description:
+        "Launch production-ready databases in seconds with built-in backups.",
+    },
+    {
+      title: "AI Gateway",
+      description:
+        "Connect to powerful AI models through a single, simplified API.",
+    },
+  ],
+  stepsSection: {
+    heading: "Simplify Your Deployment Workflow",
+    description:
+      "Deploy your WebApps, APIs and A.I workloads. Supports all your favorite stacks and frameworks including Next.js, Node.js, Remix, Hono, Docker, Go, Laravel, and more.",
+  },
+  onboarding: {
+    heading: "Brimble makes getting online easy and secure.",
+    tabs: [
+      {
+        label: "Import repo",
+        step: 1,
+        title: "Import your repository",
+        description:
+          "Connect your GitHub account and import any repo. Brimble auto-detects your framework and build settings so you can deploy with zero configuration.",
+      },
+      {
+        label: "Configure",
+        step: 2,
+        title: "Configure your build settings",
+        description:
+          "Set your framework, build command, and environment variables. Brimble auto-detects most settings so you can deploy with zero configuration.",
+      },
+      {
+        label: "Deploy",
+        step: 3,
+        title: "Deploy to production",
+        description:
+          "Hit deploy and watch your app go live in seconds. Every push to your main branch triggers an automatic production deployment.",
+      },
+    ],
+  },
+  features: {
+    heading: "Everything you need to build on the web.",
+    items: [
+      {
+        label: "PLATFORM",
+        title: "Instant Deployments",
+        description:
+          "Ship full stack apps & MCP servers in seconds. No complex setup is required.",
+      },
+      {
+        title: "Readily available LLMs",
+        description:
+          "We provide endpoints to all the popular LLMs. Connect to powerful AI models through a single, simplified API.",
+      },
+      {
+        title: "Provision databases in seconds",
+        description:
+          "Provision MySQL, Postgres, Redis and more in seconds. Launch production-ready databases with built-in backups.",
+      },
+      {
+        title: "Usage-Based Pricing",
+        description:
+          "Pay only for what you use. No hidden fees, no surprises. Start for free, and upgrade when you're ready.",
+      },
+    ],
+    footer:
+      "Deploy your WebApps, APIs and A.I workloads. Supports all your favorite stacks and frameworks including Next.js, Node.js, Remix, Hono, Docker, Go, Laravel, and more.",
+  },
+  integrations: {
+    heading:
+      "Supports all your favorite stacks and frameworks.",
+    description:
+      "Deploy your WebApps, APIs and A.I workloads. Next.js, Node.js, Remix, Hono, Docker, MongoDB, Go, PostgreSQL, Laravel — Brimble works with the tools you already love.",
+  },
+  domains: {
+    heading: "Buy Custom Domains",
+    description:
+      "Buy custom domains and use them on your projects. Register and manage your domains directly with Brimble — no third-party registrar needed.",
+    cta: "Buy domain",
+    searchPlaceholder: "Your domain",
+    faqs: [
+      {
+        label: "DOMAINS",
+        title: "Can I connect my own domain?",
+        description:
+          "Yes, you can connect any domain you already own to your Brimble projects. Just update your DNS settings and Brimble handles the rest.",
+      },
+      {
+        title: "Do I get HTTPS with custom domains?",
+        description:
+          "Absolutely. Brimble automatically provisions SSL certificates for all custom domains at no extra cost.",
+      },
+      {
+        title: "How do I manage DNS records?",
+        description:
+          "Brimble provides a simple DNS management interface where you can add, edit, and delete records for your domains.",
+      },
+      {
+        title: "Can I transfer a domain to Brimble?",
+        description:
+          "Yes, you can transfer existing domains from other registrars to Brimble. The process is straightforward and we guide you through every step.",
+      },
+      {
+        title: "Do you support subdomains?",
+        description:
+          "Yes, you can create unlimited subdomains for any domain managed on Brimble, perfect for staging and preview environments.",
+      },
+      {
+        title: "What TLDs are available?",
+        description:
+          "We support all major TLDs including .com, .io, .dev, .app, .co, and many more. Check availability in the search bar above.",
+      },
+    ],
+    footer:
+      "Register and manage your domains directly with Brimble. Automatic HTTPS, DNS management, and seamless integration with your projects.",
+  },
+  pricing: {
+    heading: "Pricing",
+    description:
+      "Brimble's pricing is designed to grow with your needs. Start for free, and upgrade when you're ready.",
+    toggle: { monthly: "Monthly", annual: "Annual" },
+    plans: [
+      {
+        name: "Free",
+        description: "For hobby projects and learning.",
+        price: { monthly: 0, annual: 0 },
+        cta: "Get started",
+        features: [
+          "Automatic HTTPS/SSL",
+          "Deploy Static Sites",
+          "5 Project Limit",
+          "300 Build Minutes",
+          "10 GB Bandwidth",
+        ],
+      },
+      {
+        name: "Hacker",
+        description: "Perfect for indie devs and side projects.",
+        price: { monthly: 5, annual: 4 },
+        cta: "Get started",
+        features: [
+          "All Free plan features",
+          "Add custom domains",
+          "Brimble web analytics",
+          "Free 5k A.I Model Tokens",
+          "Deploy Fullstack Apps",
+          "Premium CDN Features",
+          "10 Project Limit",
+          "30 GB Bandwidth",
+        ],
+      },
+      {
+        name: "Pro",
+        description: "Built for production ready applications.",
+        price: { monthly: 15, annual: 12 },
+        cta: "Get started",
+        popular: true,
+        features: [
+          "All Hacker plan features",
+          "Multi-Region Support",
+          "2 Concurrent Builds",
+          "Pull Request Preview",
+          "Scaling resources",
+          "Free 100k A.I Model Tokens",
+          "Unlimited Projects",
+          "2,500 Build Minutes",
+          "150 GB Bandwidth",
+        ],
+      },
+      {
+        name: "Team",
+        description: "Made for growing teams and scaling.",
+        price: { monthly: 30, annual: 24 },
+        cta: "Get started",
+        features: [
+          "All Pro plan features",
+          "Unlimited Deployments",
+          "Multi concurrent builds",
+          "Priority Support",
+          "Free 250k A.I Model Tokens",
+          "Unlimited Projects",
+          "5,000 Build Minutes",
+          "500 GB Bandwidth",
+        ],
+      },
+    ],
+    enterprise: {
+      title: "Enterprise",
+      description:
+        "Custom solutions for large-scale deployments. Dedicated infrastructure, SLAs, and hands-on onboarding.",
+      cta: "Contact us",
+    },
+    faqs: [
+      {
+        title: "What kind of apps can I host on Brimble?",
+        description:
+          "You can host static sites, full-stack web apps, APIs, AI workloads, and more. Brimble supports Next.js, Node.js, Remix, Hono, Docker, Go, Laravel, and many other frameworks.",
+      },
+      {
+        title: "Do I need to configure servers?",
+        description:
+          "No. Brimble handles all infrastructure for you — just connect your repo and deploy. No server management required.",
+      },
+      {
+        title: "Does Brimble support backend APIs?",
+        description:
+          "Yes. You can deploy full-stack applications including backend APIs, serverless functions, and long-running processes.",
+      },
+      {
+        title: "What is Brimble's AI API Gateway?",
+        description:
+          "Brimble provides a unified API gateway to access popular LLMs. Connect to powerful AI models through a single, simplified endpoint.",
+      },
+      {
+        title: "How does billing work for AI models?",
+        description:
+          "AI model usage is token-based. Each plan includes a free token allowance, and additional tokens are billed based on usage.",
+      },
+      {
+        title: "Can I still choose specific models?",
+        description:
+          "Yes. You have full control over which AI models to use. Our gateway supports all major providers and models.",
+      },
+    ],
+  },
+  cta: {
+    heading: "Start your free trial today.",
+    footer:
+      "Spend little to no time on DevOps and more time building. Super efficient way to host & scale your web app.",
+    buttons: {
+      primary: "Get started",
+      secondary: "Terms & conditions",
+      tertiary: "Contact us",
+    },
+  },
+} as const;
