@@ -165,12 +165,15 @@ function FilterSelect({
   value,
   onChange,
   icon,
+  dotColors,
 }: {
   label: string;
   options: string[];
   value: string;
   onChange: (v: string) => void;
   icon?: React.ReactNode;
+  /** Map option value → dot color hex. When a specific option is selected its dot replaces the icon. */
+  dotColors?: Record<string, string>;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -185,6 +188,8 @@ function FilterSelect({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
+  const activeDot = value !== "All" && dotColors?.[value];
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -192,7 +197,14 @@ function FilterSelect({
         className="flex items-center overflow-clip rounded-[4px] border border-dash-border bg-dash-bg text-sm text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
       >
         <span className="flex items-center gap-2 px-3 py-1.5">
-          {icon}
+          {activeDot ? (
+            <span
+              className="size-[6px] shrink-0 rounded-full"
+              style={{ backgroundColor: activeDot }}
+            />
+          ) : (
+            icon
+          )}
           {value === "All" ? label : value}
         </span>
         <span className="flex h-full items-center border-l border-dash-border px-2 py-1.5">
@@ -218,6 +230,12 @@ function FilterSelect({
                 }}
                 className="mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-[2px] px-2 py-1.5 text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated dark:text-dash-text-strong"
               >
+                {dotColors?.[option] && (
+                  <span
+                    className="size-[6px] shrink-0 rounded-full"
+                    style={{ backgroundColor: dotColors[option] }}
+                  />
+                )}
                 {option}
               </button>
             ))}
@@ -395,6 +413,11 @@ function DeploymentHistoryPage() {
           value={status}
           onChange={setStatus}
           icon={<StatusDotsIcon />}
+          dotColors={{
+            Successful: "#13d282",
+            Failed: "#fc391e",
+            Pending: "#ff7a00",
+          }}
         />
       </div>
 

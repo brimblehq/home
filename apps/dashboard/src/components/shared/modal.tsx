@@ -25,7 +25,23 @@ export function Modal({ open, onOpenChange, children, width = 500 }: ModalProps)
               />
             </Dialog.Overlay>
 
-            <Dialog.Content asChild>
+            <Dialog.Content
+              asChild
+              onPointerDownOutside={(e) => {
+                // Prevent Radix from closing the dialog when clicking on portaled
+                // elements (e.g. dropdown menus) that render outside Dialog.Content
+                const target = e.target as HTMLElement;
+                if (target.closest("[data-dropdown-menu]")) {
+                  e.preventDefault();
+                }
+              }}
+              onInteractOutside={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest("[data-dropdown-menu]")) {
+                  e.preventDefault();
+                }
+              }}
+            >
               <motion.div
                 initial={{ opacity: 0, scale: 0.96, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -34,8 +50,8 @@ export function Modal({ open, onOpenChange, children, width = 500 }: ModalProps)
                   duration: 0.25,
                   ease: [0.16, 1, 0.3, 1],
                 }}
-                style={{ maxWidth: width }}
-                className="fixed left-1/2 top-1/2 z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col overflow-clip rounded-lg border-[0.5px] border-dash-border bg-dash-bg shadow-[0px_2px_3px_rgba(0,0,0,0.06),inset_0px_-3px_2px_rgba(245,245,245,0.3)] dark:shadow-[0px_2px_3px_rgba(0,0,0,0.2)]"
+                style={{ width, maxWidth: "calc(100vw - 32px)" }}
+                className="fixed left-1/2 top-1/2 z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border-[0.5px] border-dash-border bg-dash-bg shadow-[0px_2px_3px_rgba(0,0,0,0.06),inset_0px_-3px_2px_rgba(245,245,245,0.3)] dark:shadow-[0px_2px_3px_rgba(0,0,0,0.2)]"
               >
                 {children}
               </motion.div>
@@ -55,7 +71,7 @@ export function ModalHeader({
   description?: string;
 }) {
   return (
-    <div className="flex flex-col gap-0.5 border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-6 py-4">
+    <div className="flex flex-col gap-0.5 rounded-t-lg border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-6 py-4">
       <Dialog.Title className="text-base leading-[1.4] tracking-[-0.096px] text-dash-text-strong">
         {title}
       </Dialog.Title>

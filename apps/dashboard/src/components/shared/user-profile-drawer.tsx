@@ -1,14 +1,15 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
 import { Drawer } from "vaul";
 import { cn } from "@brimble/ui";
+import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
+  ChevronDown,
   Copy,
   HelpCircle,
   MoreHorizontal,
   Shield,
   UserMinus,
-  Download,
   Eye,
   EyeOff,
   RefreshCw,
@@ -16,6 +17,8 @@ import {
 import { InviteMembersModal } from "../settings/invite-members-modal";
 import { WarningModal } from "./warning-modal";
 import { GlossyButton } from "./glossy-button";
+import { ChangePlanModal, billingPlans } from "./change-plan-modal";
+import { CursorPagination } from "./pagination";
 
 interface UserProfile {
   firstName: string;
@@ -38,15 +41,13 @@ type ProfileTab =
   | "profile"
   | "members"
   | "notifications"
-  | "billing"
-  | "invoices";
+  | "billing";
 
 const accountNav: { label: string; key: ProfileTab }[] = [
   { label: "Profile", key: "profile" },
   { label: "Members", key: "members" },
   { label: "Notifications", key: "notifications" },
   { label: "Billing", key: "billing" },
-  { label: "Invoices", key: "invoices" },
 ];
 
 const reachUsNav = [
@@ -110,7 +111,7 @@ function ProfileForm({
     username !== profile.username;
 
   const inputClass =
-    "w-full rounded-[6px] bg-[#f9fafb] px-3 py-2.5 text-sm leading-6 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none placeholder:text-[#9ca3af] focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(72,121,248,0.15)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(72,121,248,0.2)]";
+    "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
   function handleSave() {
     onSave?.({ firstName, lastName, username });
@@ -275,7 +276,7 @@ function ApiKeySection() {
   const [rerollOpen, setRerollOpen] = useState(false);
 
   const inputClass =
-    "w-full rounded-[6px] bg-[#f9fafb] px-3 py-2.5 text-sm leading-6 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)]";
+    "w-full input-base px-3 py-2.5 text-sm leading-6 text-dash-text-strong";
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -490,7 +491,6 @@ export function UserProfileDrawer({
               {activeTab === "members" && <MembersForm />}
               {activeTab === "notifications" && <NotificationsForm />}
               {activeTab === "billing" && <BillingForm />}
-              {activeTab === "invoices" && <InvoicesForm />}
             </div>
           </div>
         </Drawer.Content>
@@ -552,22 +552,342 @@ function NotificationRow({
   );
 }
 
-const mockBillingInvoices = ["28th August 2023", "28th July 2023"];
+const mockBillingInvoices = [
+  "28th February 2024",
+  "28th January 2024",
+  "28th December 2023",
+  "28th November 2023",
+  "28th October 2023",
+  "28th September 2023",
+  "28th August 2023",
+  "28th July 2023",
+  "28th June 2023",
+  "28th May 2023",
+  "28th April 2023",
+  "28th March 2023",
+];
+
+const INVOICES_PER_PAGE = 5;
+
+
+function PaymentFailureBanner({ daysSinceFailure }: { daysSinceFailure: number }) {
+  if (daysSinceFailure <= 0) return null;
+
+  const isBuildsDisabled = daysSinceFailure >= 7;
+  const isDeactivated = daysSinceFailure >= 14;
+
+  return (
+    <div className={`rounded-[4px] border px-4 py-3 ${isDeactivated ? "border-[#ef2f1f]/30 bg-[#ef2f1f]/[0.06]" : "border-[#f5a623]/30 bg-[#f5a623]/[0.06]"}`}>
+      <p className={`text-sm font-medium leading-5 ${isDeactivated ? "text-[#ef2f1f]" : "text-[#b37a10] dark:text-[#f5a623]"}`}>
+        {isDeactivated
+          ? "Your subscription has been deactivated. Update payment to reactivate."
+          : isBuildsDisabled
+            ? "Builds are disabled due to payment failure. Update your payment method to resume."
+            : `Payment failed ${daysSinceFailure} day${daysSinceFailure === 1 ? "" : "s"} ago. Please update your payment method.`}
+      </p>
+    </div>
+  );
+}
+
+function UsageBar({
+  label,
+  used,
+  limit,
+  unit,
+  overageNote,
+}: {
+  label: string;
+  used: number;
+  limit: number;
+  unit: string;
+  overageNote?: string;
+}) {
+  const overage = Math.max(0, used - limit);
+  const pct = Math.min(100, (used / limit) * 100);
+  const isOver = used > limit;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-dash-text-body">{label}</span>
+        <span className="text-sm tabular-nums text-dash-text-faded">
+          {used.toLocaleString()} / {limit.toLocaleString()} {unit}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-dash-bg-elevated">
+        <div
+          className={`h-full rounded-full transition-all ${isOver ? "bg-[#f5a623]" : "bg-[#4879f8]"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {overage > 0 && overageNote && (
+        <p className="text-xs text-[#f5a623]">
+          {overage.toLocaleString()} {unit} overage — {overageNote}
+        </p>
+      )}
+    </div>
+  );
+}
+
+interface BreakdownLine {
+  label: string;
+  detail: string;
+  amount: number;
+}
+
+interface SpendingResource {
+  label: string;
+  allocated: string;
+  cost: number;
+  breakdown: BreakdownLine[];
+}
+
+const mockResources: SpendingResource[] = [
+  {
+    label: "CPU",
+    allocated: "0.5 vCPU",
+    cost: 4.50,
+    breakdown: [
+      { label: "Base allocation", detail: "0.25 vCPU", amount: 2.25 },
+      { label: "Burst usage", detail: "0.25 vCPU avg", amount: 1.50 },
+      { label: "Autoscale overhead", detail: "2 spike events", amount: 0.75 },
+    ],
+  },
+  {
+    label: "Memory",
+    allocated: "512 MB",
+    cost: 2.25,
+    breakdown: [
+      { label: "Base allocation", detail: "256 MB", amount: 1.25 },
+      { label: "Peak usage", detail: "512 MB max", amount: 1.00 },
+    ],
+  },
+  {
+    label: "Storage",
+    allocated: "1 GB",
+    cost: 0.50,
+    breakdown: [
+      { label: "Build artifacts", detail: "620 MB", amount: 0.31 },
+      { label: "Cache layers", detail: "380 MB", amount: 0.19 },
+    ],
+  },
+  {
+    label: "Persistent Disk",
+    allocated: "—",
+    cost: 0,
+    breakdown: [],
+  },
+];
+
+function SpendingOverview() {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const total = mockResources.reduce((s, r) => s + r.cost, 0);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-[2px]">
+        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
+          Spending overview
+        </p>
+        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+          Resource costs for the current billing period
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-[4px] border-[0.5px] border-dash-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-dash-border bg-dash-bg-elevated/50">
+              <th className="px-3 py-2 text-left font-medium text-dash-text-faded">Resource</th>
+              <th className="px-3 py-2 text-left font-medium text-dash-text-faded">Allocated</th>
+              <th className="px-3 py-2 text-right font-medium text-dash-text-faded">Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {mockResources.map((r) => {
+              const isOpen = expanded === r.label;
+              const isClickable = r.breakdown.length > 0;
+
+              return (
+                <Fragment key={r.label}>
+                  <tr
+                    onClick={() => isClickable && setExpanded(isOpen ? null : r.label)}
+                    className={cn(
+                      "border-b border-dash-border transition-colors",
+                      isClickable && "cursor-pointer hover:bg-dash-bg-elevated/60",
+                    )}
+                  >
+                    <td className="px-3 py-2 text-dash-text-body">{r.label}</td>
+                    <td className="px-3 py-2 tabular-nums text-dash-text-faded">{r.allocated}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-dash-text-strong">
+                      {r.cost > 0 ? `$${r.cost.toFixed(2)}` : "—"}
+                    </td>
+                  </tr>
+                  <AnimatePresence>
+                    {isOpen && (
+                      <tr>
+                        <td colSpan={3} className="p-0">
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                            className="overflow-hidden"
+                          >
+                            <table className="w-full border-b border-dash-border bg-dash-bg-elevated/30 text-xs">
+                              <tbody>
+                                {r.breakdown.map((line) => (
+                                  <tr key={line.label}>
+                                    <td className="py-1.5 pl-6 pr-3 text-dash-text-faded">{line.label}</td>
+                                    <td className="px-3 py-1.5 tabular-nums text-dash-text-extra-faded">{line.detail}</td>
+                                    <td className="py-1.5 pl-3 pr-3 text-right tabular-nums text-dash-text-faded">
+                                      ${line.amount.toFixed(2)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </motion.div>
+                        </td>
+                      </tr>
+                    )}
+                  </AnimatePresence>
+                </Fragment>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="bg-dash-bg-elevated/50">
+              <td colSpan={2} className="px-3 py-2 font-medium text-dash-text-strong">Total</td>
+              <td className="px-3 py-2 text-right font-medium tabular-nums text-dash-text-strong">
+                ${total.toFixed(2)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function UsageSection() {
+  // Mock usage data — will be replaced by backend data
+  const mockUsage = {
+    bandwidthUsed: 92,
+    bandwidthLimit: 150,
+    buildMinutesUsed: 1850,
+    buildMinutesLimit: 2500,
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Plan usage */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-[2px]">
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
+            Current usage
+          </p>
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+            Resource usage for the current billing period
+          </p>
+        </div>
+
+        <UsageBar
+          label="Bandwidth"
+          used={mockUsage.bandwidthUsed}
+          limit={mockUsage.bandwidthLimit}
+          unit="GB"
+          overageNote="$0.25/GB added to next bill"
+        />
+        <UsageBar
+          label="Build minutes"
+          used={mockUsage.buildMinutesUsed}
+          limit={mockUsage.buildMinutesLimit}
+          unit="min"
+          overageNote="$0.002/min added to next bill"
+        />
+      </div>
+
+      <hr className="border-dash-border-soft" />
+
+      {/* Compute spending */}
+      <SpendingOverview />
+    </div>
+  );
+}
+
+function BillingInvoices() {
+  const [cursor, setCursor] = useState(0);
+  const page = mockBillingInvoices.slice(cursor, cursor + INVOICES_PER_PAGE);
+  const hasPrev = cursor > 0;
+  const hasNext = cursor + INVOICES_PER_PAGE < mockBillingInvoices.length;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-[2px] py-2">
+        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
+          Payment history and invoices
+        </p>
+        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+          See your billing history with Brimble including invoices
+        </p>
+      </div>
+      <div className="flex flex-col gap-4">
+        {page.map((date) => (
+          <div key={date} className="flex items-center justify-between gap-4">
+            <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+              {date}
+            </p>
+            <button className="rounded-[8px] border border-dash-border bg-dash-bg px-3 py-1.5 text-sm leading-5 tracking-[-0.0224px] text-dash-text-body transition-colors hover:bg-dash-bg-elevated">
+              view
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end pt-1">
+        <CursorPagination
+          hasPrevPage={hasPrev}
+          hasNextPage={hasNext}
+          onPrev={() => setCursor((c) => Math.max(0, c - INVOICES_PER_PAGE))}
+          onNext={() => setCursor((c) => c + INVOICES_PER_PAGE)}
+        />
+      </div>
+    </div>
+  );
+}
 
 function BillingForm() {
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState("Pro");
+  const [changePlanOpen, setChangePlanOpen] = useState(false);
+  const activePlan = billingPlans.find((p) => p.name === currentPlan)!;
+
+  // Mock payment failure state — 0 means no failure
+  const [daysSinceFailure] = useState(0);
 
   return (
     <div className="flex max-w-[488px] flex-col gap-8">
+      {/* Payment failure banner */}
+      <PaymentFailureBanner daysSinceFailure={daysSinceFailure} />
+
       <div className="relative overflow-hidden rounded-[4px] border border-dash-border bg-[#fcfcfc] dark:border-transparent dark:invert">
-        <p className="pr-[116px] px-6 py-3 text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-          You are currently on the Brimble{" "}
-          <span className="text-dash-text-strong">Premium</span> plan, you pay{" "}
-          <span className="text-dash-text-strong">$30</span> per user, per month.{" "}
-          <button className="text-dash-text-strong underline underline-offset-2">
-            Go to pricing page.
+        <div className="pr-[116px] px-6 py-3">
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+            You are currently on the Brimble{" "}
+            <span className="text-dash-text-strong">{activePlan.name}</span> plan
+            {activePlan.price > 0 ? (
+              <>, you pay <span className="text-dash-text-strong">${activePlan.price}</span> per month.</>
+            ) : (
+              "."
+            )}
+          </p>
+          <button
+            onClick={() => setChangePlanOpen(true)}
+            className="mt-1.5 text-sm font-medium text-[#4879f8] underline underline-offset-2 hover:text-[#3a6ae6]"
+          >
+            Change plan
           </button>
-        </p>
+        </div>
         <div className="absolute inset-y-0 right-0 hidden w-[96px] overflow-hidden sm:block">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_28%,#ffffff_0%,#ececec_48%,#f7f7f7_100%)]" />
           <div className="absolute left-[-8px] top-1/2 h-24 w-20 -translate-y-1/2 bg-gradient-to-r from-[#fafafa] via-[#fafafa] to-transparent" />
@@ -578,6 +898,11 @@ function BillingForm() {
           <span className="absolute right-8 top-7 size-1.5 rounded-full bg-white/70" />
         </div>
       </div>
+
+      {/* Usage & overage */}
+      <UsageSection />
+
+      <hr className="-ml-8 border-dash-border-soft" />
 
       <div className="flex flex-col gap-[30px]">
         <div className="flex items-center gap-[14px]">
@@ -616,28 +941,7 @@ function BillingForm() {
 
       <hr className="-ml-8 border-dash-border-soft" />
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-[2px] py-2">
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-            Payment history and invoices
-          </p>
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            See your billing history with Brimble including invoices
-          </p>
-        </div>
-        <div className="flex flex-col gap-4">
-          {mockBillingInvoices.map((date) => (
-            <div key={date} className="flex items-center justify-between gap-4">
-              <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                {date}
-              </p>
-              <button className="rounded-[8px] border border-dash-border bg-dash-bg px-3 py-1.5 text-sm leading-5 tracking-[-0.0224px] text-dash-text-body transition-colors hover:bg-dash-bg-elevated">
-                view
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+      <BillingInvoices />
 
       <hr className="-ml-8 border-dash-border-soft" />
 
@@ -647,7 +951,7 @@ function BillingForm() {
             Manage your subscription
           </p>
           <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            Cancel or downgrade from your current plan to the Standard plan
+            Cancel your current subscription
           </p>
         </div>
         <div>
@@ -664,12 +968,22 @@ function BillingForm() {
         open={cancelOpen}
         onOpenChange={setCancelOpen}
         title="Cancel your subscription?"
-        description="Your plan will be downgraded to the Standard plan at the end of the current billing period. You will lose access to Premium features."
+        description={`Your plan will be cancelled at the end of the current billing period. You will be moved to the Free plan and lose access to ${activePlan.name} features.`}
         confirmLabel="Cancel subscription"
         cancelLabel="Keep my plan"
         onConfirm={() => {
           // TODO: wire to API
           console.log("Subscription cancelled");
+        }}
+      />
+
+      <ChangePlanModal
+        open={changePlanOpen}
+        onOpenChange={setChangePlanOpen}
+        currentPlan={currentPlan}
+        onChangePlan={(plan) => {
+          setCurrentPlan(plan);
+          setChangePlanOpen(false);
         }}
       />
     </div>
@@ -717,7 +1031,7 @@ const eventGroups: EventGroup[] = [
   {
     key: "payment",
     title: "Payment Events",
-    icon: "/icons/workspace.svg",
+    icon: "/icons/payment.svg",
     events: [
       { key: "payment_successful", title: "Payment Successful", description: "Notify when payment is processed successfully" },
       { key: "payment_failed", title: "Payment Failed", description: "Notify when payment fails" },
@@ -754,6 +1068,28 @@ const eventGroups: EventGroup[] = [
   },
 ];
 
+function Checkbox({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] transition-colors ${
+        checked
+          ? "border-[#4879f8] bg-[#4879f8]"
+          : "border-transparent bg-dash-bg dark:border-white/20 dark:bg-transparent"
+      }`}
+    >
+      {checked && (
+        <svg width="8" height="6" viewBox="0 0 8 6" fill="none" className="text-white">
+          <path d="M1 3L3 5L7 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 function EventGroupCard({
   group,
   groupEnabled,
@@ -767,46 +1103,84 @@ function EventGroupCard({
   eventStates: Record<string, boolean>;
   onEventToggle: (key: string, v: boolean) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const checkedCount = group.events.filter(
+    (e) => groupEnabled && (eventStates[e.key] ?? false),
+  ).length;
+
   return (
     <div className="flex flex-col">
-      {/* Group header */}
-      <div className="flex items-center justify-between py-2">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-7 items-center justify-center rounded-full bg-[#f5a623]/10">
-            <img src={group.icon} alt="" className="size-3.5" />
-          </div>
-          <span className="text-sm font-medium leading-5 text-dash-text-strong">
-            {group.title}
-          </span>
+      {/* Collapsible header row */}
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2.5 py-3 text-left transition-colors hover:opacity-80"
+      >
+        <motion.span
+          animate={{ rotate: expanded ? 180 : 0 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="inline-flex"
+        >
+          <ChevronDown className="size-3.5 text-dash-text-faded" />
+        </motion.span>
+        <div className="flex size-7 items-center justify-center rounded-full bg-[#f5a623]/10">
+          <img src={group.icon} alt="" className="size-3.5" />
         </div>
-        <Toggle checked={groupEnabled} onChange={onGroupToggle} />
-      </div>
+        <span className="flex-1 text-sm font-medium leading-5 text-dash-text-strong">
+          {group.title}
+        </span>
+        {!expanded ? (
+          <span className="text-xs text-dash-text-faded">
+            {checkedCount === group.events.length
+              ? `${group.events.length} events`
+              : `${checkedCount} of ${group.events.length}`}
+          </span>
+        ) : (
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              onGroupToggle(!groupEnabled);
+            }}
+            className="text-xs text-[#4879f8] hover:underline"
+          >
+            {groupEnabled ? "Deselect all" : "Select all"}
+          </span>
+        )}
+      </button>
 
-      {/* Events */}
-      <div className="flex flex-col gap-0 pl-[38px]">
-        {group.events.map((event, i) => (
-          <div key={event.key}>
-            {i === 0 && <hr className="border-dash-border-soft" />}
-            <div className="flex items-center justify-between py-3">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-                  {event.title}
-                </span>
-                <span className="text-[13px] leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                  {event.description}
-                </span>
-              </div>
-              <Toggle
-                checked={groupEnabled && (eventStates[event.key] ?? false)}
-                onChange={(v) => onEventToggle(event.key, v)}
-              />
+      {/* Expandable event list */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, overflow: "hidden" }}
+            animate={{
+              opacity: 1,
+              height: "auto",
+              transitionEnd: { overflow: "visible" },
+            }}
+            exit={{ overflow: "hidden", opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="flex flex-col gap-2.5 pb-2 pl-[50px]">
+              {group.events.map((event) => (
+                <label
+                  key={event.key}
+                  title={event.description}
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <Checkbox
+                    checked={groupEnabled && (eventStates[event.key] ?? false)}
+                    onChange={(v) => onEventToggle(event.key, v)}
+                  />
+                  <span className="text-sm font-light text-dash-text-body">
+                    {event.title}
+                  </span>
+                </label>
+              ))}
             </div>
-            {i < group.events.length - 1 && (
-              <hr className="border-dash-border-soft" />
-            )}
-          </div>
-        ))}
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -860,7 +1234,7 @@ function NotificationsForm() {
   const totalCount = eventGroups.reduce((s, g) => s + g.events.length, 0);
 
   const inputClass =
-    "w-full rounded-[6px] bg-[#f9fafb] px-3 py-2.5 text-sm leading-6 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none placeholder:text-[#9ca3af] focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(72,121,248,0.15)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(72,121,248,0.2)]";
+    "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
   return (
     <div className="flex flex-col gap-[30px]">
@@ -941,11 +1315,9 @@ function NotificationsForm() {
         </div>
 
         {/* All Events */}
-        <div className="flex items-center justify-between py-2">
+        <div className="flex items-center py-2">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-7 items-center justify-center rounded-full bg-[#f5a623]/10">
-              <img src="/icons/home.svg" alt="" className="size-3.5" />
-            </div>
+            <Checkbox checked={allEvents} onChange={handleAllEventsToggle} />
             <div className="flex flex-col">
               <span className="text-sm font-medium leading-5 text-dash-text-strong">
                 All Events
@@ -955,13 +1327,12 @@ function NotificationsForm() {
               </span>
             </div>
           </div>
-          <Toggle checked={allEvents} onChange={handleAllEventsToggle} />
         </div>
 
         <hr className="border-dash-border-soft" />
 
         {/* Event groups */}
-        <div className="flex flex-col gap-4 pt-1">
+        <div className="flex flex-col pt-1">
           {eventGroups.map((group, i) => (
             <div key={group.key}>
               <EventGroupCard
@@ -972,7 +1343,7 @@ function NotificationsForm() {
                 onEventToggle={handleEventToggle}
               />
               {i < eventGroups.length - 1 && (
-                <hr className="mt-4 border-dash-border-soft" />
+                <hr className="border-dash-border-soft" />
               )}
             </div>
           ))}
@@ -992,7 +1363,7 @@ function NotificationsForm() {
 interface Member {
   name: string;
   email: string;
-  role: "Owner" | "Admin" | "Member";
+  role: "Creator" | "Administrator" | "Member";
   gradient: string;
 }
 
@@ -1006,13 +1377,13 @@ const mockMembers: Member[] = [
   {
     name: "Emmanuel Akujuobi",
     email: "akujuobiemmanuelk@gmail.com",
-    role: "Owner",
+    role: "Creator",
     gradient: "radial-gradient(circle at 62% 30%, #b8cffc, #94b6f8 25%, #6f9cf3 50%, #4b82ee 75%, #2769e9)",
   },
   {
     name: "Sarah Chen",
     email: "sarah.chen@brimble.io",
-    role: "Admin",
+    role: "Administrator",
     gradient: "radial-gradient(circle at 62% 30%, #b8fce8, #91f2d5 25%, #6ae8c3 50%, #43deb0 75%, #1bd49d)",
   },
   {
@@ -1025,16 +1396,15 @@ const mockMembers: Member[] = [
 
 const mockPendingInvites: PendingInvite[] = [
   { email: "james@example.com", role: "Member", sentAt: "2 days ago" },
-  { email: "maria@example.com", role: "Viewer", sentAt: "5 days ago" },
+  { email: "maria@example.com", role: "Administrator", sentAt: "5 days ago" },
 ];
 
-const MEMBER_COST_PER_SEAT = 10;
+const MEMBER_COST_PER_SEAT = 5;
 
 const roleBadgeStyles: Record<string, string> = {
-  Owner: "bg-[#4879f8]/10 text-[#4879f8]",
-  Admin: "bg-[#f5a623]/10 text-[#f5a623]",
+  Creator: "bg-[#4879f8]/10 text-[#4879f8]",
+  Administrator: "bg-[#f5a623]/10 text-[#f5a623]",
   Member: "bg-dash-bg-elevated text-dash-text-faded",
-  Viewer: "bg-dash-bg-elevated text-dash-text-faded",
 };
 
 function MemberActionMenu({ member }: { member: Member }) {
@@ -1049,7 +1419,7 @@ function MemberActionMenu({ member }: { member: Member }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  const isOwner = member.role === "Owner";
+  const isCreator = member.role === "Creator";
 
   return (
     <div ref={ref} className="relative">
@@ -1061,14 +1431,16 @@ function MemberActionMenu({ member }: { member: Member }) {
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1 w-[160px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
-          <button
-            onClick={() => setOpen(false)}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
-          >
-            <Shield className="size-3.5" />
-            Change role
-          </button>
-          {!isOwner && (
+          {!isCreator && (
+            <button
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
+            >
+              <Shield className="size-3.5" />
+              Change role
+            </button>
+          )}
+          {!isCreator && (
             <button
               onClick={() => setOpen(false)}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-500 transition-colors hover:bg-dash-bg-elevated"
@@ -1137,7 +1509,7 @@ function MembersForm() {
         <>
           <hr className="-ml-8 border-dash-border-soft" />
           <div className="flex flex-col gap-4">
-            <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
+            <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
               Pending invitations
             </span>
             {mockPendingInvites.map((invite) => (
@@ -1198,89 +1570,3 @@ function MembersForm() {
   );
 }
 
-interface Invoice {
-  id: string;
-  description: string;
-  amount: string;
-  date: string;
-  status: "paid" | "unpaid";
-}
-
-const mockInvoices: Invoice[] = [
-  { id: "INV-000005", description: "Premium plan", amount: "$30.00", date: "Jan 28", status: "unpaid" },
-  { id: "INV-000004", description: "Premium plan", amount: "$30.00", date: "Dec 28", status: "paid" },
-  { id: "INV-000003", description: "Premium plan", amount: "$20.00", date: "Nov 28", status: "paid" },
-  { id: "INV-000002", description: "Premium plan", amount: "$20.00", date: "Oct 28", status: "paid" },
-  { id: "INV-000001", description: "Standard plan", amount: "$0.00", date: "Sep 28", status: "paid" },
-];
-
-function InvoicesForm() {
-  return (
-    <div className="flex max-w-[488px] flex-col gap-6">
-      <div className="flex flex-col gap-[2px]">
-        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-          Payment history
-        </p>
-        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-          Your billing history with Brimble
-        </p>
-      </div>
-
-      <div className="flex flex-col">
-        {mockInvoices.map((invoice, i) => (
-          <div
-            key={invoice.id}
-            className={cn(
-              "flex items-center gap-3 py-3.5",
-              i > 0 && "border-t-[0.5px] border-dash-border",
-            )}
-          >
-            {/* Status dot + invoice info */}
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <span
-                className={cn(
-                  "size-[6px] shrink-0 rounded-full",
-                  invoice.status === "paid" ? "bg-[#34d399]" : "bg-[#f5a623]",
-                )}
-              />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm leading-5 text-dash-text-strong">
-                    {invoice.description}
-                  </span>
-                  <span className="font-mono text-xs text-dash-text-extra-faded">
-                    {invoice.id}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-dash-text-faded">
-                    {invoice.date}
-                  </span>
-                  <span className="text-xs text-dash-text-extra-faded">&middot;</span>
-                  <span className="text-xs font-medium tabular-nums text-dash-text-body">
-                    {invoice.amount}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex shrink-0 items-center gap-2">
-              {invoice.status === "unpaid" && (
-                <button className="rounded-[4px] border border-[#3964d5] bg-[#4879f8] px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-[#3a6ae6]">
-                  Pay
-                </button>
-              )}
-              <button
-                className="shrink-0 rounded-[4px] p-1.5 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
-                title="Download"
-              >
-                <Download className="size-3.5" />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}

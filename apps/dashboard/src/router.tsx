@@ -9,6 +9,22 @@ export function getRouter() {
     defaultPreloadStaleTime: 0,
   });
 
+  if (typeof document !== "undefined") {
+    import("nprogress").then((mod) => {
+      const NProgress = mod.default;
+      import("nprogress/nprogress.css");
+      NProgress.configure({ showSpinner: false, trickleSpeed: 200 });
+
+      router.subscribe("onBeforeLoad", ({ pathChanged }) => {
+        if (pathChanged) NProgress.start();
+      });
+
+      router.subscribe("onLoad", () => {
+        NProgress.done();
+      });
+    });
+  }
+
   return router;
 }
 

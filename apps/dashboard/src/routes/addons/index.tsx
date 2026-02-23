@@ -94,7 +94,7 @@ const marketplaceAddons: Addon[] = [
 ];
 
 const inputClass =
-  "w-full rounded-[6px] bg-[#f9fafb] px-3 py-2 text-sm leading-6 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none placeholder:text-[#9ca3af] focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(72,121,248,0.15)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(72,121,248,0.2)]";
+  "w-full input-base input-focus px-3 py-2 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 function AddonsPage() {
   const [search, setSearch] = useState("");
@@ -197,7 +197,7 @@ function AddonsPage() {
           {/* Marketplace / available */}
           <div className="mt-8">
             <hr className="mb-6 border-dash-border-soft" />
-            <h3 className="mb-4 text-sm font-medium text-dash-text-body">
+            <h3 className="mb-4 text-sm font-medium text-dash-text-strong">
               Available Addons
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -151,12 +151,11 @@ export const siteConfig = {
     heading: "Pricing",
     description:
       "Brimble's pricing is designed to grow with your needs. Start for free, and upgrade when you're ready.",
-    toggle: { monthly: "Monthly", annual: "Annual" },
-    plans: [
+    personalPlans: [
       {
         name: "Free",
         description: "For hobby projects and learning.",
-        price: { monthly: 0, annual: 0 },
+        price: 0,
         cta: "Get started",
         features: [
           "Automatic HTTPS/SSL",
@@ -169,7 +168,7 @@ export const siteConfig = {
       {
         name: "Hacker",
         description: "Perfect for indie devs and side projects.",
-        price: { monthly: 5, annual: 4 },
+        price: 7,
         cta: "Get started",
         features: [
           "All Free plan features",
@@ -185,7 +184,7 @@ export const siteConfig = {
       {
         name: "Pro",
         description: "Built for production ready applications.",
-        price: { monthly: 15, annual: 12 },
+        price: 19,
         cta: "Get started",
         popular: true,
         features: [
@@ -195,28 +194,30 @@ export const siteConfig = {
           "Pull Request Preview",
           "Scaling resources",
           "Free 100k A.I Model Tokens",
-          "Unlimited Projects",
+          "150 Projects",
           "2,500 Build Minutes",
           "150 GB Bandwidth",
         ],
       },
-      {
-        name: "Team",
-        description: "Made for growing teams and scaling.",
-        price: { monthly: 30, annual: 24 },
-        cta: "Get started",
-        features: [
-          "All Pro plan features",
-          "Unlimited Deployments",
-          "Multi concurrent builds",
-          "Priority Support",
-          "Free 250k A.I Model Tokens",
-          "Unlimited Projects",
-          "5,000 Build Minutes",
-          "500 GB Bandwidth",
-        ],
-      },
     ],
+    teamPlan: {
+      name: "Team",
+      description: "Made for growing teams and scaling. Priced per member and build container.",
+      pricingLabel: "From $12.50/mo",
+      pricePerMember: 5,
+      pricePerBuild: 7.5,
+      cta: "Create a team",
+      features: [
+        "PR previews & analytics",
+        "Configurable team members",
+        "Multi concurrent builds",
+        "Priority Support",
+        "Free 250k A.I Model Tokens",
+        "500 Projects",
+        "5,000 Build Minutes",
+        "500 GB Bandwidth",
+      ],
+    },
     enterprise: {
       title: "Enterprise",
       description:

@@ -159,6 +159,8 @@ interface CursorPaginationProps {
   onPrev: () => void;
   /** Optional center label, e.g. "Page 3" or "Showing 1–10" */
   label?: string;
+  /** Show "Previous" / "Next" text alongside the chevrons (default false) */
+  showLabels?: boolean;
 }
 
 export function CursorPagination({
@@ -167,11 +169,12 @@ export function CursorPagination({
   onNext,
   onPrev,
   label,
+  showLabels = false,
 }: CursorPaginationProps) {
   if (!hasNextPage && !hasPrevPage) return null;
 
   return (
-    <nav aria-label="Pagination" className="flex items-center justify-between">
+    <nav aria-label="Pagination" className="flex items-center gap-2">
       {/* Previous */}
       <motion.button
         whileTap={hasPrevPage ? tapScale : undefined}
@@ -180,12 +183,12 @@ export function CursorPagination({
         aria-label="Previous page"
         className={cn(
           btnOutline,
-          "h-8 gap-1.5 px-3",
+          showLabels ? "h-8 gap-1.5 px-3" : "size-8",
           !hasPrevPage && btnDisabled,
         )}
       >
         <ChevronLeft className="size-4" />
-        Previous
+        {showLabels && "Previous"}
       </motion.button>
 
       {/* Center label */}
@@ -201,11 +204,11 @@ export function CursorPagination({
         aria-label="Next page"
         className={cn(
           btnOutline,
-          "h-8 gap-1.5 px-3",
+          showLabels ? "h-8 gap-1.5 px-3" : "size-8",
           !hasNextPage && btnDisabled,
         )}
       >
-        Next
+        {showLabels && "Next"}
         <ChevronRight className="size-4" />
       </motion.button>
     </nav>

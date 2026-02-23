@@ -15,6 +15,7 @@ import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DomainsRouteImport } from './routes/domains'
 import { Route as AddonsRouteImport } from './routes/addons'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ScalingIndexRouteImport } from './routes/scaling/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
@@ -23,6 +24,7 @@ import { Route as AddonsIndexRouteImport } from './routes/addons/index'
 import { Route as WorkspaceNewRouteImport } from './routes/workspace/new'
 import { Route as ProjectsNewRouteImport } from './routes/projects/new'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
+import { Route as DomainsBuyRouteImport } from './routes/domains/buy'
 import { Route as DomainsDomainNameRouteImport } from './routes/domains/$domainName'
 import { Route as AddonsAddonIdRouteImport } from './routes/addons/$addonId'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
@@ -65,6 +67,11 @@ const AddonsRoute = AddonsRouteImport.update({
   path: '/addons',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -104,6 +111,11 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   id: '/$projectId',
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
+} as any)
+const DomainsBuyRoute = DomainsBuyRouteImport.update({
+  id: '/buy',
+  path: '/buy',
+  getParentRoute: () => DomainsRoute,
 } as any)
 const DomainsDomainNameRoute = DomainsDomainNameRouteImport.update({
   id: '/$domainName',
@@ -170,6 +182,7 @@ const ProjectsProjectIdDomainsDomainNameRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/addons': typeof AddonsRouteWithChildren
   '/domains': typeof DomainsRouteWithChildren
   '/login': typeof LoginRoute
@@ -178,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/addons/$addonId': typeof AddonsAddonIdRoute
   '/domains/$domainName': typeof DomainsDomainNameRoute
+  '/domains/buy': typeof DomainsBuyRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/new': typeof ProjectsNewRoute
   '/workspace/new': typeof WorkspaceNewRoute
@@ -197,10 +211,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/addons/$addonId': typeof AddonsAddonIdRoute
   '/domains/$domainName': typeof DomainsDomainNameRoute
+  '/domains/buy': typeof DomainsBuyRoute
   '/projects/new': typeof ProjectsNewRoute
   '/workspace/new': typeof WorkspaceNewRoute
   '/addons': typeof AddonsIndexRoute
@@ -219,6 +235,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/addons': typeof AddonsRouteWithChildren
   '/domains': typeof DomainsRouteWithChildren
   '/login': typeof LoginRoute
@@ -227,6 +244,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/addons/$addonId': typeof AddonsAddonIdRoute
   '/domains/$domainName': typeof DomainsDomainNameRoute
+  '/domains/buy': typeof DomainsBuyRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/new': typeof ProjectsNewRoute
   '/workspace/new': typeof WorkspaceNewRoute
@@ -248,6 +266,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$'
     | '/addons'
     | '/domains'
     | '/login'
@@ -256,6 +275,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/addons/$addonId'
     | '/domains/$domainName'
+    | '/domains/buy'
     | '/projects/$projectId'
     | '/projects/new'
     | '/workspace/new'
@@ -275,10 +295,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$'
     | '/login'
     | '/signup'
     | '/addons/$addonId'
     | '/domains/$domainName'
+    | '/domains/buy'
     | '/projects/new'
     | '/workspace/new'
     | '/addons'
@@ -296,6 +318,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$'
     | '/addons'
     | '/domains'
     | '/login'
@@ -304,6 +327,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/addons/$addonId'
     | '/domains/$domainName'
+    | '/domains/buy'
     | '/projects/$projectId'
     | '/projects/new'
     | '/workspace/new'
@@ -324,6 +348,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
   AddonsRoute: typeof AddonsRouteWithChildren
   DomainsRoute: typeof DomainsRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -375,6 +400,13 @@ declare module '@tanstack/react-router' {
       path: '/addons'
       fullPath: '/addons'
       preLoaderRoute: typeof AddonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -432,6 +464,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId'
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
+    }
+    '/domains/buy': {
+      id: '/domains/buy'
+      path: '/buy'
+      fullPath: '/domains/buy'
+      preLoaderRoute: typeof DomainsBuyRouteImport
+      parentRoute: typeof DomainsRoute
     }
     '/domains/$domainName': {
       id: '/domains/$domainName'
@@ -528,11 +567,13 @@ const AddonsRouteWithChildren =
 
 interface DomainsRouteChildren {
   DomainsDomainNameRoute: typeof DomainsDomainNameRoute
+  DomainsBuyRoute: typeof DomainsBuyRoute
   DomainsIndexRoute: typeof DomainsIndexRoute
 }
 
 const DomainsRouteChildren: DomainsRouteChildren = {
   DomainsDomainNameRoute: DomainsDomainNameRoute,
+  DomainsBuyRoute: DomainsBuyRoute,
   DomainsIndexRoute: DomainsIndexRoute,
 }
 
@@ -609,6 +650,7 @@ const ScalingRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
   AddonsRoute: AddonsRouteWithChildren,
   DomainsRoute: DomainsRouteWithChildren,
   LoginRoute: LoginRoute,

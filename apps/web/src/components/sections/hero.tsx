@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { siteConfig } from "@/config/site";
 import { Button } from "@brimble/ui";
-import beeHero from "@/assets/images/bee-hero.png";
+import beeHero from "@/assets/images/bee.svg";
 import arrowRight from "@/assets/icons/arrow-right.svg";
 
 export function Hero() {

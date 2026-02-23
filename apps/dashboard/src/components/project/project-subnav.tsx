@@ -1,33 +1,37 @@
 import { useState } from "react";
 import { cn } from "@brimble/ui";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { Star, Share2, Check, Rocket } from "lucide-react";
+import { toast } from "sonner";
+import { Spinner } from "../shared/spinner";
 import {
-  Pin,
-  Share2,
-  Globe,
-  Settings,
-  BarChart3,
+  GlobeSimple,
+  GearSix,
+  ChartBar,
   FileText,
-  Lock,
-  Rocket,
-  ScrollText,
-} from "lucide-react";
+  LockKey,
+  RocketLaunch,
+  Scroll,
+} from "@phosphor-icons/react";
+import { FolderTrashIcon } from "../shared/folder-trash-icon";
 import { WarningModal } from "../shared/warning-modal";
 
 const tabs = [
-  { label: "Projects details", slug: "", Icon: Globe },
-  { label: "Configuration", slug: "configuration", Icon: Settings },
-  { label: "Observability", slug: "observability", Icon: BarChart3 },
+  { label: "Projects details", slug: "", Icon: GlobeSimple },
+  { label: "Configuration", slug: "configuration", Icon: GearSix },
+  { label: "Observability", slug: "observability", Icon: ChartBar },
   { label: "Domains", slug: "domains", Icon: FileText },
-  { label: "Environment", slug: "environment", Icon: Lock },
-  { label: "Deployment history", slug: "deployment-history", Icon: Rocket },
-  { label: "Logs", slug: "logs", Icon: ScrollText },
+  { label: "Environment", slug: "environment", Icon: LockKey },
+  { label: "Deployment history", slug: "deployment-history", Icon: RocketLaunch },
+  { label: "Logs", slug: "logs", Icon: Scroll },
 ];
 
 export function ProjectSubnav({ projectId }: { projectId: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmName, setConfirmName] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [deploying, setDeploying] = useState(false);
 
   // TODO: replace with real project name from API
   const projectName = projectId;
@@ -44,7 +48,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
             const isActive = tab.slug
               ? pathname === tabPath || pathname === `${tabPath}/`
               : pathname === `/projects/${projectId}` ||
-                pathname === `/projects/${projectId}/`;
+              pathname === `/projects/${projectId}/`;
 
             return (
               <Link
@@ -57,7 +61,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                     : "text-dash-text-faded font-light hover:text-dash-text-body"
                 )}
               >
-                <tab.Icon className="size-4" />
+                <tab.Icon className={cn("size-4", !isActive && "dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80")} weight="fill" />
                 <span className="hidden md:inline">{tab.label}</span>
               </Link>
             );
@@ -66,24 +70,50 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
         {/* Right actions */}
         <div className="flex shrink-0 items-center gap-5 px-3.5">
-          <button className="text-sm font-light text-dash-text-body hover:text-dash-text-strong transition-colors">
-            <Rocket className="size-4 sm:hidden" /><span className="hidden sm:inline">Redeploy project</span>
+          <button
+            disabled={deploying}
+            onClick={() => {
+              setDeploying(true);
+              toast.loading("Redeploying project...", { id: "redeploy" });
+              setTimeout(() => {
+                setDeploying(false);
+                toast.success("Deployment queued successfully", {
+                  id: "redeploy",
+                  description: `${projectName} is being redeployed to production.`,
+                });
+              }, 3000);
+            }}
+            className="flex items-center gap-1.5 text-sm font-light text-dash-text-body transition-colors hover:text-dash-text-strong disabled:opacity-50"
+          >
+            {deploying ? (
+              <Spinner size="size-3.5" />
+            ) : (
+              <Rocket className="size-4 sm:hidden" />
+            )}
+            <span className="hidden sm:inline">{deploying ? "Redeploying..." : "Redeploy"}</span>
           </button>
           <div className="flex items-center gap-4">
             <button className="text-dash-text-faded hover:text-dash-text-strong transition-colors">
-              <Pin className="size-4" />
+              <Star className="size-4" />
             </button>
-            <button className="text-dash-text-faded hover:text-dash-text-strong transition-colors">
-              <Share2 className="size-4" />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="text-dash-text-faded hover:text-dash-text-strong transition-colors"
+            >
+              {copied ? <Check className="size-4 text-[#28c840]" /> : <Share2 className="size-4" />}
             </button>
             <button
               onClick={() => {
                 setConfirmName("");
                 setDeleteOpen(true);
               }}
-              className="text-dash-text-faded hover:text-dash-text-strong transition-colors"
+              className="transition-opacity hover:opacity-70"
             >
-              <img src="/icons/folder-trash.svg" alt="Delete" className="size-4" />
+              <FolderTrashIcon className="size-4" color="#ef2f1f" />
             </button>
           </div>
         </div>
@@ -111,7 +141,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
             value={confirmName}
             onChange={(e) => setConfirmName(e.target.value)}
             placeholder={projectName}
-            className="w-full rounded-[6px] bg-[#f9fafb] px-3 py-2.5 text-sm leading-6 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none placeholder:text-[#9ca3af] focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(225,41,29,0.15)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(225,41,29,0.15)]"
+            className="input-base input-focus-red w-full px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]"
           />
         </div>
       </WarningModal>

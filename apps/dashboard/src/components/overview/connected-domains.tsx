@@ -1,4 +1,5 @@
 import { Plus, ArrowUpRight } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { DashButton } from "../shared/dash-button";
 
 export function ConnectedDomains() {
@@ -14,10 +15,12 @@ export function ConnectedDomains() {
             Get intuitive domain registration and management using Brimble
           </p>
         </div>
-        <DashButton className="w-fit">
-          <Plus className="size-4" />
-          Register a new domain
-        </DashButton>
+        <Link to="/domains/buy">
+          <DashButton className="w-fit">
+            <Plus className="size-4" />
+            Register a new domain
+          </DashButton>
+        </Link>
       </div>
 
       {/* Right stat */}

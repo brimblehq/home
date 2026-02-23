@@ -38,9 +38,9 @@ export function Snackbar({ variant, message, action, onDismiss }: SnackbarProps)
       <div
         className={cn(
           "flex items-center gap-3 border-b border-dash-border px-4 py-2.5",
-          variant === "info" && "bg-[#4879f8]/5",
-          variant === "warning" && "bg-[#f5a623]/5",
-          variant === "error" && "bg-[#ef2f1f]/5",
+          variant === "info" && "bg-[#4879f8]/5 dark:bg-[#4879f8]/15",
+          variant === "warning" && "bg-[#f5a623]/5 dark:bg-[#f5a623]/15",
+          variant === "error" && "bg-[#ef2f1f]/5 dark:bg-[#ef2f1f]/15",
         )}
       >
         <div
@@ -48,7 +48,7 @@ export function Snackbar({ variant, message, action, onDismiss }: SnackbarProps)
           style={{ backgroundColor: color }}
         />
         <Icon className="size-4 shrink-0" style={{ color }} />
-        <p className="flex-1 text-sm text-dash-text-body">{message}</p>
+        <p className="flex-1 text-sm text-dash-text-body dark:text-dash-text-strong">{message}</p>
         {action && (
           <button
             onClick={action.onClick}

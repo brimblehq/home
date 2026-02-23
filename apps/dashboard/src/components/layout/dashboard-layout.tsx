@@ -1,24 +1,36 @@
 import { type ReactNode, useState } from "react";
-import { useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { AnimatePresence } from "motion/react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { Footer } from "./footer";
+import { CommandPalette } from "./command-palette";
 import { TooltipProvider } from "../shared/tooltip";
 import { Snackbar } from "../shared/snackbar";
+import { OnboardingChecklist } from "../shared/onboarding-checklist";
+import { DashToaster } from "../shared/toaster";
+import { UserProfileDrawer } from "../shared/user-profile-drawer";
+import { ScoutBarProvider } from "../../contexts/scoutbar-context";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
   const isAuthRoute = /^\/(login|signup)$/.test(pathname);
+  const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
+  const isCatchAll = pathname !== "/" && !knownPrefixes.test(pathname);
   const isFullWidth = /^\/projects\/[^/]+/.test(pathname) || /^\/workspace\/new/.test(pathname);
 
-  if (isAuthRoute) {
+  if (isAuthRoute || isCatchAll) {
     return (
       <TooltipProvider>
+        <DashToaster />
         {children}
       </TooltipProvider>
     );
   }
+
+  // Settings drawer — shared between sidebar & topbar
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // Welcome snackbar — shown by default for new users
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
@@ -29,16 +41,19 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const [errorDismissed, setErrorDismissed] = useState(false);
 
   return (
+    <ScoutBarProvider>
     <TooltipProvider>
+      <DashToaster />
+      <CommandPalette />
       <div className="flex h-dvh flex-col bg-dash-bg">
-        <Topbar />
+        <Topbar onSettingsClick={() => setProfileOpen(true)} />
         <AnimatePresence>
           {!welcomeDismissed && (
             <Snackbar
               key="welcome"
               variant="info"
               message="Welcome to Brimble! Get started by creating your first project."
-              action={{ label: "Create project", onClick: () => {} }}
+              action={{ label: "Create project", onClick: () => navigate({ to: "/projects/new" }) }}
               onDismiss={() => setWelcomeDismissed(true)}
             />
           )}
@@ -70,7 +85,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </main>
         ) : (
           <div className="mx-auto flex w-full max-w-screen-xl flex-1 overflow-hidden">
-            <Sidebar />
+            <Sidebar profileOpen={profileOpen} onProfileOpenChange={setProfileOpen} />
             <main className="scrollbar-hidden flex min-h-0 flex-1 flex-col overflow-y-auto">
               <div className="flex-1 py-8 pl-10">
                 {children}
@@ -79,7 +94,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             </main>
           </div>
         )}
+        <OnboardingChecklist />
+        <UserProfileDrawer open={profileOpen} onOpenChange={setProfileOpen} />
       </div>
     </TooltipProvider>
+    </ScoutBarProvider>
   );
 }

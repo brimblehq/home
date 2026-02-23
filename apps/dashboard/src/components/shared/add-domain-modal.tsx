@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, SlidersHorizontal, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { Link } from "@tanstack/react-router";
 import {
   Modal,
   ModalHeader,
@@ -173,18 +174,19 @@ export function AddDomainModal({
               )}
             </div>
 
-            {/* Create new project row */}
-            <button
-              onClick={onCreateProject}
+            {/* Purchase a domain row */}
+            <Link
+              to="/domains/buy"
+              onClick={() => resetAndClose()}
               className="flex w-full items-center gap-3 border-t-[0.5px] border-[#e5e5e5] bg-dash-bg-elevated px-4 py-3 transition-colors hover:bg-[#f0f0f0] dark:border-dash-border dark:hover:bg-[#333]"
             >
               <div className="flex size-6 items-center justify-center rounded-full border border-dash-border-soft bg-dash-bg-elevated">
                 <Plus className="size-3 text-dash-text-faded" />
               </div>
               <span className="text-sm text-dash-text-strong">
-                Create a new project
+                Purchase a domain
               </span>
-            </button>
+            </Link>
           </motion.div>
         ) : (
           <motion.div
@@ -230,7 +232,7 @@ export function AddDomainModal({
                     className={`rounded-[4px] bg-[#fdfdfd] px-2 py-1.5 text-[13px] font-light leading-5 text-dash-text-strong outline-none placeholder:text-[#9ca3af] dark:bg-[#1a1c1e] dark:placeholder:text-dash-text-extra-faded ${
                       error
                         ? "shadow-[0px_0px_0px_1px_#e1291d,0px_0px_0px_3px_rgba(225,41,29,0.15)] dark:shadow-[0px_0px_0px_1px_#e1291d,0px_0px_0px_3px_rgba(225,41,29,0.15)]"
-                        : "shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(72,121,248,0.15)] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(72,121,248,0.2)]"
+                        : "input-base input-focus"
                     }`}
                   />
                 </div>

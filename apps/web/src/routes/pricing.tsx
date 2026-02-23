@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, useInView } from "motion/react";
 import { Check, ArrowRight } from "lucide-react";
@@ -12,7 +12,7 @@ import {
   AccordionContent,
 } from "@brimble/ui";
 import { Cta } from "@/components/sections/cta";
-import trainStation from "@/assets/images/train-station.png";
+import trainStation from "@/assets/images/train-station.svg";
 import flower from "@/assets/images/flower.png";
 import arrowRight from "@/assets/icons/arrow-right.svg";
 
@@ -87,7 +87,7 @@ function PricingHero() {
 function PricingPlans() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-60px" });
-  const [annual, setAnnual] = useState(false);
+  const teamPlan = siteConfig.pricing.teamPlan;
 
   return (
     <section className="bg-brimble-surface transition-colors duration-300 px-6 pb-20">
@@ -95,48 +95,15 @@ function PricingPlans() {
         ref={ref}
         className="mx-auto flex max-w-[960px] flex-col items-center gap-10"
       >
-        {/* Billing toggle */}
-        <motion.div
-          className="flex items-center gap-1 rounded-full bg-brimble-light-gray p-1 dark:bg-white/5"
-          initial={{ opacity: 0, y: 12 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <button
-            onClick={() => setAnnual(false)}
-            className={`cursor-pointer rounded-full px-4 py-1.5 font-body text-sm font-medium transition-all duration-200 ${
-              !annual
-                ? "bg-brimble-black text-white shadow-[var(--shadow-button)] dark:bg-white dark:text-black"
-                : "text-brimble-black/60 hover:text-brimble-black"
-            }`}
-          >
-            {siteConfig.pricing.toggle.monthly}
-          </button>
-          <button
-            onClick={() => setAnnual(true)}
-            className={`cursor-pointer rounded-full px-4 py-1.5 font-body text-sm font-medium transition-all duration-200 ${
-              annual
-                ? "bg-brimble-black text-white shadow-[var(--shadow-button)] dark:bg-white dark:text-black"
-                : "text-brimble-black/60 hover:text-brimble-black"
-            }`}
-          >
-            {siteConfig.pricing.toggle.annual}
-            <span className="ml-1 text-xs text-brimble-accent-blue">
-              -20%
-            </span>
-          </button>
-        </motion.div>
-
-        {/* Plan cards */}
-        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {siteConfig.pricing.plans.map((plan, i) => (
+        {/* Personal plan cards */}
+        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
+          {siteConfig.pricing.personalPlans.map((plan, i) => (
             <motion.div
               key={plan.name}
-              className={`relative flex flex-col rounded-3xl border p-6 transition-colors duration-200 ${
-                plan.popular
+              className={`relative flex flex-col rounded-3xl border p-6 transition-colors duration-200 ${plan.popular
                   ? "border-brimble-accent-blue bg-brimble-surface shadow-[var(--shadow-big)]"
                   : "border-[rgba(152,157,164,0.3)] bg-brimble-surface dark:border-white/10"
-              }`}
+                }`}
               initial={{ opacity: 0, y: 24 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{
@@ -169,7 +136,7 @@ function PricingPlans() {
               {/* Price */}
               <div className="mt-6 flex items-baseline gap-1">
                 <span className="font-heading text-[40px] font-medium leading-none tracking-[-1.6px] text-brimble-black">
-                  ${annual ? plan.price.annual : plan.price.monthly}
+                  ${plan.price}
                 </span>
                 <span className="font-body text-sm text-brimble-black/50">
                   /mo
@@ -210,6 +177,61 @@ function PricingPlans() {
             </motion.div>
           ))}
         </div>
+
+        {/* Team plan — separate section */}
+        <motion.div
+          className="w-full rounded-3xl border border-[rgba(152,157,164,0.3)] bg-brimble-surface p-8 dark:border-white/10"
+          initial={{ opacity: 0, y: 24 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{
+            duration: 0.6,
+            delay: 0.4,
+            ease: [0.16, 1, 0.3, 1],
+          }}
+        >
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <h3 className="font-body text-xl font-medium leading-[30px] tracking-[-0.24px] text-brimble-black">
+                  {teamPlan.name}
+                </h3>
+                <span className="rounded-full bg-brimble-accent-blue/10 px-2.5 py-0.5 font-body text-xs font-medium text-brimble-accent-blue">
+                  Add-on
+                </span>
+              </div>
+              <p className="max-w-[480px] font-body text-sm leading-[18px] tracking-[-0.32px] text-brimble-black/50">
+                {teamPlan.description}
+              </p>
+              <p className="mt-1 font-body text-sm text-brimble-black/70">
+                <span className="font-medium text-brimble-black">${teamPlan.pricePerMember}</span>/member/mo
+                {" + "}
+                <span className="font-medium text-brimble-black">${teamPlan.pricePerBuild}</span>/build container/mo
+              </p>
+            </div>
+            <Button
+              variant="pill-light"
+              size="sm"
+              className="shrink-0 gap-2 transition-transform duration-150 hover:scale-[1.01] active:scale-[0.99]"
+            >
+              {teamPlan.cta}
+              <ArrowRight className="size-3" />
+            </Button>
+          </div>
+
+          <div className="my-6 h-px bg-[rgba(152,157,164,0.2)] dark:bg-white/10" />
+
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {teamPlan.features.map((feature) => (
+              <li
+                key={feature}
+                className="flex items-start gap-2 font-body text-sm leading-[18px] text-brimble-black/70"
+              >
+                <Check className="mt-0.5 size-3.5 shrink-0 text-brimble-accent-blue" />
+                {feature}
+              </li>
+            ))}
+          </ul>
+        </motion.div>
       </div>
     </section>
   );

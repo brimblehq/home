@@ -1,16 +1,23 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Search,
-  SlidersHorizontal,
   MoreVertical,
-  Check,
   RefreshCw,
   AlertCircle,
   Minus,
   Plus,
+  Pencil,
+  ArrowRightLeft,
+  Settings,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import { Link } from "@tanstack/react-router";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { FilterDropdown, type FilterOption } from "./filter-dropdown";
+import { Spinner } from "./spinner";
+import { FolderTrashIcon } from "./folder-trash-icon";
+import { Modal, ModalHeader, ModalFooter, ModalCancelButton, ModalContinueButton } from "./modal";
+import { WarningModal } from "./warning-modal";
+import { Dropdown } from "./dropdown";
 
 export interface Domain {
   name: string;
@@ -20,7 +27,92 @@ export interface Domain {
   addedBy: string;
 }
 
-const statusOptions = ["All", "Active", "Failed"] as const;
+const domainStatusOptions: FilterOption[] = [
+  { label: "All", value: "All" },
+  { label: "Active", value: "Active", dot: "#34d399" },
+  { label: "Failed", value: "Failed", dot: "#fc391e" },
+];
+
+function DomainActionsMenu({
+  onConfigure,
+  onEdit,
+  onDelete,
+  onTransfer,
+}: {
+  onConfigure: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onTransfer: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="text-dash-text-faded transition-colors hover:text-dash-text-strong"
+      >
+        <MoreVertical className="size-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-1 w-[160px] overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_4px_12px_rgba(0,0,0,0.08)]">
+          <button
+            onClick={() => {
+              onConfigure();
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
+          >
+            <Settings className="size-3.5" />
+            Configure
+          </button>
+          <button
+            onClick={() => {
+              onEdit();
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
+          >
+            <Pencil className="size-3.5" />
+            Edit
+          </button>
+          <button
+            onClick={() => {
+              onTransfer();
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
+          >
+            <ArrowRightLeft className="size-3.5" />
+            Transfer
+          </button>
+          <hr className="my-1 border-dash-border-soft" />
+          <button
+            onClick={() => {
+              onDelete();
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-500 transition-colors hover:bg-dash-bg-elevated"
+          >
+            <FolderTrashIcon className="size-3.5" />
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function DomainCheckbox({
   checked,
@@ -49,222 +141,180 @@ function DomainCheckbox({
   );
 }
 
-function FilterDropdown({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+/* ─── Transfer Domain Modal ─── */
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
-    }
-  }, [open]);
+const mockWorkspaces = [
+  { id: "personal", name: "Kemdirimakujuobi", type: "Personal" as const },
+  { id: "brimble-team", name: "Brimble Team", type: "Team" as const },
+];
 
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-dash-text-body transition-colors hover:text-dash-text-strong"
-      >
-        <SlidersHorizontal className="size-4" />
-        {value === "All" ? "Filter status" : value}
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 top-full z-50 mt-1 w-[160px] origin-top-right overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_2px_4px_-4px_rgba(0,0,0,0.07)]"
-          >
-            {statusOptions.map((option) => (
-              <button
-                key={option}
-                onClick={() => {
-                  onChange(option);
-                  setOpen(false);
-                }}
-                className="mx-1 flex w-[calc(100%-8px)] items-center justify-between rounded-[2px] px-2 py-1.5 text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated dark:text-dash-text-strong"
-              >
-                <div className="flex items-center gap-2">
-                  {option !== "All" && (
-                    <span
-                      className={`size-[6px] rounded-full ${
-                        option === "Active" ? "bg-[#34d399]" : "bg-[#fc391e]"
-                      }`}
-                    />
-                  )}
-                  {option}
-                </div>
-                {value === option && <Check className="size-3.5 text-[#4879f8]" />}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function FailedDomainRow({
+function TransferDomainModal({
+  open,
+  onOpenChange,
   domain,
-  checked,
-  onToggle,
-  basePath,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   domain: Domain;
-  checked: boolean;
-  onToggle: () => void;
-  basePath?: string;
 }) {
+  const [selectedWorkspace, setSelectedWorkspace] = useState("");
+  const [transferring, setTransferring] = useState(false);
+
+  function handleTransfer() {
+    if (!selectedWorkspace) return;
+    setTransferring(true);
+    // TODO: wire to API
+    setTimeout(() => {
+      setTransferring(false);
+      onOpenChange(false);
+    }, 2000);
+  }
+
   return (
-    <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
-      {/* Main row */}
-      <div className="flex h-[68px] items-center justify-between bg-dash-bg px-3.5">
-        <div className="flex w-[200px] items-center gap-2">
-          <DomainCheckbox checked={checked} onChange={onToggle} />
-          <div className="flex flex-col gap-1">
-            {basePath ? (
-              <Link
-                to={`${basePath}/${encodeURIComponent(domain.name)}`}
-                className="text-sm tracking-[-0.084px] text-dash-text-body transition-colors hover:text-dash-text-strong hover:underline"
-              >
-                {domain.name}
-              </Link>
-            ) : (
-              <span className="text-sm tracking-[-0.084px] text-dash-text-body">
-                {domain.name}
-              </span>
-            )}
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-light leading-[1.3] text-[#fc391e]">
-                Failed
-              </span>
-              <div className="flex size-4 items-center justify-center rounded-full">
-                <Minus className="size-3 text-[#fc391e]" strokeWidth={3} />
-              </div>
-            </div>
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <ModalHeader
+        title="Transfer Domain"
+        description={`Transfer ${domain.name} to another workspace`}
+      />
+      <div className="flex flex-col gap-4 px-6 pb-5 pt-4">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
+            Domain
+          </label>
+          <div className="flex items-center gap-2 rounded-[6px] bg-dash-bg-elevated px-3 py-2.5">
+            <span className="text-sm text-dash-text-body">{domain.name}</span>
           </div>
         </div>
-
-        {/* Status */}
-        <div className="flex w-[200px] items-center gap-1">
-          <span className="size-[6px] rounded-full bg-[#fc391e]" />
-          <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
-            Failed
-          </span>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
+            Destination workspace
+          </label>
+          <div className="flex flex-col gap-1">
+            {mockWorkspaces.map((ws) => (
+              <button
+                key={ws.id}
+                onClick={() => setSelectedWorkspace(ws.id)}
+                className={`flex items-center gap-3 rounded-[6px] px-3 py-2.5 text-left transition-colors ${
+                  selectedWorkspace === ws.id
+                    ? "bg-[#4879f8]/10 ring-1 ring-[#4879f8]"
+                    : "bg-dash-bg-elevated hover:bg-dash-border-soft"
+                }`}
+              >
+                <div
+                  className="size-7 shrink-0 rounded-full"
+                  style={{
+                    background:
+                      ws.type === "Personal"
+                        ? "radial-gradient(circle at 62% 30%, #b8fce8, #91f2d5 25%, #6ae8c3 50%, #43deb0 75%, #1bd49d)"
+                        : "radial-gradient(circle at 62% 30%, #b8cffc, #94b6f8 25%, #6f9cf3 50%, #4b82ee 75%, #2769e9)",
+                  }}
+                />
+                <div className="flex flex-col">
+                  <span className="text-sm text-dash-text-strong">{ws.name}</span>
+                  <span className="text-xs text-dash-text-faded">{ws.type}</span>
+                </div>
+                {selectedWorkspace === ws.id && (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-auto text-[#4879f8]">
+                    <path d="M3 8.5L6.5 12L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-12">
-          <button className="flex items-center gap-2 rounded-[4px] border border-dash-border bg-dash-bg px-3.5 py-1 shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated">
-            <RefreshCw className="size-4 text-dash-text-body" />
-            <span className="text-sm font-medium text-dash-text-body">Refresh</span>
-          </button>
-          <button className="text-dash-text-faded transition-colors hover:text-dash-text-strong">
-            <MoreVertical className="size-4" />
-          </button>
-        </div>
+        <p className="text-xs leading-[1.5] text-dash-text-faded">
+          Transferring a domain moves all DNS records and settings. The domain will no longer be accessible from this workspace.
+        </p>
       </div>
-
-      {/* Error banner */}
-      <div className="flex items-center justify-between bg-dash-bg-elevated px-3.5 py-2.5 border-t-[0.5px] border-dash-border">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="size-5 shrink-0 text-[#fc391e]" />
-          <span className="text-sm font-light leading-[18px] tracking-[-0.02px] text-dash-text-body">
-            Domain failed to propagate, click change settings to
-          </span>
-        </div>
-        {basePath ? (
-          <Link
-            to={`${basePath}/${encodeURIComponent(domain.name)}`}
-            className="text-sm tracking-[-0.02px] text-dash-text-body underline hover:text-dash-text-strong"
-          >
-            Change settings
-          </Link>
-        ) : (
-          <button className="text-sm tracking-[-0.02px] text-dash-text-body underline hover:text-dash-text-strong">
-            Change settings
-          </button>
-        )}
-      </div>
-    </div>
+      <ModalFooter>
+        <ModalCancelButton />
+        <ModalContinueButton
+          onClick={handleTransfer}
+          disabled={!selectedWorkspace || transferring}
+        >
+          {transferring ? (
+            <>
+              <Spinner className="text-white" />
+              <span className="ml-2">Transferring</span>
+            </>
+          ) : (
+            "Transfer"
+          )}
+        </ModalContinueButton>
+      </ModalFooter>
+    </Modal>
   );
 }
 
-function ActiveDomainRow({
+/* ─── Edit Domain Modal ─── */
+
+const projectOptions = [
+  { id: "third-party", label: "Third party" },
+  { id: "kemdirimdesign", label: "Kemdirimdesign" },
+  { id: "brimble-docs", label: "Brimble Docs" },
+  { id: "portfolio", label: "Portfolio" },
+];
+
+function EditDomainModal({
+  open,
+  onOpenChange,
   domain,
-  checked,
-  onToggle,
-  basePath,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   domain: Domain;
-  checked: boolean;
-  onToggle: () => void;
-  basePath?: string;
 }) {
+  const [name, setName] = useState(domain.name);
+  const initialProject = projectOptions.find((p) => p.label === domain.project)?.id ?? "";
+  const [project, setProject] = useState(initialProject);
+
+  const inputClass =
+    "input-base input-focus px-2 py-1.5 text-[13px] leading-5 text-dash-text-strong placeholder:text-[#9ca3af] dark:placeholder:text-dash-text-extra-faded";
+
   return (
-    <div className="flex h-[68px] items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
-      {/* Checkbox + name */}
-      <div className="flex w-[200px] items-center gap-2">
-        <DomainCheckbox checked={checked} onChange={onToggle} />
-        <div className="flex flex-col gap-1">
-          {basePath ? (
-            <Link
-              to={`${basePath}/${encodeURIComponent(domain.name)}`}
-              className="text-sm tracking-[-0.084px] text-dash-text-body transition-colors hover:text-dash-text-strong hover:underline"
-            >
-              {domain.name}
-            </Link>
-          ) : (
-            <span className="text-sm tracking-[-0.084px] text-dash-text-body">
-              {domain.name}
-            </span>
-          )}
-          {domain.project && (
-            <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">
-              {domain.project}
-            </span>
-          )}
+    <Modal open={open} onOpenChange={onOpenChange}>
+      <ModalHeader
+        title="Edit Domain"
+        description={`Update settings for ${domain.name}`}
+      />
+      <div className="flex flex-col gap-4 px-6 pb-5 pt-4">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
+            Domain name
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="example.com"
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
+            Linked project
+          </label>
+          <Dropdown
+            value={project}
+            options={projectOptions}
+            onChange={setProject}
+            placeholder="Select a project..."
+          />
         </div>
       </div>
-
-      {/* Status */}
-      <div className="flex w-[200px] items-center gap-1">
-        <span className="size-[6px] rounded-full bg-[#34d399]" />
-        <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
-          Active
-        </span>
-      </div>
-
-      {/* Added info + menu */}
-      <div className="flex items-center gap-12">
-        <div className="flex flex-col gap-1">
-          <span className="text-sm tracking-[-0.084px] text-dash-text-body">
-            {domain.addedAt}
-          </span>
-          <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">
-            {domain.addedBy}
-          </span>
-        </div>
-        <button className="text-dash-text-faded transition-colors hover:text-dash-text-strong">
-          <MoreVertical className="size-4" />
-        </button>
-      </div>
-    </div>
+      <ModalFooter>
+        <ModalCancelButton />
+        <ModalContinueButton
+          onClick={() => {
+            // TODO: wire to API
+            onOpenChange(false);
+          }}
+          disabled={!name.trim()}
+        >
+          Save Changes
+        </ModalContinueButton>
+      </ModalFooter>
+    </Modal>
   );
 }
 
@@ -277,9 +327,27 @@ export function DomainList({
   basePath?: string;
   onAddDomain?: () => void;
 }) {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
+  const [transferringDomain, setTransferringDomain] = useState<Domain | null>(null);
+  const [deletingDomain, setDeletingDomain] = useState<Domain | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [refreshing, setRefreshing] = useState<Set<string>>(new Set());
+
+  function handleRefresh(domainName: string) {
+    setRefreshing((prev) => new Set(prev).add(domainName));
+    // TODO: wire to API — simulate for now
+    setTimeout(() => {
+      setRefreshing((prev) => {
+        const next = new Set(prev);
+        next.delete(domainName);
+        return next;
+      });
+    }, 2000);
+  }
 
   const allSelected = selected.size === domains.length && domains.length > 0;
 
@@ -309,11 +377,20 @@ export function DomainList({
   const failedDomains = filtered.filter((d) => d.status === "Failed");
   const activeDomains = filtered.filter((d) => d.status === "Active");
 
+  function actionsFor(domain: Domain) {
+    return {
+      onConfigure: () => basePath && navigate({ to: `${basePath}/${encodeURIComponent(domain.name)}` as string }),
+      onEdit: () => setEditingDomain(domain),
+      onDelete: () => { setDeleteConfirmName(""); setDeletingDomain(domain); },
+      onTransfer: () => setTransferringDomain(domain),
+    };
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {/* Search + Filter bar + Add Domain */}
       <div className="flex items-center gap-3">
-        <div className="flex flex-1 items-center overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
+        <div className="flex flex-1 items-center rounded-[4px] border-[0.5px] border-dash-border">
           <div className="flex flex-1 items-center gap-2 px-4 py-3">
             <Search className="size-5 shrink-0 text-dash-text-extra-faded" />
             <input
@@ -325,7 +402,11 @@ export function DomainList({
             />
           </div>
           <div className="h-full w-px self-stretch bg-dash-border" />
-          <FilterDropdown value={statusFilter} onChange={setStatusFilter} />
+          <FilterDropdown
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={domainStatusOptions}
+          />
         </div>
 
         {onAddDomain && (
@@ -342,32 +423,166 @@ export function DomainList({
       {/* Failed domains (each in its own card) */}
       {failedDomains.map((domain, i) => {
         const originalIndex = domains.indexOf(domain);
+        const actions = actionsFor(domain);
         return (
-          <FailedDomainRow
-            key={`failed-${i}`}
-            domain={domain}
-            checked={selected.has(originalIndex)}
-            onToggle={() => toggleOne(originalIndex)}
-            basePath={basePath}
-          />
+          <div key={`failed-${i}`} className="overflow-visible rounded-[4px] border-[0.5px] border-dash-border">
+            <table className="w-full border-collapse">
+              <tbody>
+                <tr className="h-[68px] bg-dash-bg">
+                  <td className="w-10 pl-3.5">
+                    <DomainCheckbox checked={selected.has(originalIndex)} onChange={() => toggleOne(originalIndex)} />
+                  </td>
+                  <td className="py-2">
+                    <div className="flex flex-col gap-1">
+                      {basePath ? (
+                        <Link
+                          to={`${basePath}/${encodeURIComponent(domain.name)}`}
+                          className="text-sm tracking-[-0.084px] text-dash-text-body transition-colors hover:text-dash-text-strong hover:underline"
+                        >
+                          {domain.name}
+                        </Link>
+                      ) : (
+                        <span className="text-sm tracking-[-0.084px] text-dash-text-body">
+                          {domain.name}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-sm font-light leading-[1.3] text-[#fc391e]">
+                            Failed
+                          </span>
+                          <Minus className="size-3 text-[#fc391e]" strokeWidth={3} />
+                        </span>
+                        {!domain.project && (
+                          <span className="inline-flex items-center rounded-full bg-[#f5a623]/10 px-2 py-0.5 text-[11px] font-medium leading-none text-[#c48418] dark:bg-[#f5a623]/15 dark:text-[#f5a623]">
+                            Unassigned
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="w-[140px] py-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="size-[6px] shrink-0 rounded-full bg-[#fc391e]" />
+                      <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
+                        Failed
+                      </span>
+                    </div>
+                  </td>
+                  <td className="w-[180px] py-2 text-right">
+                    <button
+                      onClick={() => handleRefresh(domain.name)}
+                      disabled={refreshing.has(domain.name)}
+                      className="inline-flex items-center gap-2 rounded-[4px] border border-dash-border bg-dash-bg px-3.5 py-1 shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:opacity-60"
+                    >
+                      {refreshing.has(domain.name) ? (
+                        <Spinner className="text-dash-text-body" />
+                      ) : (
+                        <RefreshCw className="size-4 text-dash-text-body" />
+                      )}
+                      <span className="text-sm font-medium text-dash-text-body">
+                        {refreshing.has(domain.name) ? "Refreshing" : "Refresh"}
+                      </span>
+                    </button>
+                  </td>
+                  <td className="w-10 pr-3.5 text-right">
+                    <DomainActionsMenu {...actions} />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            {/* Error banner */}
+            <div className="flex items-center justify-between border-t-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5 py-2.5">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="size-5 shrink-0 text-[#fc391e]" />
+                <span className="text-sm font-light leading-[18px] tracking-[-0.02px] text-dash-text-body">
+                  Domain failed to propagate, click change settings to
+                </span>
+              </div>
+              {basePath ? (
+                <Link
+                  to={`${basePath}/${encodeURIComponent(domain.name)}`}
+                  className="shrink-0 text-sm tracking-[-0.02px] text-dash-text-body underline hover:text-dash-text-strong"
+                >
+                  Change settings
+                </Link>
+              ) : (
+                <button className="shrink-0 text-sm tracking-[-0.02px] text-dash-text-body underline hover:text-dash-text-strong">
+                  Change settings
+                </button>
+              )}
+            </div>
+          </div>
         );
       })}
 
       {/* Active domains (grouped in one card) */}
       {activeDomains.length > 0 && (
-        <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
-          {activeDomains.map((domain, i) => {
-            const originalIndex = domains.indexOf(domain);
-            return (
-              <ActiveDomainRow
-                key={`active-${i}`}
-                domain={domain}
-                checked={selected.has(originalIndex)}
-                onToggle={() => toggleOne(originalIndex)}
-                basePath={basePath}
-              />
-            );
-          })}
+        <div className="overflow-visible rounded-[4px] border-[0.5px] border-dash-border">
+          <table className="w-full border-collapse">
+            <tbody>
+              {activeDomains.map((domain, i) => {
+                const originalIndex = domains.indexOf(domain);
+                const actions = actionsFor(domain);
+                return (
+                  <tr
+                    key={`active-${i}`}
+                    className={`h-[68px] ${i < activeDomains.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
+                  >
+                    <td className="w-10 pl-3.5">
+                      <DomainCheckbox checked={selected.has(originalIndex)} onChange={() => toggleOne(originalIndex)} />
+                    </td>
+                    <td className="py-2">
+                      <div className="flex flex-col gap-1">
+                        {basePath ? (
+                          <Link
+                            to={`${basePath}/${encodeURIComponent(domain.name)}`}
+                            className="text-sm tracking-[-0.084px] text-dash-text-body transition-colors hover:text-dash-text-strong hover:underline"
+                          >
+                            {domain.name}
+                          </Link>
+                        ) : (
+                          <span className="text-sm tracking-[-0.084px] text-dash-text-body">
+                            {domain.name}
+                          </span>
+                        )}
+                        {domain.project ? (
+                          <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">
+                            {domain.project}
+                          </span>
+                        ) : (
+                          <span className="inline-flex w-fit items-center rounded-full bg-[#f5a623]/10 px-2 py-0.5 text-[11px] font-medium leading-none text-[#c48418] dark:bg-[#f5a623]/15 dark:text-[#f5a623]">
+                            Unassigned
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="w-[140px] py-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="size-[6px] shrink-0 rounded-full bg-[#34d399]" />
+                        <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
+                          Active
+                        </span>
+                      </div>
+                    </td>
+                    <td className="w-[180px] py-2">
+                      <div className="flex flex-col gap-1 text-right">
+                        <span className="text-sm tracking-[-0.084px] text-dash-text-body">
+                          {domain.addedAt}
+                        </span>
+                        <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">
+                          {domain.addedBy}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="w-10 pr-3.5 text-right">
+                      <DomainActionsMenu {...actions} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
 
           {/* Select all footer */}
           <div className="flex items-center gap-2 border-t-[0.5px] border-dash-border px-3.5 py-3">
@@ -378,6 +593,53 @@ export function DomainList({
           </div>
         </div>
       )}
+
+      {/* Transfer Domain Modal */}
+      {transferringDomain && (
+        <TransferDomainModal
+          key={`transfer-${transferringDomain.name}`}
+          open={!!transferringDomain}
+          onOpenChange={(v) => { if (!v) setTransferringDomain(null); }}
+          domain={transferringDomain}
+        />
+      )}
+
+      {/* Edit Domain Modal */}
+      {editingDomain && (
+        <EditDomainModal
+          key={editingDomain.name}
+          open={!!editingDomain}
+          onOpenChange={(v) => { if (!v) setEditingDomain(null); }}
+          domain={editingDomain}
+        />
+      )}
+
+      {/* Delete Domain Modal */}
+      <WarningModal
+        open={!!deletingDomain}
+        onOpenChange={(v) => { if (!v) setDeletingDomain(null); }}
+        title="Delete Domain"
+        description={`Are you sure you want to delete "${deletingDomain?.name}"? This action cannot be undone. All DNS records and settings for this domain will be permanently removed.`}
+        confirmLabel="Delete"
+        confirmDisabled={deleteConfirmName !== deletingDomain?.name}
+        onConfirm={() => {
+          // TODO: wire to API
+          setDeletingDomain(null);
+        }}
+      >
+        <div className="flex flex-col gap-2 text-left">
+          <label className="text-sm leading-5 text-dash-text-faded">
+            Type <span className="font-medium text-dash-text-strong">{deletingDomain?.name}</span> to confirm
+          </label>
+          <input
+            type="text"
+            value={deleteConfirmName}
+            onChange={(e) => setDeleteConfirmName(e.target.value)}
+            placeholder={deletingDomain?.name}
+            className="w-full rounded-[6px] bg-[#f9fafb] px-3 py-2.5 text-sm leading-6 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none placeholder:text-[#9ca3af] focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(225,41,29,0.15)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(225,41,29,0.15)]"
+          />
+        </div>
+      </WarningModal>
     </div>
   );
 }

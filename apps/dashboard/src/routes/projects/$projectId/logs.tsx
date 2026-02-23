@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Drawer } from "vaul";
 import { motion } from "motion/react";
-import { Activity, Forward, Pause, Play, ArrowDown, X, Copy, Check } from "lucide-react";
+import { Activity, Forward, Pause, Play, ArrowDown, X, Copy, Check, Search, Calendar, ChevronDown } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 import { TabHeader } from "../../../components/shared/tab-header";
+import { FilterDropdown, type FilterOption } from "../../../components/shared/filter-dropdown";
+import { DateRangePicker } from "../../../components/shared/date-range-picker";
 
 export const Route = createFileRoute("/projects/$projectId/logs")({
   component: LogsPage,
@@ -34,6 +37,14 @@ const levelBadge: Record<LogLine["level"], string> = {
   error: "ERROR",
   debug: "DEBUG",
 };
+
+const levelFilterOptions: FilterOption[] = [
+  { label: "All Levels", value: "all" },
+  { label: "Info", value: "info", dot: "#28c840" },
+  { label: "Warn", value: "warn", dot: "#ff9b01" },
+  { label: "Error", value: "error", dot: "#ff5f57" },
+  { label: "Debug", value: "debug", dot: "rgba(255,255,255,0.35)" },
+];
 
 function formatTime(date: Date): string {
   return (
@@ -87,6 +98,18 @@ function ApplicationLogs() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const counterRef = useRef(0);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [levelFilter, setLevelFilter] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter((line) => {
+      if (searchQuery && !line.message.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (levelFilter !== "all" && line.level !== levelFilter) return false;
+      return true;
+    });
+  }, [logs, searchQuery, levelFilter]);
+
   // Simulate streaming logs
   useEffect(() => {
     if (paused) return;
@@ -110,7 +133,7 @@ function ApplicationLogs() {
     if (autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [logs, autoScroll]);
+  }, [filteredLogs, autoScroll]);
 
   function handleScroll() {
     if (!scrollRef.current) return;
@@ -126,91 +149,130 @@ function ApplicationLogs() {
   }
 
   return (
-    <div className="overflow-hidden rounded-[4px] bg-[#222528] shadow-[0_4px_32px_rgba(0,0,0,0.12)]">
-      {/* Terminal header */}
-      <div className="flex items-center justify-between border-b border-[#31363a] px-4 py-2.5">
-        <span className="text-xs font-medium text-white/60">Application Logs</span>
-        <div className="flex items-center gap-2">
-          {!paused && (
-            <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[#28c840]">
-              <span className="size-1.5 animate-pulse rounded-full bg-[#28c840]" />
-              Live
-            </span>
-          )}
-          <button
-            onClick={() => setPaused(!paused)}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:bg-white/5 hover:text-white/60"
-          >
-            {paused ? (
-              <>
-                <Play className="size-3" />
-                Resume
-              </>
-            ) : (
-              <>
-                <Pause className="size-3" />
-                Pause
-              </>
-            )}
-          </button>
+    <div className="flex flex-col gap-3">
+      {/* Filter toolbar */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+        <div className="flex flex-1 items-center gap-2 rounded-[4px] border border-dash-border bg-dash-bg px-3 py-1.5 shadow-[0px_1px_2px_rgba(18,18,23,0.05)]">
+          <Search className="size-4 shrink-0 text-dash-text-extra-faded" />
+          <input
+            type="text"
+            placeholder="Search logs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-transparent font-logs text-sm text-dash-text-strong outline-none placeholder:text-dash-text-faded placeholder:opacity-50"
+          />
         </div>
+
+        <FilterDropdown
+          value={levelFilter}
+          onChange={setLevelFilter}
+          options={levelFilterOptions}
+          placeholder="All Levels"
+          align="left"
+        />
+
+        <DateRangePicker value={dateRange} onChange={setDateRange}>
+          <button className="flex items-center overflow-clip rounded-[4px] border border-dash-border bg-dash-bg text-sm text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated">
+            <span className="flex items-center gap-2 px-3 py-1.5">
+              <Calendar className="size-3.5 text-dash-text-faded" />
+              {dateRange?.from && dateRange?.to
+                ? `${dateRange.from.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${dateRange.to.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                : "Select date range"}
+            </span>
+            <span className="flex h-full items-center border-l border-dash-border px-2 py-1.5">
+              <ChevronDown className="size-4 text-dash-text-faded" />
+            </span>
+          </button>
+        </DateRangePicker>
       </div>
 
-      {/* Log output */}
-      <div className="relative">
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="h-[520px] overflow-y-auto px-4 py-3 font-logs text-xs leading-[22px]"
-          style={{
-            scrollbarWidth: "thin",
-            scrollbarColor: "rgba(255,255,255,0.1) transparent",
-          }}
-        >
-          {logs.map((line, i) => (
-            <div
-              key={i}
-              onClick={() => {
-                const raw = `${line.timestamp}  ${levelBadge[line.level]}  ${line.message}`;
-                navigator.clipboard.writeText(raw);
-                setCopiedIdx(i);
-                setTimeout(() => setCopiedIdx((prev) => (prev === i ? null : prev)), 1200);
-              }}
-              className="flex cursor-pointer gap-3 rounded-[2px] transition-colors hover:bg-white/[0.04]"
+      {/* Terminal */}
+      <div className="overflow-hidden rounded-[4px] bg-[#222528] shadow-[0_4px_32px_rgba(0,0,0,0.12)]">
+        {/* Terminal header */}
+        <div className="flex items-center justify-end border-b border-[#31363a] px-4 py-2">
+          <div className="flex items-center gap-2">
+            {!paused && (
+              <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[#28c840]">
+                <span className="size-1.5 animate-pulse rounded-full bg-[#28c840]" />
+                Live
+              </span>
+            )}
+            <button
+              onClick={() => setPaused(!paused)}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:bg-white/5 hover:text-white/60"
             >
-              <span className="shrink-0 select-none text-white/20">
-                {line.timestamp}
-              </span>
-              <span
-                className={`shrink-0 select-none font-medium ${levelColors[line.level]}`}
-              >
-                {levelBadge[line.level]}
-              </span>
-              <span className="flex-1 text-white/60">{line.message}</span>
-              {copiedIdx === i && (
-                <span className="shrink-0 select-none text-[10px] text-[#28c840]">
-                  Copied
-                </span>
+              {paused ? (
+                <>
+                  <Play className="size-3" />
+                  Resume
+                </>
+              ) : (
+                <>
+                  <Pause className="size-3" />
+                  Pause
+                </>
               )}
-            </div>
-          ))}
-
-          {/* Blinking cursor */}
-          <div className="mt-0.5 flex items-center">
-            <span className="inline-block h-[13px] w-[7px] animate-pulse rounded-[1px] bg-white/50" />
+            </button>
           </div>
         </div>
 
-        {/* Scroll-to-bottom */}
-        {!autoScroll && (
-          <button
-            onClick={scrollToBottom}
-            className="absolute bottom-4 right-4 flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-white/60 backdrop-blur transition-colors hover:bg-white/15 hover:text-white"
+        {/* Log output */}
+        <div className="relative">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="min-h-[400px] max-h-[600px] overflow-y-auto px-4 py-3 font-logs text-xs leading-[22px]"
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: "rgba(255,255,255,0.1) transparent",
+            }}
           >
-            <ArrowDown className="size-3" />
-            New logs
-          </button>
-        )}
+            {filteredLogs.length > 0 ? (
+              filteredLogs.map((line, i) => (
+                <div
+                  key={i}
+                  onClick={() => {
+                    const raw = `${line.timestamp}  ${levelBadge[line.level]}  ${line.message}`;
+                    navigator.clipboard.writeText(raw);
+                    setCopiedIdx(i);
+                    setTimeout(() => setCopiedIdx((prev) => (prev === i ? null : prev)), 1200);
+                  }}
+                  className="flex cursor-pointer gap-3 rounded-[2px] px-1 py-1.5 transition-colors hover:bg-white/[0.04]"
+                >
+                  <span className="shrink-0 select-none text-white/20">
+                    {line.timestamp}
+                  </span>
+                  <span
+                    className={`shrink-0 select-none font-medium ${levelColors[line.level]}`}
+                  >
+                    {levelBadge[line.level]}
+                  </span>
+                  <span className="flex-1 text-white/60">{line.message}</span>
+                  {copiedIdx === i && (
+                    <span className="shrink-0 select-none text-[10px] text-[#28c840]">
+                      Copied
+                    </span>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="flex h-[360px] items-center justify-center">
+                <span className="text-sm text-white/30">No logs matching your filters</span>
+              </div>
+            )}
+          </div>
+
+          {/* Scroll-to-bottom */}
+          {!autoScroll && (
+            <button
+              onClick={scrollToBottom}
+              className="absolute bottom-4 right-4 flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-white/60 backdrop-blur transition-colors hover:bg-white/15 hover:text-white"
+            >
+              <ArrowDown className="size-3" />
+              New logs
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -323,6 +385,22 @@ const methodColors: Record<string, string> = {
   DELETE: "text-[#ff5f57]",
 };
 
+const methodFilterOptions: FilterOption[] = [
+  { label: "All Methods", value: "all" },
+  { label: "GET", value: "GET", dot: "#28c840" },
+  { label: "POST", value: "POST", dot: "#4879f8" },
+  { label: "PUT", value: "PUT", dot: "#ff9b01" },
+  { label: "PATCH", value: "PATCH", dot: "#ff9b01" },
+  { label: "DELETE", value: "DELETE", dot: "#ff5f57" },
+];
+
+const statusFilterOptions: FilterOption[] = [
+  { label: "All Statuses", value: "all" },
+  { label: "2xx Success", value: "2xx", dot: "#28c840" },
+  { label: "4xx Client Error", value: "4xx", dot: "#ff9b01" },
+  { label: "5xx Server Error", value: "5xx", dot: "#ff5f57" },
+];
+
 function statusColor(status: number) {
   if (status < 300) return "text-[#28c840]";
   if (status < 400) return "text-[#ff9b01]";
@@ -406,47 +484,31 @@ function RequestDetailDrawer({
   const rawJson = JSON.stringify(rawData, null, 2);
   const rawLines = rawJson.split("\n");
 
-  const eventDetails: { label: string; value: React.ReactNode }[] = [
+  const groups = [
     {
-      label: "Time",
-      value: <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">{log.isoTimestamp.replace("T", " ").replace("Z", "")}</span>,
+      title: "Request",
+      items: [
+        { label: "Host", value: log.host },
+        { label: "Method", value: log.method, color: methodColors[log.method] },
+        { label: "Path", value: log.path },
+        { label: "URL", value: log.url },
+      ],
     },
     {
-      label: "Host",
-      value: <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">{log.host}</span>,
+      title: "Response",
+      items: [
+        { label: "Status", value: String(log.status), dot: statusDot(log.status) },
+        { label: "Duration", value: log.duration },
+        { label: "Response", value: log.response },
+      ],
     },
     {
-      label: "Method",
-      value: <span className={`font-logs text-xs leading-[1.4] tracking-[-0.01px] font-medium ${methodColors[log.method] ?? "text-dash-text-faded"}`}>{log.method}</span>,
-    },
-    {
-      label: "Status",
-      value: (
-        <span className="flex items-center gap-1.5">
-          <span className={`size-1.5 rounded-full ${statusDot(log.status)}`} />
-          <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">{log.status}</span>
-        </span>
-      ),
-    },
-    {
-      label: "Duration",
-      value: <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">{log.duration}</span>,
-    },
-    {
-      label: "Request",
-      value: <span className="break-all font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">{log.url}</span>,
-    },
-    {
-      label: "IP Address",
-      value: <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">{log.ip}</span>,
-    },
-    {
-      label: "Browser",
-      value: <span className="break-all font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">{log.browser}</span>,
-    },
-    {
-      label: "Response",
-      value: <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">{log.response}</span>,
+      title: "Client",
+      items: [
+        { label: "IP Address", value: log.ip },
+        { label: "Browser", value: log.browser },
+        { label: "Time", value: log.isoTimestamp.replace("T", " ").replace("Z", "") },
+      ],
     },
   ];
 
@@ -515,25 +577,53 @@ function RequestDetailDrawer({
             {/* Content */}
             <div className="min-h-0 flex-1 overflow-y-auto">
               {tab === "details" ? (
-                <table className="w-full border-collapse">
-                  <tbody>
-                    {eventDetails.map((row) => (
-                      <tr
-                        key={row.label}
-                        className="border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]"
-                      >
-                        <td className="w-[160px] py-2.5 pl-5 pr-2 align-top">
-                          <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-strong">
-                            {row.label}
+                <div className="flex flex-col gap-4 p-5">
+                  {/* Request + Response side by side */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {groups.slice(0, 2).map((group) => (
+                      <div key={group.title} className="rounded-[4px] border-[0.5px] border-dash-border">
+                        <div className="border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5 py-2">
+                          <span className="font-logs text-[10px] uppercase tracking-widest text-dash-text-faded">
+                            {group.title}
                           </span>
-                        </td>
-                        <td className="border-l-[0.5px] border-[#e5e5e5] py-2.5 pl-4 pr-5 align-top dark:border-[#2a2a2b]">
-                          {row.value}
-                        </td>
-                      </tr>
+                        </div>
+                        <div>
+                          {group.items.map((item, j) => (
+                            <div
+                              key={item.label}
+                              className={`flex justify-between px-3.5 py-2 ${j < group.items.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
+                            >
+                              <span className="font-logs text-xs text-dash-text-faded">{item.label}</span>
+                              <span className={`font-logs text-xs text-right ${item.color ?? "text-dash-text-strong"}`}>
+                                {item.dot && <span className={`mr-1.5 inline-block size-1.5 rounded-full align-middle ${item.dot}`} />}
+                                {item.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                  {/* Client full width */}
+                  <div className="rounded-[4px] border-[0.5px] border-dash-border">
+                    <div className="border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5 py-2">
+                      <span className="font-logs text-[10px] uppercase tracking-widest text-dash-text-faded">
+                        {groups[2].title}
+                      </span>
+                    </div>
+                    <div>
+                      {groups[2].items.map((item, j) => (
+                        <div
+                          key={item.label}
+                          className={`flex justify-between px-3.5 py-2 ${j < groups[2].items.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
+                        >
+                          <span className="font-logs text-xs text-dash-text-faded">{item.label}</span>
+                          <span className="font-logs text-xs text-dash-text-strong">{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="relative">
                   {/* Copy button */}
@@ -551,7 +641,7 @@ function RequestDetailDrawer({
                         <span className="inline-block w-6 shrink-0 select-none text-right text-dash-text-extra-faded">
                           {i + 1}
                         </span>
-                        <span className="ml-3 text-dash-text-body">
+                        <span className="ml-3 whitespace-pre text-dash-text-body">
                           <JsonLine text={line} />
                         </span>
                       </div>
@@ -571,43 +661,126 @@ function RequestLogs() {
   const [selectedLog, setSelectedLog] = useState<RequestLogEntry | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [methodFilter, setMethodFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  const filteredRequestLogs = useMemo(() => {
+    return mockRequestLogs.filter((log) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const searchable = `${log.method} ${log.path} ${log.response} ${log.status}`.toLowerCase();
+        if (!searchable.includes(q)) return false;
+      }
+      if (methodFilter !== "all" && log.method !== methodFilter) return false;
+      if (statusFilter !== "all") {
+        const prefix = String(log.status)[0];
+        if (statusFilter === "2xx" && prefix !== "2") return false;
+        if (statusFilter === "4xx" && prefix !== "4") return false;
+        if (statusFilter === "5xx" && prefix !== "5") return false;
+      }
+      if (dateRange?.from) {
+        const logDate = new Date(log.isoTimestamp);
+        if (logDate < dateRange.from) return false;
+        if (dateRange.to) {
+          const endOfDay = new Date(dateRange.to);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (logDate > endOfDay) return false;
+        }
+      }
+      return true;
+    });
+  }, [searchQuery, methodFilter, statusFilter, dateRange]);
+
   function handleRowClick(log: RequestLogEntry) {
     setSelectedLog(log);
     setDrawerOpen(true);
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-3">
+      {/* Filter toolbar */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+        <div className="flex flex-1 items-center gap-2 rounded-[4px] border border-dash-border bg-dash-bg px-3 py-1.5 shadow-[0px_1px_2px_rgba(18,18,23,0.05)]">
+          <Search className="size-4 shrink-0 text-dash-text-extra-faded" />
+          <input
+            type="text"
+            placeholder="Search requests..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-transparent font-logs text-sm text-dash-text-strong outline-none placeholder:text-dash-text-faded placeholder:opacity-50"
+          />
+        </div>
+
+        <FilterDropdown
+          value={methodFilter}
+          onChange={setMethodFilter}
+          options={methodFilterOptions}
+          placeholder="All Methods"
+          align="left"
+        />
+
+        <FilterDropdown
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={statusFilterOptions}
+          placeholder="All Statuses"
+          align="left"
+        />
+
+        <DateRangePicker value={dateRange} onChange={setDateRange}>
+          <button className="flex items-center overflow-clip rounded-[4px] border border-dash-border bg-dash-bg text-sm text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated">
+            <span className="flex items-center gap-2 px-3 py-1.5">
+              <Calendar className="size-3.5 text-dash-text-faded" />
+              {dateRange?.from && dateRange?.to
+                ? `${dateRange.from.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${dateRange.to.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                : "Select date range"}
+            </span>
+            <span className="flex h-full items-center border-l border-dash-border px-2 py-1.5">
+              <ChevronDown className="size-4 text-dash-text-faded" />
+            </span>
+          </button>
+        </DateRangePicker>
+      </div>
+
+      {/* Table */}
       <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
         {/* Table header */}
         <div className="grid grid-cols-[64px_1fr_60px_80px_100px] items-center gap-2 border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-4 py-2.5">
-          <span className="text-xs font-medium text-dash-text-faded">Method</span>
-          <span className="text-xs font-medium text-dash-text-faded">Path</span>
-          <span className="text-xs font-medium text-dash-text-faded">Status</span>
-          <span className="text-xs font-medium text-dash-text-faded">Duration</span>
-          <span className="text-xs font-medium text-dash-text-faded">Time</span>
+          <span className="font-logs text-xs font-medium text-dash-text-faded">Method</span>
+          <span className="font-logs text-xs font-medium text-dash-text-faded">Path</span>
+          <span className="font-logs text-xs font-medium text-dash-text-faded">Status</span>
+          <span className="font-logs text-xs font-medium text-dash-text-faded">Duration</span>
+          <span className="font-logs text-xs font-medium text-dash-text-faded">Time</span>
         </div>
 
         {/* Rows */}
-        {mockRequestLogs.map((log, i) => (
-          <button
-            key={i}
-            onClick={() => handleRowClick(log)}
-            className="grid w-full grid-cols-[64px_1fr_60px_80px_100px] items-center gap-2 border-b-[0.5px] border-dash-border px-4 py-3 text-left transition-colors hover:bg-dash-bg-elevated"
-          >
-            <span className={`text-xs font-medium ${methodColors[log.method] ?? "text-dash-text-body"}`}>
-              {log.method}
-            </span>
-            <span className="truncate text-sm font-light text-dash-text-strong">
-              {log.path}
-            </span>
-            <span className={`text-xs font-medium ${statusColor(log.status)}`}>
-              {log.status}
-            </span>
-            <span className="text-xs font-light text-dash-text-faded">{log.duration}</span>
-            <span className="text-xs font-light text-dash-text-faded">{log.timestamp}</span>
-          </button>
-        ))}
+        {filteredRequestLogs.length > 0 ? (
+          filteredRequestLogs.map((log, i) => (
+            <button
+              key={i}
+              onClick={() => handleRowClick(log)}
+              className="grid w-full grid-cols-[64px_1fr_60px_80px_100px] items-center gap-2 border-b-[0.5px] border-dash-border px-4 py-2.5 text-left transition-colors hover:bg-dash-bg-elevated"
+            >
+              <span className={`font-logs text-xs font-medium ${methodColors[log.method] ?? "text-dash-text-body"}`}>
+                {log.method}
+              </span>
+              <span className="truncate font-logs text-sm font-light text-dash-text-strong">
+                {log.path}
+              </span>
+              <span className={`font-logs text-xs font-medium ${statusColor(log.status)}`}>
+                {log.status}
+              </span>
+              <span className="font-logs text-xs font-light text-dash-text-faded">{log.duration}</span>
+              <span className="font-logs text-xs font-light text-dash-text-faded">{log.timestamp}</span>
+            </button>
+          ))
+        ) : (
+          <div className="flex h-32 items-center justify-center">
+            <span className="text-sm text-dash-text-faded">No requests matching your filters</span>
+          </div>
+        )}
       </div>
 
       <RequestDetailDrawer
@@ -615,7 +788,7 @@ function RequestLogs() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
       />
-    </>
+    </div>
   );
 }
 

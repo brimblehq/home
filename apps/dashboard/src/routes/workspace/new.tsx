@@ -13,6 +13,7 @@ import {
   Settings,
 } from "lucide-react";
 import { GlossyButton } from "../../components/shared/glossy-button";
+import { Dropdown } from "../../components/shared/dropdown";
 
 export const Route = createFileRoute("/workspace/new")({
   component: NewWorkspacePage,
@@ -23,19 +24,17 @@ export const Route = createFileRoute("/workspace/new")({
 const ease = [0.16, 1, 0.3, 1] as const;
 
 const inputClass =
-  "w-full rounded-[6px] bg-[#f9fafb] px-3 py-2.5 text-sm leading-6 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none placeholder:text-[#9ca3af] focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(72,121,248,0.15)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(72,121,248,0.2)]";
+  "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 type Phase = 1 | 2 | 3;
 
 const teamSizeOptions = [3, 5, 10, 15, 25, 50];
-const FREE_SEATS = 3;
-const COST_PER_EXTRA_SEAT = 10;
-const FREE_BUILDS = 2;
-const COST_PER_EXTRA_BUILD = 15;
+const COST_PER_MEMBER = 5;
+const COST_PER_BUILD = 7.5;
 const MIN_BUILDS = 1;
 const MAX_BUILDS = 10;
 
-const roles = ["Member", "Admin", "Viewer"];
+const roles = ["Member", "Administrator"];
 
 /* ─── Summary Chip ─── */
 
@@ -69,77 +68,6 @@ function SummaryChip({
   );
 }
 
-/* ─── Dropdown ─── */
-
-function Dropdown({
-  value,
-  options,
-  onChange,
-  renderOption,
-}: {
-  value: string;
-  options: string[];
-  onChange: (v: string) => void;
-  renderOption?: (v: string) => string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
-    }
-  }, [open]);
-
-  const display = renderOption ? renderOption(value) : value;
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between rounded-[6px] bg-[#f9fafb] px-3 py-2.5 text-sm text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)]"
-      >
-        {display}
-        <ChevronDown
-          className={`size-4 text-dash-text-faded transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.2, ease }}
-            className="absolute left-0 top-full z-50 mt-1 w-full overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg"
-          >
-            {options.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => {
-                  onChange(opt);
-                  setOpen(false);
-                }}
-                className={`flex w-full px-3 py-2 text-left text-sm transition-colors ${
-                  opt === value
-                    ? "font-medium text-dash-text-strong bg-dash-bg-elevated"
-                    : "text-dash-text-body hover:bg-dash-bg-elevated"
-                }`}
-              >
-                {renderOption ? renderOption(opt) : opt}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 /* ─── Stepper ─── */
 
 function Stepper({
@@ -156,7 +84,7 @@ function Stepper({
   renderValue: (v: number) => string;
 }) {
   return (
-    <div className="flex items-center rounded-[6px] bg-[#f9fafb] shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)]">
+    <div className="input-base flex items-center">
       <button
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
@@ -217,7 +145,7 @@ function MiniRoleDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-[100px] items-center justify-between rounded-[6px] bg-[#f9fafb] px-2.5 py-2.5 text-sm text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)]"
+        className="input-base flex w-[140px] items-center justify-between px-2.5 py-2.5 text-sm text-dash-text-strong"
       >
         {value}
         <ChevronDown className="size-3 text-dash-text-faded" />
@@ -229,7 +157,7 @@ function MiniRoleDropdown({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.2, ease }}
-            className="absolute right-0 top-full z-50 mt-1 w-[100px] overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg"
+            className="absolute right-0 top-full z-50 mt-1 w-[140px] overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg"
           >
             {roles.map((r) => (
               <button
@@ -357,8 +285,9 @@ function Phase2Config({
     }, 800);
   }
 
-  const extraSeats = Math.max(0, teamSize - FREE_SEATS);
-  const seatCost = extraSeats * COST_PER_EXTRA_SEAT;
+  const seatCost = teamSize * COST_PER_MEMBER;
+  const buildCost = concurrentBuilds * COST_PER_BUILD;
+  const totalCost = seatCost + buildCost;
 
   return (
     <motion.div
@@ -386,17 +315,11 @@ function Phase2Config({
           renderOption={(v) => `${v} Members`}
         />
         <InfoBanner>
-          Seat pricing: {FREE_SEATS} seats included by default
+          Seat pricing: ${COST_PER_MEMBER}/member/mo
           <br />
-          Additional seats: ${COST_PER_EXTRA_SEAT} per seat
-          {extraSeats > 0 && (
-            <>
-              <br />
-              <span className="font-medium">
-                +{extraSeats} extra {extraSeats === 1 ? "seat" : "seats"} = ${seatCost}/mo
-              </span>
-            </>
-          )}
+          <span className="font-medium">
+            {teamSize} {teamSize === 1 ? "member" : "members"} = ${seatCost}/mo
+          </span>
         </InfoBanner>
       </div>
 
@@ -411,14 +334,16 @@ function Phase2Config({
           max={MAX_BUILDS}
           onChange={setConcurrentBuilds}
           renderValue={(v) => {
-            const cost = Math.max(0, v - FREE_BUILDS) * COST_PER_EXTRA_BUILD;
-            return `${v} ${v === 1 ? "Build" : "Builds"} — $${cost}`;
+            const cost = v * COST_PER_BUILD;
+            return `${v} ${v === 1 ? "Build" : "Builds"} — $${cost % 1 === 0 ? cost : cost.toFixed(2)}`;
           }}
         />
         <InfoBanner>
-          Build pricing: {FREE_BUILDS} free builds included
+          Build pricing: ${COST_PER_BUILD}/build container/mo
           <br />
-          Additional builds: ${COST_PER_EXTRA_BUILD} per extra build container
+          <span className="font-medium">
+            Estimated total: ${totalCost % 1 === 0 ? totalCost : totalCost.toFixed(2)}/mo
+          </span>
         </InfoBanner>
       </div>
 

@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { motion, useInView } from "motion/react";
 import { siteConfig } from "@/config/site";
-import trainStation from "@/assets/images/train-station.png";
+import trainStation from "@/assets/images/train-station.svg";
 
 import slackIcon from "@/assets/icons/slack.png";
 import githubIcon from "@/assets/icons/github.png";

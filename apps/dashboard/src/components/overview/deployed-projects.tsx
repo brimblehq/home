@@ -1,8 +1,8 @@
-import { Plus } from "lucide-react";
 import { PageHeader } from "../shared/page-header";
 import { ProjectCard } from "../shared/project-card";
-import { DashButton } from "../shared/dash-button";
 import type { Project } from "../shared/project-card";
+import { CreateProjectCard } from "../shared/create-project-card";
+
 
 const projects: Project[] = [
   {
@@ -45,12 +45,7 @@ export function DeployedProjects() {
         {projects.map((project, i) => (
           <ProjectCard key={i} project={project} />
         ))}
-        <div className="create-new-project-card col-span-1 flex sm:col-span-2 items-center justify-center overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
-          <DashButton className="rounded-lg px-4 py-2">
-            <Plus className="size-4" />
-            Create new project
-          </DashButton>
-        </div>
+        <CreateProjectCard className="col-span-1 sm:col-span-2" />
       </div>
     </div>
   );

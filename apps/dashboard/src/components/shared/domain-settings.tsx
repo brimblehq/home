@@ -1,8 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { Copy, Share2, Reply, Trash2, Plus, AlertCircle, ChevronDown } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { Copy, Share2, Reply, Plus, AlertCircle, ChevronDown, Pencil } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
+import { FolderTrashIcon } from "./folder-trash-icon";
+import { WarningModal } from "./warning-modal";
 
 const dnsRecordTypes = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA"];
 
@@ -54,17 +57,20 @@ function AddDnsRecordModal({
   open,
   onOpenChange,
   domainName,
+  editingRecord,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   domainName: string;
+  editingRecord?: DnsRecord | null;
 }) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState("CNAME");
+  const isEditing = !!editingRecord;
+  const [name, setName] = useState(editingRecord?.name ?? "");
+  const [type, setType] = useState(editingRecord?.type ?? "CNAME");
   const [typeOpen, setTypeOpen] = useState(false);
   const typeRef = useRef<HTMLDivElement>(null);
-  const [value, setValue] = useState("");
-  const [ttl, setTtl] = useState("");
+  const [value, setValue] = useState(editingRecord?.value ?? "");
+  const [ttl, setTtl] = useState(editingRecord?.ttl ?? "");
 
   useEffect(() => {
     if (!typeOpen) return;
@@ -112,12 +118,12 @@ function AddDnsRecordModal({
                 className="fixed left-1/2 top-1/2 z-50 flex w-[500px] -translate-x-1/2 -translate-y-1/2 flex-col overflow-visible rounded-lg border-[0.5px] border-dash-border bg-dash-bg shadow-[0px_2px_3px_rgba(0,0,0,0.06),inset_0px_-3px_2px_rgba(245,245,245,0.3)] dark:shadow-[0px_2px_3px_rgba(0,0,0,0.2)]"
               >
                 {/* Header */}
-                <div className="flex flex-col gap-0.5 border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-6 py-4">
+                <div className="flex flex-col gap-0.5 rounded-t-lg border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-6 py-4">
                   <Dialog.Title className="text-base leading-[1.4] tracking-[-0.096px] text-dash-text-strong">
-                    Add DNS Record
+                    {isEditing ? "Edit DNS Record" : "Add DNS Record"}
                   </Dialog.Title>
                   <Dialog.Description className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                    Connect to {domainName}
+                    {isEditing ? `Update record for ${domainName}` : `Connect to ${domainName}`}
                   </Dialog.Description>
                 </div>
 
@@ -134,7 +140,7 @@ function AddDnsRecordModal({
                       <button
                         type="button"
                         onClick={() => setTypeOpen(!typeOpen)}
-                        className="flex w-full items-center justify-between rounded-[6px] bg-[#f9fafb] px-2 py-1.5 text-[13px] leading-5 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(72,121,248,0.15)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(72,121,248,0.2)]"
+                        className="input-base input-focus flex w-full items-center justify-between px-2 py-1.5 text-[13px] leading-5 text-dash-text-strong"
                       >
                         <span>{type || "Select type"}</span>
                         <ChevronDown className={`size-4 text-dash-text-faded transition-transform duration-200 ${typeOpen ? "rotate-180" : ""}`} />
@@ -177,7 +183,7 @@ function AddDnsRecordModal({
                     onClick={handleSubmit}
                     className="flex items-center rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-4 py-[5px] text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90"
                   >
-                    Continue
+                    {isEditing ? "Save Changes" : "Continue"}
                   </button>
                 </div>
               </motion.div>
@@ -210,7 +216,7 @@ function FormField({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-[6px] bg-[#f9fafb] px-2 py-1.5 text-[13px] leading-5 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none placeholder:text-[#9ca3af] focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(72,121,248,0.15)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:placeholder:text-dash-text-extra-faded dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(72,121,248,0.2)]"
+        className="input-base input-focus px-2 py-1.5 text-[13px] leading-5 text-dash-text-strong placeholder:text-[#9ca3af] dark:placeholder:text-dash-text-extra-faded"
       />
     </div>
   );
@@ -223,7 +229,30 @@ export function DomainSettings({
   domain: DomainInfo;
   backPath: string;
 }) {
+  const [records, setRecords] = useState(domain.dnsRecords);
   const [addRecordOpen, setAddRecordOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<DnsRecord | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const deleteRecord = useCallback((index: number) => {
+    const record = records[index];
+    setRecords((prev) => prev.filter((_, i) => i !== index));
+
+    const promise = new Promise<void>((resolve) => setTimeout(resolve, 800));
+
+    toast.promise(promise, {
+      loading: "Deleting DNS record…",
+      success: "DNS record deleted",
+      error: () => {
+        setRecords((prev) => {
+          const next = [...prev];
+          next.splice(index, 0, record);
+          return next;
+        });
+        return "Failed to delete DNS record";
+      },
+    });
+  }, [records]);
 
   return (
     <div className="flex flex-col">
@@ -247,8 +276,11 @@ export function DomainSettings({
           <button className="text-dash-text-faded transition-colors hover:text-dash-text-strong">
             <Reply className="size-4" />
           </button>
-          <button className="text-dash-text-faded transition-colors hover:text-dash-text-strong">
-            <Trash2 className="size-4" />
+          <button
+            onClick={() => setDeleteOpen(true)}
+            className="transition-opacity hover:opacity-70"
+          >
+            <FolderTrashIcon className="size-4" />
           </button>
         </div>
       </div>
@@ -269,7 +301,7 @@ export function DomainSettings({
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-1">
-              <h2 className="text-base font-medium leading-5 tracking-[-0.026px] text-dash-text-body">
+              <h2 className="text-base font-medium leading-5 tracking-[-0.026px] text-dash-text-body dark:text-white">
                 DNS Records
               </h2>
               <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
@@ -281,7 +313,10 @@ export function DomainSettings({
               </p>
             </div>
             <button
-              onClick={() => setAddRecordOpen(true)}
+              onClick={() => {
+                setEditingRecord(null);
+                setAddRecordOpen(true);
+              }}
               className="flex items-center gap-1 rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-3 py-[5px] text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90"
             >
               <Plus className="size-4" />
@@ -303,30 +338,30 @@ export function DomainSettings({
               Name
             </span>
             <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
-              TIL
+              TTL
             </span>
             <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
               Value
             </span>
-            <span className="w-4" />
+            <span className="w-[76px]" />
           </div>
 
           {/* DNS rows */}
           <div className="overflow-clip rounded-[2px] border-[0.5px] border-dash-border">
-            {domain.dnsRecords.map((record, i) => (
+            {records.map((record, i) => (
               <div
                 key={i}
                 className={`grid grid-cols-[1fr_1fr_1fr_1fr_auto] items-center gap-2 bg-dash-bg-elevated px-3.5 py-2.5 ${
-                  i < domain.dnsRecords.length - 1
+                  i < records.length - 1
                     ? "border-b-[0.5px] border-dash-border"
                     : ""
                 }`}
               >
                 <span className="font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
-                  {record.name}
+                  {record.type}
                 </span>
                 <span className="font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
-                  {record.type}
+                  {record.name}
                 </span>
                 <span className="font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
                   {record.ttl}
@@ -334,7 +369,26 @@ export function DomainSettings({
                 <span className="font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
                   {record.value}
                 </span>
-                <CopyButton text={record.value} />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingRecord(record);
+                      setAddRecordOpen(true);
+                    }}
+                    className="rounded-[4px] p-1 text-dash-text-faded transition-colors hover:bg-dash-bg hover:text-dash-text-body"
+                    title="Edit record"
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={() => deleteRecord(i)}
+                    className="rounded-[4px] p-1 transition-opacity hover:opacity-70"
+                    title="Delete record"
+                  >
+                    <FolderTrashIcon className="size-3.5" />
+                  </button>
+                  <CopyButton text={record.value} />
+                </div>
               </div>
             ))}
           </div>
@@ -343,7 +397,7 @@ export function DomainSettings({
         {/* Nameservers section */}
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <h2 className="text-base font-medium leading-5 tracking-[-0.026px] text-dash-text-body">
+            <h2 className="text-base font-medium leading-5 tracking-[-0.026px] text-dash-text-body dark:text-white">
               Nameservers
             </h2>
             <p className="max-w-[560px] text-sm font-light leading-[1.3] text-dash-text-faded">
@@ -392,9 +446,26 @@ export function DomainSettings({
 
       {/* Add DNS Record Modal */}
       <AddDnsRecordModal
+        key={editingRecord ? `edit-${editingRecord.name}` : "add"}
         open={addRecordOpen}
-        onOpenChange={setAddRecordOpen}
+        onOpenChange={(v) => {
+          setAddRecordOpen(v);
+          if (!v) setEditingRecord(null);
+        }}
         domainName={domain.domainName}
+        editingRecord={editingRecord}
+      />
+
+      {/* Delete Domain Modal */}
+      <WarningModal
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete Domain"
+        description={`Are you sure you want to delete "${domain.domainName}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={() => {
+          // TODO: handle domain deletion
+        }}
       />
     </div>
   );

@@ -36,6 +36,81 @@
   font-style: italic;
 }
 
+/* ─── Input primitives ─── */
+
+@utility input-base {
+  border-radius: 6px;
+  background-color: #f9fafb;
+  outline: none;
+  box-shadow:
+    0px 1px 2px rgba(3, 7, 18, 0.12),
+    0px 0px 0px 1px rgba(3, 7, 18, 0.08);
+
+  @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
+      background-color: #1a1c1e;
+      box-shadow:
+        0px 1px 2px rgba(0, 0, 0, 0.3),
+        0px 0px 0px 1px rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  &:is(.dark *) {
+    background-color: #1a1c1e;
+    box-shadow:
+      0px 1px 2px rgba(0, 0, 0, 0.3),
+      0px 0px 0px 1px rgba(255, 255, 255, 0.08);
+  }
+}
+
+@utility input-focus {
+  &:focus {
+    box-shadow:
+      0px 1px 2px rgba(3, 7, 18, 0.12),
+      0px 0px 0px 1px rgba(3, 7, 18, 0.08),
+      0px 0px 0px 3px rgba(72, 121, 248, 0.15);
+  }
+
+  &:is(.dark *):focus {
+    box-shadow:
+      0px 1px 2px rgba(0, 0, 0, 0.3),
+      0px 0px 0px 1px rgba(255, 255, 255, 0.08),
+      0px 0px 0px 3px rgba(72, 121, 248, 0.2);
+  }
+}
+
+@utility input-focus-within {
+  &:focus-within {
+    box-shadow:
+      0px 1px 2px rgba(3, 7, 18, 0.12),
+      0px 0px 0px 1px rgba(3, 7, 18, 0.08),
+      0px 0px 0px 3px rgba(72, 121, 248, 0.15);
+  }
+
+  &:is(.dark *):focus-within {
+    box-shadow:
+      0px 1px 2px rgba(0, 0, 0, 0.3),
+      0px 0px 0px 1px rgba(255, 255, 255, 0.08),
+      0px 0px 0px 3px rgba(72, 121, 248, 0.2);
+  }
+}
+
+@utility input-focus-red {
+  &:focus {
+    box-shadow:
+      0px 1px 2px rgba(3, 7, 18, 0.12),
+      0px 0px 0px 1px rgba(3, 7, 18, 0.08),
+      0px 0px 0px 3px rgba(225, 41, 29, 0.15);
+  }
+
+  &:is(.dark *):focus {
+    box-shadow:
+      0px 1px 2px rgba(0, 0, 0, 0.3),
+      0px 0px 0px 1px rgba(255, 255, 255, 0.08),
+      0px 0px 0px 3px rgba(225, 41, 29, 0.15);
+  }
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -110,9 +185,10 @@ code {
   --color-dash-btn-outline-border: var(--dash-btn-outline-border);
   --color-dash-btn-outline-text: var(--dash-btn-outline-text);
 
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-logs: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
   --font-family-body: 'ABC Marfa', sans-serif;
   --font-family-mono: 'ABC Marfa Mono', monospace;
-  --font-family-logs: 'JetBrains Mono Variable', 'JetBrains Mono', monospace;
 }
 
 :root {
@@ -234,6 +310,16 @@ code {
   }
 }
 
+/* NProgress overrides */
+#nprogress .bar {
+  background: #006fff;
+  height: 2px;
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px #006fff, 0 0 5px #006fff;
+}
+
 /* Hide scrollbars but keep scroll functionality */
 .scrollbar-hidden {
   scrollbar-width: none;
@@ -306,6 +392,147 @@ code {
 
 .dark .brimble-date-picker .rdp-range-middle .rdp-day_button:hover {
   background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Command Palette (Cmd+K) — cmdk ─── */
+
+/* Backdrop overlay */
+.cmdk-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 99;
+}
+
+/* Dialog content wrapper */
+.cmdk-dialog {
+  position: fixed;
+  top: 12%;
+  left: 50%;
+  margin-left: -290px;
+  z-index: 100;
+  width: 580px;
+  border-radius: 8px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  background: rgba(124, 124, 124, 0.9);
+  box-shadow: 0px 10px 28px -4px rgba(0, 0, 0, 0.26);
+  font-family: 'ABC Marfa', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Search input */
+.cmdk-dialog [cmdk-input] {
+  width: 100%;
+  height: 64px;
+  padding: 0 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 0.5px solid #9f9f9f;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 300;
+  letter-spacing: -0.0256px;
+  color: #f9f9f9;
+  outline: none;
+}
+
+.cmdk-dialog [cmdk-input]::placeholder {
+  color: #b9b9b9;
+}
+
+/* Results list */
+.cmdk-dialog [cmdk-list] {
+  max-height: 50vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+/* Group heading */
+.cmdk-dialog [cmdk-group-heading] {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.0192px;
+  color: #d1d1d1;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+/* Action items */
+.cmdk-dialog [cmdk-item] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: -0.0224px;
+  color: #f9f9f9;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s ease;
+}
+
+/* Selected / active item — only ONE at a time */
+.cmdk-dialog [cmdk-item][data-selected="true"] {
+  background: rgba(205, 205, 205, 0.5);
+}
+
+/* Icons inside items */
+.cmdk-dialog [cmdk-item] img {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Label text fills available space */
+.cmdk-dialog [cmdk-item] > span:first-of-type {
+  flex: 1;
+}
+
+/* Keyboard shortcut badges */
+.cmdk-shortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #e3e3e3;
+  flex-shrink: 0;
+}
+
+.cmdk-shortcut-blue {
+  background: #008cff;
+}
+
+.cmdk-shortcut-green {
+  background: #00b85c;
+}
+
+.cmdk-shortcut-red {
+  background: red;
+}
+
+.cmdk-shortcut-orange {
+  background: #ff7a00;
+}
+
+/* Empty state */
+.cmdk-dialog [cmdk-empty] {
+  padding: 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 300;
+  color: #b9b9b9;
 }
 
 /* Range edge rounding */

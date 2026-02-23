@@ -14,8 +14,8 @@ interface InviteRow {
   role: string;
 }
 
-const roles = ["Member", "Admin", "Viewer"];
-const COST_PER_SEAT = 10;
+const roles = ["Member", "Administrator"];
+const COST_PER_SEAT = 5;
 
 let nextId = 1;
 
@@ -41,7 +41,7 @@ function RoleDropdown({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex h-full w-[110px] items-center justify-between rounded-[6px] bg-[#f9fafb] px-3 py-2.5 text-sm text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)]"
+        className="input-base flex h-full w-[110px] items-center justify-between px-3 py-2.5 text-sm text-dash-text-strong"
       >
         {value}
         <ChevronDown className={`size-3.5 text-dash-text-faded transition-transform ${open ? "rotate-180" : ""}`} />
@@ -118,7 +118,7 @@ export function InviteMembersModal({
                 placeholder="colleague@company.com"
                 value={row.email}
                 onChange={(e) => updateRow(row.id, "email", e.target.value)}
-                className="flex-1 rounded-[6px] bg-[#f9fafb] px-3 py-2.5 text-sm leading-6 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none placeholder:text-[#9ca3af] focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(72,121,248,0.15)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(72,121,248,0.2)]"
+                className="input-base input-focus flex-1 px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]"
               />
               <RoleDropdown
                 value={row.role}

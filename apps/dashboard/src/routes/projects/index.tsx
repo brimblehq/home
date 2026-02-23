@@ -1,8 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "../../components/shared/page-header";
 import { ProjectCard } from "../../components/shared/project-card";
 import type { Project } from "../../components/shared/project-card";
+import { CreateProjectCard } from "../../components/shared/create-project-card";
 
 export const Route = createFileRoute("/projects/")({
   component: ProjectsPage,
@@ -38,7 +38,7 @@ const projects: Project[] = [
 function ProjectsPage() {
   return (
     <div className="max-w-[1000px]">
-      <PageHeader title="Projects">
+      <PageHeader title="Projects" image="/images/bee.svg">
         Welcome to faster frontend deployments! You have used{" "}
         <span className="font-normal text-dash-text-body">4/10</span> of your
         free deployments, you can upgrade to a Pro plan to access unlimited
@@ -51,21 +51,7 @@ function ProjectsPage() {
         {projects.map((project, i) => (
           <ProjectCard key={i} project={project} />
         ))}
-        <div
-          className="col-span-1 flex items-center sm:col-span-2 justify-center overflow-clip rounded-[4px] border-[0.5px] border-dash-border"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(135deg, transparent, transparent 10px, rgba(217,218,221,0.35) 10px, rgba(217,218,221,0.35) 11px)",
-          }}
-        >
-          <Link
-            to="/projects/new"
-            className="flex items-center gap-2 rounded-lg border border-dash-border bg-dash-bg px-4 py-2 text-sm font-medium text-dash-text-body shadow-sm transition-colors hover:bg-dash-bg-elevated"
-          >
-            <Plus className="size-4" />
-            Create new project
-          </Link>
-        </div>
+        <CreateProjectCard className="col-span-1 sm:col-span-2" />
       </div>
     </div>
   );

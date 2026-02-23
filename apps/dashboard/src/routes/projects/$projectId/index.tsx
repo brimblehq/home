@@ -1,5 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ExternalLink, Copy } from "lucide-react";
+import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ExternalLink, Copy, Check, ArrowUpRight } from "lucide-react";
+import { SimpleTooltip } from "../../../components/shared/tooltip";
+import { DeploymentLogsDrawer } from "../../../components/shared/deployment-logs-drawer";
 
 export const Route = createFileRoute("/projects/$projectId/")({
   component: ProjectDetailPage,
@@ -33,6 +36,10 @@ const domains = [
 ];
 
 function ProjectDetailPage() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const navigate = useNavigate();
+
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 py-8">
       {/* Project preview banner */}
@@ -92,6 +99,38 @@ function ProjectDetailPage() {
               </div>
               <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
                 <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
+                  Status code
+                </span>
+                <span className="rounded-[4px] bg-[#13d282]/15 px-2 py-0.5 text-xs font-medium text-[#13d282]">
+                  200
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
+                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
+                  Region
+                </span>
+                <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
+                  Eu-Central (Germany)
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
+                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
+                  Site password enabled
+                </span>
+                <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
+                  No
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
+                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
+                  Compute size
+                </span>
+                <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
+                  1.5GB RAM &bull; 1 CPU &bull; 7GB Storage
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
+                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
                   Framework
                 </span>
                 <div className="flex items-center gap-2">
@@ -127,11 +166,20 @@ function ProjectDetailPage() {
           <div className="flex flex-1 flex-col overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
             <div className="flex h-10 items-center justify-between border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3 text-sm tracking-[-0.02px]">
               <span className="text-dash-text-strong">Deployments</span>
-              <span className="text-dash-text-faded">See all</span>
+              <button
+                onClick={() => navigate({ to: `/projects/$projectId/deployment-history`, params: { projectId: "audioly" } })}
+                className="text-dash-text-faded transition-colors hover:text-dash-text-strong"
+              >
+                See all
+              </button>
             </div>
             <div className="flex flex-col">
               {deployments.map((dep, i) => (
-                <div key={i} className="relative px-3.5 pb-3.5 pt-3">
+                <button
+                  key={i}
+                  onClick={() => setDrawerOpen(true)}
+                  className="relative cursor-pointer px-3.5 pb-3.5 pt-3 text-left transition-colors hover:bg-dash-bg-elevated"
+                >
                   <div className="flex items-center gap-2">
                     <div className="relative flex h-full w-[17px] shrink-0 items-center">
                       {i > 0 && (
@@ -178,7 +226,7 @@ function ProjectDetailPage() {
                       </span>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -188,7 +236,7 @@ function ProjectDetailPage() {
       {/* Project domains section */}
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
-          <h2 className="text-xl font-medium leading-5 tracking-[-0.03px] text-dash-text-body">
+          <h2 className="text-xl font-medium leading-5 tracking-[-0.03px] text-dash-text-body dark:text-dash-text-strong">
             Project domains
           </h2>
           <p className="max-w-[560px] text-sm font-light leading-[1.3] text-dash-text-faded">
@@ -201,31 +249,79 @@ function ProjectDetailPage() {
 
       {/* Domain rows */}
       <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
-        {domains.map((domain, i) => (
-          <div
-            key={i}
-            className="flex h-[68px] items-center justify-between border-b-[0.5px] border-dash-border bg-white px-3.5 last:border-b-0 dark:bg-dash-bg"
-          >
-            <span className="min-w-0 flex-1 truncate text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-strong">
-              {domain.url}
-            </span>
-            <div className="flex flex-col leading-5 tracking-[-0.02px]">
-              <span className="text-sm text-dash-text-strong">
-                {domain.team}
-              </span>
-              <span className="text-sm font-light text-dash-text-faded">
-                {domain.type} - {domain.date}
-              </span>
-            </div>
-            <button className="flex h-[34px] items-center gap-2 rounded-[4px] border border-dash-border px-2 transition-colors hover:bg-dash-bg-elevated dark:border-dash-border">
-              <Copy className="size-4 text-dash-text-extra-faded" />
-              <span className="text-sm leading-5 tracking-[-0.02px] text-dash-text-extra-faded">
-                Copy
-              </span>
-            </button>
-          </div>
-        ))}
+        <table className="w-full border-collapse">
+          <tbody>
+            {domains.map((domain, i) => (
+              <tr
+                key={i}
+                className="h-[68px] border-b-[0.5px] border-dash-border bg-white last:border-b-0 dark:bg-dash-bg"
+              >
+                <td className="w-[40%] truncate px-3.5">
+                  <a
+                    href={`https://${domain.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group/link inline-flex items-center gap-1 text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-strong transition-colors hover:text-dash-text-body"
+                  >
+                    <span className="group-hover/link:underline">{domain.url}</span>
+                    <ArrowUpRight className="size-3 -translate-x-1 translate-y-0.5 opacity-0 transition-all duration-200 ease-out group-hover/link:translate-x-0 group-hover/link:translate-y-0 group-hover/link:opacity-100" />
+                  </a>
+                </td>
+                <td className="w-[100px] px-3.5">
+                  <SimpleTooltip
+                    content={domain.type === "default domain" ? "Default Brimble domain" : "Custom domain added by you"}
+                    side="top"
+                    sideOffset={4}
+                    delayDuration={150}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className={`size-[6px] rounded-full ${domain.type === "default domain" ? "bg-[#e87b35]" : "bg-dash-text-strong"}`} />
+                      <span className="text-sm font-light text-dash-text-faded">
+                        {domain.type === "default domain" ? "Default" : "Custom"}
+                      </span>
+                    </span>
+                  </SimpleTooltip>
+                </td>
+                <td className="px-3.5 text-right">
+                  <span className="text-sm text-dash-text-strong">
+                    {domain.team}
+                  </span>
+                  <br />
+                  <span className="text-sm font-light text-dash-text-faded">
+                    {domain.date}
+                  </span>
+                </td>
+                <td className="w-[50px] pr-3.5 text-right">
+                  <SimpleTooltip content={copiedIdx === i ? "Copied!" : "Copy domain"} side="top" sideOffset={4} delayDuration={150}>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(domain.url);
+                        setCopiedIdx(i);
+                        setTimeout(() => setCopiedIdx(null), 2000);
+                      }}
+                      className="inline-flex size-[34px] items-center justify-center rounded-[4px] border border-dash-border transition-colors hover:bg-dash-bg-elevated"
+                    >
+                      {copiedIdx === i ? (
+                        <Check className="size-4 text-[#13d282]" />
+                      ) : (
+                        <Copy className="size-4 text-dash-text-extra-faded" />
+                      )}
+                    </button>
+                  </SimpleTooltip>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+
+      {/* Deployment logs drawer */}
+      <DeploymentLogsDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        environment="Production"
+        status="Successful"
+      />
     </div>
   );
 }

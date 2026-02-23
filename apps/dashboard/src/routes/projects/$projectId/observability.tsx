@@ -188,7 +188,7 @@ function SemiGauge({
       {/* Header */}
       <div className="flex h-[72px] items-center border-b-[0.5px] border-dash-border-soft px-5">
         <div>
-          <h3 className="text-sm text-dash-text-body">{title}</h3>
+          <h3 className="text-sm text-dash-text-strong">{title}</h3>
           <p className="text-sm font-light text-dash-text-faded">{subtitle}</p>
         </div>
       </div>

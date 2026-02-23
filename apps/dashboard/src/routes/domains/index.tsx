@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "../../components/shared/page-header";
 import { DomainList, type Domain } from "../../components/shared/domain-list";
 import {
@@ -21,14 +21,12 @@ const domains: Domain[] = [
   },
   {
     name: "kemdirim.com",
-    project: "Third party",
     status: "Active",
     addedAt: "Added 5 months ago",
     addedBy: "By Kemdirim Akujuobi",
   },
   {
     name: "kem.design",
-    project: "Third party",
     status: "Failed",
     addedAt: "Added 5 months ago",
     addedBy: "By Kemdirim Akujuobi",
@@ -80,10 +78,11 @@ function validateDomain(url: string): DomainValidationError | null {
 
 function DomainsPage() {
   const [addDomainOpen, setAddDomainOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="max-w-[1000px]">
-      <PageHeader title="Domains">
+      <PageHeader title="Domains" image="/images/lamp.svg">
         Welcome to faster frontend deployments! You have used{" "}
         <span className="font-semibold text-dash-text-body">4/10</span> of your
         free deployments, you can upgrade to a Pro plan to access unlimited
@@ -105,9 +104,9 @@ function DomainsPage() {
           // TODO: wire to API — add domain to selected project
           console.log("Add domain:", domainUrl, "to project:", projectId);
         }}
-        onRegisterDomain={(domainUrl) => {
-          // TODO: navigate to domain registration flow
-          console.log("Register domain:", domainUrl);
+        onRegisterDomain={() => {
+          setAddDomainOpen(false);
+          navigate({ to: "/domains/buy" });
         }}
       />
     </div>

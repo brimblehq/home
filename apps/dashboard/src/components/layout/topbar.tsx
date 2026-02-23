@@ -9,10 +9,12 @@ import {
   Globe,
   Users,
 } from "lucide-react";
+import { House } from "@phosphor-icons/react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../../hooks/use-theme";
 import { DashButton } from "../shared/dash-button";
+import { useScoutBar } from "../../contexts/scoutbar-context";
 
 const allProjects = [
   "Kemdirimdesign",
@@ -179,17 +181,29 @@ function WorkspaceSwitcher() {
                 <span className="text-sm text-dash-text-body dark:text-dash-text-strong">Brimble Team</span>
               </button>
             </div>
-            {/* Create workspace */}
-            <button
-              onClick={() => {
-                setOpen(false);
-                navigate({ to: "/workspace/new" });
-              }}
-              className="flex h-10 w-full items-center gap-2 bg-dash-bg-elevated px-3.5 text-sm text-dash-text-faded transition-colors hover:text-dash-text-body"
-            >
-              <Plus className="size-4" />
-              Create workspace
-            </button>
+            {/* Home + Create workspace */}
+            <div className="flex flex-col border-t-[0.5px] border-dash-border bg-dash-bg-elevated">
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  navigate({ to: "/projects" });
+                }}
+                className="flex h-10 w-full items-center gap-2 px-3.5 text-sm text-dash-text-faded transition-colors hover:text-dash-text-body"
+              >
+                <House className="size-4" weight="fill" />
+                Home
+              </button>
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  navigate({ to: "/workspace/new" });
+                }}
+                className="flex h-10 w-full items-center gap-2 px-3.5 text-sm text-dash-text-faded transition-colors hover:text-dash-text-body"
+              >
+                <Plus className="size-4" />
+                Create workspace
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -260,6 +274,120 @@ function EnvironmentDropdown() {
   );
 }
 
+/* ─── Notifications ─── */
+
+interface Notification {
+  id: string;
+  message: string;
+  time: string;
+  read: boolean;
+}
+
+const mockNotifications: Notification[] = [
+  { id: "1", message: "Deployment successful for audioly", time: "2 min ago", read: false },
+  { id: "2", message: "Domain kemdirim.com has been verified", time: "1 hour ago", read: false },
+  { id: "3", message: "New team member joined Brimble Team", time: "3 hours ago", read: true },
+  { id: "4", message: "Payment processed successfully", time: "1 day ago", read: true },
+  { id: "5", message: "Build failed for portfolio-v2", time: "2 days ago", read: true },
+];
+
+function NotificationsDropdown() {
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState(mockNotifications);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [open]);
+
+  function markAllRead() {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }
+
+  function markAsRead(id: string) {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    );
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 text-sm text-dash-text-faded hover:text-dash-text-strong transition-colors"
+      >
+        <span className="relative">
+          <Bell className="size-4 fill-current" />
+          {unreadCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full bg-[#ef2f1f] text-[8px] font-medium text-white">
+              {unreadCount}
+            </span>
+          )}
+        </span>
+        <span>Notifications</span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute right-0 top-full z-50 mt-2 w-[340px] origin-top-right overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg shadow-[0px_2px_8px_rgba(0,0,0,0.08)]"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b-[0.5px] border-dash-border px-4 py-3">
+              <span className="text-sm font-medium text-dash-text-strong">
+                Notifications
+              </span>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllRead}
+                  className="text-xs text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
+                >
+                  Mark all as read
+                </button>
+              )}
+            </div>
+
+            {/* List */}
+            <div className="max-h-[320px] overflow-y-auto">
+              {notifications.map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => markAsRead(n.id)}
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-dash-bg-elevated"
+                >
+                  <span className={`mt-1.5 size-[6px] shrink-0 rounded-full ${n.read ? "bg-transparent" : "bg-[#ef2f1f]"}`} />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className={`text-sm leading-[1.4] ${n.read ? "font-light text-dash-text-faded" : "text-dash-text-strong"}`}>
+                      {n.message}
+                    </span>
+                    <span className="text-xs text-dash-text-extra-faded">
+                      {n.time}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 const createMenuItems = [
   { label: "Create project", icon: Plus },
   { label: "Register domain", icon: Globe },
@@ -320,6 +448,7 @@ function CreateDropdown() {
                   onClick={() => {
                     setOpen(false);
                     if (item.label === "Create project") navigate({ to: "/projects/new" });
+                    if (item.label === "Register domain") navigate({ to: "/domains/buy" });
                     if (item.label === "Create team") navigate({ to: "/workspace/new" });
                   }}
                   className="mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-[2px] px-2 py-1.5 text-sm font-light text-dash-text-body dark:text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
@@ -336,8 +465,9 @@ function CreateDropdown() {
   );
 }
 
-export function Topbar() {
+export function Topbar({ onSettingsClick }: { onSettingsClick: () => void }) {
   const { theme, toggleTheme } = useTheme();
+  const { open: openScoutBar } = useScoutBar();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const projectMatch = pathname.match(/^\/projects\/([^/]+)/);
   const projectId = projectMatch ? projectMatch[1] : null;
@@ -347,22 +477,31 @@ export function Topbar() {
       {/* Top row: search + notifications */}
       <div className="border-b border-dash-border-soft">
         <div className="mx-auto flex max-w-screen-xl items-center justify-between py-3">
-          <div className="flex items-center gap-2 text-dash-text-extra-faded">
+          <div
+            onClick={openScoutBar}
+            className="flex cursor-pointer items-center gap-2 text-dash-text-extra-faded transition-colors hover:text-dash-text-faded"
+          >
             <Search className="size-4" />
-            <input
-              type="text"
-              placeholder="Search workspace"
-              className="bg-transparent text-sm outline-none placeholder:text-dash-text-extra-faded"
-            />
+            <span className="text-sm">Search workspace or use cmd + k</span>
+            <kbd className="ml-1 rounded border border-dash-border-soft px-1.5 py-0.5 text-[10px] font-medium leading-none text-dash-text-extra-faded">
+              ⌘K
+            </kbd>
           </div>
           <div className="flex items-center gap-4 text-dash-text-faded">
-            <button className="flex items-center gap-1.5 text-sm hover:text-dash-text-strong">
-              <Bell className="size-4 fill-current" />
-              <span>Notifications</span>
-            </button>
-            <button className="flex items-center gap-1.5 text-sm hover:text-dash-text-strong">
+            <NotificationsDropdown />
+            <a href="mailto:hello@brimble.app" className="flex items-center gap-1.5 text-sm hover:text-dash-text-strong transition-colors">
               <HelpCircle className="size-4" />
               <span>Help</span>
+            </a>
+            <button
+              onClick={onSettingsClick}
+              className="flex items-center gap-1.5 text-sm transition-colors hover:text-dash-text-strong"
+            >
+              <img
+                src="/icons/settings.svg"
+                alt=""
+                className="size-4 shrink-0 dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80"
+              />
             </button>
             <button
               onClick={toggleTheme}
@@ -399,11 +538,6 @@ export function Topbar() {
           <div className="flex items-center gap-4">
             {/* Environment selector */}
             <EnvironmentDropdown />
-            {/* Import button */}
-            <DashButton>
-              <img src="/icons/import.svg" alt="" className="size-4 dark:invert dark:opacity-70" />
-              Import
-            </DashButton>
             {/* Create split button */}
             <CreateDropdown />
           </div>

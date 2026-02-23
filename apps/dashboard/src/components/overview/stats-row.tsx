@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { AreaChart, Area, YAxis, ResponsiveContainer } from "recharts";
 import { DashButton } from "../shared/dash-button";
+import { ChangePlanModal } from "../shared/change-plan-modal";
 
 const bandwidthData = [
   { value: 30 },
@@ -31,6 +33,9 @@ const deploymentRows = [
 ];
 
 export function StatsRow() {
+  const [changePlanOpen, setChangePlanOpen] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState("Free");
+
   return (
     <div className="mb-8 flex flex-col overflow-hidden rounded border-[0.5px] border-dash-border md:h-[160px] md:flex-row">
       {/* Bandwidth */}
@@ -102,12 +107,22 @@ export function StatsRow() {
               REGULAR PASS
             </span>
           </div>
-          <DashButton>
+          <DashButton onClick={() => setChangePlanOpen(true)}>
             Get Brimble Pro
             <img src="/icons/medal.svg" alt="" className="size-4" />
           </DashButton>
         </div>
       </div>
+
+      <ChangePlanModal
+        open={changePlanOpen}
+        onOpenChange={setChangePlanOpen}
+        currentPlan={currentPlan}
+        onChangePlan={(plan) => {
+          setCurrentPlan(plan);
+          setChangePlanOpen(false);
+        }}
+      />
     </div>
   );
 }

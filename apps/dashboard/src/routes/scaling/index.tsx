@@ -1,12 +1,13 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, Plus, ChevronDown } from "lucide-react";
+import { Search, Plus, Pencil } from "lucide-react";
 import { PageHeader } from "../../components/shared/page-header";
 import { DashButton } from "../../components/shared/dash-button";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { ToggleSwitch } from "../../components/shared/toggle-switch";
 import { RangeSlider } from "../../components/shared/range-slider";
+import { Dropdown } from "../../components/shared/dropdown";
 
 export const Route = createFileRoute("/scaling/")({
   component: ScalingPage,
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/scaling/")({
 const ease = [0.16, 1, 0.3, 1] as const;
 
 const inputClass =
-  "w-full rounded-[6px] bg-[#f9fafb] px-3 py-2.5 text-sm leading-6 text-dash-text-strong shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] outline-none placeholder:text-[#9ca3af] focus:shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08),0px_0px_0px_3px_rgba(72,121,248,0.15)] dark:bg-[#1a1c1e] dark:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08)] dark:focus:shadow-[0px_1px_2px_rgba(0,0,0,0.3),0px_0px_0px_1px_rgba(255,255,255,0.08),0px_0px_0px_3px_rgba(72,121,248,0.2)]";
+  "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 /* ─── Types ─── */
 
@@ -99,9 +100,11 @@ function ThresholdBar({ label, value }: { label: string; value: number }) {
 function ScalingGroupCard({
   group,
   onToggle,
+  onEdit,
 }: {
   group: ScalingGroup;
   onToggle: (id: string) => void;
+  onEdit: (group: ScalingGroup) => void;
 }) {
   return (
     <motion.div
@@ -117,11 +120,21 @@ function ScalingGroupCard({
         <span className="text-sm font-medium leading-5 text-dash-text-strong">
           {group.name}
         </span>
-        <ToggleSwitch
-          size="sm"
-          checked={group.active}
-          onChange={() => onToggle(group.id)}
-        />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onEdit(group)}
+            className="rounded-[4px] p-1 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-body"
+            title="Edit scaling group"
+          >
+            <Pencil className="size-3.5" />
+          </button>
+          <ToggleSwitch
+            size="sm"
+            checked={group.active}
+            onChange={() => onToggle(group.id)}
+          />
+        </div>
       </div>
 
       {/* Linked project */}
@@ -166,115 +179,46 @@ function ScalingGroupCard({
   );
 }
 
-/* ─── Dropdown ─── */
-
-function Dropdown({
-  value,
-  options,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  options: { id: string; label: string }[];
-  onChange: (id: string) => void;
-  placeholder?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
-    }
-  }, [open]);
-
-  const selectedLabel = options.find((o) => o.id === value)?.label;
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={`flex w-full items-center justify-between ${inputClass}`}
-      >
-        <span className={selectedLabel ? "" : "text-[#9ca3af]"}>
-          {selectedLabel ?? placeholder ?? "Select..."}
-        </span>
-        <motion.span
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2, ease }}
-        >
-          <ChevronDown className="size-3.5 text-dash-text-faded" />
-        </motion.span>
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.2, ease }}
-            className="absolute left-0 top-full z-50 mt-1 w-full overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_2px_4px_-4px_rgba(0,0,0,0.07)]"
-          >
-            {options.map((opt) => (
-              <button
-                key={opt.id}
-                onClick={() => {
-                  onChange(opt.id);
-                  setOpen(false);
-                }}
-                className={`flex w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-dash-bg-elevated ${
-                  opt.id === value
-                    ? "font-medium text-dash-text-strong"
-                    : "text-dash-text-faded"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 /* ─── Inline Creation Form ─── */
 
 function CreationForm({
   onCancel,
   onCreate,
+  editingGroup,
 }: {
   onCancel: () => void;
   onCreate: (group: ScalingGroup) => void;
+  editingGroup?: ScalingGroup | null;
 }) {
-  const [name, setName] = useState("");
-  const [project, setProject] = useState("");
-  const [autoScaling, setAutoScaling] = useState(true);
-  const [minInstances, setMinInstances] = useState(1);
-  const [maxInstances, setMaxInstances] = useState(5);
-  const [cpuThreshold, setCpuThreshold] = useState(70);
-  const [memThreshold, setMemThreshold] = useState(80);
+  const isEditing = !!editingGroup;
+  const initialProject = editingGroup
+    ? mockProjects.find((p) => p.label === editingGroup.project)?.id ?? ""
+    : "";
+
+  const [name, setName] = useState(editingGroup?.name ?? "");
+  const [project, setProject] = useState(initialProject);
+  const [autoScaling, setAutoScaling] = useState(editingGroup?.active ?? true);
+  const [minInstances, setMinInstances] = useState(editingGroup?.minInstances ?? 1);
+  const [maxInstances, setMaxInstances] = useState(editingGroup?.maxInstances ?? 5);
+  const [cpuThreshold, setCpuThreshold] = useState(editingGroup?.cpuThreshold ?? 70);
+  const [memThreshold, setMemThreshold] = useState(editingGroup?.memoryThreshold ?? 80);
 
   function handleCreate() {
     const projectLabel =
       mockProjects.find((p) => p.id === project)?.label ?? "unknown";
     onCreate({
-      id: `sg-${Date.now()}`,
+      id: editingGroup?.id ?? `sg-${Date.now()}`,
       name: name.trim() || "Untitled Group",
       project: projectLabel,
       active: autoScaling,
       minInstances,
       maxInstances,
-      runningInstances: minInstances,
+      runningInstances: isEditing
+        ? editingGroup.runningInstances
+        : minInstances,
       cpuThreshold,
       memoryThreshold: memThreshold,
-      createdAt: "just now",
+      createdAt: editingGroup?.createdAt ?? "just now",
     });
   }
 
@@ -401,7 +345,7 @@ function CreationForm({
             onClick={handleCreate}
             disabled={!name.trim() || !project}
           >
-            Create Group
+            {isEditing ? "Save Changes" : "Create Group"}
           </GlossyButton>
         </div>
       </div>
@@ -444,6 +388,7 @@ function ScalingPage() {
   const [groups, setGroups] = useState<ScalingGroup[]>(initialGroups);
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<ScalingGroup | null>(null);
 
   const filtered = groups.filter((g) =>
     g.name.toLowerCase().includes(search.toLowerCase()),
@@ -456,13 +401,30 @@ function ScalingPage() {
   }
 
   function handleCreate(group: ScalingGroup) {
-    setGroups((prev) => [group, ...prev]);
+    if (editingGroup) {
+      setGroups((prev) =>
+        prev.map((g) => (g.id === group.id ? group : g)),
+      );
+    } else {
+      setGroups((prev) => [group, ...prev]);
+    }
     setFormOpen(false);
+    setEditingGroup(null);
+  }
+
+  function handleEdit(group: ScalingGroup) {
+    setEditingGroup(group);
+    setFormOpen(true);
+  }
+
+  function handleFormCancel() {
+    setFormOpen(false);
+    setEditingGroup(null);
   }
 
   return (
     <div className="max-w-[1000px]">
-      <PageHeader title="Scaling">
+      <PageHeader title="Scaling" image="/images/scaling-tab.svg">
         Configure auto-scaling groups to automatically adjust the number of
         running instances for your projects based on CPU and memory thresholds.
       </PageHeader>
@@ -470,8 +432,8 @@ function ScalingPage() {
       <hr className="-ml-4 mb-6 border-dash-border-soft md:-ml-10" />
 
       {/* Toolbar */}
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dash-text-extra-faded" />
           <input
             type="text"
@@ -481,21 +443,27 @@ function ScalingPage() {
             className={`${inputClass} pl-9`}
           />
         </div>
-        <DashButton
-          variant="primary"
-          onClick={() => setFormOpen(true)}
+        <GlossyButton
+          variant="blue"
+          onClick={() => {
+            setEditingGroup(null);
+            setFormOpen(true);
+          }}
+          className="shrink-0 gap-1.5"
         >
           <Plus className="size-3.5" />
           New Scaling Group
-        </DashButton>
+        </GlossyButton>
       </div>
 
-      {/* Inline creation form */}
-      <AnimatePresence>
+      {/* Inline creation / edit form */}
+      <AnimatePresence mode="wait">
         {formOpen && (
           <CreationForm
-            onCancel={() => setFormOpen(false)}
+            key={editingGroup?.id ?? "new"}
+            onCancel={handleFormCancel}
             onCreate={handleCreate}
+            editingGroup={editingGroup}
           />
         )}
       </AnimatePresence>
@@ -510,7 +478,11 @@ function ScalingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: 0.08 * i, ease }}
             >
-              <ScalingGroupCard group={group} onToggle={handleToggle} />
+              <ScalingGroupCard
+                group={group}
+                onToggle={handleToggle}
+                onEdit={handleEdit}
+              />
             </motion.div>
           ))}
         </div>
