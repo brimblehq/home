@@ -16,7 +16,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
 import { type DateRange } from "react-day-picker";
-import { subDays, format, formatDistanceToNow, differenceInSeconds } from "date-fns";
+import { format, differenceInSeconds } from "date-fns";
 import { TabHeader } from "../../../components/shared/tab-header";
 import { Tooltip } from "../../../components/shared/tooltip";
 import { DateRangePicker } from "../../../components/shared/date-range-picker";
@@ -32,20 +32,25 @@ import type {
   DeploymentLog,
 } from "@/backend/deployments";
 import type { DeploymentDrawerLogEntry } from "@/utils/deployment-logs";
+import { getSupabaseClient } from "@/lib/supabase";
+import { mapDeploymentRunLogsToDrawerEntries } from "@/utils/deployment-logs";
+import {
+  defaultDeploymentHistoryDateRange,
+  deploymentStatusColor as statusColor,
+  deploymentStatusLabel as statusLabel,
+  formatDeploymentTimeAgo,
+} from "@/utils/deployment-history";
+import config from "@/config";
 
 const parentRoute = getRouteApi("/projects/$projectId");
 
 const PAGE_LIMIT = 10;
 
-function defaultDateRange(): DateRange {
-  return { from: subDays(new Date(), 30), to: new Date() };
-}
-
 export const Route = createFileRoute(
   "/projects/$projectId/deployment-history",
 )({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 120_000,
+  preloadStaleTime: 120_000,
   loader: async ({ context, location }) => {
     const project = (context as any).project;
     const workspace =
@@ -53,7 +58,7 @@ export const Route = createFileRoute(
       new URLSearchParams(location.searchStr || "").get("workspace") ||
       undefined;
 
-    const range = defaultDateRange();
+    const range = defaultDeploymentHistoryDateRange();
 
     const result = await (listDeploymentsServerFn as unknown as (input: {
       data: {
@@ -79,56 +84,6 @@ export const Route = createFileRoute(
   },
   component: DeploymentHistoryPage,
 });
-
-const statusColor: Record<string, string> = {
-  active: "bg-[#13d282]",
-  ready: "bg-[#13d282]",
-  successful: "bg-[#13d282]",
-  failed: "bg-[#fc391e]",
-  inprogress: "bg-[#ff7a00]",
-  building: "bg-[#ff7a00]",
-  pending: "bg-[#ff7a00]",
-  queued: "bg-[#ff7a00]",
-  cancelled: "bg-dash-text-faded",
-  canceled: "bg-dash-text-faded",
-};
-
-const statusLabel: Record<string, string> = {
-  active: "Successful",
-  ready: "Successful",
-  successful: "Successful",
-  failed: "Failed",
-  inprogress: "In Progress",
-  building: "Building",
-  pending: "Pending",
-  queued: "Queued",
-  cancelled: "Cancelled",
-  canceled: "Cancelled",
-};
-
-function timeAgo(dateStr?: string): string {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "";
-  return formatDistanceToNow(date, { addSuffix: true });
-}
-
-function getDuration(startTime?: string, endTime?: string): string {
-  if (!startTime) return "--";
-  const start = new Date(startTime);
-  if (isNaN(start.getTime())) return "--";
-  const end = endTime ? new Date(endTime) : new Date();
-  if (isNaN(end.getTime())) return "--";
-
-  const secs = differenceInSeconds(end, start);
-  if (secs < 0) return "--";
-  if (secs < 60) return `${secs}s`;
-  const mins = Math.floor(secs / 60);
-  const remSecs = secs % 60;
-  if (mins < 60) return `${mins}m ${remSecs}s`;
-  const hours = Math.floor(mins / 60);
-  return `${hours}h ${mins % 60}m`;
-}
 
 /* ─── Filter dropdown (reusable) ─── */
 
@@ -441,6 +396,36 @@ function DeploymentMenu({
 
 /* ─── Deployment row ─── */
 
+const TERMINAL_STATUSES = new Set([
+  "active", "ready", "successful", "failed", "cancelled", "canceled",
+]);
+
+function useLiveDuration(startTime?: string, endTime?: string, status?: string) {
+  const isLive = !!startTime && !endTime && !TERMINAL_STATUSES.has(status?.toLowerCase() ?? "");
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!isLive) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isLive]);
+
+  if (!startTime) return "--";
+  const start = new Date(startTime);
+  if (isNaN(start.getTime())) return "--";
+  const end = endTime ? new Date(endTime) : (isLive ? new Date(now) : new Date());
+  if (isNaN(end.getTime())) return "--";
+
+  const secs = differenceInSeconds(end, start);
+  if (secs < 0) return "--";
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  const remSecs = secs % 60;
+  if (mins < 60) return `${mins}m ${remSecs}s`;
+  const hours = Math.floor(mins / 60);
+  return `${hours}h ${mins % 60}m`;
+}
+
 function DeploymentRow({
   deployment,
   projectId,
@@ -459,8 +444,8 @@ function DeploymentRow({
   const status = deployment.status?.toLowerCase() ?? "";
   const dot = statusColor[status] ?? "bg-dash-text-faded";
   const label = statusLabel[status] ?? deployment.status ?? "";
-  const duration = getDuration(deployment.startTime, deployment.endTime);
-  const ago = timeAgo(deployment.createdAt);
+  const duration = useLiveDuration(deployment.startTime, deployment.endTime, deployment.status);
+  const ago = formatDeploymentTimeAgo(deployment.createdAt);
 
   return (
     <div
@@ -478,7 +463,7 @@ function DeploymentRow({
       </div>
 
       {/* Col 2: Status + duration */}
-      <div className="flex w-[120px] shrink-0 flex-col gap-0.5">
+      <div className="flex w-[180px] shrink-0 flex-col gap-0.5 px-5">
         <div className="flex items-center gap-1.5">
           <span className={`size-[6px] shrink-0 rounded-full ${dot}`} />
           <span className="text-sm font-light text-dash-text-body">
@@ -491,7 +476,7 @@ function DeploymentRow({
       </div>
 
       {/* Col 3: Commit + branch */}
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 pl-2">
         <span className="truncate text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
           {deployment.message || "No commit message"}
         </span>
@@ -645,7 +630,9 @@ function DeploymentHistoryPage() {
   const [fetching, setFetching] = useState(false);
 
   const [search, setSearch] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(defaultDateRange);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(
+    defaultDeploymentHistoryDateRange,
+  );
   const [environment, setEnvironment] = useState("All");
   const [status, setStatus] = useState("All");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -656,6 +643,13 @@ function DeploymentHistoryPage() {
   >({});
   const [drawerLogsLoading, setDrawerLogsLoading] = useState(false);
   const [drawerLogsError, setDrawerLogsError] = useState<string | null>(null);
+  const [isPageVisible, setIsPageVisible] = useState(() => {
+    if (typeof document === "undefined") {
+      return true;
+    }
+
+    return document.visibilityState === "visible";
+  });
 
   const getDeploymentRunLogs = useServerFn(
     listDeploymentRunLogsServerFn as any,
@@ -677,8 +671,13 @@ function DeploymentHistoryPage() {
   };
 
   const fetchDeployments = useCallback(
-    async (page: number) => {
-      setFetching(true);
+    async (page: number, options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+
+      if (!silent) {
+        setFetching(true);
+      }
+
       try {
         const result = await (listDeploymentsServerFn as unknown as (input: {
           data: {
@@ -706,10 +705,24 @@ function DeploymentHistoryPage() {
 
         setDeployments(result);
         setCurrentPage(result.currentPage);
+        setSelectedDeployment((prev) => {
+          if (!prev) {
+            return prev;
+          }
+
+          const updated = result.items.find((item) => item.id === prev.id);
+          if (!updated) {
+            return prev;
+          }
+
+          return updated;
+        });
       } catch {
         // keep existing data
       } finally {
-        setFetching(false);
+        if (!silent) {
+          setFetching(false);
+        }
       }
     },
     [projectId, workspace, environment, status, dateRange],
@@ -717,11 +730,36 @@ function DeploymentHistoryPage() {
 
   // Re-fetch when filters change
   useEffect(() => {
-    fetchDeployments(1);
+    void fetchDeployments(1);
   }, [environment, status, dateRange]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    function handleVisibilityChange() {
+      setIsPageVisible(document.visibilityState === "visible");
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isPageVisible) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void fetchDeployments(currentPage, { silent: true });
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [currentPage, fetchDeployments, isPageVisible]);
+
   function handlePageChange(page: number) {
-    fetchDeployments(page);
+    void fetchDeployments(page);
   }
 
   // Client-side search filter (within the current page)
@@ -748,7 +786,7 @@ function DeploymentHistoryPage() {
     ? drawerLogsByDeploymentId[selectedDeployment.id] ?? []
     : [];
 
-  const loadDeploymentLogs = useCallback(
+  const fetchLogsForDeployment = useCallback(
     async (deployment: DeploymentLog) => {
       if (!deployment.id) {
         setDrawerLogsError("Missing deployment log ID.");
@@ -791,13 +829,50 @@ function DeploymentHistoryPage() {
     [drawerLogsByDeploymentId, getDeploymentRunLogs, workspace],
   );
 
+  // Supabase realtime: subscribe to new log rows while drawer is open
+  useEffect(() => {
+    if (!drawerOpen || !selectedDeployment) return;
+
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const logId = selectedDeployment.id;
+    const channel = supabase
+      .channel(`deployment-logs-${logId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: config.supabaseTableName,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (row.logId !== logId) return;
+
+          const [entry] = mapDeploymentRunLogsToDrawerEntries([row]);
+          if (!entry) return;
+
+          setDrawerLogsByDeploymentId((prev) => ({
+            ...prev,
+            [logId]: [...(prev[logId] ?? []), entry],
+          }));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [drawerOpen, selectedDeployment]);
+
   const openDeploymentDrawer = useCallback(
     (deployment: DeploymentLog) => {
       setSelectedDeployment(deployment);
       setDrawerOpen(true);
-      void loadDeploymentLogs(deployment);
+      void fetchLogsForDeployment(deployment);
     },
-    [loadDeploymentLogs],
+    [fetchLogsForDeployment],
   );
 
   return (

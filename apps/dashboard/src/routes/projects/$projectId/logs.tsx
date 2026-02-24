@@ -1,18 +1,41 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Drawer } from "vaul";
 import { motion } from "motion/react";
 import { Activity, Forward, Pause, Play, ArrowDown, X, Copy, Check, Search, Calendar, ChevronDown } from "lucide-react";
 import type { DateRange } from "react-day-picker";
+import { endOfDay, format, startOfDay, subDays, subHours } from "date-fns";
 import { TabHeader } from "../../../components/shared/tab-header";
 import { FilterDropdown, type FilterOption } from "../../../components/shared/filter-dropdown";
 import { DateRangePicker } from "../../../components/shared/date-range-picker";
+import { NumberPagination } from "../../../components/shared/pagination";
+import type { DropdownOption } from "../../../components/shared/dropdown";
+import { listRequestLogsServerFn } from "@/server/logs/actions";
+import type { RequestLogsPage as RequestLogsResponse, RequestLogEntry as ApiRequestLogEntry } from "@/backend/logs";
+import { useLiveApplicationLogs } from "@/hooks/use-live-application-logs";
+import {
+  buildRequestLogRawData,
+  defaultApplicationLogsDateRange,
+  defaultRequestLogsDateRange,
+  detectAppLogLevel,
+  embeddedIsoTimestampRegex,
+  formatAppLogTime,
+  mapApiRequestLogToUiRow,
+  requestMethodColors as methodColors,
+  requestStatusColor as statusColor,
+  requestStatusDot as statusDot,
+  type UiLogLevel,
+  type UiRequestLogEntry as RequestLogEntry,
+} from "@/utils/project-logs";
 
 export const Route = createFileRoute("/projects/$projectId/logs")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 120_000,
+  preloadStaleTime: 120_000,
   component: LogsPage,
 });
+
+const parentRoute = getRouteApi("/projects/$projectId");
 
 type Tab = "application" | "request";
 
@@ -22,7 +45,7 @@ type Tab = "application" | "request";
 
 interface LogLine {
   timestamp: string;
-  level: "info" | "warn" | "error" | "debug";
+  level: UiLogLevel;
   message: string;
 }
 
@@ -48,61 +71,109 @@ const levelFilterOptions: FilterOption[] = [
   { label: "Debug", value: "debug", dot: "rgba(255,255,255,0.35)" },
 ];
 
-function formatTime(date: Date): string {
+/** Strip leading ISO-8601 timestamp from a log message (Loki often embeds one). */
+/** Detect URLs for auto-linking. */
+const urlRe = /(https?:\/\/[^\s]+)/g;
+
+/** Render a log message with auto-linked URLs and preserved whitespace. */
+function LogMessage({ text }: { text: string }) {
+  const parts = text.split(urlRe);
   return (
-    date.toLocaleTimeString("en-US", { hour12: false }) +
-    "." +
-    String(date.getMilliseconds()).padStart(3, "0")
+    <span className="whitespace-pre-wrap break-words">
+      {parts.map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#4879f8] underline hover:text-[#6b9aff]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </span>
   );
 }
 
-const appLogTemplates: { level: LogLine["level"]; message: string }[] = [
-  { level: "info", message: "Server listening on port 3000" },
-  { level: "info", message: "Connected to database cluster (primary)" },
-  { level: "debug", message: "Route /api/health matched — handler invoked" },
-  { level: "info", message: "Worker process spawned (pid: 4821)" },
-  { level: "info", message: "Cache warmed: 1,247 entries loaded (38ms)" },
-  { level: "warn", message: "Memory usage at 78% — consider scaling" },
-  { level: "debug", message: "GC pause: 12ms (minor collection)" },
-  { level: "info", message: "Cron job [cleanup-sessions] triggered" },
-  { level: "info", message: "WebSocket connection established (client: kd92x)" },
-  { level: "debug", message: "Redis pub/sub channel subscribed: events:deploy" },
-  { level: "info", message: "SSL certificate valid — expires in 47 days" },
-  { level: "warn", message: "Slow query detected: SELECT * FROM deployments (320ms)" },
-  { level: "error", message: "ECONNREFUSED 10.0.3.12:5432 — retrying in 3s" },
-  { level: "info", message: "Retry successful — database connection restored" },
-  { level: "info", message: "Static assets served from CDN edge (us-east-1)" },
-  { level: "debug", message: "JWT token validated for user_8fk29d" },
-  { level: "info", message: "Deployment webhook received — build #1847" },
-  { level: "info", message: "Build artifacts uploaded to storage (2.3MB)" },
-  { level: "warn", message: "Rate limit approaching: 892/1000 requests per minute" },
-  { level: "info", message: "Health check passed — all services operational" },
-  { level: "debug", message: "Session store pruned: 23 expired entries removed" },
-  { level: "info", message: "Middleware pipeline initialized (6 handlers)" },
-  { level: "error", message: "Unhandled promise rejection — stack trace logged" },
-  { level: "info", message: "Recovery: process restarted gracefully" },
-];
-
-function generateInitialLogs(count: number): LogLine[] {
-  const now = Date.now();
-  return Array.from({ length: count }, (_, i) => {
-    const tpl = appLogTemplates[i % appLogTemplates.length];
-    const time = new Date(now - (count - i) * 2400);
-    return { timestamp: formatTime(time), level: tpl.level, message: tpl.message };
-  });
-}
-
-function ApplicationLogs() {
-  const [paused, setPaused] = useState(false);
-  const [logs, setLogs] = useState<LogLine[]>(() => generateInitialLogs(30));
+function ApplicationLogs({
+  allocationOptions,
+  allocationContainerByOptionId,
+}: {
+  allocationOptions: DropdownOption[];
+  allocationContainerByOptionId: Record<string, string>;
+}) {
   const [autoScroll, setAutoScroll] = useState(true);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const counterRef = useRef(0);
+  const [selectedAllocation, setSelectedAllocation] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [levelFilter, setLevelFilter] = useState("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(
+    defaultApplicationLogsDateRange,
+  );
+
+  useEffect(() => {
+    if (allocationOptions.length === 0) {
+      setSelectedAllocation("");
+      return;
+    }
+
+    const stillExists = allocationOptions.some((option) => option.id === selectedAllocation);
+    if (stillExists) {
+      return;
+    }
+
+    setSelectedAllocation(allocationOptions[0].id);
+  }, [allocationOptions, selectedAllocation]);
+
+  const rangeStart = useMemo(() => {
+    if (dateRange?.from) {
+      return startOfDay(dateRange.from);
+    }
+
+    return subHours(new Date(), 1);
+  }, [dateRange?.from]);
+
+  const rangeEnd = useMemo(() => {
+    if (dateRange?.to) {
+      return endOfDay(dateRange.to);
+    }
+
+    return undefined;
+  }, [dateRange?.to]);
+
+  const selectedContainer = (allocationContainerByOptionId[selectedAllocation] || "").trim();
+
+  const liveLogs = useLiveApplicationLogs({
+    container: selectedContainer,
+    searchQuery,
+    start: rangeStart,
+    end: rangeEnd,
+    enabled: Boolean(selectedContainer),
+    limit: 200,
+  });
+
+  const logs = useMemo<LogLine[]>(() => {
+    return liveLogs.logs
+      .filter((item) => item.message.trim().length > 0)
+      .map((item) => {
+        // Strip leading ISO timestamp that Loki sometimes embeds
+        const message = item.message.replace(embeddedIsoTimestampRegex, "");
+        const level = detectAppLogLevel(message);
+
+        return {
+          timestamp: formatAppLogTime(new Date(item.epochMs || Date.now())),
+          level,
+          message,
+        };
+      });
+  }, [liveLogs.logs]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter((line) => {
@@ -111,24 +182,6 @@ function ApplicationLogs() {
       return true;
     });
   }, [logs, searchQuery, levelFilter]);
-
-  // Simulate streaming logs
-  useEffect(() => {
-    if (paused) return;
-
-    const interval = setInterval(() => {
-      const tpl = appLogTemplates[counterRef.current % appLogTemplates.length];
-      counterRef.current++;
-      const newLine: LogLine = {
-        timestamp: formatTime(new Date()),
-        level: tpl.level,
-        message: tpl.message,
-      };
-      setLogs((prev) => [...prev.slice(-200), newLine]);
-    }, 1200 + Math.random() * 1800);
-
-    return () => clearInterval(interval);
-  }, [paused]);
 
   // Auto-scroll
   useEffect(() => {
@@ -143,11 +196,21 @@ function ApplicationLogs() {
     setAutoScroll(scrollHeight - scrollTop - clientHeight < 40);
   }
 
-  function scrollToBottom() {
+  const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       setAutoScroll(true);
     }
+  }, []);
+
+  if (allocationOptions.length === 0) {
+    return (
+      <div className="flex h-[420px] items-center justify-center rounded-[4px] border border-dash-border bg-dash-bg-elevated">
+        <span className="text-sm text-dash-text-faded">
+          No application log container available for this project yet.
+        </span>
+      </div>
+    );
   }
 
   return (
@@ -178,7 +241,7 @@ function ApplicationLogs() {
             <span className="flex items-center gap-2 px-3 py-1.5">
               <Calendar className="size-3.5 text-dash-text-faded" />
               {dateRange?.from && dateRange?.to
-                ? `${dateRange.from.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${dateRange.to.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                ? `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`
                 : "Select date range"}
             </span>
             <span className="flex h-full items-center border-l border-dash-border px-2 py-1.5">
@@ -186,6 +249,7 @@ function ApplicationLogs() {
             </span>
           </button>
         </DateRangePicker>
+
       </div>
 
       {/* Terminal */}
@@ -193,17 +257,41 @@ function ApplicationLogs() {
         {/* Terminal header */}
         <div className="flex items-center justify-end border-b border-[#31363a] px-4 py-2">
           <div className="flex items-center gap-2">
-            {!paused && (
+            {!liveLogs.isPaused && (
               <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[#28c840]">
                 <span className="size-1.5 animate-pulse rounded-full bg-[#28c840]" />
                 Live
               </span>
             )}
+            {allocationOptions.length > 0 && (
+              <select
+                value={selectedAllocation}
+                onChange={(e) => setSelectedAllocation(e.target.value)}
+                className="hidden cursor-pointer appearance-none rounded-md border border-white/10 bg-transparent px-2 py-1 font-logs text-[10px] tracking-wider text-white/40 outline-none transition-colors hover:border-white/20 hover:text-white/60 sm:inline"
+              >
+                {allocationOptions.map((option) => (
+                  <option key={option.id} value={option.id} className="bg-[#222528] text-white/60">
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
+            {liveLogs.isPaused && liveLogs.pendingLogsCount > 0 && (
+              <span className="text-[10px] font-medium uppercase tracking-wider text-[#ff9b01]">
+                {liveLogs.pendingLogsCount} pending
+              </span>
+            )}
             <button
-              onClick={() => setPaused(!paused)}
+              onClick={() => {
+                if (liveLogs.isPaused) {
+                  liveLogs.resume();
+                } else {
+                  liveLogs.pause();
+                }
+              }}
               className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:bg-white/5 hover:text-white/60"
             >
-              {paused ? (
+              {liveLogs.isPaused ? (
                 <>
                   <Play className="size-3" />
                   Resume
@@ -215,19 +303,27 @@ function ApplicationLogs() {
                 </>
               )}
             </button>
+            <button
+              onClick={liveLogs.reconnect}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:bg-white/5 hover:text-white/60"
+            >
+              <Activity className="size-3" />
+              Reconnect
+            </button>
           </div>
         </div>
+        {liveLogs.error && (
+          <div className="border-b border-[#442424] bg-[#2b1717] px-4 py-2 text-xs text-[#ff9f95]">
+            {liveLogs.error}
+          </div>
+        )}
 
         {/* Log output */}
         <div className="relative">
           <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="min-h-[400px] max-h-[600px] overflow-y-auto px-4 py-3 font-logs text-xs leading-[22px]"
-            style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "rgba(255,255,255,0.1) transparent",
-            }}
+            className="min-h-[400px] max-h-[600px] overflow-y-auto px-4 py-3 font-logs text-xs leading-[22px] [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent]"
           >
             {filteredLogs.length > 0 ? (
               filteredLogs.map((line, i) => (
@@ -239,19 +335,27 @@ function ApplicationLogs() {
                     setCopiedIdx(i);
                     setTimeout(() => setCopiedIdx((prev) => (prev === i ? null : prev)), 1200);
                   }}
-                  className="flex cursor-pointer gap-3 rounded-[2px] px-1 py-1.5 transition-colors hover:bg-white/[0.04]"
+                  className={`flex cursor-pointer gap-3 rounded-[2px] px-1 py-1.5 transition-colors hover:bg-white/[0.04] ${
+                    line.level === "error"
+                      ? "bg-red-500/[0.06]"
+                      : line.level === "warn"
+                        ? "bg-yellow-500/[0.06]"
+                        : ""
+                  }`}
                 >
-                  <span className="shrink-0 select-none text-white/20">
+                  <span className="shrink-0 select-none pt-px text-white/20">
                     {line.timestamp}
                   </span>
                   <span
-                    className={`shrink-0 select-none font-medium ${levelColors[line.level]}`}
+                    className={`shrink-0 select-none pt-px font-medium ${levelColors[line.level]}`}
                   >
                     {levelBadge[line.level]}
                   </span>
-                  <span className="flex-1 text-white/60">{line.message}</span>
+                  <span className="min-w-0 flex-1 text-white/60">
+                    <LogMessage text={line.message} />
+                  </span>
                   {copiedIdx === i && (
-                    <span className="shrink-0 select-none text-[10px] text-[#28c840]">
+                    <span className="shrink-0 select-none pt-px text-[10px] text-[#28c840]">
                       Copied
                     </span>
                   )}
@@ -259,7 +363,9 @@ function ApplicationLogs() {
               ))
             ) : (
               <div className="flex h-[360px] items-center justify-center">
-                <span className="text-sm text-white/30">No logs matching your filters</span>
+                <span className="text-sm text-white/30">
+                  {liveLogs.isConnecting ? "Connecting to logs..." : "No logs matching your filters"}
+                </span>
               </div>
             )}
           </div>
@@ -284,109 +390,6 @@ function ApplicationLogs() {
    Request Logs (table-style)
    ───────────────────────────────────────────── */
 
-interface RequestLogEntry {
-  method: string;
-  path: string;
-  status: number;
-  duration: string;
-  timestamp: string;
-  ip: string;
-  host: string;
-  url: string;
-  browser: string;
-  query?: Record<string, string>;
-  headers: Record<string, string>;
-  response: string;
-  isoTimestamp: string;
-}
-
-const mockRequestLogs: RequestLogEntry[] = [
-  {
-    method: "GET", path: "/api/projects", status: 200, duration: "42ms", timestamp: "2 min ago", ip: "102.89.23.45",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/projects", browser: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    headers: { "Referer": "https://app.brimble.io/dashboard", "Accept": "application/json", "Cf-Ray": "9d1ff7f5ef7de2c5-CPT", "Cf-Ipcountry": "NG", "Accept-Encoding": "gzip, br", "X-Forwarded-Proto": "https", "Sec-Fetch-Mode": "cors", "Sec-Fetch-Dest": "empty" },
-    response: "OK", isoTimestamp: "2026-02-22T17:48:01.227Z",
-  },
-  {
-    method: "POST", path: "/api/deploy", status: 201, duration: "1,284ms", timestamp: "4 min ago", ip: "102.89.23.45",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/deploy", browser: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    query: { branch: "main", env: "production" },
-    headers: { "Content-Type": "application/json", "Referer": "https://app.brimble.io/projects", "Cf-Ray": "a2b3c4d5e6f7-LAX", "Cf-Ipcountry": "NG", "Accept-Encoding": "gzip, br" },
-    response: "created", isoTimestamp: "2026-02-22T17:46:12.891Z",
-  },
-  {
-    method: "GET", path: "/api/health", status: 200, duration: "3ms", timestamp: "5 min ago", ip: "10.0.0.1",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/health", browser: "kube-probe/1.28",
-    headers: { "User-Agent": "kube-probe/1.28", "Accept": "*/*", "Connection": "close" },
-    response: "OK", isoTimestamp: "2026-02-22T17:45:00.112Z",
-  },
-  {
-    method: "GET", path: "/api/domains", status: 200, duration: "67ms", timestamp: "8 min ago", ip: "102.89.23.45",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/domains?projectId=audioly", browser: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    query: { projectId: "audioly" },
-    headers: { "Referer": "https://app.brimble.io/projects/audioly/domains", "Accept": "application/json", "Cf-Ipcountry": "NG" },
-    response: "OK", isoTimestamp: "2026-02-22T17:42:33.445Z",
-  },
-  {
-    method: "PATCH", path: "/api/settings", status: 200, duration: "89ms", timestamp: "12 min ago", ip: "102.89.23.45",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/settings", browser: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    headers: { "Content-Type": "application/json", "Referer": "https://app.brimble.io/settings", "Cf-Ipcountry": "NG" },
-    response: "OK", isoTimestamp: "2026-02-22T17:38:44.221Z",
-  },
-  {
-    method: "GET", path: "/api/metrics", status: 429, duration: "—", timestamp: "15 min ago", ip: "203.45.67.89",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/metrics", browser: "python-requests/2.31.0",
-    headers: { "User-Agent": "python-requests/2.31.0", "Accept": "*/*", "Accept-Encoding": "gzip, deflate" },
-    response: "rate limited", isoTimestamp: "2026-02-22T17:35:12.003Z",
-  },
-  {
-    method: "POST", path: "/api/webhooks/github", status: 200, duration: "34ms", timestamp: "18 min ago", ip: "140.82.112.5",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/webhooks/github", browser: "GitHub-Hookshot/1a2b3c4",
-    headers: { "Content-Type": "application/json", "X-GitHub-Event": "push", "X-GitHub-Delivery": "f8e7d6c5-b4a3-2918-0706-f5e4d3c2b1a0", "User-Agent": "GitHub-Hookshot/1a2b3c4" },
-    response: "handled", isoTimestamp: "2026-02-22T17:32:08.776Z",
-  },
-  {
-    method: "GET", path: "/api/users/me", status: 200, duration: "18ms", timestamp: "20 min ago", ip: "102.89.23.45",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/users/me", browser: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    headers: { "Authorization": "Bearer ey...redacted", "Accept": "application/json", "Cf-Ipcountry": "NG" },
-    response: "OK", isoTimestamp: "2026-02-22T17:30:55.109Z",
-  },
-  {
-    method: "POST", path: "/api/deploy", status: 500, duration: "2,102ms", timestamp: "25 min ago", ip: "102.89.23.45",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/deploy", browser: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    query: { branch: "feat/auth", env: "staging" },
-    headers: { "Content-Type": "application/json", "Referer": "https://app.brimble.io/projects", "Cf-Ipcountry": "NG" },
-    response: "internal server error", isoTimestamp: "2026-02-22T17:25:11.887Z",
-  },
-  {
-    method: "GET", path: "/api/analytics", status: 200, duration: "234ms", timestamp: "30 min ago", ip: "102.89.23.45",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/analytics?range=7d", browser: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    query: { range: "7d" },
-    headers: { "Accept": "application/json", "Cf-Ipcountry": "NG" },
-    response: "OK", isoTimestamp: "2026-02-22T17:20:03.554Z",
-  },
-  {
-    method: "PUT", path: "/api/env", status: 200, duration: "56ms", timestamp: "35 min ago", ip: "102.89.23.45",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/env", browser: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    headers: { "Content-Type": "application/json", "Referer": "https://app.brimble.io/projects/audioly/environment", "Cf-Ipcountry": "NG" },
-    response: "OK", isoTimestamp: "2026-02-22T17:15:47.332Z",
-  },
-  {
-    method: "GET", path: "/api/certificates", status: 200, duration: "78ms", timestamp: "40 min ago", ip: "102.89.23.45",
-    host: "app.brimble.io", url: "https://app.brimble.io/api/certificates", browser: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-    headers: { "Accept": "application/json", "Cf-Ipcountry": "NG" },
-    response: "OK", isoTimestamp: "2026-02-22T17:10:22.001Z",
-  },
-];
-
-const methodColors: Record<string, string> = {
-  GET: "text-[#28c840]",
-  POST: "text-[#4879f8]",
-  PUT: "text-[#ff9b01]",
-  PATCH: "text-[#ff9b01]",
-  DELETE: "text-[#ff5f57]",
-};
-
 const methodFilterOptions: FilterOption[] = [
   { label: "All Methods", value: "all" },
   { label: "GET", value: "GET", dot: "#28c840" },
@@ -402,36 +405,6 @@ const statusFilterOptions: FilterOption[] = [
   { label: "4xx Client Error", value: "4xx", dot: "#ff9b01" },
   { label: "5xx Server Error", value: "5xx", dot: "#ff5f57" },
 ];
-
-function statusColor(status: number) {
-  if (status < 300) return "text-[#28c840]";
-  if (status < 400) return "text-[#ff9b01]";
-  return "text-[#ff5f57]";
-}
-
-function statusDot(status: number) {
-  if (status < 300) return "bg-[#28c840]";
-  if (status < 400) return "bg-[#ff9b01]";
-  return "bg-[#ff5f57]";
-}
-
-/** Build raw JSON object for the Raw Data tab */
-function buildRawData(log: RequestLogEntry) {
-  const raw: Record<string, unknown> = {
-    timestamp: log.isoTimestamp,
-    hostname: log.host,
-    method: log.method,
-    url: log.url,
-  };
-  if (log.query) raw.query = log.query;
-  raw.status = log.status;
-  raw.response = log.response;
-  raw.browser = log.browser;
-  raw.headers = log.headers;
-  raw.ip = log.ip;
-  raw.duration = log.duration;
-  return raw;
-}
 
 /** Tokenize a single line of JSON and return colored spans */
 function JsonLine({ text }: { text: string }) {
@@ -482,7 +455,7 @@ function RequestDetailDrawer({
 
   if (!log) return null;
 
-  const rawData = buildRawData(log);
+  const rawData = buildRequestLogRawData(log);
   const rawJson = JSON.stringify(rawData, null, 2);
   const rawLines = rawJson.split("\n");
 
@@ -659,17 +632,98 @@ function RequestDetailDrawer({
   );
 }
 
-function RequestLogs() {
+function RequestLogs({
+  projectId,
+  workspace,
+}: {
+  projectId: string;
+  workspace?: string;
+}) {
   const [selectedLog, setSelectedLog] = useState<RequestLogEntry | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [requestLogs, setRequestLogs] = useState<RequestLogEntry[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [requestLogsLoading, setRequestLogsLoading] = useState(false);
+  const [requestLogsError, setRequestLogsError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(
+    defaultRequestLogsDateRange,
+  );
+
+  const getRequestLogs = useServerFn(listRequestLogsServerFn as any) as (args: {
+    data: {
+      projectId: string;
+      workspace?: string;
+      page?: number;
+      limit?: number;
+    };
+  }) => Promise<RequestLogsResponse>;
+
+  const fetchRequestLogs = useCallback(async () => {
+    if (!projectId) {
+      return;
+    }
+
+    setRequestLogsLoading(true);
+    setRequestLogsError(null);
+
+    try {
+      const rawResult = await getRequestLogs({
+        data: {
+          projectId,
+          workspace,
+          page: currentPage,
+          limit: 50,
+        },
+      });
+
+      let result: RequestLogsResponse | undefined;
+      if (rawResult && typeof rawResult === "object") {
+        const maybeWrapped = rawResult as {
+          result?: RequestLogsResponse;
+          data?: RequestLogsResponse;
+          items?: RequestLogsResponse["items"];
+        };
+
+        if (maybeWrapped.result && typeof maybeWrapped.result === "object") {
+          result = maybeWrapped.result;
+        } else if (maybeWrapped.data && typeof maybeWrapped.data === "object") {
+          result = maybeWrapped.data;
+        } else if (Array.isArray(maybeWrapped.items)) {
+          result = maybeWrapped as unknown as RequestLogsResponse;
+        }
+      }
+
+      const items = Array.isArray(result?.items) ? result.items : [];
+      setRequestLogs(items.map(mapApiRequestLogToUiRow));
+      setTotalPages(Math.max(1, Number(result?.totalPages ?? 1)));
+    } catch (error) {
+      let message = "Failed to load request logs.";
+      if (error instanceof Error && error.message.trim()) {
+        message = error.message;
+      }
+      setRequestLogsError(message);
+      setRequestLogs([]);
+      setTotalPages(1);
+    } finally {
+      setRequestLogsLoading(false);
+    }
+  }, [currentPage, getRequestLogs, projectId, workspace]);
+
+  useEffect(() => {
+    void fetchRequestLogs();
+  }, [fetchRequestLogs]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [projectId, workspace]);
 
   const filteredRequestLogs = useMemo(() => {
-    return mockRequestLogs.filter((log) => {
+    return requestLogs.filter((log) => {
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         const searchable = `${log.method} ${log.path} ${log.response} ${log.status}`.toLowerCase();
@@ -686,14 +740,13 @@ function RequestLogs() {
         const logDate = new Date(log.isoTimestamp);
         if (logDate < dateRange.from) return false;
         if (dateRange.to) {
-          const endOfDay = new Date(dateRange.to);
-          endOfDay.setHours(23, 59, 59, 999);
-          if (logDate > endOfDay) return false;
+          const rangeEndOfDay = endOfDay(dateRange.to);
+          if (logDate > rangeEndOfDay) return false;
         }
       }
       return true;
     });
-  }, [searchQuery, methodFilter, statusFilter, dateRange]);
+  }, [requestLogs, searchQuery, methodFilter, statusFilter, dateRange]);
 
   function handleRowClick(log: RequestLogEntry) {
     setSelectedLog(log);
@@ -736,7 +789,7 @@ function RequestLogs() {
             <span className="flex items-center gap-2 px-3 py-1.5">
               <Calendar className="size-3.5 text-dash-text-faded" />
               {dateRange?.from && dateRange?.to
-                ? `${dateRange.from.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${dateRange.to.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                ? `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`
                 : "Select date range"}
             </span>
             <span className="flex h-full items-center border-l border-dash-border px-2 py-1.5">
@@ -758,7 +811,20 @@ function RequestLogs() {
         </div>
 
         {/* Rows */}
-        {filteredRequestLogs.length > 0 ? (
+        {requestLogsLoading ? (
+          Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={`req-skeleton-${i}`}
+              className="grid grid-cols-[64px_1fr_60px_80px_100px] items-center gap-2 border-b-[0.5px] border-dash-border px-4 py-2.5"
+            >
+              <div className="h-3.5 w-10 animate-pulse rounded bg-dash-border-soft" />
+              <div className="h-3.5 w-2/3 animate-pulse rounded bg-dash-border-soft" />
+              <div className="h-3.5 w-8 animate-pulse rounded bg-dash-border-soft" />
+              <div className="h-3.5 w-12 animate-pulse rounded bg-dash-border-soft" />
+              <div className="h-3.5 w-14 animate-pulse rounded bg-dash-border-soft" />
+            </div>
+          ))
+        ) : filteredRequestLogs.length > 0 ? (
           filteredRequestLogs.map((log, i) => (
             <button
               key={i}
@@ -780,10 +846,18 @@ function RequestLogs() {
           ))
         ) : (
           <div className="flex h-32 items-center justify-center">
-            <span className="text-sm text-dash-text-faded">No requests matching your filters</span>
+            <span className="text-sm text-dash-text-faded">
+              {requestLogsError || "No requests matching your filters"}
+            </span>
           </div>
         )}
       </div>
+
+      <NumberPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={(page) => setCurrentPage(page)}
+      />
 
       <RequestDetailDrawer
         log={selectedLog}
@@ -799,7 +873,51 @@ function RequestLogs() {
    ───────────────────────────────────────────── */
 
 function LogsPage() {
+  const { project, workspace } = parentRoute.useLoaderData() as any;
   const [activeTab, setActiveTab] = useState<Tab>("application");
+
+  const { allocationOptions, allocationContainerByOptionId } = useMemo(() => {
+    const options: DropdownOption[] = [];
+    const containerMap: Record<string, string> = {};
+    const seenIds = new Set<string>();
+
+    function resolveId(rawId: unknown): string {
+      if (rawId && typeof rawId === "object" && (rawId as any).$oid) return String((rawId as any).$oid);
+      if (rawId != null && typeof rawId !== "object") return String(rawId).trim();
+      return "";
+    }
+
+    if (Array.isArray(project?.job?.allocations)) {
+      for (const [index, allocation] of project.job.allocations.entries()) {
+        const container =
+          typeof allocation?.container === "string" ? allocation.container.trim() : "";
+        if (!container) continue;
+
+        const optionId = resolveId(allocation?.id) || `${container}-${index}`;
+        if (seenIds.has(optionId)) continue;
+
+        seenIds.add(optionId);
+        options.push({ id: optionId, label: container });
+        containerMap[optionId] = container;
+      }
+    }
+
+    const commonContainer =
+      typeof project?.job?.commonContainer === "string"
+        ? project.job.commonContainer.trim()
+        : "";
+
+    if (commonContainer && options.length === 0) {
+      options.push({ id: commonContainer, label: commonContainer });
+      containerMap[commonContainer] = commonContainer;
+    }
+
+    if (options.length === 1 && commonContainer && !containerMap[options[0].id]) {
+      containerMap[options[0].id] = commonContainer;
+    }
+
+    return { allocationOptions: options, allocationContainerByOptionId: containerMap };
+  }, [project?.job?.allocations, project?.job?.commonContainer]);
 
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 py-8">
@@ -842,7 +960,14 @@ function LogsPage() {
       </div>
 
       {/* Content */}
-      {activeTab === "application" ? <ApplicationLogs /> : <RequestLogs />}
+      {activeTab === "application" ? (
+        <ApplicationLogs
+          allocationOptions={allocationOptions}
+          allocationContainerByOptionId={allocationContainerByOptionId}
+        />
+      ) : (
+        <RequestLogs projectId={project?.id || project?.name || ""} workspace={workspace} />
+      )}
     </div>
   );
 }

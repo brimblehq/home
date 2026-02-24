@@ -22,6 +22,7 @@ export const config = {
   authApiUrl: `${gatewayUrl}/auth`,
   dnsApiUrl: `${gatewayUrl}/dns`,
   paymentApiUrl: `${gatewayUrl}/payment/api`,
+  logsSocketUrl: `${gatewayUrl}/core`,
   avatarUrl:
     readEnv("NEXT_PUBLIC_AVATAR_URL") ??
     readEnv("VITE_AVATAR_URL") ??

@@ -4,8 +4,8 @@ import { Search, Plus, Eye, EyeOff, Lock } from "lucide-react";
 import { TabHeader } from "../../../components/shared/tab-header";
 
 export const Route = createFileRoute("/projects/$projectId/environment")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 120_000,
+  preloadStaleTime: 120_000,
   component: EnvironmentPage,
 });
 

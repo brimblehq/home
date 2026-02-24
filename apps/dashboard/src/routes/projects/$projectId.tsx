@@ -1,7 +1,8 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { ProjectSubnav } from "../../components/project/project-subnav";
-import { getProjectDetailsServerFn } from "@/server/projects/actions";
+import { getProjectDetailsServerFn, listHomeProjectsServerFn } from "@/server/projects/actions";
 import type { Project as BackendProject } from "@/backend/projects";
+import type { ApiListResponse } from "@/backend";
 
 const PROJECT_CACHE_MS = 60_000;
 const projectCache = new Map<string, { project: BackendProject; timestamp: number }>();
@@ -37,17 +38,28 @@ export function invalidateProjectCache(projectId?: string) {
 }
 
 export const Route = createFileRoute("/projects/$projectId")({
-  staleTime: 60_000,
-  preloadStaleTime: 60_000,
+  staleTime: 300_000,
+  preloadStaleTime: 300_000,
   beforeLoad: async ({ params, location }) => {
     const searchParams = new URLSearchParams(location.searchStr || "");
     const workspace = searchParams.get("workspace") || undefined;
-    const project = await fetchProjectCached(params.projectId, workspace);
+    const [project, projectSwitcherProjects] = await Promise.all([
+      fetchProjectCached(params.projectId, workspace),
+      (listHomeProjectsServerFn as unknown as (input: {
+        data: { workspace?: string };
+      }) => Promise<ApiListResponse<BackendProject>>)({
+        data: { workspace },
+      }),
+    ]);
 
-    return { project, workspace };
+    return { project, workspace, projectSwitcherProjects };
   },
   loader: ({ context }) => {
-    return { project: (context as any).project, workspace: (context as any).workspace };
+    return {
+      project: (context as any).project,
+      workspace: (context as any).workspace,
+      projectSwitcherProjects: (context as any).projectSwitcherProjects,
+    };
   },
   component: ProjectLayout,
 });

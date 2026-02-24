@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@brimble/ui";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, getRouteApi, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Star, Share2, Check, Rocket } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import {
 import { FolderTrashIcon } from "../shared/folder-trash-icon";
 import { WarningModal } from "../shared/warning-modal";
 import { redeployProjectServerFn } from "@/server/projects/actions";
+import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 
 const tabs = [
   { label: "Projects details", slug: "", Icon: GlobeSimple },
@@ -28,8 +29,15 @@ const tabs = [
   { label: "Logs", slug: "logs", Icon: Scroll },
 ];
 
+const projectRouteApi = getRouteApi("/projects/$projectId");
+
 export function ProjectSubnav({ projectId }: { projectId: string }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const parentLoaderData = projectRouteApi.useLoaderData() as {
+    project?: { id?: string; name?: string };
+  };
+  const pathname = useRouterState({
+    select: (s) => s.resolvedLocation?.pathname ?? s.location.pathname,
+  });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const redeployProject = useServerFn(redeployProjectServerFn as any) as (args: {
     data: {
@@ -42,8 +50,8 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   const [copied, setCopied] = useState(false);
   const [deploying, setDeploying] = useState(false);
 
-  // TODO: replace with real project name from API
-  const projectName = projectId;
+  const actualProjectId = parentLoaderData?.project?.id || projectId;
+  const projectName = parentLoaderData?.project?.name || projectId;
 
   async function handleRedeploy() {
     if (deploying) {
@@ -59,7 +67,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
       await redeployProject({
         data: {
-          projectId,
+          projectId: actualProjectId,
           workspace,
         },
       });
@@ -95,13 +103,9 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
             return (
               <Link
-                key=<span className="hidden md:inline">{tab.label}</span>
-                to={tabPath}
-                preload={
-                  tab.slug === "configuration" || tab.slug === "observability"
-                    ? "render"
-                    : "intent"
-                }
+                key={tab.label}
+                to={withWorkspaceQuery({ pathname: tabPath, searchStr }) as any}
+                preload="render"
                 className={cn(
                   "flex h-14 items-center gap-2 px-2 text-sm tracking-[-0.09px] transition-colors",
                   isActive

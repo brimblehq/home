@@ -14,18 +14,31 @@ import { ScoutBarProvider } from "../../contexts/scoutbar-context";
 import type { SettingsSidebarSnapshot } from "@/backend/settings";
 import type { ApiListResponse } from "@/backend";
 import type { Workspace } from "@/backend/workspaces";
+import type { Project } from "@/backend/projects";
 
 export function DashboardLayout({
   children,
   initialSettingsSnapshot,
   initialWorkspaces,
+  initialProjectSwitcherProjects,
 }: {
   children: ReactNode;
   initialSettingsSnapshot?: SettingsSidebarSnapshot | null;
   initialWorkspaces?: ApiListResponse<Workspace>;
+  initialProjectSwitcherProjects?: ApiListResponse<Project> | null;
 }) {
   const pathname = useRouterState({
     select: (s) => s.resolvedLocation?.pathname ?? s.location.pathname,
+  });
+  const matchedProjectSwitcherProjects = useRouterState({
+    select: (s) => {
+      const projectMatch = s.matches.find((match) => match.routeId === "/projects/$projectId");
+      const loaderData = projectMatch?.loaderData as
+        | { projectSwitcherProjects?: ApiListResponse<Project> | null }
+        | undefined;
+
+      return loaderData?.projectSwitcherProjects?.items ?? null;
+    },
   });
   const navigate = useNavigate();
   const isAuthRoute = /^\/(login|signup)$/.test(pathname);
@@ -63,6 +76,9 @@ export function DashboardLayout({
           onSettingsClick={() => setProfileOpen(true)}
           settingsSnapshot={initialSettingsSnapshot ?? null}
           workspaces={initialWorkspaces?.items ?? []}
+          projectSwitcherProjects={
+            matchedProjectSwitcherProjects ?? initialProjectSwitcherProjects?.items ?? []
+          }
         />
         <AnimatePresence>
           {!welcomeDismissed && (

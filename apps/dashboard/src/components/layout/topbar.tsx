@@ -18,17 +18,28 @@ import { useScoutBar } from "../../contexts/scoutbar-context";
 import config from "@/config";
 import type { SettingsSidebarSnapshot } from "@/backend/settings";
 import type { Workspace } from "@/backend/workspaces";
+import type { Project } from "@/backend/projects";
 import { toTitleCase } from "@/utils/dashboard";
+import {
+  buildProjectSwitchUrl,
+  buildWorkspaceSwitchUrl,
+  withWorkspaceQuery,
+} from "@/utils/topbar-navigation";
 
-const allProjects = [
-  "Kemdirimdesign",
-  "Audioly",
-  "Cool-Projects",
-];
-
-function ProjectSwitcher({ projectId }: { projectId: string }) {
+function ProjectSwitcher({
+  projectId,
+  pathname,
+  searchStr,
+  projects,
+}: {
+  projectId: string;
+  pathname: string;
+  searchStr: string;
+  projects: Project[];
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -42,13 +53,22 @@ function ProjectSwitcher({ projectId }: { projectId: string }) {
     }
   }, [open]);
 
+  const displayProjectId = decodeURIComponent(projectId);
+  const currentProject = projects.find(
+    (project) => project.slug === displayProjectId || project.name === displayProjectId,
+  );
+  let activeProjectLabel = displayProjectId;
+  if (currentProject?.name) {
+    activeProjectLabel = currentProject.name;
+  }
+
   return (
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1 text-sm font-medium text-dash-text-faded hover:text-dash-text-strong transition-colors"
       >
-        {projectId}
+        {activeProjectLabel}
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -67,21 +87,46 @@ function ProjectSwitcher({ projectId }: { projectId: string }) {
             className="absolute left-0 top-full z-50 mt-2 w-[200px] origin-top-left overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg shadow-[0px_2px_3px_rgba(0,0,0,0.06)]"
           >
             {/* Project list */}
-            <div className="flex flex-col gap-2 border-b-[0.5px] border-dash-border px-3.5 py-2">
-              {allProjects.map((name) => (
-                <Link
-                  key={name}
-                  to={`/projects/${name.toLowerCase()}`}
-                  onClick={() => setOpen(false)}
-                  className="flex h-8 items-center pl-px pr-2 text-sm text-dash-text-strong hover:text-dash-text-body transition-colors"
-                >
-                  {name}
-                </Link>
-              ))}
+            <div className="scrollbar-hidden flex max-h-[240px] flex-col gap-2 overflow-y-auto border-b-[0.5px] border-dash-border px-3.5 py-2">
+              {projects.length > 0 ? (
+                projects.map((project) => {
+                  const nextProjectId = project.slug || project.name;
+                  if (!nextProjectId) {
+                    return null;
+                  }
+
+                  const isActive =
+                    nextProjectId === displayProjectId || project.name === activeProjectLabel;
+                  const nextUrl = buildProjectSwitchUrl({
+                    pathname,
+                    searchStr,
+                    targetProjectId: nextProjectId,
+                  });
+
+                  return (
+                    <button
+                      key={project.id || nextProjectId}
+                      onClick={() => {
+                        setOpen(false);
+                        navigate({ to: nextUrl as any });
+                      }}
+                      className={`flex h-8 items-center pl-px pr-2 text-left text-sm transition-colors ${
+                        isActive
+                          ? "text-dash-text-strong"
+                          : "text-dash-text-faded hover:text-dash-text-body"
+                      }`}
+                    >
+                      {project.name || nextProjectId}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="py-1 text-sm text-dash-text-extra-faded">No projects found</div>
+              )}
             </div>
             {/* Create project */}
             <Link
-              to="/projects/new"
+              to={searchStr ? `/projects/new?${searchStr}` : "/projects/new"}
               onClick={() => setOpen(false)}
               className="flex h-10 items-center gap-2 bg-dash-bg-elevated px-3.5 text-sm text-dash-text-faded hover:text-dash-text-body transition-colors"
             >
@@ -152,16 +197,11 @@ function WorkspaceSwitcher({
     : personalWorkspaceLabel;
 
   const navigateWithWorkspace = (workspaceSlug?: string) => {
-    const nextParams = new URLSearchParams(searchStr || "");
-
-    if (workspaceSlug) {
-      nextParams.set("workspace", workspaceSlug);
-    } else {
-      nextParams.delete("workspace");
-    }
-
-    const nextSearch = nextParams.toString();
-    const nextUrl = nextSearch ? `${pathname}?${nextSearch}` : pathname;
+    const nextUrl = buildWorkspaceSwitchUrl({
+      pathname,
+      searchStr,
+      workspaceSlug,
+    });
 
     navigate({ to: nextUrl as any });
   };
@@ -284,7 +324,7 @@ function WorkspaceSwitcher({
               <button
                 onClick={() => {
                   setOpen(false);
-                  navigate({ to: "/projects" });
+                  navigate({ to: withWorkspaceQuery({ pathname: "/projects", searchStr }) as any });
                 }}
                 className="flex h-10 w-full items-center gap-2 px-3.5 text-sm text-dash-text-faded transition-colors hover:text-dash-text-body"
               >
@@ -294,7 +334,7 @@ function WorkspaceSwitcher({
               <button
                 onClick={() => {
                   setOpen(false);
-                  navigate({ to: "/workspace/new" });
+                  navigate({ to: withWorkspaceQuery({ pathname: "/workspace/new", searchStr }) as any });
                 }}
                 className="flex h-10 w-full items-center gap-2 px-3.5 text-sm text-dash-text-faded transition-colors hover:text-dash-text-body"
               >
@@ -496,6 +536,7 @@ function CreateDropdown() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -545,9 +586,21 @@ function CreateDropdown() {
                   key={item.label}
                   onClick={() => {
                     setOpen(false);
-                    if (item.label === "Create project") navigate({ to: "/projects/new" });
-                    if (item.label === "Register domain") navigate({ to: "/domains/buy" });
-                    if (item.label === "Create team") navigate({ to: "/workspace/new" });
+                    if (item.label === "Create project") {
+                      navigate({
+                        to: withWorkspaceQuery({ pathname: "/projects/new", searchStr }) as any,
+                      });
+                    }
+                    if (item.label === "Register domain") {
+                      navigate({
+                        to: withWorkspaceQuery({ pathname: "/domains/buy", searchStr }) as any,
+                      });
+                    }
+                    if (item.label === "Create team") {
+                      navigate({
+                        to: withWorkspaceQuery({ pathname: "/workspace/new", searchStr }) as any,
+                      });
+                    }
                   }}
                   className="mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-[2px] px-2 py-1.5 text-sm font-light text-dash-text-body dark:text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                 >
@@ -567,10 +620,12 @@ export function Topbar({
   onSettingsClick,
   settingsSnapshot,
   workspaces,
+  projectSwitcherProjects,
 }: {
   onSettingsClick: () => void;
   settingsSnapshot?: SettingsSidebarSnapshot | null;
   workspaces?: Workspace[];
+  projectSwitcherProjects?: Project[];
 }) {
   const { theme, toggleTheme } = useTheme();
   const { open: openScoutBar } = useScoutBar();
@@ -641,7 +696,12 @@ export function Topbar({
               projectId === "new" ? (
                 <span className="text-sm font-medium text-dash-text-faded">New Project</span>
               ) : (
-                <ProjectSwitcher projectId={projectId} />
+                <ProjectSwitcher
+                  projectId={projectId}
+                  pathname={pathname}
+                  searchStr={searchStr}
+                  projects={projectSwitcherProjects ?? []}
+                />
               )
             ) : (
               <span className="text-sm font-medium text-dash-text-faded">Home</span>

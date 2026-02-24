@@ -93,7 +93,13 @@ function ProjectDetailPage() {
   if (project?.domains && project.domains.length > 0) {
     domainRows = project.domains.map((domain: any) => {
       let type = "Custom domain";
-      if (domain.isDefault) {
+
+      const domainName =
+        typeof domain?.name === "string" ? domain.name.toLowerCase() : "";
+      const isBrimbleManagedDefault =
+        domainName.endsWith(".brimble.app") || domainName.endsWith(".brimble.io");
+
+      if (domain?.isDefault === true || domain?.isCustom === false || isBrimbleManagedDefault) {
         type = "default domain";
       }
 

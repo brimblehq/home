@@ -146,6 +146,14 @@ function mapDomainRecord(domain: any): DomainRecord | null {
     isCustom = domain.isCustom;
   } else if (typeof domain?.is_custom === "boolean") {
     isCustom = domain.is_custom;
+  } else {
+    const lowerName = name.toLowerCase();
+    const isBrimbleManagedDefault =
+      lowerName.endsWith(".brimble.app") || lowerName.endsWith(".brimble.io");
+
+    if (isBrimbleManagedDefault) {
+      isCustom = false;
+    }
   }
 
   let isExpired: boolean | undefined;

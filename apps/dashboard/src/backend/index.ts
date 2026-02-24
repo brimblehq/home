@@ -3,6 +3,7 @@ import { createBackendClient, type BackendClient, type BackendClientConfig } fro
 import { createDeploymentsApi, type DeploymentsApi } from "./deployments";
 import { createDomainsApi, type DomainsApi } from "./domains";
 import { createFrameworksApi, type FrameworksApi } from "./frameworks";
+import { createLogsApi, type LogsApi } from "./logs";
 import { createObservabilityApi, type ObservabilityApi } from "./observability";
 import { createOverviewApi, type OverviewApi } from "./overview";
 import { createProjectsApi, type ProjectsApi } from "./projects";
@@ -16,6 +17,7 @@ export * from "./deployments";
 export * from "./domains";
 export * from "./errors";
 export * from "./frameworks";
+export * from "./logs";
 export * from "./observability";
 export * from "./overview";
 export * from "./projects";
@@ -32,6 +34,7 @@ export interface BackendApi {
   domains: DomainsApi;
   frameworks: FrameworksApi;
   observability: ObservabilityApi;
+  logs: LogsApi;
   overview: OverviewApi;
   deployments: DeploymentsApi;
   workspaces: WorkspacesApi;
@@ -49,6 +52,7 @@ export function createBackendApi(config: BackendClientConfig): BackendApi {
     domains: createDomainsApi(client),
     frameworks: createFrameworksApi(client),
     observability: createObservabilityApi(client),
+    logs: createLogsApi(client),
     overview: createOverviewApi(client),
     deployments: createDeploymentsApi(client),
     workspaces: createWorkspacesApi(client),

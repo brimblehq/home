@@ -35,8 +35,8 @@ import {
 const parentRoute = getRouteApi("/projects/$projectId");
 
 export const Route = createFileRoute("/projects/$projectId/configuration")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 120_000,
+  preloadStaleTime: 120_000,
   loader: async ({ context }) => {
     const project = (context as any).project;
     const workspace = (context as any).workspace;

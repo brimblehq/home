@@ -4,6 +4,7 @@ import {
   Clock,
   ChevronRight,
   ChevronsDownUp,
+  ArrowDownToLine,
   X,
   CheckCircle2,
   XCircle,
@@ -120,7 +121,10 @@ export function DeploymentLogsDrawer({
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(
     new Set(),
   );
+  const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -139,7 +143,16 @@ export function DeploymentLogsDrawer({
     }
 
     setCollapsedSections(new Set());
-  }, [open, logs]);
+    setAutoScroll(true);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !autoScroll || !scrollRef.current) {
+      return;
+    }
+
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [autoScroll, open, logs, collapsedSections]);
 
   const successCount = logs.filter(
     (l) => l.type === "section" && l.status === "success",
@@ -174,6 +187,25 @@ export function DeploymentLogsDrawer({
       if (l.type === "section") sections.add(i);
     });
     setCollapsedSections(sections);
+  }
+
+  function handleBodyScroll() {
+    if (!scrollRef.current) {
+      return;
+    }
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const nearBottom = scrollHeight - scrollTop - clientHeight < 40;
+    setAutoScroll(nearBottom);
+  }
+
+  function copyLogLine(log: DeploymentDrawerLogEntry, index: number) {
+    const text = `[${log.timestamp}] ${log.message}`;
+    navigator.clipboard.writeText(text);
+    setCopiedRowIndex(index);
+    window.setTimeout(() => {
+      setCopiedRowIndex((prev) => (prev === index ? null : prev));
+    }, 1200);
   }
 
   const visibleRows: { log: DeploymentDrawerLogEntry; index: number }[] = [];
@@ -258,6 +290,15 @@ export function DeploymentLogsDrawer({
                 {/* Actions */}
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })}
+                    className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
+                  >
+                    <ArrowDownToLine className="size-4" />
+                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">
+                      Bottom
+                    </span>
+                  </button>
+                  <button
                     onClick={() => downloadLogs(logs)}
                     className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                   >
@@ -289,7 +330,11 @@ export function DeploymentLogsDrawer({
             </div>
 
             {/* ─── Log body ─── */}
-            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.14)_transparent]">
+            <div
+              ref={scrollRef}
+              onScroll={handleBodyScroll}
+              className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.14)_transparent]"
+            >
               <table className="w-full border-collapse">
                 <tbody>
                   {loading ? (
@@ -344,11 +389,13 @@ export function DeploymentLogsDrawer({
                             <button
                               onClick={() => {
                                 if (!canCollapse) {
+                                  copyLogLine(log, index);
                                   return;
                                 }
 
                                 toggleSection(index);
                               }}
+                              onDoubleClick={() => copyLogLine(log, index)}
                               className="flex w-full items-center gap-3 py-2.5 pl-5 pr-2 text-left transition-colors hover:bg-dash-bg-elevated"
                             >
                               {canCollapse ? (
@@ -369,15 +416,29 @@ export function DeploymentLogsDrawer({
                               <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-strong">
                                 {renderLogTextWithLinks(log.message)}
                               </span>
+                              {copiedRowIndex === index && (
+                                <span className="ml-auto shrink-0 font-logs text-[10px] uppercase tracking-wider text-[#13d282]">
+                                  Copied
+                                </span>
+                              )}
                             </button>
                           ) : (
-                            <div className="py-2.5 pl-12 pr-2">
+                            <button
+                              type="button"
+                              onClick={() => copyLogLine(log, index)}
+                              className="flex w-full items-start gap-3 py-2.5 pl-12 pr-2 text-left transition-colors hover:bg-dash-bg-elevated"
+                            >
                               <span
-                                className={`whitespace-pre-wrap font-logs text-xs leading-[1.4] tracking-[-0.01px] ${detailClasses.text}`}
+                                className={`flex-1 whitespace-pre-wrap font-logs text-xs leading-[1.4] tracking-[-0.01px] ${detailClasses.text}`}
                               >
                                 {renderLogTextWithLinks(log.message, detailClasses.link)}
                               </span>
-                            </div>
+                              {copiedRowIndex === index && (
+                                <span className="shrink-0 font-logs text-[10px] uppercase tracking-wider text-[#13d282]">
+                                  Copied
+                                </span>
+                              )}
+                            </button>
                           )}
                         </td>
 

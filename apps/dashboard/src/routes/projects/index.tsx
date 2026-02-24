@@ -31,23 +31,22 @@ export const Route = createFileRoute("/projects/")({
 
     return next;
   },
-  loader: async ({ location }) => {
-    const params = new URLSearchParams(location.searchStr || "");
-    const rawPage = params.get("page");
-    const rawWorkspace = params.get("workspace");
-
+  loaderDeps: ({ search }) => {
     let page = 1;
-    if (rawPage) {
-      const parsed = Number(rawPage);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        page = Math.floor(parsed);
-      }
+    if (typeof search.page === "number" && Number.isFinite(search.page) && search.page > 0) {
+      page = Math.floor(search.page);
     }
 
     let workspace: string | undefined;
-    if (rawWorkspace && rawWorkspace.trim()) {
-      workspace = rawWorkspace.trim();
+    if (typeof search.workspace === "string" && search.workspace.trim()) {
+      workspace = search.workspace.trim();
     }
+
+    return { page, workspace };
+  },
+  loader: async ({ deps }) => {
+    const page = deps.page;
+    const workspace = deps.workspace;
 
     const result = await (listProjectsPageServerFn as unknown as (input: {
       data: { page?: number; workspace?: string };
@@ -57,6 +56,7 @@ export const Route = createFileRoute("/projects/")({
 
     const projects = result.items.map((project: BackendProject): Project => ({
       name: project.name,
+      slug: project.slug || project.name,
       commitMessage: project.log?.message || "No recent activity",
       branch: project.repo?.branch || "main",
       updatedAt: formatRelativeTime(project.updatedAt),

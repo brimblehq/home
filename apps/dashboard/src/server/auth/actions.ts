@@ -71,6 +71,12 @@ export const logoutServerFn = createServerFn({ method: "POST" }).handler(async (
   return { ok: true } as const;
 });
 
+export const getAccessTokenServerFn = createServerFn({ method: "GET" }).handler(
+  async () => {
+    return getServerAccessToken();
+  },
+);
+
 export const getCurrentSessionServerFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const session = await getServerBackendApi().auth.getCurrentSession();

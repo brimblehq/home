@@ -25,8 +25,8 @@ import { formatRelativeTime } from "@/utils/dashboard";
 const parentRoute = getRouteApi("/projects/$projectId");
 
 export const Route = createFileRoute("/projects/$projectId/domains/")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 120_000,
+  preloadStaleTime: 120_000,
   validateSearch: (search: Record<string, unknown>) => {
     const next: { page?: number; workspace?: string } = {};
 

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, Fragment } from "react";
 import axios from "axios";
 import { Drawer } from "vaul";
 import { cn } from "@brimble/ui";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -531,13 +531,19 @@ function ProfileNavSidebar({
   onClose,
   onSignOut,
   isSigningOut,
+  showMembersTab,
 }: {
   activeTab: ProfileTab;
   onTabChange: (tab: ProfileTab) => void;
   onClose: () => void;
   onSignOut?: () => void | Promise<void>;
   isSigningOut?: boolean;
+  showMembersTab: boolean;
 }) {
+  const accountNavItems = showMembersTab
+    ? accountNav
+    : accountNav.filter((item) => item.key !== "members");
+
   return (
     <div className="flex h-full w-[380px] shrink-0 flex-col border-l border-dash-border bg-dash-bg pb-6 pt-5">
       {/* Back button */}
@@ -554,7 +560,7 @@ function ProfileNavSidebar({
           <span className="px-3.5 text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">
             Account
           </span>
-          {accountNav.map((item) => (
+          {accountNavItems.map((item) => (
             <button
               key={item.key}
               onClick={() => onTabChange(item.key)}
@@ -631,6 +637,7 @@ export function UserProfileDrawer({
   initialSnapshot?: SettingsSidebarSnapshot | null;
 }) {
   const navigate = useNavigate();
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const logout = useServerFn(logoutServerFn);
   const getSettingsSnapshot = useServerFn(getSettingsSidebarSnapshotServerFn);
   const listInvoices = useServerFn(listSettingsInvoicesServerFn as any) as (args: {
@@ -670,6 +677,16 @@ export function UserProfileDrawer({
   const [snapshot, setSnapshot] = useState<SettingsSidebarSnapshot | null>(initialSnapshot);
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const hasActiveWorkspace = (() => {
+    const params = new URLSearchParams(searchStr || "");
+    const workspace = params.get("workspace");
+
+    if (!workspace) {
+      return false;
+    }
+
+    return workspace.trim().length > 0;
+  })();
 
   const profile = mapSettingsSnapshotToDrawerProfile(snapshot);
 
@@ -705,6 +722,12 @@ export function UserProfileDrawer({
 
     void refreshSettings();
   }, [open, snapshot]);
+
+  useEffect(() => {
+    if (!hasActiveWorkspace && activeTab === "members") {
+      setActiveTab("profile");
+    }
+  }, [activeTab, hasActiveWorkspace]);
 
   async function handleSignOut() {
     if (isSigningOut) {
@@ -774,6 +797,7 @@ export function UserProfileDrawer({
             onClose={() => onOpenChange(false)}
             onSignOut={handleSignOut}
             isSigningOut={isSigningOut}
+            showMembersTab={hasActiveWorkspace}
           />
 
           {/* Content area */}

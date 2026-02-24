@@ -45,6 +45,7 @@ function DashboardHome() {
 
   const deployedProjects: ProjectCardProject[] = projects.slice(0, 3).map((project) => ({
     name: project.name,
+    slug: project.slug || project.name,
     commitMessage: project.log?.message || "No recent activity",
     branch: project.repo?.branch || "main",
     updatedAt: formatRelativeTime(project.updatedAt),

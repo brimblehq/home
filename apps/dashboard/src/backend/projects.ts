@@ -69,6 +69,13 @@ export interface Project {
   log?: {
     message?: string;
   };
+  job?: {
+    commonContainer?: string;
+    allocations?: Array<{
+      id?: string | number;
+      container?: string;
+    }>;
+  };
 }
 
 export interface ListProjectsInput {
@@ -246,6 +253,41 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       rootDirectory = project.rootDir;
     }
 
+    let job: Project["job"] | undefined;
+    if (project?.job && typeof project.job === "object") {
+      const allocations = Array.isArray(project.job.allocations)
+        ? project.job.allocations
+            .filter((allocation: any) => allocation && typeof allocation === "object")
+            .map((allocation: any) => {
+              const rawId = allocation?.ID ?? allocation?.id;
+              const id =
+                rawId && typeof rawId === "object" && rawId.$oid
+                  ? String(rawId.$oid)
+                  : rawId != null
+                    ? String(rawId)
+                    : undefined;
+
+              const container =
+                typeof allocation?.Container === "string"
+                  ? allocation.Container
+                  : typeof allocation?.container === "string"
+                    ? allocation.container
+                    : undefined;
+
+              return { id, container };
+            })
+            .filter((allocation: any) => allocation.container)
+        : [];
+
+      job = {
+        commonContainer:
+          typeof project.job.commonContainer === "string"
+            ? project.job.commonContainer
+            : undefined,
+        allocations,
+      };
+    }
+
     return {
       id: String(project?.id ?? project?._id ?? project?.name ?? ""),
       name: String(project?.name ?? ""),
@@ -306,6 +348,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
           }
         : undefined,
       log: project?.log ? { message: project.log?.message } : undefined,
+      job,
     };
   }
 

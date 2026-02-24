@@ -311,21 +311,28 @@ code {
 }
 
 /* NProgress overrides */
+#nprogress {
+  pointer-events: none;
+}
+
 #nprogress .bar {
   background: #006fff;
-  height: 2px;
+  height: 4px;
+  z-index: 2000;
+  box-shadow: 0 0 0 1px rgb(0 111 255 / 16%);
 }
 
 #nprogress .peg {
-  box-shadow: 0 0 10px #006fff, 0 0 5px #006fff;
+  box-shadow: 0 0 14px rgb(0 111 255 / 85%), 0 0 7px rgb(0 111 255 / 65%);
 }
 
 .dark #nprogress .bar {
   background: #b27a22;
+  box-shadow: 0 0 0 1px rgb(178 122 34 / 18%);
 }
 
 .dark #nprogress .peg {
-  box-shadow: 0 0 10px #b27a22, 0 0 5px #b27a22;
+  box-shadow: 0 0 14px rgb(178 122 34 / 85%), 0 0 7px rgb(178 122 34 / 65%);
 }
 
 /* Hide scrollbars but keep scroll functionality */

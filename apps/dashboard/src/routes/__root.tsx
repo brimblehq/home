@@ -11,6 +11,8 @@ import type { SettingsSidebarSnapshot } from "@/backend/settings";
 import { listWorkspacesServerFn } from "@/server/workspaces/actions";
 import type { ApiListResponse } from "@/backend";
 import type { Workspace } from "@/backend/workspaces";
+import { listHomeProjectsServerFn } from "@/server/projects/actions";
+import type { Project } from "@/backend/projects";
 
 import appCss from "../styles.css?url";
 
@@ -39,23 +41,44 @@ export const Route = createRootRoute({
       return {
         settingsSnapshot: null as SettingsSidebarSnapshot | null,
         workspaces: { items: [] } as ApiListResponse<Workspace>,
+        projectSwitcherProjects: null as ApiListResponse<Project> | null,
       };
     }
 
     try {
-      const [settingsSnapshot, workspaces] = await Promise.all([
+      const searchParams = new URLSearchParams(location.searchStr || "");
+      const rawWorkspace = searchParams.get("workspace");
+      let workspace: string | undefined;
+      if (rawWorkspace && rawWorkspace.trim()) {
+        workspace = rawWorkspace.trim();
+      }
+
+      const isProjectDetailsRoute =
+        /^\/projects\/[^/]+(?:\/|$)/.test(location.pathname) &&
+        !/^\/projects\/new(?:\/|$)/.test(location.pathname);
+
+      const [settingsSnapshot, workspaces, projectSwitcherProjects] = await Promise.all([
         (getSettingsSidebarSnapshotServerFn as unknown as () => Promise<SettingsSidebarSnapshot>)(),
         (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)(),
+        isProjectDetailsRoute
+          ? (listHomeProjectsServerFn as unknown as (input: {
+              data: { workspace?: string };
+            }) => Promise<ApiListResponse<Project>>)({
+              data: { workspace },
+            })
+          : Promise.resolve(null as ApiListResponse<Project> | null),
       ]);
 
       return {
         settingsSnapshot,
         workspaces,
+        projectSwitcherProjects,
       };
     } catch {
       return {
         settingsSnapshot: null as SettingsSidebarSnapshot | null,
         workspaces: { items: [] } as ApiListResponse<Workspace>,
+        projectSwitcherProjects: null as ApiListResponse<Project> | null,
       };
     }
   },
@@ -83,12 +106,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  const { settingsSnapshot, workspaces } = Route.useLoaderData();
+  const { settingsSnapshot, workspaces, projectSwitcherProjects } = Route.useLoaderData();
 
   return (
     <DashboardLayout
       initialSettingsSnapshot={settingsSnapshot}
       initialWorkspaces={workspaces}
+      initialProjectSwitcherProjects={projectSwitcherProjects}
     >
       <Outlet />
     </DashboardLayout>

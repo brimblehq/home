@@ -2,6 +2,7 @@ import { cn } from "@brimble/ui";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../../hooks/use-theme";
+import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 
 const mainNav = [
   { label: "Home", icon: "/icons/home.svg", href: "/" },
@@ -28,6 +29,7 @@ export function Sidebar({
 }) {
   const { theme, toggleTheme } = useTheme();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
 
   return (
     <>
@@ -59,7 +61,7 @@ export function Sidebar({
               return (
                 <Link
                   key={item.label}
-                  to={item.href}
+                  to={withWorkspaceQuery({ pathname: item.href, searchStr }) as any}
                   className={cn(
                     navItemBase,
                     isActive
@@ -100,7 +102,7 @@ export function Sidebar({
                 return (
                   <Link
                     key={item.label}
-                    to={item.href}
+                    to={withWorkspaceQuery({ pathname: item.href, searchStr }) as any}
                     className={cn(
                       navItemBase,
                       isActive

@@ -1,5 +1,6 @@
 export interface Project {
   name: string;
+  slug?: string;
   commitMessage: string;
   branch: string;
   updatedAt: string;
@@ -8,15 +9,20 @@ export interface Project {
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { Star } from "lucide-react";
+import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 
 export function ProjectCard({ project }: { project: Project }) {
-  const slug = project.name.toLowerCase().replace(/\s+/g, "-");
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const slug = (project.slug || project.name).toLowerCase().replace(/\s+/g, "-");
   const [starred, setStarred] = useState(project.starred ?? false);
 
   return (
-    <Link to={`/projects/${slug}`} className="block">
+    <Link
+      to={withWorkspaceQuery({ pathname: `/projects/${slug}`, searchStr }) as any}
+      className="block"
+    >
     <motion.div
       whileHover={{ y: -3, scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
