@@ -1,161 +1,134 @@
-import { useState, useRef, useEffect } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Search,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   MoreVertical,
   GitBranch,
   Calendar,
+  RotateCw,
+  ExternalLink,
+  XCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { createPortal } from "react-dom";
 import { type DateRange } from "react-day-picker";
+import { subDays, format, formatDistanceToNow, differenceInSeconds } from "date-fns";
 import { TabHeader } from "../../../components/shared/tab-header";
 import { Tooltip } from "../../../components/shared/tooltip";
 import { DateRangePicker } from "../../../components/shared/date-range-picker";
 import { DeploymentLogsDrawer } from "../../../components/shared/deployment-logs-drawer";
+import {
+  listDeploymentsServerFn,
+  redeployServerFn,
+  cancelDeploymentServerFn,
+  listDeploymentRunLogsServerFn,
+} from "@/server/deployments/actions";
+import type {
+  PaginatedDeploymentsResponse,
+  DeploymentLog,
+} from "@/backend/deployments";
+import type { DeploymentDrawerLogEntry } from "@/utils/deployment-logs";
+
+const parentRoute = getRouteApi("/projects/$projectId");
+
+const PAGE_LIMIT = 10;
+
+function defaultDateRange(): DateRange {
+  return { from: subDays(new Date(), 30), to: new Date() };
+}
 
 export const Route = createFileRoute(
   "/projects/$projectId/deployment-history",
 )({
+  staleTime: 30_000,
+  preloadStaleTime: 30_000,
+  loader: async ({ context, location }) => {
+    const project = (context as any).project;
+    const workspace =
+      (context as any).workspace ||
+      new URLSearchParams(location.searchStr || "").get("workspace") ||
+      undefined;
+
+    const range = defaultDateRange();
+
+    const result = await (listDeploymentsServerFn as unknown as (input: {
+      data: {
+        projectId: string;
+        workspace?: string;
+        page?: number;
+        limit?: number;
+        start?: string;
+        end?: string;
+      };
+    }) => Promise<PaginatedDeploymentsResponse>)({
+      data: {
+        projectId: project?.id || project?.name,
+        workspace,
+        page: 1,
+        limit: PAGE_LIMIT,
+        start: format(range.from!, "yyyy-MM-dd"),
+        end: format(range.to!, "yyyy-MM-dd"),
+      },
+    });
+
+    return { deployments: result, workspace };
+  },
   component: DeploymentHistoryPage,
 });
 
-interface Deployment {
-  url: string;
-  environment: string;
-  status: "Successful" | "Failed" | "Pending";
-  duration: string;
-  commitMessage: string;
-  branch: string;
-  timeAgo: string;
-  user: {
-    name: string;
-    displayName: string;
-    role: string;
-    avatarUrl?: string;
-  };
+const statusColor: Record<string, string> = {
+  active: "bg-[#13d282]",
+  ready: "bg-[#13d282]",
+  successful: "bg-[#13d282]",
+  failed: "bg-[#fc391e]",
+  inprogress: "bg-[#ff7a00]",
+  building: "bg-[#ff7a00]",
+  pending: "bg-[#ff7a00]",
+  queued: "bg-[#ff7a00]",
+  cancelled: "bg-dash-text-faded",
+  canceled: "bg-dash-text-faded",
+};
+
+const statusLabel: Record<string, string> = {
+  active: "Successful",
+  ready: "Successful",
+  successful: "Successful",
+  failed: "Failed",
+  inprogress: "In Progress",
+  building: "Building",
+  pending: "Pending",
+  queued: "Queued",
+  cancelled: "Cancelled",
+  canceled: "Cancelled",
+};
+
+function timeAgo(dateStr?: string): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  return formatDistanceToNow(date, { addSuffix: true });
 }
 
-const deployments: Deployment[] = [
-  {
-    url: "audioly-458ghu583.david.brimble.app",
-    environment: "Production",
-    status: "Successful",
-    duration: "29s",
-    commitMessage: "feat(step-10) : add pwa setup an import...",
-    branch: "step-10",
-    timeAgo: "2days",
-    user: {
-      name: "David Muritala Ad...",
-      displayName: "Dacid M.",
-      role: "Administrator",
-    },
-  },
-  {
-    url: "audioly-458ghu583.david.brimble.app",
-    environment: "Production",
-    status: "Failed",
-    duration: "123m 14s",
-    commitMessage: "feat(step-10) : add pwa setup an import...",
-    branch: "step-10",
-    timeAgo: "2days",
-    user: {
-      name: "David Muritala Ad...",
-      displayName: "Dacid M.",
-      role: "Administrator",
-    },
-  },
-  {
-    url: "audioly-458ghu583.david.brimble.app",
-    environment: "Production",
-    status: "Failed",
-    duration: "12m 29s",
-    commitMessage: "feat(step-10) : add pwa setup an import...",
-    branch: "step-10",
-    timeAgo: "2days",
-    user: {
-      name: "David Muritala Ad...",
-      displayName: "Dacid M.",
-      role: "Administrator",
-    },
-  },
-  {
-    url: "audioly-458ghu583.david.brimble.app",
-    environment: "Production",
-    status: "Successful",
-    duration: "29s",
-    commitMessage: "feat(step-10) : add pwa setup an import...",
-    branch: "step-10",
-    timeAgo: "2days",
-    user: {
-      name: "David Muritala Ad...",
-      displayName: "Dacid M.",
-      role: "Administrator",
-    },
-  },
-  {
-    url: "audioly-458ghu583.david.brimble.app",
-    environment: "Production",
-    status: "Successful",
-    duration: "29s",
-    commitMessage: "feat(step-10) : add pwa setup an import...",
-    branch: "step-10",
-    timeAgo: "2days",
-    user: {
-      name: "David Muritala Ad...",
-      displayName: "Dacid M.",
-      role: "Administrator",
-    },
-  },
-  {
-    url: "audioly-458ghu583.david.brimble.app",
-    environment: "Production",
-    status: "Successful",
-    duration: "29s",
-    commitMessage: "feat(step-10) : add pwa setup an import...",
-    branch: "step-10",
-    timeAgo: "2days",
-    user: {
-      name: "David Muritala Ad...",
-      displayName: "Dacid M.",
-      role: "Administrator",
-    },
-  },
-  {
-    url: "audioly-458ghu583.david.brimble.app",
-    environment: "Production",
-    status: "Successful",
-    duration: "29s",
-    commitMessage: "feat(step-10) : add pwa setup an import...",
-    branch: "step-10",
-    timeAgo: "2days",
-    user: {
-      name: "David Muritala Ad...",
-      displayName: "Dacid M.",
-      role: "Administrator",
-    },
-  },
-  {
-    url: "audioly-458ghu583.david.brimble.app",
-    environment: "Production",
-    status: "Successful",
-    duration: "29s",
-    commitMessage: "feat(step-10) : add pwa setup an import...",
-    branch: "step-10",
-    timeAgo: "2days",
-    user: {
-      name: "David Muritala Ad...",
-      displayName: "Dacid M.",
-      role: "Administrator",
-    },
-  },
-];
+function getDuration(startTime?: string, endTime?: string): string {
+  if (!startTime) return "--";
+  const start = new Date(startTime);
+  if (isNaN(start.getTime())) return "--";
+  const end = endTime ? new Date(endTime) : new Date();
+  if (isNaN(end.getTime())) return "--";
 
-const statusColor = {
-  Successful: "bg-[#13d282]",
-  Failed: "bg-[#fc391e]",
-  Pending: "bg-[#ff7a00]",
-} as const;
+  const secs = differenceInSeconds(end, start);
+  if (secs < 0) return "--";
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  const remSecs = secs % 60;
+  if (mins < 60) return `${mins}m ${remSecs}s`;
+  const hours = Math.floor(mins / 60);
+  return `${hours}h ${mins % 60}m`;
+}
 
 /* ─── Filter dropdown (reusable) ─── */
 
@@ -172,7 +145,6 @@ function FilterSelect({
   value: string;
   onChange: (v: string) => void;
   icon?: React.ReactNode;
-  /** Map option value → dot color hex. When a specific option is selected its dot replaces the icon. */
   dotColors?: Record<string, string>;
 }) {
   const [open, setOpen] = useState(false);
@@ -258,83 +230,404 @@ function StatusDotsIcon() {
   );
 }
 
+/* ─── Row action menu (portal-based dropdown, NOT a bottom sheet) ─── */
+
+function DeploymentMenu({
+  deployment,
+  projectId,
+  workspace,
+  projectStatus,
+  onRedeployed,
+}: {
+  deployment: DeploymentLog;
+  projectId: string;
+  workspace?: string;
+  projectStatus?: string;
+  onRedeployed: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const updatePos = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 4, left: rect.right - 192 });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePos();
+    window.addEventListener("scroll", updatePos, { capture: true, passive: true });
+    window.addEventListener("resize", updatePos, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", updatePos, { capture: true });
+      window.removeEventListener("resize", updatePos);
+    };
+  }, [open, updatePos]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        triggerRef.current?.contains(e.target as Node) ||
+        menuRef.current?.contains(e.target as Node)
+      )
+        return;
+      setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const status = deployment.status?.toLowerCase();
+  const isInProgress = status === "inprogress" || status === "building";
+  const isPending = status === "pending" || status === "queued";
+  const isActive = status === "active" || status === "ready";
+  const projectInProgress = projectStatus?.toLowerCase() === "inprogress";
+
+  const canRedeploy = !isInProgress && !projectInProgress;
+  const canCancel = isInProgress || isPending;
+  const canViewApp = isActive && deployment.domain;
+  const canViewCommit = !!deployment.commitLink;
+
+  async function handleRedeploy() {
+    setLoading(true);
+    try {
+      await (redeployServerFn as unknown as (input: {
+        data: { projectId: string; logId: string; workspace?: string };
+      }) => Promise<any>)({
+        data: { projectId, logId: deployment.id, workspace },
+      });
+      onRedeployed();
+    } catch {
+      // silently fail for now
+    } finally {
+      setLoading(false);
+      setOpen(false);
+    }
+  }
+
+  async function handleCancel() {
+    setLoading(true);
+    try {
+      await (cancelDeploymentServerFn as unknown as (input: {
+        data: { projectId: string; logId: string; workspace?: string };
+      }) => Promise<any>)({
+        data: { projectId, logId: deployment.id, workspace },
+      });
+      onRedeployed();
+    } catch {
+      // silently fail for now
+    } finally {
+      setLoading(false);
+      setOpen(false);
+    }
+  }
+
+  const actions: {
+    id: string;
+    label: string;
+    icon: React.ReactNode;
+    onClick: () => void;
+    visible: boolean;
+  }[] = [
+    {
+      id: "redeploy",
+      label: "Redeploy",
+      icon: <RotateCw className="size-3.5" />,
+      onClick: handleRedeploy,
+      visible: canRedeploy,
+    },
+    {
+      id: "view-commit",
+      label: "View commit",
+      icon: <ExternalLink className="size-3.5" />,
+      onClick: () => {
+        if (deployment.commitLink) window.open(deployment.commitLink, "_blank");
+        setOpen(false);
+      },
+      visible: canViewCommit,
+    },
+    {
+      id: "view-app",
+      label: "View application",
+      icon: <ExternalLink className="size-3.5" />,
+      onClick: () => {
+        if (deployment.domain)
+          window.open(
+            deployment.domain.startsWith("http")
+              ? deployment.domain
+              : `https://${deployment.domain}`,
+            "_blank",
+          );
+        setOpen(false);
+      },
+      visible: !!canViewApp,
+    },
+    {
+      id: "cancel",
+      label: "Cancel deployment",
+      icon: <XCircle className="size-3.5 text-[#fc391e]" />,
+      onClick: handleCancel,
+      visible: canCancel,
+    },
+  ];
+
+  const visibleActions = actions.filter((a) => a.visible);
+  if (visibleActions.length === 0) return null;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!open) updatePos();
+          setOpen((prev) => !prev);
+        }}
+        className="ml-4 shrink-0 rounded-[4px] p-1 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
+      >
+        {loading ? (
+          <RotateCw className="size-4 animate-spin" />
+        ) : (
+          <MoreVertical className="size-4" />
+        )}
+      </button>
+
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                ref={menuRef}
+                initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  position: "fixed",
+                  top: pos.top,
+                  left: pos.left,
+                  width: 192,
+                  zIndex: 9999,
+                  pointerEvents: "auto",
+                }}
+                className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_4px_12px_-4px_rgba(0,0,0,0.12)]"
+              >
+                {visibleActions.map((action) => (
+                  <button
+                    key={action.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      action.onClick();
+                    }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
+                  >
+                    {action.icon}
+                    {action.label}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
+    </>
+  );
+}
+
 /* ─── Deployment row ─── */
 
 function DeploymentRow({
   deployment,
+  projectId,
+  workspace,
+  projectStatus,
   onClick,
+  onRedeployed,
 }: {
-  deployment: Deployment;
+  deployment: DeploymentLog;
+  projectId: string;
+  workspace?: string;
+  projectStatus?: string;
   onClick: () => void;
+  onRedeployed: () => void;
 }) {
+  const status = deployment.status?.toLowerCase() ?? "";
+  const dot = statusColor[status] ?? "bg-dash-text-faded";
+  const label = statusLabel[status] ?? deployment.status ?? "";
+  const duration = getDuration(deployment.startTime, deployment.endTime);
+  const ago = timeAgo(deployment.createdAt);
+
   return (
     <div
       onClick={onClick}
       className="flex cursor-pointer items-center border-b-[0.5px] border-dash-border px-3.5 py-4 transition-colors last:border-b-0 hover:bg-dash-bg-elevated"
     >
-      {/* Col 1: URL + environment */}
+      {/* Col 1: Name + environment */}
       <div className="flex w-[280px] shrink-0 flex-col gap-0.5">
         <span className="truncate text-sm tracking-[-0.084px] text-dash-text-strong">
-          {deployment.url}
+          {deployment.name || deployment.id}
         </span>
         <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-          {deployment.environment}
+          {deployment.environment || "Production"}
         </span>
       </div>
 
       {/* Col 2: Status + duration */}
       <div className="flex w-[120px] shrink-0 flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
-          <span
-            className={`size-[6px] shrink-0 rounded-full ${statusColor[deployment.status]}`}
-          />
+          <span className={`size-[6px] shrink-0 rounded-full ${dot}`} />
           <span className="text-sm font-light text-dash-text-body">
-            {deployment.status}
+            {label}
           </span>
         </div>
         <span className="pl-[14px] text-sm font-light leading-[1.3] text-dash-text-faded">
-          {deployment.duration}
+          {duration}
         </span>
       </div>
 
       {/* Col 3: Commit + branch */}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-          {deployment.commitMessage}
+          {deployment.message || "No commit message"}
         </span>
         <div className="flex items-center gap-1">
           <GitBranch className="size-3.5 text-dash-text-faded" />
           <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-            {deployment.branch}
+            {deployment.branch || "main"}
           </span>
         </div>
       </div>
 
-      {/* Col 4: Time + user with tooltip */}
+      {/* Col 4: Time + user */}
       <div className="flex w-[160px] shrink-0 flex-col gap-0.5 pl-4">
         <span className="text-sm tracking-[-0.084px] text-dash-text-strong">
-          {deployment.timeAgo}
+          {ago}
         </span>
         <Tooltip
           user={{
-            name: deployment.user.displayName,
-            role: deployment.user.role,
-            avatarUrl: deployment.user.avatarUrl,
+            name: deployment.username || "Unknown",
+            role: "",
+            avatarUrl: deployment.avatar,
           }}
           side="bottom"
           sideOffset={4}
           delayDuration={200}
         >
           <span className="w-fit cursor-pointer truncate text-sm font-light leading-[1.3] text-dash-text-faded transition-colors hover:text-dash-text-body">
-            {deployment.user.name}
+            {deployment.username || "Unknown"}
           </span>
         </Tooltip>
       </div>
 
       {/* Col 5: Menu */}
-      <button className="ml-4 shrink-0 text-dash-text-faded transition-colors hover:text-dash-text-strong">
-        <MoreVertical className="size-4" />
+      <div onClick={(e) => e.stopPropagation()}>
+        <DeploymentMenu
+          deployment={deployment}
+          projectId={projectId}
+          workspace={workspace}
+          projectStatus={projectStatus}
+          onRedeployed={onRedeployed}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ─── Pagination ─── */
+
+function Pagination({
+  currentPage,
+  totalPages,
+  onChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+
+  const pages: (number | "...")[] = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (
+      i === 1 ||
+      i === totalPages ||
+      (i >= currentPage - 1 && i <= currentPage + 1)
+    ) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== "...") {
+      pages.push("...");
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-1 pt-4">
+      <button
+        onClick={() => onChange(Math.max(1, currentPage - 1))}
+        disabled={currentPage <= 1}
+        className="flex size-8 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated disabled:opacity-30"
+      >
+        <ChevronLeft className="size-4" />
       </button>
+      {pages.map((page, idx) =>
+        page === "..." ? (
+          <span
+            key={`ellipsis-${idx}`}
+            className="flex size-8 items-center justify-center text-sm text-dash-text-faded"
+          >
+            ...
+          </span>
+        ) : (
+          <button
+            key={page}
+            onClick={() => onChange(page)}
+            className={`flex size-8 items-center justify-center rounded-[4px] text-sm transition-colors ${
+              page === currentPage
+                ? "bg-dash-bg-elevated font-medium text-dash-text-strong"
+                : "text-dash-text-faded hover:bg-dash-bg-elevated"
+            }`}
+          >
+            {page}
+          </button>
+        ),
+      )}
+      <button
+        onClick={() => onChange(Math.min(totalPages, currentPage + 1))}
+        disabled={currentPage >= totalPages}
+        className="flex size-8 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated disabled:opacity-30"
+      >
+        <ChevronRight className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+/* ─── Loading skeleton ─── */
+
+function DeploymentSkeleton() {
+  return (
+    <div className="flex items-center border-b-[0.5px] border-dash-border px-3.5 py-4 last:border-b-0">
+      <div className="flex w-[280px] shrink-0 flex-col gap-1.5">
+        <div className="h-4 w-48 animate-pulse rounded bg-dash-border-soft" />
+        <div className="h-3.5 w-20 animate-pulse rounded bg-dash-border-soft" />
+      </div>
+      <div className="flex w-[120px] shrink-0 flex-col gap-1.5">
+        <div className="h-4 w-16 animate-pulse rounded bg-dash-border-soft" />
+        <div className="h-3.5 w-10 animate-pulse rounded bg-dash-border-soft" />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="h-4 w-56 animate-pulse rounded bg-dash-border-soft" />
+        <div className="h-3.5 w-16 animate-pulse rounded bg-dash-border-soft" />
+      </div>
+      <div className="flex w-[160px] shrink-0 flex-col gap-1.5 pl-4">
+        <div className="h-4 w-14 animate-pulse rounded bg-dash-border-soft" />
+        <div className="h-3.5 w-24 animate-pulse rounded bg-dash-border-soft" />
+      </div>
+      <div className="ml-4 size-4 animate-pulse rounded bg-dash-border-soft" />
     </div>
   );
 }
@@ -342,36 +635,176 @@ function DeploymentRow({
 /* ─── Page ─── */
 
 function DeploymentHistoryPage() {
+  const { project, workspace } = parentRoute.useLoaderData() as any;
+  const loaderData = Route.useLoaderData();
+  const initialData = loaderData.deployments as PaginatedDeploymentsResponse;
+
+  const [deployments, setDeployments] =
+    useState<PaginatedDeploymentsResponse>(initialData);
+  const [currentPage, setCurrentPage] = useState(initialData?.currentPage ?? 1);
+  const [fetching, setFetching] = useState(false);
+
   const [search, setSearch] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(defaultDateRange);
   const [environment, setEnvironment] = useState("All");
   const [status, setStatus] = useState("All");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedDeployment, setSelectedDeployment] =
-    useState<Deployment | null>(null);
+    useState<DeploymentLog | null>(null);
+  const [drawerLogsByDeploymentId, setDrawerLogsByDeploymentId] = useState<
+    Record<string, DeploymentDrawerLogEntry[]>
+  >({});
+  const [drawerLogsLoading, setDrawerLogsLoading] = useState(false);
+  const [drawerLogsError, setDrawerLogsError] = useState<string | null>(null);
 
-  const filtered = deployments.filter((d) => {
-    const matchesSearch =
-      !search ||
-      d.url.toLowerCase().includes(search.toLowerCase()) ||
-      d.branch.toLowerCase().includes(search.toLowerCase());
-    const matchesEnv =
-      environment === "All" || d.environment === environment;
-    const matchesStatus = status === "All" || d.status === status;
-    return matchesSearch && matchesEnv && matchesStatus;
+  const getDeploymentRunLogs = useServerFn(
+    listDeploymentRunLogsServerFn as any,
+  ) as (args: {
+    data: {
+      logId: string;
+      workspace?: string;
+    };
+  }) => Promise<{ entries: DeploymentDrawerLogEntry[] }>;
+
+  const projectId = project?.id || project?.name;
+
+  const statusFilterMap: Record<string, string> = {
+    Successful: "ACTIVE",
+    Failed: "FAILED",
+    "In Progress": "INPROGRESS",
+    Pending: "PENDING",
+    Cancelled: "CANCELLED",
+  };
+
+  const fetchDeployments = useCallback(
+    async (page: number) => {
+      setFetching(true);
+      try {
+        const result = await (listDeploymentsServerFn as unknown as (input: {
+          data: {
+            projectId: string;
+            workspace?: string;
+            page?: number;
+            limit?: number;
+            statuses?: string;
+            environment?: string;
+            start?: string;
+            end?: string;
+          };
+        }) => Promise<PaginatedDeploymentsResponse>)({
+          data: {
+            projectId,
+            workspace,
+            page,
+            limit: PAGE_LIMIT,
+            statuses: status !== "All" ? statusFilterMap[status] : undefined,
+            environment: environment !== "All" ? environment.toUpperCase() : undefined,
+            start: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+            end: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+          },
+        });
+
+        setDeployments(result);
+        setCurrentPage(result.currentPage);
+      } catch {
+        // keep existing data
+      } finally {
+        setFetching(false);
+      }
+    },
+    [projectId, workspace, environment, status, dateRange],
+  );
+
+  // Re-fetch when filters change
+  useEffect(() => {
+    fetchDeployments(1);
+  }, [environment, status, dateRange]);
+
+  function handlePageChange(page: number) {
+    fetchDeployments(page);
+  }
+
+  // Client-side search filter (within the current page)
+  const filtered = (deployments?.items ?? []).filter((d) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      (d.name?.toLowerCase().includes(q)) ||
+      (d.branch?.toLowerCase().includes(q)) ||
+      (d.message?.toLowerCase().includes(q))
+    );
   });
+
+  let drawerStatus: "Successful" | "Failed" | "Pending" = "Pending";
+  const selectedStatus = selectedDeployment?.status?.toLowerCase();
+
+  if (selectedStatus === "active" || selectedStatus === "ready") {
+    drawerStatus = "Successful";
+  } else if (selectedStatus === "failed") {
+    drawerStatus = "Failed";
+  }
+
+  const selectedDeploymentLogs = selectedDeployment
+    ? drawerLogsByDeploymentId[selectedDeployment.id] ?? []
+    : [];
+
+  const loadDeploymentLogs = useCallback(
+    async (deployment: DeploymentLog) => {
+      if (!deployment.id) {
+        setDrawerLogsError("Missing deployment log ID.");
+        setDrawerLogsLoading(false);
+        return;
+      }
+
+      const cached = drawerLogsByDeploymentId[deployment.id];
+      if (cached) {
+        setDrawerLogsError(null);
+        setDrawerLogsLoading(false);
+        return;
+      }
+
+      setDrawerLogsLoading(true);
+      setDrawerLogsError(null);
+
+      try {
+        const result = await getDeploymentRunLogs({
+          data: {
+            logId: deployment.id,
+            workspace,
+          },
+        });
+
+        setDrawerLogsByDeploymentId((prev) => ({
+          ...prev,
+          [deployment.id]: Array.isArray(result?.entries) ? result.entries : [],
+        }));
+      } catch (error) {
+        let message = "Failed to load deployment logs.";
+        if (error instanceof Error && error.message.trim()) {
+          message = error.message;
+        }
+        setDrawerLogsError(message);
+      } finally {
+        setDrawerLogsLoading(false);
+      }
+    },
+    [drawerLogsByDeploymentId, getDeploymentRunLogs, workspace],
+  );
+
+  const openDeploymentDrawer = useCallback(
+    (deployment: DeploymentLog) => {
+      setSelectedDeployment(deployment);
+      setDrawerOpen(true);
+      void loadDeploymentLogs(deployment);
+    },
+    [loadDeploymentLogs],
+  );
 
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 py-8">
       <TabHeader title="Deployment history">
-        Set environment-specific config and secrets (such as API keys), then
-        read those values from your code.{" "}
-        <a
-          href="#"
-          className="text-[#4879f8] underline transition-colors hover:text-[#3a6ae6]"
-        >
-          Learn more
-        </a>
+        View the deployment history for this project including status, duration
+        and commit details.
       </TabHeader>
 
       {/* Filter bar */}
@@ -381,7 +814,7 @@ function DeploymentHistoryPage() {
           <Search className="size-4 shrink-0 text-dash-text-extra-faded" />
           <input
             type="text"
-            placeholder="All branches"
+            placeholder="Search by branch or commit..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-transparent text-sm text-dash-text-strong outline-none placeholder:text-dash-text-faded placeholder:opacity-50"
@@ -393,8 +826,8 @@ function DeploymentHistoryPage() {
             <span className="flex items-center gap-2 px-3 py-1.5">
               <Calendar className="size-3.5 text-dash-text-faded" />
               {dateRange?.from && dateRange?.to
-                ? `${dateRange.from.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${dateRange.to.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-                : "Select date range"}
+                ? `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`
+                : "Last 30 days"}
             </span>
             <span className="flex h-full items-center border-l border-dash-border px-2 py-1.5">
               <ChevronDown className="size-4 text-dash-text-faded" />
@@ -409,47 +842,70 @@ function DeploymentHistoryPage() {
         />
         <FilterSelect
           label="Status"
-          options={["All", "Successful", "Failed", "Pending"]}
+          options={["All", "Successful", "Failed", "In Progress", "Pending", "Cancelled"]}
           value={status}
           onChange={setStatus}
           icon={<StatusDotsIcon />}
           dotColors={{
             Successful: "#13d282",
             Failed: "#fc391e",
+            "In Progress": "#ff7a00",
             Pending: "#ff7a00",
+            Cancelled: "#888",
           }}
         />
       </div>
 
       {/* Deployment list */}
       <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
-        {filtered.length > 0 ? (
-          filtered.map((deployment, i) => (
+        {fetching ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <DeploymentSkeleton key={i} />
+          ))
+        ) : filtered.length > 0 ? (
+          filtered.map((deployment) => (
             <DeploymentRow
-              key={i}
+              key={deployment.id}
               deployment={deployment}
+              projectId={projectId}
+              workspace={workspace}
+              projectStatus={project?.status}
               onClick={() => {
-                setSelectedDeployment(deployment);
-                setDrawerOpen(true);
+                openDeploymentDrawer(deployment);
               }}
+              onRedeployed={() => fetchDeployments(currentPage)}
             />
           ))
         ) : (
           <div className="flex h-32 items-center justify-center">
             <span className="text-sm text-dash-text-faded">
-              No deployments found
+              {deployments?.items?.length === 0
+                ? "No deployments yet"
+                : "No deployments found"}
             </span>
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {!fetching && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={deployments?.totalPages ?? 1}
+          onChange={handlePageChange}
+        />
+      )}
 
       {/* Deployment logs drawer */}
       {selectedDeployment && (
         <DeploymentLogsDrawer
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
-          environment={selectedDeployment.environment}
-          status={selectedDeployment.status}
+          environment={selectedDeployment.environment || "Production"}
+          status={drawerStatus}
+          logs={selectedDeploymentLogs}
+          loading={drawerLogsLoading}
+          emptyMessage={drawerLogsError || "No logs available for this deployment yet."}
         />
       )}
     </div>

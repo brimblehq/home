@@ -1,15 +1,17 @@
-import { useState, useRef, useEffect } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { createFileRoute, getRouteApi, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  ChevronDown,
-  Folder,
   HardDrive,
   Settings,
   Hammer,
   Cpu,
   AlertTriangle,
+  GitBranch,
 } from "lucide-react";
+import { FolderOpen } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { GlossyButton } from "../../../components/shared/glossy-button";
 import { TabHeader } from "../../../components/shared/tab-header";
 import { WarningModal } from "../../../components/shared/warning-modal";
@@ -17,8 +19,85 @@ import { RootDirectoryDrawer } from "../../../components/project/root-directory-
 import { RangeSlider } from "../../../components/shared/range-slider";
 import { Dropdown } from "../../../components/shared/dropdown";
 import { ToggleSwitch } from "../../../components/shared/toggle-switch";
+import {
+  saveProjectGeneralConfigServerFn,
+} from "@/server/projects/actions";
+import type { FrameworkOption } from "@/backend/frameworks";
+import type { RepositoryMetadata } from "@/backend/repositories";
+import { listFrameworksServerFn } from "@/server/frameworks/actions";
+import { getGithubRepoServerFn } from "@/server/repositories/actions";
+import {
+  formatMemory,
+  normalizeCpuValue,
+  normalizeMemoryGbValue,
+} from "@/utils/project-configuration";
+
+const parentRoute = getRouteApi("/projects/$projectId");
 
 export const Route = createFileRoute("/projects/$projectId/configuration")({
+  staleTime: 30_000,
+  preloadStaleTime: 30_000,
+  loader: async ({ context }) => {
+    const project = (context as any).project;
+    const workspace = (context as any).workspace;
+
+    let repo: RepositoryMetadata | null = null;
+    let frameworks: FrameworkOption[] = [];
+    const repoName = project?.repo?.fullName || project?.repo?.name;
+    const installationId = project?.repo?.installationId;
+
+    const tasks: Promise<void>[] = [];
+
+    tasks.push(
+      (listFrameworksServerFn as unknown as (input: {
+        data?: undefined;
+      }) => Promise<FrameworkOption[] | { result?: FrameworkOption[]; data?: FrameworkOption[] }>)({
+        data: undefined,
+      })
+        .then((items) => {
+          let parsedItems: FrameworkOption[] = [];
+
+          if (Array.isArray(items)) {
+            parsedItems = items;
+          } else if (items && typeof items === "object") {
+            if (Array.isArray((items as any).result)) {
+              parsedItems = (items as any).result;
+            } else if (Array.isArray((items as any).data)) {
+              parsedItems = (items as any).data;
+            }
+          }
+
+          if (Array.isArray(parsedItems)) {
+            frameworks = parsedItems;
+          } else {
+            frameworks = [];
+          }
+        })
+        .catch(() => {
+          frameworks = [];
+        }),
+    );
+
+    if (repoName) {
+      tasks.push(
+        (getGithubRepoServerFn as unknown as (input: {
+          data: { repoName: string; installationId?: number | string };
+        }) => Promise<RepositoryMetadata>)({
+          data: { repoName, installationId },
+        })
+          .then((result) => {
+            repo = result;
+          })
+          .catch(() => {
+            repo = null;
+          }),
+      );
+    }
+
+    await Promise.all(tasks);
+
+    return { repo, frameworks, workspace };
+  },
   component: ConfigurationPage,
 });
 
@@ -29,34 +108,20 @@ const ease = [0.16, 1, 0.3, 1] as const;
 const inputClass =
   "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
-const diskSizes = [
-  { id: "1", label: "1 GB ($0.25/month)" },
-  { id: "5", label: "5 GB ($1.25/month)" },
-  { id: "10", label: "10 GB ($2.50/month)" },
-  { id: "25", label: "25 GB ($6.25/month)" },
-  { id: "50", label: "50 GB ($12.50/month)" },
-  { id: "100", label: "100 GB ($25/month)" },
-];
+const PERSISTENT_STORAGE_PRICE_PER_GB = 0.25;
+
+const diskSizes = Array.from({ length: 15 }, (_, index) => {
+  const size = (index + 1) * 10;
+  return {
+    id: String(size),
+    label: `${size} GB ($${size * PERSISTENT_STORAGE_PRICE_PER_GB}/month)`,
+  };
+});
 
 const scalingGroupOptions = [
   { id: "", label: "None" },
   { id: "sg-1", label: "Web Frontend" },
   { id: "sg-2", label: "API Workers" },
-];
-
-const branchOptions = [
-  { id: "main", label: "Main" },
-  { id: "develop", label: "Develop" },
-  { id: "staging", label: "Staging" },
-];
-
-const frameworkOptions = [
-  { id: "react", label: "React JS" },
-  { id: "nextjs", label: "Next.js" },
-  { id: "vue", label: "Vue.js" },
-  { id: "svelte", label: "SvelteKit" },
-  { id: "astro", label: "Astro" },
-  { id: "static", label: "Static / HTML" },
 ];
 
 type Section = "general" | "build" | "resources" | "danger";
@@ -86,6 +151,7 @@ function ConfigInput({
   onClick?: () => void;
 }) {
   const Comp = onClick ? "button" : "div";
+  const isDefault = value === "./" || value === ".";
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-sm font-medium text-dash-text-strong">{label}</span>
@@ -96,22 +162,18 @@ function ConfigInput({
         {icon && (
           <span className="mr-2 shrink-0 text-dash-text-faded">{icon}</span>
         )}
-        <span className="text-sm font-light leading-[22px] tracking-[-0.02px] text-dash-text-faded">
+        <span
+          className={`text-sm leading-[22px] tracking-[-0.02px] ${
+            isDefault
+              ? "font-light text-dash-text-faded"
+              : "font-mono text-dash-text-strong"
+          }`}
+        >
           {value}
         </span>
       </Comp>
     </div>
   );
-}
-
-/* ─── Helper: format memory ─── */
-
-function formatMemory(mb: number): string {
-  if (mb >= 1024) {
-    const gb = mb / 1024;
-    return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} GB`;
-  }
-  return `${mb} MB`;
 }
 
 /* ─── Section: General ─── */
@@ -121,29 +183,47 @@ function GeneralSection({
   setProjectName,
   branch,
   setBranch,
+  branchOptions,
   rootDir,
   onOpenDrawer,
   framework,
   setFramework,
+  frameworkOptions,
+  saveDisabled,
+  saveLoading,
+  onSave,
 }: {
   projectName: string;
   setProjectName: (v: string) => void;
   branch: string;
   setBranch: (v: string) => void;
+  branchOptions: { id: string; label: string }[];
   rootDir: string;
   onOpenDrawer: () => void;
   framework: string;
   setFramework: (v: string) => void;
+  frameworkOptions: { id: string; label: string; icon?: string }[];
+  saveDisabled: boolean;
+  saveLoading: boolean;
+  onSave: () => void;
 }) {
   return (
-    <div className="rounded-[4px] border-[0.5px] border-dash-border">
+    <form
+      className="rounded-[4px] border-[0.5px] border-dash-border"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave();
+      }}
+    >
       {/* Row 1: Project name */}
       <div className="flex flex-col gap-1.5 px-4 py-4">
         <label className="text-sm font-medium text-dash-text-strong">
           Project name
         </label>
-        <div className="flex items-start gap-3.5">
-          <div className="input-base input-focus-within flex flex-1 items-stretch overflow-hidden">
+        <div
+          className="input-base input-focus-within flex items-stretch overflow-hidden"
+          style={!projectName.trim() ? { boxShadow: "0px 1px 2px rgba(239,47,31,0.3), 0px 0px 0px 1px #ef2f1f" } : undefined}
+        >
             <div className="flex items-center border-r border-dash-border px-3">
               <span className="whitespace-nowrap text-sm leading-6 text-dash-text-faded">
                 brimble.io/
@@ -156,8 +236,11 @@ function GeneralSection({
               className="w-full bg-transparent px-3 py-2.5 text-sm leading-6 text-dash-text-strong outline-none"
             />
           </div>
-          <GlossyButton disabled>Save</GlossyButton>
-        </div>
+        {!projectName.trim() && (
+          <span className="text-xs text-[#ef2f1f]">
+            Project name is required
+          </span>
+        )}
       </div>
 
       <hr className="border-dash-border" />
@@ -181,7 +264,7 @@ function GeneralSection({
       <div className="px-4 py-4">
         <ConfigInput
           label="Root directory"
-          icon={<Folder className="size-5" />}
+          icon={<FolderOpen size={20} weight="duotone" />}
           value={rootDir}
           onClick={onOpenDrawer}
         />
@@ -201,7 +284,20 @@ function GeneralSection({
           placeholder="Select framework..."
         />
       </div>
-    </div>
+
+      <hr className="border-dash-border" />
+
+      <div className="flex justify-end px-4 py-4">
+        <GlossyButton
+          type="submit"
+          disabled={saveDisabled || saveLoading}
+          loading={saveLoading}
+          loadingLabel="Saving..."
+        >
+          Save
+        </GlossyButton>
+      </div>
+    </form>
   );
 }
 
@@ -341,9 +437,9 @@ function ResourcesSection({
         <RangeSlider
           value={cpuValue}
           onChange={setCpuValue}
-          min={0.25}
+          min={0.5}
           max={8}
-          step={0.25}
+          step={0.5}
           unit=" vCPU"
         />
       </div>
@@ -363,9 +459,9 @@ function ResourcesSection({
             <RangeSlider
               value={memoryValue}
               onChange={setMemoryValue}
-              min={256}
-              max={16384}
-              step={256}
+              min={0.5}
+              max={12}
+              step={0.5}
               hideValue
             />
           </div>
@@ -455,7 +551,7 @@ function ResourcesSection({
                 <div className="rounded-[4px] bg-[#4879f8]/[0.04] px-3 py-2.5 dark:bg-[#4879f8]/[0.08]">
                   <p className="text-xs leading-relaxed text-dash-text-body">
                     <span className="font-medium text-[#4879f8]">
-                      $0.25/GB per month.
+                      ${PERSISTENT_STORAGE_PRICE_PER_GB}/GB per month.
                     </span>{" "}
                     Data persists across container restarts and deployments. The
                     volume mounts at{" "}
@@ -578,40 +674,185 @@ function DangerSection({
 /* ─── Main Page ─── */
 
 function ConfigurationPage() {
+  const { project, workspace } = parentRoute.useLoaderData() as any;
+  const { repo, frameworks } = Route.useLoaderData();
+  const params = Route.useParams();
+  const navigate = useNavigate();
+  const saveGeneralConfig = useServerFn(saveProjectGeneralConfigServerFn as any) as (args: {
+    data: {
+      projectId: string;
+      workspace?: string;
+      name: string;
+      branch?: string;
+      rootDirectory?: string;
+      framework?: string;
+    };
+  }) => Promise<{ id?: string; message?: string }>;
   const [activeSection, setActiveSection] = useState<Section>("general");
-  const [projectName, setProjectName] = useState("frontend-web");
-  const [branch, setBranch] = useState("main");
+  const [projectName, setProjectName] = useState(project?.name || "");
+  const [branch, setBranch] = useState(project?.repo?.branch || "");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [rootDir, setRootDir] = useState("Github/Main");
-  const [framework, setFramework] = useState("react");
+  const [rootDir, setRootDir] = useState(project?.rootDirectory || "./");
+  const [framework, setFramework] = useState(project?.framework || "");
 
   // Build settings
-  const [installCmd, setInstallCmd] = useState("");
-  const [buildCmd, setBuildCmd] = useState("");
-  const [startCmd, setStartCmd] = useState("");
+  const [installCmd, setInstallCmd] = useState(project?.installCommand || "");
+  const [buildCmd, setBuildCmd] = useState(project?.buildCommand || "");
+  const [startCmd, setStartCmd] = useState(project?.startCommand || "");
 
   // Health check
-  const [healthCheckPath, setHealthCheckPath] = useState("");
+  const [healthCheckPath, setHealthCheckPath] = useState(project?.healthCheckPath || "");
 
   // Compute resources
-  const [cpuValue, setCpuValue] = useState(1);
-  const [memoryValue, setMemoryValue] = useState(512);
+  const [cpuValue, setCpuValue] = useState(normalizeCpuValue(project?.specs?.cpu));
+  const [memoryValue, setMemoryValue] = useState(
+    normalizeMemoryGbValue(project?.specs?.memory),
+  );
 
   // Scaling group
-  const [scalingGroup, setScalingGroup] = useState("");
+  const [scalingGroup, setScalingGroup] = useState(project?.autoscalingGroup?.id || "");
 
   // Persistent storage
-  const [diskEnabled, setDiskEnabled] = useState(false);
-  const [diskSize, setDiskSize] = useState("1");
-  const [mountPath, setMountPath] = useState("");
+  const [diskEnabled, setDiskEnabled] = useState(Boolean(project?.diskSize || project?.volumeMount));
+  const [diskSize, setDiskSize] = useState(
+    String(project?.diskSize || 1),
+  );
+  const [mountPath, setMountPath] = useState(project?.volumeMount || "");
 
   // Maintenance mode
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(Boolean(project?.maintenance));
+  const [repoMetadata, setRepoMetadata] = useState<RepositoryMetadata | null>(repo ?? null);
+  const [savingGeneral, setSavingGeneral] = useState(false);
+  const [generalBaseline, setGeneralBaseline] = useState(() => ({
+    projectName: project?.name || "",
+    branch: project?.repo?.branch || "",
+    rootDir: project?.rootDirectory || "./",
+    framework: project?.framework || "",
+  }));
+  const frameworkOptions = (() => {
+    const mapped = (frameworks || []).map((item) => ({
+      id: item.slug,
+      label: item.name,
+      icon: item.logo,
+    }));
+
+    if (!framework) {
+      return mapped;
+    }
+
+    const exists = mapped.some((item) => item.id === framework);
+    if (exists) {
+      return mapped;
+    }
+
+    return [
+      ...mapped,
+      {
+        id: framework,
+        label: framework,
+      },
+    ];
+  })();
+
+  useEffect(() => {
+    setProjectName(project?.name || "");
+    setBranch(project?.repo?.branch || "");
+    setRootDir(project?.rootDirectory || "./");
+    setFramework(project?.framework || "");
+    setInstallCmd(project?.installCommand || "");
+    setBuildCmd(project?.buildCommand || "");
+    setStartCmd(project?.startCommand || "");
+    setHealthCheckPath(project?.healthCheckPath || "");
+    setCpuValue(normalizeCpuValue(project?.specs?.cpu));
+    setMemoryValue(normalizeMemoryGbValue(project?.specs?.memory));
+    setScalingGroup(project?.autoscalingGroup?.id || "");
+    setDiskEnabled(Boolean(project?.diskSize || project?.volumeMount));
+    setDiskSize(String(project?.diskSize || 1));
+    setMountPath(project?.volumeMount || "");
+    setMaintenanceMode(Boolean(project?.maintenance));
+    setGeneralBaseline({
+      projectName: project?.name || "",
+      branch: project?.repo?.branch || "",
+      rootDir: project?.rootDirectory || "./",
+      framework: project?.framework || "",
+    });
+  }, [project]);
+
+  useEffect(() => {
+    setRepoMetadata(repo ?? null);
+  }, [repo]);
+
+  useEffect(() => {
+    setRootDir("./");
+  }, [branch]);
+
+  const branchOptions = (repoMetadata?.branches || []).map((branchName) => ({
+    id: branchName,
+    label: branchName,
+  }));
+  const isGeneralDirty =
+    projectName !== generalBaseline.projectName ||
+    branch !== generalBaseline.branch ||
+    rootDir !== generalBaseline.rootDir ||
+    framework !== generalBaseline.framework;
+  const isGeneralSaveDisabled = !projectName.trim() || !isGeneralDirty;
+
+  async function handleSaveGeneral() {
+    if (isGeneralSaveDisabled || savingGeneral) {
+      return;
+    }
+
+    try {
+      setSavingGeneral(true);
+
+      await saveGeneralConfig({
+        data: {
+          projectId: project?.id || params.projectId,
+          workspace,
+          name: projectName.trim(),
+          branch,
+          rootDirectory: rootDir,
+          framework,
+        },
+      });
+
+      const nextProjectId = projectName.trim();
+      if (nextProjectId && nextProjectId !== params.projectId) {
+        let nextUrl = `/projects/${encodeURIComponent(nextProjectId)}/configuration`;
+        if (workspace) {
+          nextUrl = `${nextUrl}?workspace=${encodeURIComponent(workspace)}`;
+        }
+
+        await navigate({
+          to: nextUrl as any,
+          replace: true,
+        });
+      }
+
+      setGeneralBaseline({
+        projectName: projectName.trim(),
+        branch,
+        rootDir,
+        framework,
+      });
+
+      toast.success("Configuration saved. Redeploy started.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save configuration");
+    } finally {
+      setSavingGeneral(false);
+    }
+  }
+
+  const serviceTypeValue = String(project?.serviceType || "").toLowerCase();
+  const isDatabaseProject = serviceTypeValue === "database";
 
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-4 py-8">
       <TabHeader title="Configuration">
-        Manage your project settings and deployment configuration.{" "}
+        {isDatabaseProject
+          ? "Manage your database settings, access controls, and compute resources."
+          : "Manage your project settings and deployment configuration."}{" "}
         <a href="#" className="text-[#4879f8] underline">
           Learn more
         </a>
@@ -665,10 +906,15 @@ function ConfigurationPage() {
                   setProjectName={setProjectName}
                   branch={branch}
                   setBranch={setBranch}
+                  branchOptions={branchOptions}
                   rootDir={rootDir}
                   onOpenDrawer={() => setDrawerOpen(true)}
                   framework={framework}
                   setFramework={setFramework}
+                  frameworkOptions={frameworkOptions}
+                  saveDisabled={isGeneralSaveDisabled}
+                  saveLoading={savingGeneral}
+                  onSave={handleSaveGeneral}
                 />
               )}
               {activeSection === "build" && (
@@ -715,7 +961,26 @@ function ConfigurationPage() {
       <RootDirectoryDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        onSelect={(path) => setRootDir(`Github/${path}`)}
+        repoName={project?.repo?.fullName || project?.repo?.name}
+        installationId={project?.repo?.installationId}
+        branch={branch}
+        selectedPath={rootDir || "./"}
+        onSelect={({ path, framework: detectedFramework }) => {
+          setRootDir(path || "./");
+
+          if (detectedFramework?.slug) {
+            setFramework(detectedFramework.slug);
+          }
+          if (detectedFramework?.installCommand) {
+            setInstallCmd(detectedFramework.installCommand);
+          }
+          if (detectedFramework?.buildCommand) {
+            setBuildCmd(detectedFramework.buildCommand);
+          }
+          if (detectedFramework?.startCommand) {
+            setStartCmd(detectedFramework.startCommand);
+          }
+        }}
       />
     </div>
   );

@@ -11,7 +11,8 @@ import {
   Settings,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { FilterDropdown, type FilterOption } from "./filter-dropdown";
 import { Spinner } from "./spinner";
 import { FolderTrashIcon } from "./folder-trash-icon";
@@ -20,11 +21,22 @@ import { WarningModal } from "./warning-modal";
 import { Dropdown } from "./dropdown";
 
 export interface Domain {
+  id?: string;
+  projectId?: string;
   name: string;
   project?: string;
   status: "Active" | "Failed";
   addedAt: string;
   addedBy: string;
+  active?: boolean;
+  enabled?: boolean;
+  isCustom?: boolean;
+  isExpired?: boolean;
+  purchased?: boolean;
+  redirect?: {
+    url?: string;
+    status?: number;
+  } | null;
 }
 
 const domainStatusOptions: FilterOption[] = [
@@ -33,16 +45,18 @@ const domainStatusOptions: FilterOption[] = [
   { label: "Failed", value: "Failed", dot: "#fc391e" },
 ];
 
+interface DomainMenuItem {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  danger?: boolean;
+  onClick: () => void;
+}
+
 function DomainActionsMenu({
-  onConfigure,
-  onEdit,
-  onDelete,
-  onTransfer,
+  items,
 }: {
-  onConfigure: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onTransfer: () => void;
+  items: DomainMenuItem[];
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -67,47 +81,27 @@ function DomainActionsMenu({
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1 w-[160px] overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_4px_12px_rgba(0,0,0,0.08)]">
-          <button
-            onClick={() => {
-              onConfigure();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
-          >
-            <Settings className="size-3.5" />
-            Configure
-          </button>
-          <button
-            onClick={() => {
-              onEdit();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
-          >
-            <Pencil className="size-3.5" />
-            Edit
-          </button>
-          <button
-            onClick={() => {
-              onTransfer();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
-          >
-            <ArrowRightLeft className="size-3.5" />
-            Transfer
-          </button>
-          <hr className="my-1 border-dash-border-soft" />
-          <button
-            onClick={() => {
-              onDelete();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-500 transition-colors hover:bg-dash-bg-elevated"
-          >
-            <FolderTrashIcon className="size-3.5" />
-            Delete
-          </button>
+          {items.map((item, index) => {
+            const showDivider = Boolean(item.danger) && index > 0;
+
+            return (
+              <div key={item.id}>
+                {showDivider ? <hr className="my-1 border-dash-border-soft" /> : null}
+                <button
+                  onClick={() => {
+                    item.onClick();
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-dash-bg-elevated ${
+                    item.danger ? "text-red-500" : "text-dash-text-body"
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -231,15 +225,10 @@ function TransferDomainModal({
         <ModalContinueButton
           onClick={handleTransfer}
           disabled={!selectedWorkspace || transferring}
+          loading={transferring}
+          loadingLabel="Transferring..."
         >
-          {transferring ? (
-            <>
-              <Spinner className="text-white" />
-              <span className="ml-2">Transferring</span>
-            </>
-          ) : (
-            "Transfer"
-          )}
+          Transfer
         </ModalContinueButton>
       </ModalFooter>
     </Modal>
@@ -248,28 +237,122 @@ function TransferDomainModal({
 
 /* ─── Edit Domain Modal ─── */
 
-const projectOptions = [
-  { id: "third-party", label: "Third party" },
-  { id: "kemdirimdesign", label: "Kemdirimdesign" },
-  { id: "brimble-docs", label: "Brimble Docs" },
-  { id: "portfolio", label: "Portfolio" },
+const redirectOptions = [
+  { id: "301", label: "301 Permanent Redirect" },
+  { id: "302", label: "302 Found" },
+  { id: "307", label: "307 Temporary Redirect" },
+  { id: "308", label: "308 Permanent Redirect" },
 ];
+
+function isValidRedirectUrl(url: string) {
+  try {
+    if (!url) {
+      return true;
+    }
+
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+
+    const hostname = parsed.hostname;
+    if (!hostname.includes(".")) {
+      return false;
+    }
+
+    if (hostname.startsWith(".") || hostname.endsWith(".")) {
+      return false;
+    }
+
+    const tld = hostname.split(".").pop();
+    if (!tld || tld.length === 0) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function EditDomainModal({
   open,
   onOpenChange,
   domain,
+  projectOptions,
+  onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   domain: Domain;
+  projectOptions: Array<{ id: string; label: string }>;
+  onSave?: (input: {
+    domain: Domain;
+    name: string;
+    projectId?: string;
+    redirect: { url: string; status: number } | null;
+  }) => Promise<void>;
 }) {
   const [name, setName] = useState(domain.name);
-  const initialProject = projectOptions.find((p) => p.label === domain.project)?.id ?? "";
+  let initialProject = "";
+  if (domain.projectId) {
+    initialProject = domain.projectId;
+  } else {
+    const matchedProject = projectOptions.find((p) => p.label === domain.project);
+    if (matchedProject) {
+      initialProject = matchedProject.id;
+    }
+  }
   const [project, setProject] = useState(initialProject);
+  const [redirectStatus, setRedirectStatus] = useState<string>(() => {
+    if (typeof domain.redirect?.status === "number") {
+      return String(domain.redirect.status);
+    }
+    return "307";
+  });
+  const [redirectUrl, setRedirectUrl] = useState(() => domain.redirect?.url ?? "");
+  const [redirectUrlError, setRedirectUrlError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const inputClass =
     "input-base input-focus px-2 py-1.5 text-[13px] leading-5 text-dash-text-strong placeholder:text-[#9ca3af] dark:placeholder:text-dash-text-extra-faded";
+
+  async function handleSave() {
+    if (redirectUrl && !isValidRedirectUrl(redirectUrl)) {
+      setRedirectUrlError("Please enter a valid URL (e.g., https://example.com)");
+      return;
+    }
+
+    setRedirectUrlError("");
+
+    const nextName = name.trim();
+    const nextRedirect = redirectUrl.trim()
+      ? {
+          url: redirectUrl.trim(),
+          status: Number(redirectStatus),
+        }
+      : null;
+
+    if (!onSave) {
+      onOpenChange(false);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await onSave({
+        domain,
+        name: nextName,
+        projectId: project || undefined,
+        redirect: nextRedirect,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update domain");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
@@ -301,15 +384,70 @@ function EditDomainModal({
             placeholder="Select a project..."
           />
         </div>
+        <div className="mt-1 flex flex-col gap-1.5">
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
+            Redirect status
+          </label>
+          <Dropdown
+            value={redirectStatus}
+            options={redirectOptions}
+            onChange={setRedirectStatus}
+            placeholder="Select redirect status..."
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
+              Redirect URL
+            </label>
+            {redirectUrl ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setRedirectUrl("");
+                  setRedirectUrlError("");
+                }}
+                className="text-xs text-dash-text-faded underline hover:text-dash-text-strong"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          <input
+            type="url"
+            value={redirectUrl}
+            onChange={(e) => {
+              setRedirectUrl(e.target.value);
+              if (redirectUrlError) {
+                setRedirectUrlError("");
+              }
+            }}
+            onBlur={() => {
+              if (redirectUrl && !isValidRedirectUrl(redirectUrl)) {
+                setRedirectUrlError("Please enter a valid URL (e.g., https://example.com)");
+              } else {
+                setRedirectUrlError("");
+              }
+            }}
+            placeholder="https://example.com"
+            className={inputClass}
+          />
+          {redirectUrlError ? (
+            <p className="text-xs text-[#fc391e]">{redirectUrlError}</p>
+          ) : (
+            <p className="text-xs text-dash-text-faded">
+              Optional. Leave empty to disable redirect.
+            </p>
+          )}
+        </div>
       </div>
       <ModalFooter>
         <ModalCancelButton />
         <ModalContinueButton
-          onClick={() => {
-            // TODO: wire to API
-            onOpenChange(false);
-          }}
-          disabled={!name.trim()}
+          onClick={handleSave}
+          disabled={!name.trim() || Boolean(redirectUrlError) || saving}
+          loading={saving}
+          loadingLabel="Saving..."
         >
           Save Changes
         </ModalContinueButton>
@@ -321,13 +459,29 @@ function EditDomainModal({
 export function DomainList({
   domains,
   basePath,
+  projects = [],
   onAddDomain,
+  onRefreshDomain,
+  onConfigureDomain,
+  onDeleteDomain,
 }: {
   domains: Domain[];
   basePath?: string;
+  projects?: Array<{ id: string; name: string }>;
   onAddDomain?: () => void;
+  onRefreshDomain?: (domain: Domain) => Promise<void>;
+  onConfigureDomain?: (input: {
+    domain: Domain;
+    name: string;
+    projectId?: string;
+    redirect: { url: string; status: number } | null;
+  }) => Promise<void>;
+  onDeleteDomain?: (domain: Domain) => Promise<void>;
 }) {
   const navigate = useNavigate();
+  const searchStr = useRouterState({
+    select: (state) => state.location.searchStr,
+  });
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -336,17 +490,25 @@ export function DomainList({
   const [deletingDomain, setDeletingDomain] = useState<Domain | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [refreshing, setRefreshing] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const projectDropdownOptions = projects.map((project) => ({
+    id: project.id,
+    label: project.name,
+  }));
 
-  function handleRefresh(domainName: string) {
-    setRefreshing((prev) => new Set(prev).add(domainName));
-    // TODO: wire to API — simulate for now
-    setTimeout(() => {
+  async function handleRefresh(domain: Domain) {
+    setRefreshing((prev) => new Set(prev).add(domain.name));
+    try {
+      if (onRefreshDomain) {
+        await onRefreshDomain(domain);
+      }
+    } finally {
       setRefreshing((prev) => {
         const next = new Set(prev);
-        next.delete(domainName);
+        next.delete(domain.name);
         return next;
       });
-    }, 2000);
+    }
   }
 
   const allSelected = selected.size === domains.length && domains.length > 0;
@@ -377,12 +539,83 @@ export function DomainList({
   const failedDomains = filtered.filter((d) => d.status === "Failed");
   const activeDomains = filtered.filter((d) => d.status === "Active");
 
+  let workspaceSuffix = "";
+  if (searchStr) {
+    const params = new URLSearchParams(searchStr);
+    const workspace = params.get("workspace");
+    if (workspace && workspace.trim()) {
+      workspaceSuffix = `?workspace=${encodeURIComponent(workspace.trim())}`;
+    }
+  }
+
+  function canManageDns(domain: Domain) {
+    const isCustom = Boolean(domain.isCustom);
+    if (!isCustom) {
+      return false;
+    }
+
+    return domain.name.split(".").length === 2;
+  }
+
+  function getDomainDetailsPath(domain: Domain) {
+    if (!basePath) {
+      return null;
+    }
+
+    if (!canManageDns(domain)) {
+      return null;
+    }
+
+    return `${basePath}/${encodeURIComponent(domain.name)}${workspaceSuffix}`;
+  }
+
   function actionsFor(domain: Domain) {
+    const isCustom = Boolean(domain.isCustom);
+    const domainDetailsPath = getDomainDetailsPath(domain);
+    const items: DomainMenuItem[] = [];
+
+    if (domainDetailsPath) {
+      items.push({
+        id: "manage-dns",
+        label: "Manage DNS",
+        icon: <Settings className="size-3.5" />,
+        onClick: () => {
+          navigate({ to: domainDetailsPath as string });
+        },
+      });
+    }
+
+    items.push({
+      id: "configure",
+      label: "Configure",
+      icon: <Pencil className="size-3.5" />,
+      onClick: () => setEditingDomain(domain),
+    });
+
+    if (isCustom) {
+      items.push({
+        id: "transfer",
+        label: "Transfer domain",
+        icon: <ArrowRightLeft className="size-3.5" />,
+        onClick: () => setTransferringDomain(domain),
+      });
+    }
+
+    if (isCustom) {
+      items.push({
+        id: "delete",
+        label: domain.purchased ? "Remove domain" : "Delete domain",
+        icon: <FolderTrashIcon className="size-3.5" />,
+        danger: true,
+        onClick: () => {
+          setDeleteConfirmName("");
+          setDeletingDomain(domain);
+        },
+      });
+    }
+
     return {
-      onConfigure: () => basePath && navigate({ to: `${basePath}/${encodeURIComponent(domain.name)}` as string }),
-      onEdit: () => setEditingDomain(domain),
-      onDelete: () => { setDeleteConfirmName(""); setDeletingDomain(domain); },
-      onTransfer: () => setTransferringDomain(domain),
+      items,
     };
   }
 
@@ -424,6 +657,7 @@ export function DomainList({
       {failedDomains.map((domain, i) => {
         const originalIndex = domains.indexOf(domain);
         const actions = actionsFor(domain);
+        const domainDetailsPath = getDomainDetailsPath(domain);
         return (
           <div key={`failed-${i}`} className="overflow-visible rounded-[4px] border-[0.5px] border-dash-border">
             <table className="w-full border-collapse">
@@ -434,9 +668,9 @@ export function DomainList({
                   </td>
                   <td className="py-2">
                     <div className="flex flex-col gap-1">
-                      {basePath ? (
+                      {domainDetailsPath ? (
                         <Link
-                          to={`${basePath}/${encodeURIComponent(domain.name)}`}
+                          to={domainDetailsPath}
                           className="text-sm tracking-[-0.084px] text-dash-text-body transition-colors hover:text-dash-text-strong hover:underline"
                         >
                           {domain.name}
@@ -447,12 +681,6 @@ export function DomainList({
                         </span>
                       )}
                       <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-sm font-light leading-[1.3] text-[#fc391e]">
-                            Failed
-                          </span>
-                          <Minus className="size-3 text-[#fc391e]" strokeWidth={3} />
-                        </span>
                         {!domain.project && (
                           <span className="inline-flex items-center rounded-full bg-[#f5a623]/10 px-2 py-0.5 text-[11px] font-medium leading-none text-[#c48418] dark:bg-[#f5a623]/15 dark:text-[#f5a623]">
                             Unassigned
@@ -471,7 +699,7 @@ export function DomainList({
                   </td>
                   <td className="w-[180px] py-2 text-right">
                     <button
-                      onClick={() => handleRefresh(domain.name)}
+                      onClick={() => void handleRefresh(domain)}
                       disabled={refreshing.has(domain.name)}
                       className="inline-flex items-center gap-2 rounded-[4px] border border-dash-border bg-dash-bg px-3.5 py-1 shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:opacity-60"
                     >
@@ -496,18 +724,21 @@ export function DomainList({
               <div className="flex items-center gap-2">
                 <AlertCircle className="size-5 shrink-0 text-[#fc391e]" />
                 <span className="text-sm font-light leading-[18px] tracking-[-0.02px] text-dash-text-body">
-                  Domain failed to propagate, click change settings to
+                  Domain waiting for DNS propagation (this can take a while) or DNS misconfigured.
                 </span>
               </div>
-              {basePath ? (
+              {domainDetailsPath ? (
                 <Link
-                  to={`${basePath}/${encodeURIComponent(domain.name)}`}
+                  to={domainDetailsPath}
                   className="shrink-0 text-sm tracking-[-0.02px] text-dash-text-body underline hover:text-dash-text-strong"
                 >
                   Change settings
                 </Link>
               ) : (
-                <button className="shrink-0 text-sm tracking-[-0.02px] text-dash-text-body underline hover:text-dash-text-strong">
+                <button
+                  onClick={() => setEditingDomain(domain)}
+                  className="shrink-0 text-sm tracking-[-0.02px] text-dash-text-body underline hover:text-dash-text-strong"
+                >
                   Change settings
                 </button>
               )}
@@ -524,6 +755,7 @@ export function DomainList({
               {activeDomains.map((domain, i) => {
                 const originalIndex = domains.indexOf(domain);
                 const actions = actionsFor(domain);
+                const domainDetailsPath = getDomainDetailsPath(domain);
                 return (
                   <tr
                     key={`active-${i}`}
@@ -534,9 +766,9 @@ export function DomainList({
                     </td>
                     <td className="py-2">
                       <div className="flex flex-col gap-1">
-                        {basePath ? (
+                        {domainDetailsPath ? (
                           <Link
-                            to={`${basePath}/${encodeURIComponent(domain.name)}`}
+                            to={domainDetailsPath}
                             className="text-sm tracking-[-0.084px] text-dash-text-body transition-colors hover:text-dash-text-strong hover:underline"
                           >
                             {domain.name}
@@ -611,6 +843,13 @@ export function DomainList({
           open={!!editingDomain}
           onOpenChange={(v) => { if (!v) setEditingDomain(null); }}
           domain={editingDomain}
+          projectOptions={projectDropdownOptions}
+          onSave={async (input) => {
+            if (!onConfigureDomain) {
+              return;
+            }
+            await onConfigureDomain(input);
+          }}
         />
       )}
 
@@ -621,11 +860,30 @@ export function DomainList({
         title="Delete Domain"
         description={`Are you sure you want to delete "${deletingDomain?.name}"? This action cannot be undone. All DNS records and settings for this domain will be permanently removed.`}
         confirmLabel="Delete"
-        confirmDisabled={deleteConfirmName !== deletingDomain?.name}
-        onConfirm={() => {
-          // TODO: wire to API
-          setDeletingDomain(null);
+        confirmDisabled={deleteConfirmName !== deletingDomain?.name || deleting}
+        onConfirm={async () => {
+          if (!deletingDomain) {
+            return;
+          }
+
+          if (!onDeleteDomain) {
+            setDeletingDomain(null);
+            return;
+          }
+
+          try {
+            setDeleting(true);
+            await onDeleteDomain(deletingDomain);
+            setDeletingDomain(null);
+            setDeleteConfirmName("");
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to delete domain");
+            throw error;
+          } finally {
+            setDeleting(false);
+          }
         }}
+        confirmLoadingLabel="Deleting..."
       >
         <div className="flex flex-col gap-2 text-left">
           <label className="text-sm leading-5 text-dash-text-faded">

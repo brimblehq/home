@@ -1,4 +1,5 @@
 import { cn } from "@brimble/ui";
+import { LoadingButtonContent } from "./loading-button-content";
 
 const variants = {
   blue: {
@@ -14,11 +15,15 @@ const variants = {
 interface GlossyButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: keyof typeof variants;
   fullWidth?: boolean;
+  loading?: boolean;
+  loadingLabel?: React.ReactNode;
 }
 
 export function GlossyButton({
   variant = "blue",
   fullWidth,
+  loading = false,
+  loadingLabel,
   className,
   children,
   ...props
@@ -36,7 +41,9 @@ export function GlossyButton({
         className,
       )}
     >
-      {children}
+      <LoadingButtonContent loading={loading} loadingLabel={loadingLabel}>
+        {children}
+      </LoadingButtonContent>
     </button>
   );
 }

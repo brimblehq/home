@@ -21,20 +21,20 @@ export function ProjectCard({ project }: { project: Project }) {
       whileHover={{ y: -3, scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className="flex cursor-pointer flex-col overflow-clip rounded-[4px] border-[0.5px] border-dash-border"
+      className="flex h-[168px] cursor-pointer flex-col overflow-clip rounded-[4px] border-[0.5px] border-dash-border"
     >
       {/* Project name + commit message */}
-      <div className="flex flex-col gap-0.5 px-3.5 pt-3 pb-2 text-sm tracking-[-0.02px]">
-        <span className="font-medium leading-5 text-dash-text-strong">
+      <div className="flex min-h-0 flex-1 flex-col gap-0.5 px-3.5 pt-3 pb-2 text-sm tracking-[-0.02px]">
+        <span className="shrink-0 font-medium leading-5 text-dash-text-strong">
           {project.name}
         </span>
-        <span className="font-light leading-[22px] text-dash-text-faded">
+        <span className="line-clamp-1 font-light leading-[22px] text-dash-text-faded">
           {project.commitMessage}
         </span>
       </div>
 
       {/* Branch with git icon + vertical line */}
-      <div className="relative flex items-center gap-2 px-3 pb-1 pt-0.5">
+      <div className="relative flex shrink-0 items-center gap-2 px-3 pb-1 pt-0.5">
         {/* Vertical line above icon */}
         <div className="absolute left-[23px] top-[-6px] h-[16px] w-px bg-dash-border" />
         {/* Git icon */}
@@ -45,7 +45,7 @@ export function ProjectCard({ project }: { project: Project }) {
       </div>
 
       {/* Updated timestamp + star */}
-      <div className="flex h-10 items-center justify-between border-t-[0.5px] border-dash-border px-3.5">
+      <div className="flex h-10 shrink-0 items-center justify-between border-t-[0.5px] border-dash-border px-3.5">
         <span className="font-mono text-xs uppercase leading-[18px] tracking-[-0.02px] text-dash-text-extra-faded opacity-80">
           Updated {project.updatedAt}
         </span>

@@ -1,31 +1,37 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getDomainDetailsServerFn } from "@/server/domains/actions";
 import {
   DomainSettings,
-  type DomainInfo,
 } from "../../components/shared/domain-settings";
+import { mapDomainDetailsToDomainInfo } from "@/utils/domain-settings";
 
 export const Route = createFileRoute("/domains/$domainName")({
+  loader: async ({ params, location }) => {
+    const searchParams = new URLSearchParams(location.searchStr || "");
+    const workspace = searchParams.get("workspace") || undefined;
+
+    const domain = await (getDomainDetailsServerFn as unknown as (input: {
+      data: { domainName: string; workspace?: string };
+    }) => Promise<any>)({
+      data: {
+        domainName: decodeURIComponent(params.domainName),
+        workspace,
+      },
+    });
+
+    return { domain, workspace };
+  },
   component: DomainSettingsPage,
 });
 
 function DomainSettingsPage() {
-  const { domainName } = Route.useParams();
+  const { domain, workspace } = Route.useLoaderData();
+  const domainInfo = mapDomainDetailsToDomainInfo(domain);
 
-  // Mock data — replace with real API call
-  const domain: DomainInfo = {
-    domainName: decodeURIComponent(domainName),
-    registrar: "Custom domain",
-    nameserversType: "Custom domain",
-    expirationDate: "NA",
-    creator: "Kemdirim Akujuobi",
-    dnsRecords: [
-      { name: "site.com", type: "CNAME", ttl: "1day", value: "157.90.225.125" },
-      { name: "site.com", type: "CNAME", ttl: "1day", value: "157.90.225.125" },
-    ],
-    nameservers: ["ns1.brimble.io", "ns2.brimble.io"],
-    nameserverWarning:
-      "You are currently using the wrong nameservers. Please use the provided nameservers below",
-  };
+  let backPath = "/domains";
+  if (workspace) {
+    backPath = `/domains?workspace=${encodeURIComponent(workspace)}`;
+  }
 
-  return <DomainSettings domain={domain} backPath="/domains" />;
+  return <DomainSettings domain={domainInfo} backPath={backPath} />;
 }

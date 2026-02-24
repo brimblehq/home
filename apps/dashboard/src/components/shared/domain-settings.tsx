@@ -400,7 +400,7 @@ export function DomainSettings({
             <h2 className="text-base font-medium leading-5 tracking-[-0.026px] text-dash-text-body dark:text-white">
               Nameservers
             </h2>
-            <p className="max-w-[560px] text-sm font-light leading-[1.3] text-dash-text-faded">
+            <p className="max-w-[720px] text-sm font-light leading-[1.3] text-dash-text-faded">
               To use Brimble Name Servers, Kindly enable DNS for this domain. It
               can always be disabled too from the Domains Page. Point your domain
               nameservers of "

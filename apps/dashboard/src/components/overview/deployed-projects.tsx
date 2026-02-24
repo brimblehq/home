@@ -3,35 +3,23 @@ import { ProjectCard } from "../shared/project-card";
 import type { Project } from "../shared/project-card";
 import { CreateProjectCard } from "../shared/create-project-card";
 
+function getCreateCardSpan(projectCount: number) {
+  const smRemaining = projectCount % 2 === 0 ? 2 : 2 - (projectCount % 2);
+  const lgRemaining = projectCount % 3 === 0 ? 3 : 3 - (projectCount % 3);
 
-const projects: Project[] = [
-  {
-    name: "Kemdirimdesign",
-    commitMessage: "Merge pull request #40 from Cool-Projects/fix101",
-    branch: "master",
-    updatedAt: "23h ago",
-  },
-  {
-    name: "Kemdirimdesign",
-    commitMessage: "Merge pull request #40 from Cool-Projects/fix101",
-    branch: "master",
-    updatedAt: "23h ago",
-  },
-  {
-    name: "Kemdirimdesign",
-    commitMessage: "Merge pull request #40 from Cool-Projects/fix101",
-    branch: "main",
-    updatedAt: "2d ago",
-  },
-  {
-    name: "Kemdirimdesign",
-    commitMessage: "Merge pull request #40 from Cool-Projects/fix101",
-    branch: "main",
-    updatedAt: "5d ago",
-  },
-];
+  return [
+    smRemaining >= 2 ? "sm:col-span-2" : "",
+    lgRemaining >= 3 ? "lg:col-span-3" : lgRemaining >= 2 ? "lg:col-span-2" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
-export function DeployedProjects() {
+export function DeployedProjects({
+  projects,
+}: {
+  projects: Project[];
+}) {
   return (
     <div className="mb-8">
       <PageHeader title="Deployed projects">
@@ -45,7 +33,7 @@ export function DeployedProjects() {
         {projects.map((project, i) => (
           <ProjectCard key={i} project={project} />
         ))}
-        <CreateProjectCard className="col-span-1 sm:col-span-2" />
+        <CreateProjectCard className={getCreateCardSpan(projects.length)} />
       </div>
     </div>
   );

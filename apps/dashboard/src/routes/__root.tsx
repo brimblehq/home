@@ -5,10 +5,18 @@ import {
   createRootRoute,
 } from "@tanstack/react-router";
 import { DashboardLayout } from "../components/layout/dashboard-layout";
+import { enforceRouteAuth } from "../lib/auth-guards";
+import { getSettingsSidebarSnapshotServerFn } from "@/server/settings/actions";
+import type { SettingsSidebarSnapshot } from "@/backend/settings";
+import { listWorkspacesServerFn } from "@/server/workspaces/actions";
+import type { ApiListResponse } from "@/backend";
+import type { Workspace } from "@/backend/workspaces";
 
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
+  staleTime: 60_000,
+  preloadStaleTime: 60_000,
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -19,6 +27,38 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: appCss },
     ],
   }),
+  beforeLoad: async ({ location }) => {
+    await enforceRouteAuth(location.pathname, location.searchStr);
+  },
+  loader: async ({ location }) => {
+    const isAuthRoute = /^\/(login|signup)$/.test(location.pathname);
+    const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
+    const isCatchAll = location.pathname !== "/" && !knownPrefixes.test(location.pathname);
+
+    if (isAuthRoute || isCatchAll) {
+      return {
+        settingsSnapshot: null as SettingsSidebarSnapshot | null,
+        workspaces: { items: [] } as ApiListResponse<Workspace>,
+      };
+    }
+
+    try {
+      const [settingsSnapshot, workspaces] = await Promise.all([
+        (getSettingsSidebarSnapshotServerFn as unknown as () => Promise<SettingsSidebarSnapshot>)(),
+        (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)(),
+      ]);
+
+      return {
+        settingsSnapshot,
+        workspaces,
+      };
+    } catch {
+      return {
+        settingsSnapshot: null as SettingsSidebarSnapshot | null,
+        workspaces: { items: [] } as ApiListResponse<Workspace>,
+      };
+    }
+  },
   component: RootComponent,
   shellComponent: RootDocument,
 });
@@ -30,7 +70,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement;var t=localStorage.getItem('theme');if(t==='dark'||((!t)&&window.matchMedia('(prefers-color-scheme:dark)').matches)){d.classList.add('dark')}}catch(e){}})()`,
+            __html: `(function(){try{var d=document.documentElement;var t=localStorage.getItem('theme');var dark=t==='dark'||((!t)&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(dark){d.classList.add('dark')}else{d.classList.remove('dark')}}catch(e){}})()`,
           }}
         />
       </head>
@@ -43,8 +83,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const { settingsSnapshot, workspaces } = Route.useLoaderData();
+
   return (
-    <DashboardLayout>
+    <DashboardLayout
+      initialSettingsSnapshot={settingsSnapshot}
+      initialWorkspaces={workspaces}
+    >
       <Outlet />
     </DashboardLayout>
   );

@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, Fragment } from "react";
+import axios from "axios";
 import { Drawer } from "vaul";
 import { cn } from "@brimble/ui";
+import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
@@ -13,29 +16,40 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
+  Send,
 } from "lucide-react";
+import { toast } from "sonner";
 import { InviteMembersModal } from "../settings/invite-members-modal";
 import { WarningModal } from "./warning-modal";
 import { GlossyButton } from "./glossy-button";
 import { ChangePlanModal, billingPlans } from "./change-plan-modal";
 import { CursorPagination } from "./pagination";
-
-interface UserProfile {
-  firstName: string;
-  lastName: string;
-  username: string;
-  uniqueId: string;
-  email: string;
-  avatarUrl?: string;
-}
-
-const mockProfile: UserProfile = {
-  firstName: "Emmanuel",
-  lastName: "Akujuobi",
-  username: "kemthereem",
-  uniqueId: "64799fb0615d68ff27ac8b8f",
-  email: "akujuobiemmanuelk@gmail.com",
-};
+import { logoutServerFn } from "@/server/auth/actions";
+import {
+  createSettingsApiKeyServerFn,
+  decryptSettingsApiKeyServerFn,
+  getSettingsSidebarSnapshotServerFn,
+  listSettingsInvoicesServerFn,
+  requestSettingsEmailVerificationServerFn,
+  resetSettingsApiKeyServerFn,
+  testSettingsWebhookServerFn,
+  updateSettingsBuildsServerFn,
+  updateSettingsNotificationsServerFn,
+  updateSettingsProfileServerFn,
+  updateSettingsWebhooksServerFn,
+} from "@/server/settings/actions";
+import type {
+  SettingsInvoicePage,
+  SettingsSidebarSnapshot,
+  SettingsWebhookGroup as ServerWebhookGroup,
+} from "@/backend/settings";
+import config from "@/config";
+import {
+  mapSettingsSnapshotToDrawerProfile,
+  maskSecretWithAsterisks,
+  type DrawerUserProfile,
+} from "@/utils/dashboard";
+type UserProfile = DrawerUserProfile;
 
 type ProfileTab =
   | "profile"
@@ -51,10 +65,10 @@ const accountNav: { label: string; key: ProfileTab }[] = [
 ];
 
 const reachUsNav = [
-  { label: "Blog", emoji: "📔" },
-  { label: "Follow on twitter", emoji: "🔵" },
-  { label: "Discord", emoji: "🟣" },
-  { label: "Help", emoji: "🛟" },
+  { label: "Blog", emoji: "📔", href: "https://brimble.io/blog" },
+  { label: "Follow on twitter", emoji: "🔵", href: "https://x.com/brimblehq" },
+  { label: "Discord", emoji: "🟣", href: "https://discord.gg" },
+  { label: "Help", emoji: "🛟", href: "https://docs.brimble.io" },
 ];
 
 const aboutNav = [
@@ -95,48 +109,134 @@ function ProfileForm({
   profile,
   onSave,
   onChangeEmail,
+  onBuildsChange,
+  onCreateApiKey,
+  onResetApiKey,
+  onDecryptApiKey,
+  isSaving,
 }: {
   profile: UserProfile;
-  onSave?: (data: { firstName: string; lastName: string; username: string }) => void;
-  onChangeEmail?: () => void;
+  onSave?: (data: {
+    firstName: string;
+    lastName: string;
+    username: string;
+    avatarUrl?: string;
+  }) => void | Promise<void>;
+  onChangeEmail?: (email: string) => void | Promise<void>;
+  onBuildsChange?: (enabled: boolean) => Promise<void> | void;
+  onCreateApiKey?: () => Promise<string | undefined> | string | undefined;
+  onResetApiKey?: () => Promise<string | undefined> | string | undefined;
+  onDecryptApiKey?: (encryptedApiKey: string) => Promise<string | null | undefined>;
+  isSaving?: boolean;
 }) {
   const [firstName, setFirstName] = useState(profile.firstName);
   const [lastName, setLastName] = useState(profile.lastName);
   const [username, setUsername] = useState(profile.username);
-  const [buildsEnabled, setBuildsEnabled] = useState(true);
+  const [email, setEmail] = useState(profile.email);
+  const [buildsEnabled, setBuildsEnabled] = useState(profile.buildsEnabled ?? true);
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl ?? "");
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isDirty =
+  const isTextDirty =
     firstName !== profile.firstName ||
     lastName !== profile.lastName ||
     username !== profile.username;
+  const isAvatarDirty = avatarUrl !== (profile.avatarUrl ?? "");
+  const isDirty = isTextDirty || isAvatarDirty;
 
   const inputClass =
     "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
   function handleSave() {
-    onSave?.({ firstName, lastName, username });
+    void onSave?.({ firstName, lastName, username, avatarUrl: avatarUrl || undefined });
   }
 
-  function handleDiscard() {
+  useEffect(() => {
     setFirstName(profile.firstName);
     setLastName(profile.lastName);
     setUsername(profile.username);
+    setEmail(profile.email);
+    setAvatarUrl(profile.avatarUrl ?? "");
+  }, [profile.avatarUrl, profile.email, profile.firstName, profile.lastName, profile.username]);
+
+  useEffect(() => {
+    setBuildsEnabled(profile.buildsEnabled ?? true);
+  }, [profile.buildsEnabled]);
+
+  async function handleAvatarFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "profile-photos");
+
+      const response = await axios.post(config.uploadUrl, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const nextAvatarUrl = response.data?.secure_url || response.data?.url;
+
+      if (typeof nextAvatarUrl === "string" && nextAvatarUrl.length > 0) {
+        setAvatarUrl(String(nextAvatarUrl));
+        toast.success("Photo uploaded. Click Confirm to save changes.");
+      } else {
+        toast.error("Upload succeeded but no image URL was returned.");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
+    } finally {
+      setIsUploadingAvatar(false);
+      if (event.target) {
+        event.target.value = "";
+      }
+    }
   }
+
+  const avatarSeed = profile.username || profile.firstName || profile.email || "user";
+  const avatarSrc =
+    avatarUrl ||
+    `${config.avatarUrl}/adventurer-neutral/svg?seed=${encodeURIComponent(avatarSeed)}`;
 
   return (
     <div className="flex max-w-[488px] flex-col gap-8">
       {/* Avatar + Upload */}
       <div className="flex items-center gap-4">
-        <div
-          className="size-16 shrink-0 rounded-full"
-          style={{
-            background:
-              "radial-gradient(circle at 62% 30%, #b8cffc, #94b6f8 25%, #6f9cf3 50%, #4b82ee 75%, #2769e9)",
-          }}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+          className="hidden"
+          onChange={handleAvatarFileChange}
         />
+        <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-dash-border-soft bg-dash-bg-elevated">
+          <img
+            src={avatarSrc}
+            alt="Profile avatar"
+            className="h-full w-full object-cover"
+          />
+          {isUploadingAvatar && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/80 border-t-transparent" />
+            </div>
+          )}
+        </div>
         <div className="flex flex-col gap-2">
-          <button className="flex h-[34px] w-fit items-center rounded-[4px] border border-dash-border bg-dash-bg px-3.5 text-sm font-medium text-dash-text-strong shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated">
-            Upload photo
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingAvatar || Boolean(isSaving)}
+            className="flex h-[34px] w-fit items-center rounded-[4px] border border-dash-border bg-dash-bg px-3.5 text-sm font-medium text-dash-text-strong shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-50"
+          >
+            {isUploadingAvatar ? "Uploading..." : "Upload photo"}
           </button>
           <span className="text-sm text-dash-text-faded">
             Hold Option "⌥" to reveal alternate action
@@ -206,7 +306,13 @@ function ProfileForm({
       </div>
 
       {/* Save button */}
-      <GlossyButton onClick={handleSave} disabled={!isDirty} fullWidth>
+      <GlossyButton
+        onClick={handleSave}
+        disabled={!isDirty || isUploadingAvatar || Boolean(isSaving)}
+        fullWidth
+        loading={Boolean(isSaving)}
+        loadingLabel="Saving..."
+      >
         Confirm
       </GlossyButton>
 
@@ -225,12 +331,12 @@ function ProfileForm({
         <div className="flex items-center gap-3">
           <input
             type="email"
-            value={profile.email}
-            readOnly
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             className={cn(inputClass, "text-dash-text-faded")}
           />
           <button
-            onClick={onChangeEmail}
+            onClick={() => onChangeEmail?.(email)}
             className="shrink-0 text-sm font-medium tracking-[-0.0224px] text-dash-text-strong transition-colors hover:text-dash-text-body"
           >
             Change
@@ -250,33 +356,71 @@ function ProfileForm({
             Enable or disable builds for your projects
           </span>
         </div>
-        <Toggle checked={buildsEnabled} onChange={setBuildsEnabled} />
+        <Toggle
+          checked={buildsEnabled}
+          onChange={async (nextValue) => {
+            setBuildsEnabled(nextValue);
+            try {
+              await onBuildsChange?.(nextValue);
+            } catch (error) {
+              setBuildsEnabled(!nextValue);
+              throw error;
+            }
+          }}
+        />
       </div>
 
       <hr className="border-dash-border-soft" />
 
       {/* API Key */}
-      <ApiKeySection />
+      <ApiKeySection
+        initialApiKey={profile.apiKey}
+        onCreate={onCreateApiKey}
+        onReset={onResetApiKey}
+        onDecrypt={onDecryptApiKey}
+      />
     </div>
   );
 }
 
-const MOCK_API_KEY = "brm_sk_a4f8e2c1d7b3094e5f6a1c8d2e9b7f3a4d6e8c0";
-
-function maskKey(key: string) {
-  // Show first 7 chars (brm_sk_) and last 4, mask the rest
-  const prefix = key.slice(0, 7);
-  const suffix = key.slice(-4);
-  return `${prefix}${"•".repeat(key.length - 11)}${suffix}`;
-}
-
-function ApiKeySection() {
-  const [apiKey, setApiKey] = useState(MOCK_API_KEY);
+function ApiKeySection({
+  initialApiKey,
+  onCreate,
+  onReset,
+  onDecrypt,
+}: {
+  initialApiKey?: string;
+  onCreate?: () => Promise<string | undefined> | string | undefined;
+  onReset?: () => Promise<string | undefined> | string | undefined;
+  onDecrypt?: (encryptedApiKey: string) => Promise<string | null | undefined>;
+}) {
+  const [encryptedApiKey, setEncryptedApiKey] = useState(initialApiKey ?? "");
+  const [decryptedApiKey, setDecryptedApiKey] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [rerollOpen, setRerollOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDecrypting, setIsDecrypting] = useState(false);
 
   const inputClass =
     "w-full input-base px-3 py-2.5 text-sm leading-6 text-dash-text-strong";
+
+  useEffect(() => {
+    setEncryptedApiKey(initialApiKey ?? "");
+    setDecryptedApiKey(null);
+    setRevealed(false);
+  }, [initialApiKey]);
+
+  const displayValue = (() => {
+    if (!encryptedApiKey) {
+      return "No API Key Yet";
+    }
+
+    if (revealed && decryptedApiKey) {
+      return decryptedApiKey;
+    }
+
+    return maskSecretWithAsterisks(encryptedApiKey);
+  })();
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -293,28 +437,66 @@ function ApiKeySection() {
         <div className="relative flex-1">
           <input
             type="text"
-            value={revealed ? apiKey : maskKey(apiKey)}
+            value={displayValue}
             readOnly
             className={cn(inputClass, "pr-20 font-mono text-[13px] text-dash-text-faded")}
           />
           <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
             <button
-              onClick={() => setRevealed(!revealed)}
+              onClick={async () => {
+                if (!encryptedApiKey) {
+                  return;
+                }
+
+                if (revealed) {
+                  setRevealed(false);
+                  return;
+                }
+
+                if (decryptedApiKey) {
+                  setRevealed(true);
+                  return;
+                }
+
+                setIsDecrypting(true);
+
+                try {
+                  const decrypted = await onDecrypt?.(encryptedApiKey);
+                  if (decrypted) {
+                    setDecryptedApiKey(decrypted);
+                    setRevealed(true);
+                  }
+                } finally {
+                  setIsDecrypting(false);
+                }
+              }}
+              disabled={!encryptedApiKey || isDecrypting}
               className="shrink-0 rounded-[4px] p-1 text-dash-text-faded transition-colors hover:text-dash-text-strong"
               title={revealed ? "Hide" : "Reveal"}
             >
               {revealed ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
             </button>
-            <CopyButton text={apiKey} />
+            {decryptedApiKey ? (
+              <CopyButton text={decryptedApiKey} />
+            ) : (
+              <button
+                disabled
+                className="shrink-0 rounded-[4px] p-1 text-dash-text-extra-faded"
+                title="Reveal key to copy"
+              >
+                <Copy className="size-4" />
+              </button>
+            )}
           </div>
         </div>
 
         <button
           onClick={() => setRerollOpen(true)}
+          disabled={isSubmitting}
           className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
         >
           <RefreshCw className="size-3.5" />
-          Reroll
+          {encryptedApiKey ? "Reroll" : "Generate"}
         </button>
       </div>
 
@@ -325,11 +507,18 @@ function ApiKeySection() {
         description="Your current key will be permanently invalidated. Any services using it will lose access immediately."
         confirmLabel="Reroll key"
         cancelLabel="Cancel"
-        onConfirm={() => {
-          // TODO: wire to API — generate new key
-          const newKey = `brm_sk_${Array.from({ length: 32 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("")}`;
-          setApiKey(newKey);
-          setRevealed(true);
+        onConfirm={async () => {
+          setIsSubmitting(true);
+          try {
+            const nextKey = encryptedApiKey ? await onReset?.() : await onCreate?.();
+            if (nextKey) {
+              setEncryptedApiKey(nextKey);
+              setDecryptedApiKey(null);
+              setRevealed(false);
+            }
+          } finally {
+            setIsSubmitting(false);
+          }
         }}
       />
     </div>
@@ -341,11 +530,13 @@ function ProfileNavSidebar({
   onTabChange,
   onClose,
   onSignOut,
+  isSigningOut,
 }: {
   activeTab: ProfileTab;
   onTabChange: (tab: ProfileTab) => void;
   onClose: () => void;
-  onSignOut?: () => void;
+  onSignOut?: () => void | Promise<void>;
+  isSigningOut?: boolean;
 }) {
   return (
     <div className="flex h-full w-[380px] shrink-0 flex-col border-l border-dash-border bg-dash-bg pb-6 pt-5">
@@ -416,11 +607,14 @@ function ProfileNavSidebar({
       {/* Sign out */}
       <div className="pl-[120px] pr-3 pt-4">
         <button
-          onClick={onSignOut}
+          onClick={() => {
+            void onSignOut?.();
+          }}
+          disabled={isSigningOut}
           className={cn(navItemBase, "shrink-0 text-dash-text-body hover:bg-dash-bg-elevated")}
         >
           <span className="text-sm">⛳️</span>
-          Sign out
+          {isSigningOut ? "Signing out..." : "Sign out"}
         </button>
       </div>
     </div>
@@ -430,11 +624,134 @@ function ProfileNavSidebar({
 export function UserProfileDrawer({
   open,
   onOpenChange,
+  initialSnapshot = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialSnapshot?: SettingsSidebarSnapshot | null;
 }) {
+  const navigate = useNavigate();
+  const logout = useServerFn(logoutServerFn);
+  const getSettingsSnapshot = useServerFn(getSettingsSidebarSnapshotServerFn);
+  const listInvoices = useServerFn(listSettingsInvoicesServerFn as any) as (args: {
+    data: { page: number };
+  }) => Promise<SettingsInvoicePage>;
+  const updateProfile = useServerFn(updateSettingsProfileServerFn as any) as (args: {
+    data: { firstName: string; lastName: string; username: string; avatarUrl?: string };
+  }) => Promise<SettingsSidebarSnapshot["profile"]>;
+  const requestEmailVerification = useServerFn(
+    requestSettingsEmailVerificationServerFn as any,
+  ) as (args: { data: { email: string } }) => Promise<{ ok: true }>;
+  const updateNotifications = useServerFn(updateSettingsNotificationsServerFn as any) as (args: {
+    data: { email: boolean; mute: boolean };
+  }) => Promise<{ ok: true }>;
+  const updateBuilds = useServerFn(updateSettingsBuildsServerFn as any) as (args: {
+    data: { buildDisabled: boolean };
+  }) => Promise<{ ok: true }>;
+  const createApiKey = useServerFn(createSettingsApiKeyServerFn);
+  const resetApiKey = useServerFn(resetSettingsApiKeyServerFn);
+  const decryptApiKey = useServerFn(decryptSettingsApiKeyServerFn as any) as (args: {
+    data: { encryptedApiKey: string };
+  }) => Promise<string | null>;
+  const updateWebhooks = useServerFn(updateSettingsWebhooksServerFn as any) as (args: {
+    data: {
+      webhookUrl: string | null;
+      discordUrl: string | null;
+      slackUrl: string | null;
+      events: string[];
+    };
+  }) => Promise<SettingsSidebarSnapshot["webhooks"]>;
+  const testWebhook = useServerFn(testSettingsWebhookServerFn as any) as (args: {
+    data: { url: string; type: "discord" | "slack" | "custom" };
+  }) => Promise<{ ok: true }>;
   const [activeTab, setActiveTab] = useState<ProfileTab>("profile");
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [snapshot, setSnapshot] = useState<SettingsSidebarSnapshot | null>(initialSnapshot);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+
+  const profile = mapSettingsSnapshotToDrawerProfile(snapshot);
+
+  useEffect(() => {
+    if (initialSnapshot) {
+      setSnapshot(initialSnapshot);
+    }
+  }, [initialSnapshot]);
+
+  const refreshSettings = async () => {
+    setIsLoadingSettings(true);
+    setSettingsError(null);
+
+    try {
+      const nextSnapshot = await getSettingsSnapshot();
+      setSnapshot(nextSnapshot);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to load settings";
+      setSettingsError(message);
+    } finally {
+      setIsLoadingSettings(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (snapshot) {
+      return;
+    }
+
+    void refreshSettings();
+  }, [open, snapshot]);
+
+  async function handleSignOut() {
+    if (isSigningOut) {
+      return;
+    }
+
+    setIsSigningOut(true);
+
+    try {
+      await logout();
+      onOpenChange(false);
+      await navigate({ to: "/login" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to sign out");
+    } finally {
+      setIsSigningOut(false);
+    }
+  }
+
+  async function handleInvoicePageChange(page: number) {
+    try {
+      const invoicePage = await listInvoices({ data: { page } });
+
+      setSnapshot((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          billing: {
+            ...prev.billing,
+            invoices: invoicePage,
+          },
+        };
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load invoices");
+    }
+  }
+
+  let drawerTitle: string = activeTab;
+  if (activeTab === "billing") {
+    drawerTitle = "Plan & billing";
+  } else if (activeTab === "members") {
+    drawerTitle = "Members";
+  }
 
   return (
     <Drawer.Root
@@ -455,10 +772,8 @@ export function UserProfileDrawer({
             activeTab={activeTab}
             onTabChange={setActiveTab}
             onClose={() => onOpenChange(false)}
-            onSignOut={() => {
-              // TODO: wire sign out
-              console.log("Sign out");
-            }}
+            onSignOut={handleSignOut}
+            isSigningOut={isSigningOut}
           />
 
           {/* Content area */}
@@ -466,7 +781,7 @@ export function UserProfileDrawer({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-dash-border px-8 py-5">
               <Drawer.Title className="text-base font-medium leading-[25px] tracking-[-0.0256px] text-dash-text-strong capitalize">
-                {activeTab === "billing" ? "Plan & billing" : activeTab === "members" ? "Members" : activeTab}
+                {drawerTitle}
               </Drawer.Title>
               <button className="flex size-8 items-center justify-center rounded-full border border-dash-border-soft text-dash-text-faded transition-colors hover:text-dash-text-strong">
                 <HelpCircle className="size-4" />
@@ -475,22 +790,218 @@ export function UserProfileDrawer({
 
             {/* Form */}
             <div className="flex-1 px-8 py-8">
-              {activeTab === "profile" && (
+              {settingsError && activeTab !== "members" && (
+                <div className="mb-4 rounded-[6px] border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-500">
+                  {settingsError}
+                </div>
+              )}
+              {isLoadingSettings && !snapshot && activeTab !== "members" ? (
+                <div className="text-sm text-dash-text-faded">Loading settings…</div>
+              ) : null}
+              {activeTab === "profile" && profile && (
                 <ProfileForm
-                  profile={mockProfile}
-                  onSave={(data) => {
-                    // TODO: wire to API
-                    console.log("Save profile:", data);
+                  profile={profile}
+                  isSaving={isSavingProfile}
+                  onSave={async (data) => {
+                    setIsSavingProfile(true);
+                    try {
+                      const updated = await updateProfile({ data });
+                      setSnapshot((prev) => {
+                        if (!prev) {
+                          return prev;
+                        }
+
+                        return {
+                          ...prev,
+                          profile: {
+                            ...prev.profile,
+                            firstName: updated.firstName,
+                            lastName: updated.lastName,
+                            username: updated.username,
+                            avatarUrl: updated.avatarUrl,
+                          },
+                        };
+                      });
+                      toast.success("Profile updated");
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to update profile");
+                    } finally {
+                      setIsSavingProfile(false);
+                    }
                   }}
-                  onChangeEmail={() => {
-                    // TODO: wire email verification flow
-                    console.log("Change email — trigger verification");
+                  onChangeEmail={async (email) => {
+                    try {
+                      await requestEmailVerification({ data: { email } });
+                      toast.success("Verification email sent");
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to send verification email");
+                    }
+                  }}
+                  onBuildsChange={async (enabled) => {
+                    try {
+                      await updateBuilds({ data: { buildDisabled: !enabled } });
+                      setSnapshot((prev) => {
+                        if (!prev) {
+                          return prev;
+                        }
+
+                        return {
+                          ...prev,
+                          profile: {
+                            ...prev.profile,
+                            buildDisabled: !enabled,
+                          },
+                        };
+                      });
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to update build settings");
+                      throw error;
+                    }
+                  }}
+                  onCreateApiKey={async () => {
+                    try {
+                      const result = await createApiKey();
+                      const apiKeyValue = result.apiKey;
+
+                      if (apiKeyValue) {
+                        setSnapshot((prev) => {
+                          if (!prev) {
+                            return prev;
+                          }
+
+                          return {
+                            ...prev,
+                            profile: {
+                              ...prev.profile,
+                              apiKey: apiKeyValue,
+                            },
+                          };
+                        });
+                        toast.success("API key created");
+                      }
+
+                      return apiKeyValue;
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to create API key");
+                      return undefined;
+                    }
+                  }}
+                  onResetApiKey={async () => {
+                    try {
+                      const result = await resetApiKey();
+                      const apiKeyValue = result.apiKey;
+
+                      if (apiKeyValue) {
+                        setSnapshot((prev) => {
+                          if (!prev) {
+                            return prev;
+                          }
+
+                          return {
+                            ...prev,
+                            profile: {
+                              ...prev.profile,
+                              apiKey: apiKeyValue,
+                            },
+                          };
+                        });
+                        toast.success("API key reset");
+                      }
+
+                      return apiKeyValue;
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to reset API key");
+                      return undefined;
+                    }
+                  }}
+                  onDecryptApiKey={async (encryptedApiKey) => {
+                    try {
+                      return await decryptApiKey({ data: { encryptedApiKey } });
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to decrypt API key");
+                      return null;
+                    }
                   }}
                 />
               )}
+              {activeTab === "profile" && !profile && !isLoadingSettings && (
+                <div className="text-sm text-dash-text-faded">
+                  Profile settings are unavailable right now.
+                </div>
+              )}
               {activeTab === "members" && <MembersForm />}
-              {activeTab === "notifications" && <NotificationsForm />}
-              {activeTab === "billing" && <BillingForm />}
+              {activeTab === "notifications" && profile && (
+                <NotificationsForm
+                  profile={profile}
+                  webhooks={snapshot?.webhooks}
+                  onTestWebhook={async (url, type) => {
+                    try {
+                      await testWebhook({ data: { url, type } });
+                      toast.success("Test webhook sent successfully");
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to send test webhook");
+                    }
+                  }}
+                  onSave={async (data) => {
+                    try {
+                      await updateNotifications({
+                        data: {
+                          email: data.emailNotifications,
+                          mute: data.mute,
+                        },
+                      });
+                      const nextWebhooks = await updateWebhooks({
+                        data: {
+                          webhookUrl: data.webhookUrl,
+                          discordUrl: data.discordUrl,
+                          slackUrl: data.slackUrl,
+                          events: data.events,
+                        },
+                      });
+
+                      setSnapshot((prev) => {
+                        if (!prev) {
+                          return prev;
+                        }
+
+                        return {
+                          ...prev,
+                          profile: {
+                            ...prev.profile,
+                            notifications: {
+                              ...prev.profile.notifications,
+                              email: data.emailNotifications,
+                              mute: data.mute,
+                            },
+                          },
+                          webhooks: nextWebhooks,
+                        };
+                      });
+
+                      toast.success("Notification settings saved");
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to save notification settings");
+                    }
+                  }}
+                />
+              )}
+              {activeTab === "notifications" && !profile && !isLoadingSettings && (
+                <div className="text-sm text-dash-text-faded">
+                  Notification settings are unavailable right now.
+                </div>
+              )}
+              {activeTab === "billing" && profile && (
+                <BillingForm
+                  profile={profile}
+                  billing={snapshot?.billing}
+                  onInvoicesPageChange={handleInvoicePageChange}
+                />
+              )}
+              {activeTab === "billing" && !profile && !isLoadingSettings && (
+                <div className="text-sm text-dash-text-faded">
+                  Billing settings are unavailable right now.
+                </div>
+              )}
             </div>
           </div>
         </Drawer.Content>
@@ -551,23 +1062,7 @@ function NotificationRow({
     </div>
   );
 }
-
-const mockBillingInvoices = [
-  "28th February 2024",
-  "28th January 2024",
-  "28th December 2023",
-  "28th November 2023",
-  "28th October 2023",
-  "28th September 2023",
-  "28th August 2023",
-  "28th July 2023",
-  "28th June 2023",
-  "28th May 2023",
-  "28th April 2023",
-  "28th March 2023",
-];
-
-const INVOICES_PER_PAGE = 5;
+void NotificationRow;
 
 
 function PaymentFailureBanner({ daysSinceFailure }: { daysSinceFailure: number }) {
@@ -769,58 +1264,56 @@ function SpendingOverview() {
     </div>
   );
 }
+void SpendingOverview;
 
-function UsageSection() {
-  // Mock usage data — will be replaced by backend data
-  const mockUsage = {
-    bandwidthUsed: 92,
-    bandwidthLimit: 150,
-    buildMinutesUsed: 1850,
-    buildMinutesLimit: 2500,
-  };
+function UsageSection({
+  spending,
+}: {
+  spending?: { used: number; spendingLimit: number };
+}) {
+  const used = Number(spending?.used ?? 0);
+  const limit = Number(spending?.spendingLimit ?? 0);
+  const hasBudget = limit > 0;
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Plan usage */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-[2px]">
           <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
             Current usage
           </p>
           <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            Resource usage for the current billing period
+            Billing usage for the current period
           </p>
         </div>
 
-        <UsageBar
-          label="Bandwidth"
-          used={mockUsage.bandwidthUsed}
-          limit={mockUsage.bandwidthLimit}
-          unit="GB"
-          overageNote="$0.25/GB added to next bill"
-        />
-        <UsageBar
-          label="Build minutes"
-          used={mockUsage.buildMinutesUsed}
-          limit={mockUsage.buildMinutesLimit}
-          unit="min"
-          overageNote="$0.002/min added to next bill"
-        />
+        {hasBudget ? (
+          <UsageBar
+            label="Spending budget"
+            used={used}
+            limit={limit}
+            unit="USD"
+            overageNote="Overage may be added to the next invoice"
+          />
+        ) : (
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+            No spending budget configured yet.
+          </p>
+        )}
       </div>
-
-      <hr className="border-dash-border-soft" />
-
-      {/* Compute spending */}
-      <SpendingOverview />
     </div>
   );
 }
 
-function BillingInvoices() {
-  const [cursor, setCursor] = useState(0);
-  const page = mockBillingInvoices.slice(cursor, cursor + INVOICES_PER_PAGE);
-  const hasPrev = cursor > 0;
-  const hasNext = cursor + INVOICES_PER_PAGE < mockBillingInvoices.length;
+function BillingInvoices({
+  invoices,
+  onPageChange,
+}: {
+  invoices?: SettingsInvoicePage;
+  onPageChange?: (page: number) => Promise<void> | void;
+}) {
+  const currentPage = invoices?.page ?? 1;
+  const totalPages = invoices?.totalPages ?? 1;
 
   return (
     <div className="flex flex-col gap-3">
@@ -833,50 +1326,108 @@ function BillingInvoices() {
         </p>
       </div>
       <div className="flex flex-col gap-4">
-        {page.map((date) => (
-          <div key={date} className="flex items-center justify-between gap-4">
-            <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-              {date}
-            </p>
-            <button className="rounded-[8px] border border-dash-border bg-dash-bg px-3 py-1.5 text-sm leading-5 tracking-[-0.0224px] text-dash-text-body transition-colors hover:bg-dash-bg-elevated">
-              view
-            </button>
-          </div>
-        ))}
+        {(invoices?.items ?? []).map((invoice) => {
+          let label = "Unknown date";
+
+          if (invoice.createdAt) {
+            const parsed = new Date(invoice.createdAt);
+            if (!Number.isNaN(parsed.getTime())) {
+              label = new Intl.DateTimeFormat("en-US", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }).format(parsed);
+            }
+          }
+
+          return (
+            <div key={invoice.id} className="flex items-center justify-between gap-4">
+              <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+                {label}
+              </p>
+              {invoice.downloadLink ? (
+                <a
+                  href={invoice.downloadLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-[8px] border border-dash-border bg-dash-bg px-3 py-1.5 text-sm leading-5 tracking-[-0.0224px] text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
+                >
+                  view
+                </a>
+              ) : (
+                <span className="text-xs text-dash-text-extra-faded">
+                  {invoice.due ? "overdue" : "paid"} • ${invoice.total.toFixed(2)}
+                </span>
+              )}
+            </div>
+          );
+        })}
+        {(invoices?.items.length ?? 0) === 0 && (
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+            No invoices yet.
+          </p>
+        )}
       </div>
       <div className="flex justify-end pt-1">
         <CursorPagination
-          hasPrevPage={hasPrev}
-          hasNextPage={hasNext}
-          onPrev={() => setCursor((c) => Math.max(0, c - INVOICES_PER_PAGE))}
-          onNext={() => setCursor((c) => c + INVOICES_PER_PAGE)}
+          hasPrevPage={currentPage > 1}
+          hasNextPage={currentPage < totalPages}
+          onPrev={() => {
+            if (currentPage > 1) {
+              void onPageChange?.(currentPage - 1);
+            }
+          }}
+          onNext={() => {
+            if (currentPage < totalPages) {
+              void onPageChange?.(currentPage + 1);
+            }
+          }}
         />
       </div>
     </div>
   );
 }
 
-function BillingForm() {
+function BillingForm({
+  profile,
+  billing,
+  onInvoicesPageChange,
+}: {
+  profile: UserProfile;
+  billing?: SettingsSidebarSnapshot["billing"];
+  onInvoicesPageChange?: (page: number) => Promise<void> | void;
+}) {
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [currentPlan, setCurrentPlan] = useState("Pro");
   const [changePlanOpen, setChangePlanOpen] = useState(false);
-  const activePlan = billingPlans.find((p) => p.name === currentPlan)!;
 
-  // Mock payment failure state — 0 means no failure
-  const [daysSinceFailure] = useState(0);
+  let currentPlan = "Free";
+  const normalizedPlanType = (profile.subscriptionPlanType || "").toLowerCase();
+
+  if (normalizedPlanType.includes("developer")) {
+    currentPlan = "Pro";
+  } else if (normalizedPlanType.includes("hacker")) {
+    currentPlan = "Hacker";
+  } else if (normalizedPlanType.includes("team")) {
+    currentPlan = "Team";
+  }
+
+  const activePlan = billingPlans.find((plan) => plan.name === currentPlan) ?? billingPlans[0];
+  const primaryCard = billing?.cards.find((card) => card.preferred) ?? billing?.cards[0];
+  const daysSinceFailure = profile.subscriptionDue ? 1 : 0;
 
   return (
     <div className="flex max-w-[488px] flex-col gap-8">
-      {/* Payment failure banner */}
       <PaymentFailureBanner daysSinceFailure={daysSinceFailure} />
 
       <div className="relative overflow-hidden rounded-[4px] border border-dash-border bg-[#fcfcfc] dark:border-transparent dark:invert">
-        <div className="pr-[116px] px-6 py-3">
+        <div className="px-6 py-3 pr-[116px]">
           <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
             You are currently on the Brimble{" "}
             <span className="text-dash-text-strong">{activePlan.name}</span> plan
             {activePlan.price > 0 ? (
-              <>, you pay <span className="text-dash-text-strong">${activePlan.price}</span> per month.</>
+              <>
+                , you pay <span className="text-dash-text-strong">${activePlan.price}</span> per month.
+              </>
             ) : (
               "."
             )}
@@ -890,58 +1441,53 @@ function BillingForm() {
         </div>
         <div className="absolute inset-y-0 right-0 hidden w-[96px] overflow-hidden sm:block">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_28%,#ffffff_0%,#ececec_48%,#f7f7f7_100%)]" />
-          <div className="absolute left-[-8px] top-1/2 h-24 w-20 -translate-y-1/2 bg-gradient-to-r from-[#fafafa] via-[#fafafa] to-transparent" />
-          <div className="absolute right-5 top-1/2 -translate-y-1/2 text-[30px] font-extrabold leading-none text-[#d9d9d9] [text-shadow:0px_0.7px_1px_rgba(0,0,0,0.4)]">
-            $
-          </div>
-          <span className="absolute right-3 top-4 size-1.5 rounded-full bg-white/80" />
-          <span className="absolute right-8 top-7 size-1.5 rounded-full bg-white/70" />
         </div>
       </div>
 
-      {/* Usage & overage */}
-      <UsageSection />
+      <UsageSection spending={billing?.spending} />
 
       <hr className="-ml-8 border-dash-border-soft" />
 
       <div className="flex flex-col gap-[30px]">
         <div className="flex items-center gap-[14px]">
-          <div className="relative h-12 w-[68px] shrink-0 overflow-hidden rounded-[5px] bg-[radial-gradient(circle_at_84%_10%,#5a5454_0%,#383636_55%,#1f1f1f_100%)] shadow-[0px_1px_1px_rgba(0,0,0,0.16),0px_1px_0px_rgba(0,0,0,0.11)]">
-            <div className="absolute left-[7px] top-[19px] h-[10px] w-[14px] rounded-[2px] bg-white/10" />
-            <div className="absolute right-[7px] top-[34px] flex items-center gap-0.5">
-              <span className="size-[4px] rounded-full bg-[#ea4335]" />
-              <span className="size-[4px] rounded-full bg-[#fbbc05]" />
-            </div>
-          </div>
+          <div className="relative h-12 w-[68px] shrink-0 overflow-hidden rounded-[5px] bg-[radial-gradient(circle_at_84%_10%,#5a5454_0%,#383636_55%,#1f1f1f_100%)] shadow-[0px_1px_1px_rgba(0,0,0,0.16),0px_1px_0px_rgba(0,0,0,0.11)]" />
           <div className="flex flex-col gap-[2px] py-2">
             <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
               Payment cards
             </p>
             <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-              Link your bank cards for payments on Brimble
+              {billing?.cards.length ?? 0} linked card{(billing?.cards.length ?? 0) === 1 ? "" : "s"}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex flex-col gap-[2px]">
-            <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-              Mastercard
-            </p>
-            <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-              <span className="tabular-nums text-dash-text-strong">9594</span>, expiring{" "}
-              <span className="tabular-nums text-dash-text-strong">24/2034</span>
-            </p>
+        {primaryCard ? (
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-[2px]">
+              <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
+                {primaryCard.cardType || "Card"}
+              </p>
+              <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+                <span className="tabular-nums text-dash-text-strong">{primaryCard.last4 || "••••"}</span>, expiring{" "}
+                <span className="tabular-nums text-dash-text-strong">
+                  {primaryCard.expMonth || "--"}/{primaryCard.expYear || "----"}
+                </span>
+              </p>
+            </div>
+            <button className="shrink-0 rounded-[8px] border border-dash-border bg-dash-bg px-3.5 py-2 text-sm font-medium leading-5 tracking-[-0.0224px] text-dash-text-body shadow-[0px_1px_2px_rgba(16,24,40,0.05)] transition-colors hover:bg-dash-bg-elevated">
+              Update card information
+            </button>
           </div>
-          <button className="shrink-0 rounded-[8px] border border-dash-border bg-dash-bg px-3.5 py-2 text-sm font-medium leading-5 tracking-[-0.0224px] text-dash-text-body shadow-[0px_1px_2px_rgba(16,24,40,0.05)] transition-colors hover:bg-dash-bg-elevated">
-            Update card information
-          </button>
-        </div>
+        ) : (
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+            No payment methods added yet.
+          </p>
+        )}
       </div>
 
       <hr className="-ml-8 border-dash-border-soft" />
 
-      <BillingInvoices />
+      <BillingInvoices invoices={billing?.invoices} onPageChange={onInvoicesPageChange} />
 
       <hr className="-ml-8 border-dash-border-soft" />
 
@@ -972,7 +1518,6 @@ function BillingForm() {
         confirmLabel="Cancel subscription"
         cancelLabel="Keep my plan"
         onConfirm={() => {
-          // TODO: wire to API
           console.log("Subscription cancelled");
         }}
       />
@@ -981,8 +1526,7 @@ function BillingForm() {
         open={changePlanOpen}
         onOpenChange={setChangePlanOpen}
         currentPlan={currentPlan}
-        onChangePlan={(plan) => {
-          setCurrentPlan(plan);
+        onChangePlan={() => {
           setChangePlanOpen(false);
         }}
       />
@@ -1001,7 +1545,7 @@ interface EventItem {
 interface EventGroup {
   key: string;
   title: string;
-  icon: string;
+  icon?: string;
   events: EventItem[];
 }
 
@@ -1124,7 +1668,13 @@ function EventGroupCard({
           <ChevronDown className="size-3.5 text-dash-text-faded" />
         </motion.span>
         <div className="flex size-7 items-center justify-center rounded-full bg-[#f5a623]/10">
-          <img src={group.icon} alt="" className="size-3.5" />
+          {group.icon ? (
+            <img src={group.icon} alt="" className="size-3.5" />
+          ) : (
+            <span className="text-[10px] font-semibold text-[#f5a623]">
+              {group.title.slice(0, 1)}
+            </span>
+          )}
         </div>
         <span className="flex-1 text-sm font-medium leading-5 text-dash-text-strong">
           {group.title}
@@ -1185,24 +1735,100 @@ function EventGroupCard({
   );
 }
 
-function NotificationsForm() {
-  const [emailNotifs, setEmailNotifs] = useState(false);
-  const [discordUrl, setDiscordUrl] = useState("");
-  const [slackUrl, setSlackUrl] = useState("");
-  const [webhookUrl, setWebhookUrl] = useState("");
+function NotificationsForm({
+  profile,
+  webhooks,
+  onTestWebhook,
+  onSave,
+}: {
+  profile: UserProfile;
+  webhooks?: {
+    webhookUrl: string;
+    discordUrl: string;
+    slackUrl: string;
+    groups: ServerWebhookGroup[];
+  };
+  onTestWebhook?: (url: string, type: "discord" | "slack" | "custom") => Promise<void> | void;
+  onSave?: (data: {
+    emailNotifications: boolean;
+    mute: boolean;
+    webhookUrl: string | null;
+    discordUrl: string | null;
+    slackUrl: string | null;
+    events: string[];
+  }) => Promise<void> | void;
+}) {
+  const [emailNotifs, setEmailNotifs] = useState(profile.notifications?.email ?? false);
+  const [discordUrl, setDiscordUrl] = useState(webhooks?.discordUrl ?? "");
+  const [slackUrl, setSlackUrl] = useState(webhooks?.slackUrl ?? "");
+  const [webhookUrl, setWebhookUrl] = useState(webhooks?.webhookUrl ?? "");
   const [allEvents, setAllEvents] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
+
+  async function handleTestWebhook(url: string, type: "discord" | "slack" | "custom") {
+    if (!url.trim()) return;
+    setTestingWebhook(type);
+    try {
+      await onTestWebhook?.(url.trim(), type);
+    } finally {
+      setTestingWebhook(null);
+    }
+  }
 
   // Group-level toggles
   const [groupToggles, setGroupToggles] = useState<Record<string, boolean>>({});
   // Individual event toggles
   const [eventToggles, setEventToggles] = useState<Record<string, boolean>>({});
 
+  const groupsForUi: EventGroup[] =
+    webhooks?.groups.map((group) => ({
+      key: group.title.toLowerCase().replace(/\s+/g, "_"),
+      title: group.title,
+      events: group.events.map((event) => ({
+        key: event.key,
+        title: event.label || event.key,
+        description: event.description || "",
+      })),
+    })) ?? eventGroups;
+
+  useEffect(() => {
+    setEmailNotifs(profile.notifications?.email ?? false);
+  }, [profile.notifications?.email]);
+
+  useEffect(() => {
+    setWebhookUrl(webhooks?.webhookUrl ?? "");
+    setDiscordUrl(webhooks?.discordUrl ?? "");
+    setSlackUrl(webhooks?.slackUrl ?? "");
+
+    const nextEvents: Record<string, boolean> = {};
+    const nextGroups: Record<string, boolean> = {};
+    const sourceGroups = webhooks?.groups ?? [];
+
+    for (const group of sourceGroups) {
+      const groupKey = group.title.toLowerCase().replace(/\s+/g, "_");
+      let allEnabled = true;
+
+      for (const event of group.events) {
+        nextEvents[event.key] = Boolean(event.enabled);
+        if (!event.enabled) {
+          allEnabled = false;
+        }
+      }
+
+      nextGroups[groupKey] = allEnabled;
+    }
+
+    setEventToggles(nextEvents);
+    setGroupToggles(nextGroups);
+  }, [webhooks]);
+
   function handleAllEventsToggle(v: boolean) {
     setAllEvents(v);
     if (v) {
       const groups: Record<string, boolean> = {};
       const events: Record<string, boolean> = {};
-      for (const g of eventGroups) {
+      for (const g of groupsForUi) {
         groups[g.key] = true;
         for (const e of g.events) events[e.key] = true;
       }
@@ -1216,7 +1842,7 @@ function NotificationsForm() {
 
   function handleGroupToggle(groupKey: string, v: boolean) {
     setGroupToggles((prev) => ({ ...prev, [groupKey]: v }));
-    const group = eventGroups.find((g) => g.key === groupKey);
+    const group = groupsForUi.find((g) => g.key === groupKey);
     if (group) {
       setEventToggles((prev) => {
         const next = { ...prev };
@@ -1231,7 +1857,21 @@ function NotificationsForm() {
   }
 
   const enabledCount = Object.values(eventToggles).filter(Boolean).length;
-  const totalCount = eventGroups.reduce((s, g) => s + g.events.length, 0);
+  const totalCount = groupsForUi.reduce((s, g) => s + g.events.length, 0);
+
+  useEffect(() => {
+    if (totalCount === 0) {
+      setAllEvents(false);
+      return;
+    }
+
+    if (enabledCount === totalCount) {
+      setAllEvents(true);
+      return;
+    }
+
+    setAllEvents(false);
+  }, [enabledCount, totalCount]);
 
   const inputClass =
     "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
@@ -1264,37 +1904,67 @@ function NotificationsForm() {
           <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
             Discord webhook URL
           </label>
-          <input
-            type="url"
-            value={discordUrl}
-            onChange={(e) => setDiscordUrl(e.target.value)}
-            placeholder="https://discord.com/api/webhooks/..."
-            className={inputClass}
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="url"
+              value={discordUrl}
+              onChange={(e) => setDiscordUrl(e.target.value)}
+              placeholder="https://discord.com/api/webhooks/..."
+              className={cn(inputClass, "flex-1")}
+            />
+            <button
+              onClick={() => handleTestWebhook(discordUrl, "discord")}
+              disabled={!discordUrl.trim() || testingWebhook === "discord"}
+              className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Send className="size-3.5" />
+              {testingWebhook === "discord" ? "Sending..." : "Test"}
+            </button>
+          </div>
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
             Slack webhook URL
           </label>
-          <input
-            type="url"
-            value={slackUrl}
-            onChange={(e) => setSlackUrl(e.target.value)}
-            placeholder="https://hooks.slack.com/services/..."
-            className={inputClass}
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="url"
+              value={slackUrl}
+              onChange={(e) => setSlackUrl(e.target.value)}
+              placeholder="https://hooks.slack.com/services/..."
+              className={cn(inputClass, "flex-1")}
+            />
+            <button
+              onClick={() => handleTestWebhook(slackUrl, "slack")}
+              disabled={!slackUrl.trim() || testingWebhook === "slack"}
+              className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Send className="size-3.5" />
+              {testingWebhook === "slack" ? "Sending..." : "Test"}
+            </button>
+          </div>
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
             Custom webhook URL
           </label>
-          <input
-            type="url"
-            value={webhookUrl}
-            onChange={(e) => setWebhookUrl(e.target.value)}
-            placeholder="https://your-server.com/webhook"
-            className={inputClass}
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="url"
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+              placeholder="https://your-server.com/webhook"
+              className={cn(inputClass, "flex-1")}
+            />
+            <button
+              onClick={() => handleTestWebhook(webhookUrl, "custom")}
+              disabled={!webhookUrl.trim() || testingWebhook === "custom"}
+              className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Send className="size-3.5" />
+              {testingWebhook === "custom" ? "Sending..." : "Test"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1333,7 +2003,7 @@ function NotificationsForm() {
 
         {/* Event groups */}
         <div className="flex flex-col pt-1">
-          {eventGroups.map((group, i) => (
+          {groupsForUi.map((group, i) => (
             <div key={group.key}>
               <EventGroupCard
                 group={group}
@@ -1342,7 +2012,7 @@ function NotificationsForm() {
                 eventStates={eventToggles}
                 onEventToggle={handleEventToggle}
               />
-              {i < eventGroups.length - 1 && (
+              {i < groupsForUi.length - 1 && (
                 <hr className="border-dash-border-soft" />
               )}
             </div>
@@ -1351,7 +2021,32 @@ function NotificationsForm() {
 
         {/* Save */}
         <div className="flex justify-end pt-4">
-          <GlossyButton className="px-6">
+          <GlossyButton
+            className="px-6"
+            disabled={isSaving}
+            loading={isSaving}
+            loadingLabel="Saving..."
+            onClick={async () => {
+              const selectedEvents = Object.entries(eventToggles)
+                .filter(([, enabled]) => enabled)
+                .map(([key]) => key);
+
+              setIsSaving(true);
+
+              try {
+                await onSave?.({
+                  emailNotifications: emailNotifs,
+                  mute: profile.notifications?.mute ?? false,
+                  webhookUrl: webhookUrl.trim() || null,
+                  discordUrl: discordUrl.trim() || null,
+                  slackUrl: slackUrl.trim() || null,
+                  events: selectedEvents,
+                });
+              } finally {
+                setIsSaving(false);
+              }
+            }}
+          >
             Save Settings
           </GlossyButton>
         </div>
@@ -1569,4 +2264,3 @@ function MembersForm() {
     </div>
   );
 }
-

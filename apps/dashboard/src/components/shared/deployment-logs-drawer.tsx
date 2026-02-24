@@ -8,80 +8,19 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { DownloadSimple } from "@phosphor-icons/react";
 import { motion } from "motion/react";
-
-interface LogEntry {
-  type: "section" | "detail";
-  message: string;
-  timestamp: string;
-  status?: "success" | "error";
-}
+import type { DeploymentDrawerLogEntry } from "@/utils/deployment-logs";
 
 interface DeploymentLogsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   environment: string;
   status: "Successful" | "Failed" | "Pending";
-  logs?: LogEntry[];
+  logs?: DeploymentDrawerLogEntry[];
+  loading?: boolean;
+  emptyMessage?: string;
 }
-
-const mockLogs: LogEntry[] = [
-  {
-    type: "section",
-    message: "deployment queued starting soon",
-    timestamp: "we 11/08/2024 17:59:21",
-  },
-  {
-    type: "detail",
-    message: "workflow id:random-string",
-    timestamp: "we 11/08/2024 17:59:21",
-  },
-  {
-    type: "section",
-    message: "deployment started",
-    timestamp: "we 11/08/2024 17:59:21",
-    status: "success",
-  },
-  {
-    type: "detail",
-    message:
-      "cloning from github.com/kemdirimakujuobi/kemdirim.design.git(branch:main, commit: 6ef3446)",
-    timestamp: "we 11/08/2024 17:59:21",
-  },
-  {
-    type: "detail",
-    message: "cloning completed successfully",
-    timestamp: "we 11/08/2024 17:59:21",
-  },
-  {
-    type: "detail",
-    message: "checking out branch main with commit 6ef3446",
-    timestamp: "we 11/08/2024 17:59:21",
-  },
-  {
-    type: "detail",
-    message: 'running "brimble build" command',
-    timestamp: "we 11/08/2024 17:59:21",
-  },
-  {
-    type: "detail",
-    message: "serving to http://127.0.0.1:46587 - PID: 768332",
-    timestamp: "we 11/08/2024 17:59:21",
-  },
-  {
-    type: "detail",
-    message:
-      '{"level":"info","message":"got a bug or suggestion? please report it on https://bit.ly/3cE7iZu or create an issue on Github: https://github.com/brimblehq/brimble/issues"}',
-    timestamp: "we 11/08/2024 17:59:21",
-  },
-  {
-    type: "section",
-    message:
-      "site is live. visit https://kemdirimakujuobi.brimble.app to view your project",
-    timestamp: "we 11/08/2024 17:59:21",
-    status: "success",
-  },
-];
 
 const statusDotColor = {
   Successful: "bg-[#13d282]",
@@ -89,19 +28,100 @@ const statusDotColor = {
   Pending: "bg-[#ff7a00]",
 } as const;
 
+const urlPattern = /(https?:\/\/[^\s]+)/g;
+const errorPattern =
+  /\b(error|failed|failure|fatal|panic|exception|timed out|timeout|context canceled|cancelled)\b/i;
+const warningPattern = /\bwarning|deprecated\b/i;
+
+function getLogLineTone(message: string): "error" | "warning" | "default" {
+  if (errorPattern.test(message)) {
+    return "error";
+  }
+
+  if (warningPattern.test(message)) {
+    return "warning";
+  }
+
+  return "default";
+}
+
+function getDetailToneClasses(tone: "error" | "warning" | "default") {
+  if (tone === "error") {
+    return {
+      row: "bg-[#fc391e]/6",
+      text: "text-[#ff8f80]",
+      timestamp: "text-[#ffb0a6]",
+      link: "hover:text-[#ffe0db]",
+    };
+  }
+
+  if (tone === "warning") {
+    return {
+      row: "bg-[#ff7a00]/6",
+      text: "text-[#ffc07a]",
+      timestamp: "text-[#ffd19f]",
+      link: "hover:text-[#ffe5c4]",
+    };
+  }
+
+  return {
+    row: "",
+    text: "text-dash-text-faded",
+    timestamp: "text-dash-text-faded",
+    link: "hover:text-dash-text-strong",
+  };
+}
+
+function renderLogTextWithLinks(text: string, linkHoverClass = "hover:text-dash-text-strong") {
+  const parts = text.split(urlPattern);
+
+  return parts.map((part, index) => {
+    if (/^https?:\/\/[^\s]+$/i.test(part)) {
+      return (
+        <a
+          key={`${part}-${index}`}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`underline underline-offset-2 ${linkHoverClass}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+
+    return <span key={`${index}-${part}`}>{part}</span>;
+  });
+}
+
+function downloadLogs(logs: DeploymentDrawerLogEntry[]) {
+  const text = logs
+    .map((l) => `[${l.timestamp}] ${l.message}`)
+    .join("\n");
+  const blob = new Blob([text], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `deployment-logs-${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function DeploymentLogsDrawer({
   open,
   onOpenChange,
   environment,
   status,
-  logs = mockLogs,
+  logs = [],
+  loading = false,
+  emptyMessage = "No logs available for this deployment yet.",
 }: DeploymentLogsDrawerProps) {
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(
     new Set(),
   );
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
@@ -113,12 +133,28 @@ export function DeploymentLogsDrawer({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open, onOpenChange]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setCollapsedSections(new Set());
+  }, [open, logs]);
+
   const successCount = logs.filter(
     (l) => l.type === "section" && l.status === "success",
   ).length;
-  const errorCount = logs.filter(
-    (l) => l.type === "section" && l.status === "error",
-  ).length;
+  const errorCount = logs.filter((l) => {
+    if (l.type === "section" && l.status === "error") {
+      return true;
+    }
+
+    if (l.type === "detail") {
+      return getLogLineTone(l.message) === "error";
+    }
+
+    return false;
+  }).length;
 
   function toggleSection(index: number) {
     setCollapsedSections((prev) => {
@@ -140,8 +176,7 @@ export function DeploymentLogsDrawer({
     setCollapsedSections(sections);
   }
 
-  // Build visible rows
-  const visibleRows: { log: LogEntry; index: number }[] = [];
+  const visibleRows: { log: DeploymentDrawerLogEntry; index: number }[] = [];
   let currentSectionIndex: number | null = null;
 
   for (let i = 0; i < logs.length; i++) {
@@ -157,6 +192,22 @@ export function DeploymentLogsDrawer({
         visibleRows.push({ log, index: i });
       }
     }
+  }
+
+  function sectionHasChildren(sectionIndex: number): boolean {
+    for (let i = sectionIndex + 1; i < logs.length; i++) {
+      const next = logs[i];
+
+      if (next.type === "section") {
+        return false;
+      }
+
+      if (next.type === "detail") {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   return (
@@ -178,7 +229,6 @@ export function DeploymentLogsDrawer({
           >
             {/* ─── Top bar ─── */}
             <div className="flex shrink-0 items-center justify-between border-b-[0.5px] border-[#e5e5e5] px-5 py-3.5 dark:border-dash-border">
-              {/* Left: Run History */}
               <div className="flex items-center gap-2">
                 <Clock className="size-4 text-dash-text-faded" />
                 <span className="text-sm leading-[1.3] tracking-[-0.0224px] text-dash-text-strong">
@@ -186,7 +236,6 @@ export function DeploymentLogsDrawer({
                 </span>
               </div>
 
-              {/* Right: counters + actions */}
               <div className="flex flex-1 items-center justify-end gap-6">
                 {/* Counters */}
                 <div className="flex items-center gap-2">
@@ -209,6 +258,15 @@ export function DeploymentLogsDrawer({
                 {/* Actions */}
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={() => downloadLogs(logs)}
+                    className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
+                  >
+                    <DownloadSimple className="size-4" />
+                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">
+                      Download
+                    </span>
+                  </button>
+                  <button
                     onClick={collapseAll}
                     className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                   >
@@ -230,31 +288,78 @@ export function DeploymentLogsDrawer({
               </div>
             </div>
 
-            {/* ─── Log body — single scrollable table so rows stay aligned ─── */}
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            {/* ─── Log body ─── */}
+            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.14)_transparent]">
               <table className="w-full border-collapse">
                 <tbody>
-                  {visibleRows.map(({ log, index }) => {
+                  {loading ? (
+                    Array.from({ length: 10 }).map((_, index) => (
+                      <tr
+                        key={`skeleton-${index}`}
+                        className="border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]"
+                      >
+                        <td className="align-top">
+                          <div className="flex items-center gap-3 py-2.5 pl-5 pr-2">
+                            <div className="h-3.5 w-3.5 animate-pulse rounded bg-dash-border-soft" />
+                            <div className="h-3.5 w-60 animate-pulse rounded bg-dash-border-soft" />
+                          </div>
+                        </td>
+                        <td className="w-[100px] border-l-[0.5px] border-[#e5e5e5] align-top sm:w-[200px] dark:border-[#2a2a2b]">
+                          <div className="py-2.5 pl-4 pr-3">
+                            <div className="h-3.5 w-28 animate-pulse rounded bg-dash-border-soft" />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : visibleRows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={2}
+                        className="px-5 py-8 text-center text-sm text-dash-text-faded"
+                      >
+                        {emptyMessage}
+                      </td>
+                    </tr>
+                  ) : (
+                    visibleRows.map(({ log, index }) => {
                     const isSection = log.type === "section";
                     const isCollapsed = collapsedSections.has(index);
+                    const canCollapse = isSection ? sectionHasChildren(index) : false;
+                    const detailTone = getLogLineTone(log.message);
+                    const detailClasses = getDetailToneClasses(detailTone);
+
+                    let rowClassName =
+                      "border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]";
+                    if (!isSection && detailClasses.row) {
+                      rowClassName = `${rowClassName} ${detailClasses.row}`;
+                    }
 
                     return (
                       <tr
                         key={index}
-                        className="border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]"
+                        className={rowClassName}
                       >
-                        {/* Log message cell */}
                         <td className="align-top">
                           {isSection ? (
                             <button
-                              onClick={() => toggleSection(index)}
+                              onClick={() => {
+                                if (!canCollapse) {
+                                  return;
+                                }
+
+                                toggleSection(index);
+                              }}
                               className="flex w-full items-center gap-3 py-2.5 pl-5 pr-2 text-left transition-colors hover:bg-dash-bg-elevated"
                             >
-                              <ChevronRight
-                                className={`size-3.5 shrink-0 text-dash-text-faded transition-transform duration-150 ${
-                                  !isCollapsed ? "rotate-90" : ""
-                                }`}
-                              />
+                              {canCollapse ? (
+                                <ChevronRight
+                                  className={`size-3.5 shrink-0 text-dash-text-faded transition-transform duration-150 ${
+                                    !isCollapsed ? "rotate-90" : ""
+                                  }`}
+                                />
+                              ) : (
+                                <span className="size-3.5 shrink-0" />
+                              )}
                               {log.status === "success" && (
                                 <CheckCircle2 className="size-3.5 shrink-0 text-[#13d282]" />
                               )}
@@ -262,26 +367,27 @@ export function DeploymentLogsDrawer({
                                 <XCircle className="size-3.5 shrink-0 text-[#fc391e]" />
                               )}
                               <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-strong">
-                                {log.message}
+                                {renderLogTextWithLinks(log.message)}
                               </span>
                             </button>
                           ) : (
                             <div className="py-2.5 pl-12 pr-2">
-                              <span className="whitespace-pre-wrap font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">
-                                {log.message}
+                              <span
+                                className={`whitespace-pre-wrap font-logs text-xs leading-[1.4] tracking-[-0.01px] ${detailClasses.text}`}
+                              >
+                                {renderLogTextWithLinks(log.message, detailClasses.link)}
                               </span>
                             </div>
                           )}
                         </td>
 
-                        {/* Timestamp cell */}
-                        <td className="w-[100px] border-l-[0.5px] sm:w-[200px] border-[#e5e5e5] align-top dark:border-[#2a2a2b]">
+                        <td className="w-[100px] border-l-[0.5px] border-[#e5e5e5] align-top dark:border-[#2a2a2b] sm:w-[200px]">
                           <div className="whitespace-nowrap py-2.5 pl-4 pr-3">
                             <span
                               className={`font-logs text-xs leading-[1.4] tracking-[-0.01px] ${
                                 isSection
                                   ? "text-dash-text-strong"
-                                  : "text-dash-text-faded"
+                                  : detailClasses.timestamp
                               }`}
                             >
                               {log.timestamp}
@@ -290,7 +396,7 @@ export function DeploymentLogsDrawer({
                         </td>
                       </tr>
                     );
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>

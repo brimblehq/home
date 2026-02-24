@@ -1,5 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
+import { LoadingButtonContent } from "./loading-button-content";
 
 interface ModalProps {
   open: boolean;
@@ -108,19 +109,25 @@ export function ModalCancelButton({ onClick }: { onClick?: () => void }) {
 export function ModalContinueButton({
   onClick,
   disabled,
+  loading = false,
+  loadingLabel,
   children = "Continue",
 }: {
-  onClick?: () => void;
+  onClick?: () => void | Promise<void>;
   disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       className="flex items-center rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-4 py-[5px] text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
     >
-      {children}
+      <LoadingButtonContent loading={loading} loadingLabel={loadingLabel}>
+        {children}
+      </LoadingButtonContent>
     </button>
   );
 }

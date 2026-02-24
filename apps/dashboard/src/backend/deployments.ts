@@ -1,35 +1,133 @@
-import type { ApiClient, ApiListResponse } from "./types";
-import { notImplemented } from "./utils";
+import type { ApiClient } from "./types";
 
-export interface Deployment {
+export interface DeploymentLog {
   id: string;
-  projectId: string;
-  status: "queued" | "building" | "ready" | "failed" | "canceled";
+  name: string;
+  status: string;
   branch?: string;
-  commitSha?: string;
+  message?: string;
+  commitLink?: string;
+  environment?: string;
+  startTime?: string;
+  endTime?: string;
   createdAt?: string;
+  username?: string;
+  avatar?: string;
+  domain?: string;
 }
 
-export interface CreateDeploymentInput {
-  projectId: string;
-  branch?: string;
-  commitSha?: string;
+export interface PaginatedDeploymentsResponse {
+  items: DeploymentLog[];
+  currentPage: number;
+  totalPages: number;
+  total?: number;
+  environments: string[];
+  statuses: string[];
+}
+
+export interface ListDeploymentsInput {
+  page?: number;
+  limit?: number;
+  statuses?: string;
+  environment?: string;
+  start?: string;
+  end?: string;
+  teamId?: string;
 }
 
 export interface DeploymentsApi {
-  list(projectId: string): Promise<ApiListResponse<Deployment>>;
-  getById(deploymentId: string): Promise<Deployment>;
-  create(input: CreateDeploymentInput): Promise<Deployment>;
-  cancel(deploymentId: string): Promise<void>;
+  list(
+    projectId: string,
+    input?: ListDeploymentsInput,
+  ): Promise<PaginatedDeploymentsResponse>;
+  getById(projectId: string, logId: string): Promise<DeploymentLog | null>;
+  redeploy(
+    projectId: string,
+    logId: string,
+    input?: { teamId?: string },
+  ): Promise<{ id?: string }>;
+  cancel(
+    projectId: string,
+    logId: string,
+    input?: { teamId?: string },
+  ): Promise<void>;
+}
+
+function mapDeploymentLog(log: any): DeploymentLog {
+  return {
+    id: log.id ?? log._id,
+    name: log.name ?? "",
+    status: (log.status ?? "").toLowerCase(),
+    branch: log.branch,
+    message: log.message,
+    commitLink: log.commitLink ?? log.commit_link,
+    environment: log.environment,
+    startTime: log.startTime,
+    endTime: log.endTime,
+    createdAt: log.createdAt,
+    username: log.username ?? log.user?.username,
+    avatar: log.avatar ?? log.user?.avatar,
+    domain: log.domain,
+  };
 }
 
 export function createDeploymentsApi(client: ApiClient): DeploymentsApi {
-  void client;
-
   return {
-    list: () => notImplemented<ApiListResponse<Deployment>>("deployments", "list"),
-    getById: () => notImplemented<Deployment>("deployments", "getById"),
-    create: () => notImplemented<Deployment>("deployments", "create"),
-    cancel: () => notImplemented<void>("deployments", "cancel"),
+    async list(projectId, input) {
+      const response = await client.request<any>(
+        `/core/v1/logs/${encodeURIComponent(projectId)}`,
+        {
+          method: "GET",
+          query: {
+            page: input?.page,
+            limit: input?.limit,
+            statuses: input?.statuses,
+            environment: input?.environment,
+            start: input?.start,
+            end: input?.end,
+            teamId: input?.teamId,
+          },
+        },
+      );
+
+      const root = response?.data?.data ?? response?.data ?? response ?? {};
+      const rawLogs = root.logs ?? root ?? [];
+      const items = (Array.isArray(rawLogs) ? rawLogs : []).map(mapDeploymentLog);
+
+      return {
+        items,
+        currentPage: root.currentPage ?? root.current_page ?? 1,
+        totalPages: root.totalPages ?? root.total_pages ?? 1,
+        total: root.total ?? root.count,
+        environments: root.environments ?? ["PRODUCTION"],
+        statuses: root.statuses ?? ["ACTIVE", "INPROGRESS", "FAILED", "CANCELLED", "PENDING"],
+      };
+    },
+
+    async getById(projectId, logId) {
+      const response = await client.request<any>(
+        `/core/v1/logs/${encodeURIComponent(projectId)}/${encodeURIComponent(logId)}`,
+        { method: "GET" },
+      );
+
+      const root = response?.data?.data ?? response?.data ?? response;
+      return root ? mapDeploymentLog(root) : null;
+    },
+
+    async redeploy(projectId, logId, input) {
+      const response = await client.request<any>(
+        `/core/v1/projects/${encodeURIComponent(projectId)}/redeploy`,
+        { method: "POST", body: { logId }, query: { teamId: input?.teamId } },
+      );
+      const root = response?.data?.data ?? response?.data ?? response ?? {};
+      return { id: root.id ?? root._id };
+    },
+
+    async cancel(projectId, logId, input) {
+      await client.request<any>(
+        `/core/v1/projects/cancel/${encodeURIComponent(projectId)}/${encodeURIComponent(logId)}`,
+        { method: "POST", body: {}, query: { teamId: input?.teamId } },
+      );
+    },
   };
 }

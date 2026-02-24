@@ -127,13 +127,19 @@ export function AuthSplitLayout({
 export function AuthProviderButton({
   icon,
   label,
+  onClick,
+  disabled,
 }: {
   icon: ReactNode;
   label: string;
+  onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
+      onClick={onClick}
+      disabled={disabled}
       className="flex h-11 w-full items-center justify-center gap-2.5 rounded-[10px] border border-dash-border bg-dash-bg text-sm font-medium text-dash-text-strong shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:bg-dash-bg-elevated hover:shadow-[0_2px_4px_rgba(16,24,40,0.08)] dark:bg-dash-bg-elevated dark:hover:bg-[#333]"
     >
       {icon}

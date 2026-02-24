@@ -1,44 +1,120 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { ExternalLink, Copy, Check, ArrowUpRight } from "lucide-react";
 import { SimpleTooltip } from "../../../components/shared/tooltip";
 import { DeploymentLogsDrawer } from "../../../components/shared/deployment-logs-drawer";
+import { getProjectScreenshotServerFn } from "@/server/projects/actions";
+import { formatRelativeTime } from "@/utils/dashboard";
+
+const parentRoute = getRouteApi("/projects/$projectId");
 
 export const Route = createFileRoute("/projects/$projectId/")({
+  staleTime: 30_000,
+  preloadStaleTime: 30_000,
+  loader: async ({ context }) => {
+    const project = (context as any).project;
+
+    let screenshotUrl = project?.screenshot || null;
+    if (project?.id) {
+      try {
+        const endpointScreenshot = await (getProjectScreenshotServerFn as unknown as (input: {
+          data: { projectId: string };
+        }) => Promise<string | null>)({
+          data: { projectId: project.id },
+        });
+
+        if (endpointScreenshot) {
+          screenshotUrl = endpointScreenshot;
+        }
+      } catch {
+      }
+    }
+
+    return { screenshotUrl };
+  },
   component: ProjectDetailPage,
 });
-
-const deployments = [
-  { url: "audioly-458ghu583.david.brimble.app", date: "Jan 16, 2024" },
-  { url: "audioly-458ghu583.david.brimble.app", date: "Jan 16, 2024" },
-  { url: "audioly-458ghu583.david.brimble.app", date: "Jan 16, 2024" },
-];
-
-const domains = [
-  {
-    url: "www.audioly.brimble.app",
-    team: "Kemdirim's team",
-    type: "default domain",
-    date: "Jan 13, 2023",
-  },
-  {
-    url: "www.audioly.brimble.app",
-    team: "Kemdirim's team",
-    type: "Custom domain",
-    date: "Jan 13, 2023",
-  },
-  {
-    url: "www.audioly.brimble.app",
-    team: "Kemdirim's team",
-    type: "Custom domain",
-    date: "Jan 13, 2023",
-  },
-];
 
 function ProjectDetailPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const navigate = useNavigate();
+  const { projectId } = Route.useParams();
+  const { project } = parentRoute.useLoaderData() as any;
+  const { screenshotUrl } = Route.useLoaderData();
+
+  const projectName = project?.name || projectId;
+  const liveUrl = project?.previewUrl || project?.domains?.[0]?.name || "";
+  let liveHref = "";
+  if (liveUrl) {
+    if (liveUrl.startsWith("http")) {
+      liveHref = liveUrl;
+    } else {
+      liveHref = `https://${liveUrl}`;
+    }
+  }
+  const projectStatus = (project?.status || "UNKNOWN").toUpperCase();
+  let statusChipClass = "bg-dash-text-faded";
+  if (projectStatus === "READY" || projectStatus === "ACTIVE") {
+    statusChipClass = "bg-[#13d282]";
+  } else if (projectStatus === "FAILED") {
+    statusChipClass = "bg-[#ef4444]";
+  }
+  const statusCode = project?.statusCode;
+  const regionText = project?.region || "Unknown";
+  let passwordEnabledText = "No";
+  if (typeof project?.passwordEnabled === "boolean") {
+    if (project.passwordEnabled) {
+      passwordEnabledText = "Yes";
+    } else {
+      passwordEnabledText = "No";
+    }
+  }
+
+  let computeSizeText = "Not available";
+  if (project?.specs) {
+    const memory = project.specs.memory ? `${project.specs.memory}GB RAM` : null;
+    const cpu = project.specs.cpu ? `${project.specs.cpu} CPU` : null;
+    const storage = project.specs.storage ? `${project.specs.storage}GB Storage` : null;
+    computeSizeText = [memory, cpu, storage].filter(Boolean).join(" • ") || "Not available";
+  }
+
+  const frameworkLabel = project?.framework || "Unknown";
+  const repoSource = project?.repo?.git || "Git";
+  const repoName = project?.repo?.name || repoSource;
+  const repositoryHref = project?.gitLink || "";
+  const lastUpdatedText = project?.updatedAt
+    ? formatRelativeTime(project.updatedAt)
+    : "unknown";
+
+  const deploymentRows: Array<{ url: string; date: string }> = [];
+
+  let domainRows: Array<{ url: string; team: string; type: string; date: string }> = [];
+  if (project?.domains && project.domains.length > 0) {
+    domainRows = project.domains.map((domain: any) => {
+      let type = "Custom domain";
+      if (domain.isDefault) {
+        type = "default domain";
+      }
+
+      let date = "";
+      if (domain.createdAt) {
+        date = new Date(domain.createdAt).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+
+      const row = {
+        url: domain.name,
+        team: "",
+        type,
+        date,
+      };
+      return row;
+    });
+  }
 
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 py-8">
@@ -56,19 +132,40 @@ function ProjectDetailPage() {
                   <span className="size-[4px] rounded-full bg-[#28C840]" />
                 </div>
               </div>
-              <div className="flex-1" />
+              <div className="relative h-[222px] w-full bg-dash-bg-elevated">
+                {screenshotUrl ? (
+                  <img
+                    src={screenshotUrl}
+                    alt={`${projectName} screenshot`}
+                    className="h-full w-full object-cover object-top"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm font-light text-dash-text-faded">
+                    No screenshot available yet.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           {/* Project name bar */}
-          <div className="flex h-10 items-center justify-between border-t-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5">
+              <div className="flex h-10 items-center justify-between border-t-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5">
             <span className="text-sm leading-5 tracking-[-0.02px] text-dash-text-faded">
-              Audioly
+              {projectName}
             </span>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-light leading-[18px] tracking-[-0.02px] text-dash-text-faded opacity-80">
-                View live
-              </span>
-              <ExternalLink className="size-4 text-dash-text-faded" />
+              {liveHref ? (
+                <a
+                  href={liveHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <span className="text-xs font-light leading-[18px] tracking-[-0.02px] text-dash-text-faded opacity-80">
+                    View live
+                  </span>
+                  <ExternalLink className="size-4 text-dash-text-faded" />
+                </a>
+              ) : null}
             </div>
           </div>
         </div>
@@ -83,17 +180,17 @@ function ProjectDetailPage() {
             <div className="flex flex-col">
               <div className="border-b-[0.5px] border-dash-border p-3.5">
                 <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                  Last updated 2 months ago
+                  Last updated {lastUpdatedText}
                 </span>
               </div>
               <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
                 <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
                   Project status
                 </span>
-                <div className="flex h-5 items-center gap-2 rounded-[4px] bg-[#13d282] px-2">
+                <div className={`flex h-5 items-center gap-2 rounded-[4px] px-2 ${statusChipClass}`}>
                   <span className="size-1.5 rounded-full bg-white" />
                   <span className="text-[8px] font-medium tracking-[-0.01px] text-white">
-                    READY
+                    {projectStatus}
                   </span>
                 </div>
               </div>
@@ -101,16 +198,22 @@ function ProjectDetailPage() {
                 <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
                   Status code
                 </span>
-                <span className="rounded-[4px] bg-[#13d282]/15 px-2 py-0.5 text-xs font-medium text-[#13d282]">
-                  200
-                </span>
+                {typeof statusCode === "number" ? (
+                  <span className="rounded-[4px] bg-[#13d282]/15 px-2 py-0.5 text-xs font-medium text-[#13d282]">
+                    {statusCode}
+                  </span>
+                ) : (
+                  <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
+                    N/A
+                  </span>
+                )}
               </div>
               <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
                 <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
                   Region
                 </span>
                 <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                  Eu-Central (Germany)
+                  {regionText}
                 </span>
               </div>
               <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
@@ -118,7 +221,7 @@ function ProjectDetailPage() {
                   Site password enabled
                 </span>
                 <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                  No
+                  {passwordEnabledText}
                 </span>
               </div>
               <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
@@ -126,7 +229,7 @@ function ProjectDetailPage() {
                   Compute size
                 </span>
                 <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                  1.5GB RAM &bull; 1 CPU &bull; 7GB Storage
+                  {computeSizeText}
                 </span>
               </div>
               <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
@@ -135,7 +238,7 @@ function ProjectDetailPage() {
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                    React JS
+                    {frameworkLabel}
                   </span>
                   <img
                     src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg"
@@ -149,14 +252,34 @@ function ProjectDetailPage() {
                   Repository
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-strong">
-                    From <span className="underline">Github</span>
-                  </span>
-                  <div className="flex size-6 items-center justify-center rounded-full border border-[#3e3e3e] bg-gradient-to-b from-[#666] to-[#1b1b1b] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">
-                    <svg width="9" height="9" viewBox="0 0 16 16" fill="white">
-                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
-                    </svg>
-                  </div>
+                  {repositoryHref ? (
+                    <a
+                      href={repositoryHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2"
+                    >
+                      <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-strong">
+                        From <span className="underline">{repoName}</span>
+                      </span>
+                      <div className="flex size-6 items-center justify-center rounded-full border border-[#3e3e3e] bg-gradient-to-b from-[#666] to-[#1b1b1b] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">
+                        <svg width="9" height="9" viewBox="0 0 16 16" fill="white">
+                          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                        </svg>
+                      </div>
+                    </a>
+                  ) : (
+                    <>
+                      <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-strong">
+                        From <span className="underline">{repoName}</span>
+                      </span>
+                      <div className="flex size-6 items-center justify-center rounded-full border border-[#3e3e3e] bg-gradient-to-b from-[#666] to-[#1b1b1b] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">
+                        <svg width="9" height="9" viewBox="0 0 16 16" fill="white">
+                          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                        </svg>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -167,14 +290,15 @@ function ProjectDetailPage() {
             <div className="flex h-10 items-center justify-between border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3 text-sm tracking-[-0.02px]">
               <span className="text-dash-text-strong">Deployments</span>
               <button
-                onClick={() => navigate({ to: `/projects/$projectId/deployment-history`, params: { projectId: "audioly" } })}
+                onClick={() => navigate({ to: `/projects/$projectId/deployment-history`, params: { projectId } })}
                 className="text-dash-text-faded transition-colors hover:text-dash-text-strong"
               >
                 See all
               </button>
             </div>
             <div className="flex flex-col">
-              {deployments.map((dep, i) => (
+              {deploymentRows.length > 0 ? (
+                deploymentRows.map((dep, i) => (
                 <button
                   key={i}
                   onClick={() => setDrawerOpen(true)}
@@ -213,7 +337,7 @@ function ProjectDetailPage() {
                           strokeLinecap="round"
                         />
                       </svg>
-                      {i < deployments.length - 1 && (
+                      {i < deploymentRows.length - 1 && (
                         <div className="absolute -bottom-3.5 left-[7.5px] h-3.5 w-px bg-dash-border" />
                       )}
                     </div>
@@ -227,7 +351,12 @@ function ProjectDetailPage() {
                     </div>
                   </div>
                 </button>
-              ))}
+                ))
+              ) : (
+                <div className="px-3.5 py-4 text-sm font-light text-dash-text-faded">
+                  No deployments available yet.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -251,7 +380,8 @@ function ProjectDetailPage() {
       <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
         <table className="w-full border-collapse">
           <tbody>
-            {domains.map((domain, i) => (
+            {domainRows.length > 0 ? (
+              domainRows.map((domain, i) => (
               <tr
                 key={i}
                 className="h-[68px] border-b-[0.5px] border-dash-border bg-white last:border-b-0 dark:bg-dash-bg"
@@ -310,7 +440,17 @@ function ProjectDetailPage() {
                   </SimpleTooltip>
                 </td>
               </tr>
-            ))}
+              ))
+            ) : (
+              <tr className="h-[68px] border-b-0 bg-white dark:bg-dash-bg">
+                <td
+                  colSpan={4}
+                  className="px-3.5 text-sm font-light text-dash-text-faded"
+                >
+                  No domains attached to this project yet.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

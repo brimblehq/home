@@ -11,21 +11,15 @@ const TASKS = [
   "Deploy to production",
 ] as const;
 
-export function OnboardingChecklist() {
+export function OnboardingChecklist({
+  completedTasks = new Set(),
+}: {
+  completedTasks?: Set<number>;
+}) {
   const [expanded, setExpanded] = useState(false);
-  const [completed, setCompleted] = useState<Set<number>>(new Set());
 
-  const completedCount = completed.size;
+  const completedCount = completedTasks.size;
   const progress = completedCount / TASKS.length;
-
-  function toggle(index: number) {
-    setCompleted((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  }
 
   return (
     <motion.div
@@ -147,19 +141,16 @@ export function OnboardingChecklist() {
             {/* Task list */}
             <ul className="px-4 py-2">
               {TASKS.map((task, i) => {
-                const done = completed.has(i);
+                const done = completedTasks.has(i);
                 return (
                   <li key={i}>
-                    <button
-                      onClick={() => toggle(i)}
-                      className="group flex w-full items-center gap-3 rounded-md px-1 py-2 text-left transition-colors hover:bg-dash-bg-elevated"
-                    >
-                      {/* Checkbox */}
+                    <div className="flex items-center gap-3 px-1 py-2">
+                      {/* Checkbox (read-only) */}
                       <span
                         className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors ${
                           done
                             ? "border-[#3c6ce7] bg-[#3c6ce7]"
-                            : "border-dash-border group-hover:border-dash-text-faded"
+                            : "border-dash-border"
                         }`}
                       >
                         {done && (
@@ -188,7 +179,7 @@ export function OnboardingChecklist() {
                       >
                         {task}
                       </span>
-                    </button>
+                    </div>
                   </li>
                 );
               })}

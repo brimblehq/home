@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Github, ArrowLeft, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 import {
   AuthDivider,
   AuthField,
@@ -9,6 +11,14 @@ import {
   AuthSplitLayout,
   OtpInput,
 } from "../components/auth/auth-split-layout";
+import {
+  finalizeOauthSessionServerFn,
+  lookupAuthServerFn,
+  resendAuthCodeServerFn,
+  startSignupServerFn,
+  verifyEmailCodeServerFn,
+} from "../server/auth/actions";
+import { startOauthPopup, type OauthProvider } from "../lib/auth/oauth-popup";
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
@@ -36,6 +46,9 @@ function DetailsStep({
   onUsernameChange,
   onSubmit,
   loading,
+  onGithub,
+  onGoogle,
+  oauthLoadingProvider,
 }: {
   email: string;
   onEmailChange: (v: string) => void;
@@ -43,6 +56,9 @@ function DetailsStep({
   onUsernameChange: (v: string) => void;
   onSubmit: () => void;
   loading: boolean;
+  onGithub: () => void;
+  onGoogle: () => void;
+  oauthLoadingProvider: OauthProvider | null;
 }) {
   return (
     <motion.div
@@ -52,8 +68,26 @@ function DetailsStep({
       transition={{ duration: 0.25, ease }}
     >
       <div className="space-y-2.5">
-        <AuthProviderButton icon={<Github className="size-4" />} label="Sign up with GitHub" />
-        <AuthProviderButton icon={<GoogleIcon />} label="Sign up with Google" />
+        <AuthProviderButton
+          icon={<Github className="size-4" />}
+          label={
+            oauthLoadingProvider === "github"
+              ? "Connecting GitHub..."
+              : "Sign up with GitHub"
+          }
+          onClick={onGithub}
+          disabled={loading || oauthLoadingProvider !== null}
+        />
+        <AuthProviderButton
+          icon={<GoogleIcon />}
+          label={
+            oauthLoadingProvider === "google"
+              ? "Connecting Google..."
+              : "Sign up with Google"
+          }
+          onClick={onGoogle}
+          disabled={loading || oauthLoadingProvider !== null}
+        />
       </div>
 
       <AuthDivider label="or use email" />
@@ -182,34 +216,105 @@ function OtpStep({
 /* ─── Page ─── */
 
 function SignupPage() {
+  const navigate = useNavigate();
+  const lookupAuth = useServerFn(lookupAuthServerFn);
+  const startSignup = useServerFn(startSignupServerFn);
+  const resendAuthCode = useServerFn(resendAuthCodeServerFn);
+  const verifyEmailCode = useServerFn(verifyEmailCodeServerFn);
+  const finalizeOauthSession = useServerFn(finalizeOauthSessionServerFn);
   const [step, setStep] = useState<"details" | "otp">("details");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OauthProvider | null>(null);
 
-  function handleSendOtp() {
+  async function handleOauth(provider: OauthProvider) {
+    if (oauthLoadingProvider) {
+      return;
+    }
+
+    setOauthLoadingProvider(provider);
+
+    try {
+      const data = await startOauthPopup(provider);
+      const response = await finalizeOauthSession({
+        data: {
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token,
+          user: {
+            id: data.id,
+            email: data.email,
+            username: data.username,
+            firstName: data.first_name,
+            lastName: data.last_name,
+            company: data.company,
+            onboarded: Boolean(data.onboard?.user),
+          },
+        },
+      });
+
+      toast.success(
+        `Welcome${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
+      );
+      await navigate({ to: "/" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "OAuth sign up failed");
+    } finally {
+      setOauthLoadingProvider(null);
+    }
+  }
+
+  async function handleSendOtp() {
     if (!email.trim() || !username.trim()) return;
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const usernameCheck = await lookupAuth({ data: { username } });
+      if (!usernameCheck.available) {
+        throw new Error(usernameCheck.message || "Username is unavailable");
+      }
+
+      const emailCheck = await lookupAuth({ data: { email } });
+      if (!emailCheck.available) {
+        throw new Error(emailCheck.message || "Email is unavailable");
+      }
+
+      await startSignup({ data: { email, username } });
+      toast.success("Verification code sent");
       setStep("otp");
-    }, 800);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Signup failed");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleVerify() {
+  async function handleVerify() {
     if (otp.length < 6) return;
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await verifyEmailCode({ data: { email, code: otp } });
+      toast.success("Account created successfully");
+      await navigate({ to: "/" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Verification failed");
+    } finally {
       setLoading(false);
-      // Navigate to onboarding on success
-    }, 1000);
+    }
   }
 
-  function handleResend() {
+  async function handleResend() {
     setOtp("");
+    if (!email.trim()) return;
     setLoading(true);
-    setTimeout(() => setLoading(false), 800);
+    try {
+      await resendAuthCode({ data: { email } });
+      toast.success("Code resent");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to resend code");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -247,6 +352,13 @@ function SignupPage() {
             onUsernameChange={setUsername}
             onSubmit={handleSendOtp}
             loading={loading}
+            onGithub={() => {
+              void handleOauth("github");
+            }}
+            onGoogle={() => {
+              void handleOauth("google");
+            }}
+            oauthLoadingProvider={oauthLoadingProvider}
           />
         ) : (
           <OtpStep

@@ -1,57 +1,121 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "../../components/shared/page-header";
 import { ProjectCard } from "../../components/shared/project-card";
 import type { Project } from "../../components/shared/project-card";
 import { CreateProjectCard } from "../../components/shared/create-project-card";
+import { NumberPagination } from "../../components/shared/pagination";
+import { listProjectsPageServerFn } from "@/server/projects/actions";
+import type { Project as BackendProject, PaginatedProjectsResponse } from "@/backend/projects";
+import { formatRelativeTime } from "@/utils/dashboard";
 
 export const Route = createFileRoute("/projects/")({
+  staleTime: 30_000,
+  preloadStaleTime: 30_000,
+  validateSearch: (search: Record<string, unknown>) => {
+    const next: { page?: number; workspace?: string } = {};
+
+    const rawPage = search.page;
+    if (typeof rawPage === "number" && Number.isFinite(rawPage) && rawPage > 0) {
+      next.page = Math.floor(rawPage);
+    } else if (typeof rawPage === "string") {
+      const parsed = Number(rawPage);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        next.page = Math.floor(parsed);
+      }
+    }
+
+    const rawWorkspace = search.workspace;
+    if (typeof rawWorkspace === "string" && rawWorkspace.trim()) {
+      next.workspace = rawWorkspace.trim();
+    }
+
+    return next;
+  },
+  loader: async ({ location }) => {
+    const params = new URLSearchParams(location.searchStr || "");
+    const rawPage = params.get("page");
+    const rawWorkspace = params.get("workspace");
+
+    let page = 1;
+    if (rawPage) {
+      const parsed = Number(rawPage);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        page = Math.floor(parsed);
+      }
+    }
+
+    let workspace: string | undefined;
+    if (rawWorkspace && rawWorkspace.trim()) {
+      workspace = rawWorkspace.trim();
+    }
+
+    const result = await (listProjectsPageServerFn as unknown as (input: {
+      data: { page?: number; workspace?: string };
+    }) => Promise<PaginatedProjectsResponse>)({
+      data: { page, workspace },
+    });
+
+    const projects = result.items.map((project: BackendProject): Project => ({
+      name: project.name,
+      commitMessage: project.log?.message || "No recent activity",
+      branch: project.repo?.branch || "main",
+      updatedAt: formatRelativeTime(project.updatedAt),
+    }));
+
+    return {
+      projects,
+      pagination: {
+        currentPage: result.currentPage,
+        totalPages: result.totalPages,
+        total: result.total,
+        overallTotalProjects: result.overallTotalProjects,
+      },
+    };
+  },
   component: ProjectsPage,
 });
 
-const projects: Project[] = [
-  {
-    name: "Kemdirimdesign",
-    commitMessage: "Merge pull request #40 from Cool-Projects/fix101",
-    branch: "master",
-    updatedAt: "23h ago",
-  },
-  {
-    name: "Kemdirimdesign",
-    commitMessage: "Merge pull request #40 from Cool-Projects/fix101",
-    branch: "master",
-    updatedAt: "23h ago",
-  },
-  {
-    name: "Kemdirimdesign",
-    commitMessage: "Merge pull request #40 from Cool-Projects/fix101",
-    branch: "main",
-    updatedAt: "2d ago",
-  },
-  {
-    name: "Kemdirimdesign",
-    commitMessage: "Merge pull request #40 from Cool-Projects/fix101",
-    branch: "main",
-    updatedAt: "5d ago",
-  },
-];
-
 function ProjectsPage() {
+  const navigate = useNavigate({ from: "/projects/" });
+  const search = Route.useSearch();
+  const { projects, pagination } = Route.useLoaderData();
+
+  function handlePageChange(page: number) {
+    if (page < 1 || page === pagination.currentPage || page > pagination.totalPages) {
+      return;
+    }
+
+    navigate({
+      to: "/projects/",
+      search: {
+        ...(search || {}),
+        page: page === 1 ? undefined : page,
+      },
+    });
+  }
+
   return (
     <div className="max-w-[1000px]">
       <PageHeader title="Projects" image="/images/bee.svg">
-        Welcome to faster frontend deployments! You have used{" "}
-        <span className="font-normal text-dash-text-body">4/10</span> of your
-        free deployments, you can upgrade to a Pro plan to access unlimited
-        deployments.
+        Manage your deployed projects from one place. Track recent updates, jump
+        into configurations, and spin up new deployments quickly.
       </PageHeader>
 
       <hr className="border-dash-border-soft mb-8 -mx-4 md:-mx-10" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <CreateProjectCard className="col-span-full" />
         {projects.map((project, i) => (
-          <ProjectCard key={i} project={project} />
+          <ProjectCard key={`${project.name}-${i}`} project={project} />
         ))}
-        <CreateProjectCard className="col-span-1 sm:col-span-2" />
+      </div>
+
+      <div className="mt-6 flex justify-center">
+        <NumberPagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          onPageChange={handlePageChange}
+        />
       </div>
     </div>
   );

@@ -1,46 +1,134 @@
 import type { ApiClient } from "./types";
-import { notImplemented } from "./utils";
-
-export interface LoginInput {
-  email: string;
-  password: string;
-}
-
-export interface SignupInput {
-  firstName: string;
-  lastName?: string;
-  email: string;
-  username: string;
-  company?: string;
-  password: string;
-}
-
-export interface AuthSession {
-  accessToken: string;
-  refreshToken?: string;
-  user: {
-    id: string;
-    email: string;
-    name?: string;
-  };
-}
-
-export interface AuthApi {
-  login(input: LoginInput): Promise<AuthSession>;
-  signup(input: SignupInput): Promise<AuthSession>;
-  logout(): Promise<void>;
-  getCurrentSession(): Promise<AuthSession | null>;
-  requestMagicLink(email: string): Promise<void>;
-}
+import type {
+  AuthApi,
+  AuthSession,
+  LoginInput,
+  SignupInput,
+  UserLookupInput,
+  UserLookupResult,
+  VerifyEmailCodeInput,
+} from "./auth/types";
+export type {
+  AuthApi,
+  AuthSession,
+  AuthUser,
+  LoginInput,
+  SignupInput,
+  UserLookupInput,
+  UserLookupResult,
+  VerifyEmailCodeInput,
+} from "./auth/types";
 
 export function createAuthApi(client: ApiClient): AuthApi {
-  void client;
+  const endpoints = {
+    login: "/auth/beta/login",
+    signup: "/auth/beta/signup",
+    verifyEmail: "/auth/beta/verify-email",
+    logoutCore: "/core/v1/logout",
+    logoutAuth: "/auth/beta/logout",
+    me: "/auth/user/me",
+    lookup: "/auth/beta/lookup",
+  } as const;
+
+  const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+  const mapSession = (payload: any): AuthSession => {
+    const data = payload?.data?.data ?? payload?.data ?? payload;
+    const firstName = data?.first_name ?? data?.firstName;
+    const lastName = data?.last_name ?? data?.lastName;
+
+    return {
+      accessToken: data?.access_token ?? data?.accessToken,
+      refreshToken: data?.refresh_token ?? data?.refreshToken,
+      user: {
+        id: String(data?.id ?? ""),
+        email: String(data?.email ?? ""),
+        username: data?.username,
+        firstName,
+        lastName,
+        company: data?.company,
+        name: [firstName, lastName].filter(Boolean).join(" ") || data?.name,
+        onboarded: Boolean(data?.onboard?.user ?? data?.onboarded),
+      },
+    };
+  };
 
   return {
-    login: () => notImplemented<AuthSession>("auth", "login"),
-    signup: () => notImplemented<AuthSession>("auth", "signup"),
-    logout: () => notImplemented<void>("auth", "logout"),
-    getCurrentSession: () => notImplemented<AuthSession | null>("auth", "getCurrentSession"),
-    requestMagicLink: () => notImplemented<void>("auth", "requestMagicLink"),
+    async login(input) {
+      await client.request(endpoints.login, {
+        method: "POST",
+        body: { email: normalizeEmail(input.email) },
+      });
+    },
+    async signup(input) {
+      await client.request(endpoints.signup, {
+        method: "POST",
+        body: {
+          email: normalizeEmail(input.email),
+          username: input.username.trim(),
+          first_name: input.firstName?.trim() || input.username.trim(),
+          last_name: input.lastName?.trim() || undefined,
+          company: input.company?.trim() || undefined,
+        },
+      });
+    },
+    async verifyEmailCode(input) {
+      const response = await client.request(endpoints.verifyEmail, {
+        method: "POST",
+        body: {
+          email: normalizeEmail(input.email),
+          access_code: input.code,
+        },
+      });
+
+      return mapSession(response);
+    },
+    async resendCode(email) {
+      await client.request(endpoints.login, {
+        method: "POST",
+        body: { email: normalizeEmail(email) },
+      });
+    },
+    async lookup(input) {
+      let query: { email: string } | { username: string } | null = null;
+
+      if (input.email?.trim()) {
+        query = { email: normalizeEmail(input.email) };
+      } else if (input.username?.trim()) {
+        query = { username: input.username.trim() };
+      }
+
+      if (!query) {
+        return { available: false, message: "Email or username is required" };
+      }
+
+      try {
+        await client.request(endpoints.lookup, {
+          method: "GET",
+          query,
+        });
+        return { available: true };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Lookup request failed";
+        return { available: false, message };
+      }
+    },
+    async logout() {
+      await Promise.allSettled([
+        client.request(endpoints.logoutCore, { method: "POST" }),
+        client.request(endpoints.logoutAuth, { method: "POST" }),
+      ]);
+    },
+    async getCurrentSession() {
+      try {
+        const response = await client.request(endpoints.me, {
+          method: "GET",
+        });
+        return mapSession(response);
+      } catch {
+        return null;
+      }
+    },
   };
 }

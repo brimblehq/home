@@ -1,477 +1,47 @@
-import { useState, useRef, useEffect } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { TabHeader } from "../../../components/shared/tab-header";
+import { TimeSeriesChart } from "@/components/observability/time-series-chart";
+import { SemiGauge } from "@/components/observability/semi-gauge";
+import { SegmentedToggle } from "@/components/observability/segmented-toggle";
+import { formatTimeLabel, toKbps, hoursAgoForInterval } from "@/utils/observability";
+import type { ResourceObservabilityMetrics } from "@/backend/observability";
+import {
+  getObservabilityGrafanaUrlServerFn,
+  getProjectObservabilityMetricsServerFn,
+} from "@/server/observability/actions";
+import { normalizeMemoryGbValue } from "@/utils/project-configuration";
+
+const parentRoute = getRouteApi("/projects/$projectId");
 
 export const Route = createFileRoute("/projects/$projectId/observability")({
+  staleTime: 30_000,
+  preloadStaleTime: 30_000,
+  loader: async ({ context }) => {
+    const project = (context as any).project;
+    const workspace = (context as any).workspace;
+
+    const [metrics, grafanaUrl] = await Promise.all([
+      (getProjectObservabilityMetricsServerFn as unknown as (input: {
+        data: { projectId: string; workspace?: string; hrsAgo?: number };
+      }) => Promise<ResourceObservabilityMetrics>)({
+        data: { projectId: project.id, workspace, hrsAgo: 1 },
+      }),
+      (getObservabilityGrafanaUrlServerFn as unknown as (input: {
+        data: { workspace?: string };
+      }) => Promise<string | null>)({
+        data: { workspace },
+      }).catch(() => null),
+    ]);
+
+    return { metrics, grafanaUrl };
+  },
   component: ObservabilityPage,
 });
 
-/* ─────────────────────────────────────────────
-   Shared components
-   ───────────────────────────────────────────── */
-
-function SegmentedToggle({
-  options,
-  value,
-  onChange,
-}: {
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center rounded-[4px] border-[0.5px] border-dash-border p-0.5">
-      {options.map((opt) => (
-        <button
-          key={opt}
-          onClick={() => onChange(opt)}
-          className={`rounded-[3px] px-3 py-1 text-xs font-medium transition-colors ${
-            opt === value
-              ? "bg-dash-bg-elevated text-dash-text-strong"
-              : "text-dash-text-faded hover:text-dash-text-body"
-          }`}
-        >
-          {opt}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/** Hatched bar chart — diagonal-line background + solid orange value bars */
-function TimeSeriesChart({
-  data,
-  yUnit = "",
-}: {
-  data: { time: string; value: number }[];
-  yUnit?: string;
-  color?: string;
-}) {
-  const [hovered, setHovered] = useState<number | null>(null);
-  if (data.length === 0) return null;
-  const max = Math.max(...data.map((d) => d.value), 1) * 1.15;
-  const barH = 260;
-
-  return (
-    <div>
-      <div className="flex items-end gap-[2px]">
-        {data.map((d, i) => {
-          const pct = d.value / max;
-          const valH = Math.max(pct * barH, 4);
-          const isActive = hovered === i;
-
-          return (
-            <div
-              key={i}
-              className="group flex flex-1 flex-col items-center"
-              onMouseEnter={() => setHovered(i)}
-              onMouseLeave={() => setHovered(null)}
-            >
-              {/* Tooltip on hover */}
-              <div className="relative mb-1.5 flex h-5 items-center justify-center">
-                {isActive && (
-                  <span className="whitespace-nowrap rounded bg-dash-text-strong px-1.5 py-0.5 font-logs text-[10px] font-medium text-dash-bg">
-                    {d.value.toFixed(1)} {yUnit}
-                  </span>
-                )}
-              </div>
-
-              {/* Bar */}
-              <div
-                className="relative w-full overflow-hidden rounded-[3px]"
-                style={{ height: barH }}
-              >
-                {/* Hatched background */}
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    backgroundColor: "var(--color-dash-bg-elevated)",
-                    backgroundImage:
-                      "repeating-linear-gradient(-45deg, transparent, transparent 3.5px, var(--color-dash-border-soft) 3.5px, var(--color-dash-border-soft) 4px)",
-                  }}
-                />
-
-                {/* Value bar */}
-                <div
-                  className="absolute inset-x-0 bottom-0 transition-all duration-150"
-                  style={{ height: valH }}
-                >
-                  <div
-                    className="size-full"
-                    style={{
-                      backgroundColor: "#ff7a00",
-                      opacity: isActive ? 1 : 0.3,
-                    }}
-                  />
-                  {isActive && (
-                    <div
-                      className="absolute inset-x-0 top-0 -translate-y-full"
-                      style={{ height: 8, backgroundColor: "#ffa800" }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Time label */}
-              <span
-                className={`mt-2 text-[10px] transition-colors ${
-                  isActive
-                    ? "font-medium text-dash-text-strong"
-                    : "text-dash-text-extra-faded"
-                }`}
-              >
-                {d.time}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/** Semi-circular tick gauge (green→red, radial lines clipped to arc band) */
-
-const TICK_COUNT = 24;
-const G = 118; // center of the 236×236 coordinate space
-const OUTER_R = 108; // outer edge of the arc band
-const INNER_R = 78; // inner edge of the arc band
-const LINE_W = 3.5; // stroke width of each radial line
-
-/* 24 colors: green (left) → yellow → orange → red (right) */
-const TICK_COLORS = [
-  "#22c55e", "#2dd46b", "#3ee377", "#5bea8a", "#78f29e",
-  "#9ae53b", "#b5e840", "#cdec44", "#e5d030", "#f0c020",
-  "#f5b020", "#f5a623", "#f09418", "#eb7d15", "#e86b11",
-  "#e5590e", "#e04a0c", "#dc3c0a", "#d63027", "#d02824",
-  "#cc2222", "#c41e1e", "#bb1a1a", "#b01616",
-];
-
-function SemiGauge({
-  value,
-  max,
-  label,
-  valueLabel,
-  title,
-  subtitle,
-}: {
-  value: number;
-  max: number;
-  label: string;
-  valueLabel: string;
-  title: string;
-  subtitle: string;
-}) {
-  const activeTicks = Math.round((Math.min(value, max) / max) * TICK_COUNT);
-
-  /* Build radial lines: each is a line from well beyond center to well beyond outer edge,
-     clipped by a semicircular ring (donut top half). Angles go from 180° (left) to 0° (right). */
-  const lines = Array.from({ length: TICK_COUNT }, (_, i) => {
-    const angleDeg = 180 - (i / (TICK_COUNT - 1)) * 180;
-    const angleRad = (angleDeg * Math.PI) / 180;
-    const cos = Math.cos(angleRad);
-    const sin = Math.sin(angleRad);
-    // Extend line well beyond center and outer edge so clip handles it
-    const len = OUTER_R + 30;
-    return {
-      x1: G - len * cos,
-      y1: G + len * sin,
-      x2: G + len * cos,
-      y2: G - len * sin,
-      index: i,
-    };
-  });
-
-  return (
-    <div className="flex flex-1 flex-col rounded-[4px] border-[0.5px] border-dash-border-soft bg-dash-bg">
-      {/* Header */}
-      <div className="flex h-[72px] items-center border-b-[0.5px] border-dash-border-soft px-5">
-        <div>
-          <h3 className="text-sm text-dash-text-strong">{title}</h3>
-          <p className="text-sm font-light text-dash-text-faded">{subtitle}</p>
-        </div>
-      </div>
-
-      {/* Body: gauge + info */}
-      <div className="flex items-center px-5 py-6">
-        <div className="shrink-0">
-          <svg
-            width="200"
-            height="110"
-            viewBox="0 0 236 130"
-            fill="none"
-          >
-            <defs>
-              {/* Semicircular ring mask — only the top-half donut band is visible */}
-              <clipPath id={`gauge-clip-${label}`}>
-                {/* Outer semicircle (top half) */}
-                <path
-                  d={`M ${G - OUTER_R},${G} A ${OUTER_R},${OUTER_R} 0 0,1 ${G + OUTER_R},${G} L ${G + INNER_R},${G} A ${INNER_R},${INNER_R} 0 0,0 ${G - INNER_R},${G} Z`}
-                />
-              </clipPath>
-            </defs>
-
-            <g clipPath={`url(#gauge-clip-${label})`}>
-              {lines.map((line) => {
-                const isActive = line.index < activeTicks;
-                return (
-                  <line
-                    key={line.index}
-                    x1={line.x1}
-                    y1={line.y1}
-                    x2={line.x2}
-                    y2={line.y2}
-                    stroke={isActive ? TICK_COLORS[line.index] : "var(--color-dash-border-soft)"}
-                    strokeWidth={LINE_W}
-                    strokeLinecap="round"
-                  />
-                );
-              })}
-            </g>
-          </svg>
-        </div>
-
-        <div className="ml-5 border-l border-[#ebebeb] pl-5 dark:border-dash-border">
-          <span className="block text-base text-dash-text-strong">{label}</span>
-          <span className="block font-logs text-sm text-dash-text-faded">{valueLabel}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────
-   App Metrics mock data
-   ───────────────────────────────────────────── */
-
-function generateTimeSeries(
-  count: number,
-  minV: number,
-  maxV: number,
-  startHour = 16,
-  startMin = 26,
-  spike?: { at: number; multiplier: number }
-) {
-  const result: { time: string; value: number }[] = [];
-  for (let i = 0; i < count; i++) {
-    const totalMin = startHour * 60 + startMin + i * 5;
-    const h = Math.floor(totalMin / 60) % 24;
-    const m = totalMin % 60;
-    let val = minV + Math.random() * (maxV - minV);
-    if (spike && Math.abs(i - spike.at) < 4) {
-      val *= spike.multiplier * (1 - Math.abs(i - spike.at) * 0.2);
-    }
-    result.push({
-      time: `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`,
-      value: val,
-    });
-  }
-  return result;
-}
-
-const memoryData = generateTimeSeries(24, 0.3, 1.8, 16, 26, { at: 8, multiplier: 3 });
-const cpuData = generateTimeSeries(24, 5, 35, 16, 26, { at: 10, multiplier: 4 });
-const networkData = generateTimeSeries(24, 0.4, 3.5, 16, 26, { at: 7, multiplier: 8 });
-
-const responseP90 = generateTimeSeries(24, 80, 200, 16, 26, { at: 12, multiplier: 2.5 });
-const responseP95 = generateTimeSeries(24, 100, 280, 16, 26, { at: 12, multiplier: 2.5 });
-const responseP99 = generateTimeSeries(24, 150, 400, 16, 26, { at: 12, multiplier: 2 });
-const responseAvg = generateTimeSeries(24, 40, 120, 16, 26, { at: 12, multiplier: 2 });
-
-const metricCharts = {
-  "Memory Usage": { data: memoryData, unit: "GB" },
-  "CPU Usage": { data: cpuData, unit: "%" },
-  "Network Egress": { data: networkData, unit: "KB/s" },
-  "Response Times": { data: responseP90, unit: "ms" },
-} as const;
-
-type MetricChart = keyof typeof metricCharts;
-
-const responseTimeSeries: Record<string, { time: string; value: number }[]> = {
-  P90: responseP90,
-  P95: responseP95,
-  P99: responseP99,
-  Average: responseAvg,
-};
-
-/* ─────────────────────────────────────────────
-   App Analytics mock data
-   ───────────────────────────────────────────── */
-
-const visitorData = [
-  { month: "JAN", value: 14 },
-  { month: "FEB", value: 108 },
-  { month: "MAR", value: 166 },
-  { month: "APR", value: 55 },
-  { month: "MAY", value: 137 },
-  { month: "JUN", value: 14 },
-  { month: "JUL", value: 76 },
-  { month: "AUG", value: 55 },
-  { month: "SEP", value: 183 },
-  { month: "OCT", value: 89 },
-  { month: "NOV", value: 154 },
-  { month: "DEC", value: 13 },
-];
-
-const topPages = [
-  { path: "/about", visitors: 148 },
-  { path: "/blog", visitors: 148 },
-  { path: "/home", visitors: 148 },
-];
-
-const funnelSources = [
-  { name: "Asana", icon: "🔷", visitors: 148 },
-  { name: "Confluence", icon: "🔵", visitors: 148 },
-  { name: "LinkedIn", icon: "🔗", visitors: 148 },
-  { name: "Google.com", icon: "🔍", visitors: 148 },
-];
-
-const countries = [
-  { name: "Nigeria", flag: "🇳🇬", visitors: 148 },
-  { name: "United States", flag: "🇺🇸", visitors: 148 },
-  { name: "Canada", flag: "🇨🇦", visitors: 148 },
-  { name: "Mexico", flag: "🇲🇽", visitors: 148 },
-  { name: "Botswana", flag: "🇧🇼", visitors: 148 },
-];
-
-const browsers = [
-  { name: "Chrome", visitors: 148 },
-  { name: "Mozilla Firefox", visitors: 148 },
-  { name: "Arc", visitors: 148 },
-  { name: "Edge", visitors: 148 },
-  { name: "Safari", visitors: 148 },
-];
-
-const devices = [
-  { name: "Desktop", visitors: 3200 },
-  { name: "Mobile", visitors: 1400 },
-  { name: "Tablet", visitors: 300 },
-];
-
-/* ─────────────────────────────────────────────
-   Analytics sub-components
-   ───────────────────────────────────────────── */
-
-function MiniSparkline({ className, color = "#fff" }: { className?: string; color?: string }) {
-  const points = [2, 8, 5, 12, 7, 18, 14, 22, 16, 28, 20, 35];
-  const max = Math.max(...points);
-  const h = 40;
-  const w = 120;
-  const d = points
-    .map((v, i) => `${(i / (points.length - 1)) * w},${h - (v / max) * (h - 4)}`)
-    .join(" L ");
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className={className} fill="none">
-      <polyline points={d} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </svg>
-  );
-}
-
-function VisitorBarChart() {
-  const [hovered, setHovered] = useState<number | null>(null);
-  const max = Math.max(...visitorData.map((d) => d.value), 1);
-  const barH = 240; // max bar height in px
-
-  return (
-    <div className="mt-6">
-      <div className="flex gap-0">
-        {visitorData.map((d, i) => {
-          const pct = d.value / max;
-          const valH = Math.max(pct * barH, 6); // min 6px so tiny values are visible
-          const isActive = hovered === i;
-
-          return (
-            <div
-              key={d.month}
-              className="flex flex-1 flex-col items-center gap-2"
-              onMouseEnter={() => setHovered(i)}
-              onMouseLeave={() => setHovered(null)}
-            >
-              {/* Bar container */}
-              <div
-                className="relative w-full overflow-hidden rounded-[4px]"
-                style={{ height: barH }}
-              >
-                {/* Hatched background (full height) */}
-                <div
-                  className="absolute inset-0 rounded-[4px]"
-                  style={{
-                    backgroundColor: "var(--color-dash-bg-elevated)",
-                    backgroundImage:
-                      "repeating-linear-gradient(-45deg, transparent, transparent 4px, var(--color-dash-border-soft) 4px, var(--color-dash-border-soft) 4.5px)",
-                  }}
-                />
-
-                {/* Value bar (solid, anchored to bottom) */}
-                <div
-                  className="absolute inset-x-0 bottom-0 transition-all duration-150"
-                  style={{ height: valH }}
-                >
-                  <div
-                    className="size-full"
-                    style={{
-                      backgroundColor: "#ff7a00",
-                      opacity: isActive ? 1 : 0.3,
-                    }}
-                  />
-                  {/* Active cap */}
-                  {isActive && (
-                    <div
-                      className="absolute inset-x-0 top-0 -translate-y-full"
-                      style={{ height: 10, backgroundColor: "#ffa800" }}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Month label */}
-              <span
-                className={`text-[11px] font-medium tracking-wide transition-colors ${
-                  isActive
-                    ? "text-dash-text-strong"
-                    : "text-dash-text-extra-faded"
-                }`}
-              >
-                {d.month}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ListCard({ title, subtitle, items, showSeeAll }: { title: string; subtitle?: string; items: { label: string; icon?: string; value: string }[]; showSeeAll?: boolean }) {
-  return (
-    <div className="flex flex-1 flex-col rounded-[4px] border-[0.5px] border-dash-border">
-      <div className="flex items-center justify-between border-b-[0.5px] border-dash-border px-4 py-3">
-        <div>
-          <h3 className="text-sm font-medium text-dash-text-strong">{title}</h3>
-          {subtitle && <p className="text-xs font-light text-dash-text-faded">{subtitle}</p>}
-        </div>
-        {showSeeAll && <button className="text-xs text-[#4879f8] hover:underline">See all</button>}
-      </div>
-      <div className="flex flex-col">
-        {items.map((item, i) => (
-          <div key={i} className={`flex items-center justify-between px-4 py-2.5 ${i < items.length - 1 ? "border-b-[0.5px] border-dash-border-soft" : ""}`}>
-            <div className="flex items-center gap-2">
-              {item.icon && <span className="text-sm">{item.icon}</span>}
-              <span className="text-sm font-light text-dash-text-body">{item.label}</span>
-            </div>
-            <span className="text-xs text-dash-text-faded">{item.value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────
-   Section: App Metrics
-   ───────────────────────────────────────────── */
+type MetricChart = "Memory Usage" | "CPU Usage" | "Network Egress" | "Response Times";
 
 const timeIntervals = [
   "Last 1 Hour",
@@ -536,50 +106,179 @@ function TimeIntervalDropdown({
   );
 }
 
-function AppMetrics() {
+function AppMetrics({
+  project,
+  initialMetrics,
+  grafanaUrl,
+  workspace,
+}: {
+  project: Project;
+  initialMetrics: ResourceObservabilityMetrics;
+  grafanaUrl: string | null;
+  workspace?: string;
+}) {
+  const fetchMetrics = useServerFn(getProjectObservabilityMetricsServerFn as any) as (args: {
+    data: { projectId: string; workspace?: string; hrsAgo?: number };
+  }) => Promise<ResourceObservabilityMetrics>;
   const [activeChart, setActiveChart] = useState<MetricChart>("Memory Usage");
   const [responseMetric, setResponseMetric] = useState("P90");
   const [timeInterval, setTimeInterval] = useState("Last 1 Hour");
+  const [metrics, setMetrics] = useState<ResourceObservabilityMetrics>(initialMetrics);
+  const [loadingMetrics, setLoadingMetrics] = useState(false);
 
-  const chartTabs: MetricChart[] = ["Memory Usage", "CPU Usage", "Network Egress", "Response Times"];
+  useEffect(() => {
+    setMetrics(initialMetrics);
+  }, [initialMetrics]);
 
-  const currentData =
-    activeChart === "Response Times"
-      ? responseTimeSeries[responseMetric]
-      : metricCharts[activeChart].data;
-  const currentUnit =
-    activeChart === "Response Times" ? "ms" : metricCharts[activeChart].unit;
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMetricsForRange() {
+      const hrsAgo = hoursAgoForInterval(timeInterval);
+      if (hrsAgo === 1) {
+        setMetrics(initialMetrics);
+        return;
+      }
+
+      try {
+        setLoadingMetrics(true);
+        const nextMetrics = await fetchMetrics({
+          data: {
+            projectId: project.id,
+            workspace,
+            hrsAgo,
+          },
+        });
+
+        if (!cancelled) {
+          setMetrics(nextMetrics);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingMetrics(false);
+        }
+      }
+    }
+
+    void loadMetricsForRange();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [timeInterval, fetchMetrics, project.id, workspace, initialMetrics]);
+
+  const chartTabs: MetricChart[] = [
+    "Memory Usage",
+    "CPU Usage",
+    "Network Egress",
+    "Response Times",
+  ];
+
+  const aggregateSeries = useMemo(() => {
+    const results = Array.isArray(metrics?.results) ? metrics.results : [];
+
+    return results.map((item: any) => {
+      let point = item;
+      if (item && typeof item === "object" && "aggregate" in item) {
+        point = item.aggregate;
+      }
+
+      return {
+        time: formatTimeLabel(String(item?.date ?? "")),
+        memory: Number(point?.memory ?? 0),
+        cpu: Number(point?.cpu ?? 0),
+        network: toKbps(point?.network?.bytesPerSecond ?? null),
+      };
+    });
+  }, [metrics]);
+
+  const responseSeries = useMemo(() => {
+    const items = metrics?.responseTime?.results || [];
+
+    return {
+      P90: items.map((item) => ({
+        time: formatTimeLabel(item.date),
+        value: Number(item.p90 ?? 0),
+      })),
+      P95: items.map((item) => ({
+        time: formatTimeLabel(item.date),
+        value: Number(item.p95 ?? 0),
+      })),
+      P99: items.map((item) => ({
+        time: formatTimeLabel(item.date),
+        value: Number(item.p99 ?? 0),
+      })),
+      Average: items.map((item) => ({
+        time: formatTimeLabel(item.date),
+        value: Number(item.avg ?? 0),
+      })),
+    };
+  }, [metrics]);
+
+  let currentData: { time: string; value: number }[] = [];
+  let currentUnit = "";
+
+  if (activeChart === "Response Times") {
+    currentData = responseSeries[responseMetric] || [];
+    currentUnit = "ms";
+  } else if (activeChart === "Memory Usage") {
+    currentData = aggregateSeries.map((item) => ({ time: item.time, value: item.memory }));
+    currentUnit = "%";
+  } else if (activeChart === "CPU Usage") {
+    currentData = aggregateSeries.map((item) => ({ time: item.time, value: item.cpu }));
+    currentUnit = "%";
+  } else {
+    currentData = aggregateSeries.map((item) => ({ time: item.time, value: item.network }));
+    currentUnit = "KB/s";
+  }
+
+  const cpuPercent = Number(metrics?.average?.cpu?.totalInPercentage ?? 0);
+  const cpuSize = Number(metrics?.average?.cpu?.size ?? 0);
+  const memoryPercent = Number(metrics?.average?.memory?.totalInPercentage ?? 0);
+  const memoryUsedGb = Number(metrics?.average?.memory?.size ?? 0);
+  const memoryLimitGb = normalizeMemoryGbValue(project?.specs?.memory);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <TabHeader title="Metrics & Observability">
           Monitor your app's key metrics and health.
+          {grafanaUrl ? (
+            <>
+              {" "}
+              <a
+                href={grafanaUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[#4879f8] underline"
+              >
+                View in Grafana
+              </a>
+            </>
+          ) : null}
         </TabHeader>
         <TimeIntervalDropdown value={timeInterval} onChange={setTimeInterval} />
       </div>
 
-      {/* CPU + Memory semi-circular gauges */}
       <div className="flex gap-4">
         <SemiGauge
-          value={8}
+          value={cpuPercent}
           max={100}
           label="CPU"
-          valueLabel="8%-4vCPU"
+          valueLabel={`${cpuPercent.toFixed(1)}% - ${cpuSize.toFixed(1)} vCPU`}
           title="CPU Usage"
           subtitle="Current processor utilization"
         />
         <SemiGauge
-          value={10}
+          value={memoryPercent}
           max={100}
           label="Memory"
-          valueLabel="1.6GB of 16GB"
+          valueLabel={`${memoryPercent.toFixed(2)} % / ${memoryLimitGb.toFixed(1)}GB`}
           title="Memory usage"
           subtitle="Current memory consumption"
         />
       </div>
 
-      {/* Chart tabs */}
       <div className="rounded-[4px] border-[0.5px] border-dash-border">
         <div className="flex items-center justify-between border-b-[0.5px] border-dash-border">
           <div className="flex">
@@ -597,7 +296,7 @@ function AppMetrics() {
               </button>
             ))}
           </div>
-          {activeChart === "Response Times" && (
+          {activeChart === "Response Times" ? (
             <div className="pr-4">
               <SegmentedToggle
                 options={["P90", "P95", "P99", "Average"]}
@@ -605,19 +304,186 @@ function AppMetrics() {
                 onChange={setResponseMetric}
               />
             </div>
-          )}
+          ) : null}
         </div>
-        <div className="px-5 pb-5 pt-8">
-          <TimeSeriesChart data={currentData} yUnit={currentUnit} />
+        <div className="min-w-0 overflow-hidden px-5 pb-5 pt-8">
+          {loadingMetrics ? (
+            <div className="flex h-[260px] items-center justify-center text-sm text-dash-text-faded">
+              Loading metrics...
+            </div>
+          ) : currentData.length > 0 ? (
+            <TimeSeriesChart data={currentData} yUnit={currentUnit} label={activeChart} />
+          ) : (
+            <div className="flex h-[260px] items-center justify-center text-sm text-dash-text-faded">
+              No metrics available for this time range.
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────
-   Section: App Analytics
-   ───────────────────────────────────────────── */
+const visitorData = [
+  { month: "JAN", value: 14 },
+  { month: "FEB", value: 108 },
+  { month: "MAR", value: 166 },
+  { month: "APR", value: 55 },
+  { month: "MAY", value: 137 },
+  { month: "JUN", value: 14 },
+  { month: "JUL", value: 76 },
+  { month: "AUG", value: 55 },
+  { month: "SEP", value: 183 },
+  { month: "OCT", value: 89 },
+  { month: "NOV", value: 154 },
+  { month: "DEC", value: 13 },
+];
+
+const topPages = [
+  { path: "/about", visitors: 148 },
+  { path: "/blog", visitors: 148 },
+  { path: "/home", visitors: 148 },
+];
+
+const funnelSources = [
+  { name: "Asana", icon: "🔷", visitors: 148 },
+  { name: "Confluence", icon: "🔵", visitors: 148 },
+  { name: "LinkedIn", icon: "🔗", visitors: 148 },
+  { name: "Google.com", icon: "🔍", visitors: 148 },
+];
+
+const countries = [
+  { name: "Nigeria", flag: "🇳🇬", visitors: 148 },
+  { name: "United States", flag: "🇺🇸", visitors: 148 },
+  { name: "Canada", flag: "🇨🇦", visitors: 148 },
+  { name: "Mexico", flag: "🇲🇽", visitors: 148 },
+  { name: "Botswana", flag: "🇧🇼", visitors: 148 },
+];
+
+const browsers = [
+  { name: "Chrome", visitors: 148 },
+  { name: "Mozilla Firefox", visitors: 148 },
+  { name: "Arc", visitors: 148 },
+  { name: "Edge", visitors: 148 },
+  { name: "Safari", visitors: 148 },
+];
+
+const devices = [
+  { name: "Desktop", visitors: 3200 },
+  { name: "Mobile", visitors: 1400 },
+  { name: "Tablet", visitors: 300 },
+];
+
+function MiniSparkline({ className, color = "#fff" }: { className?: string; color?: string }) {
+  const points = [2, 8, 5, 12, 7, 18, 14, 22, 16, 28, 20, 35];
+  const max = Math.max(...points);
+  const h = 40;
+  const w = 120;
+  const d = points
+    .map((v, i) => `${(i / (points.length - 1)) * w},${h - (v / max) * (h - 4)}`)
+    .join(" L ");
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className={className} fill="none">
+      <polyline points={d} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
+function VisitorBarChart() {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const max = Math.max(...visitorData.map((d) => d.value), 1);
+  const barH = 240;
+
+  return (
+    <div className="mt-6">
+      <div className="flex gap-0">
+        {visitorData.map((d, i) => {
+          const pct = d.value / max;
+          const valH = Math.max(pct * barH, 6);
+          const isActive = hovered === i;
+
+          return (
+            <div
+              key={d.month}
+              className="flex flex-1 flex-col items-center gap-2"
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              <div
+                className="relative w-full overflow-hidden rounded-[4px]"
+                style={{ height: barH }}
+              >
+                <div
+                  className="absolute inset-0 rounded-[4px]"
+                  style={{
+                    backgroundColor: "var(--color-dash-bg-elevated)",
+                    backgroundImage:
+                      "repeating-linear-gradient(-45deg, transparent, transparent 4px, var(--color-dash-border-soft) 4px, var(--color-dash-border-soft) 4.5px)",
+                  }}
+                />
+
+                <div
+                  className="absolute inset-x-0 bottom-0 transition-all duration-150"
+                  style={{ height: valH }}
+                >
+                  <div
+                    className="size-full"
+                    style={{
+                      backgroundColor: "#ff7a00",
+                      opacity: isActive ? 1 : 0.3,
+                    }}
+                  />
+                  {isActive && (
+                    <div
+                      className="absolute inset-x-0 top-0 -translate-y-full"
+                      style={{ height: 10, backgroundColor: "#ffa800" }}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <span
+                className={`text-[11px] font-medium tracking-wide transition-colors ${
+                  isActive
+                    ? "text-dash-text-strong"
+                    : "text-dash-text-extra-faded"
+                }`}
+              >
+                {d.month}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ListCard({ title, subtitle, items, showSeeAll }: { title: string; subtitle?: string; items: { label: string; icon?: string; value: string }[]; showSeeAll?: boolean }) {
+  return (
+    <div className="flex flex-1 flex-col rounded-[4px] border-[0.5px] border-dash-border">
+      <div className="flex items-center justify-between border-b-[0.5px] border-dash-border px-4 py-3">
+        <div>
+          <h3 className="text-sm font-medium text-dash-text-strong">{title}</h3>
+          {subtitle && <p className="text-xs font-light text-dash-text-faded">{subtitle}</p>}
+        </div>
+        {showSeeAll && <button className="text-xs text-[#4879f8] hover:underline">See all</button>}
+      </div>
+      <div className="flex flex-col">
+        {items.map((item, i) => (
+          <div key={i} className={`flex items-center justify-between px-4 py-2.5 ${i < items.length - 1 ? "border-b-[0.5px] border-dash-border-soft" : ""}`}>
+            <div className="flex items-center gap-2">
+              {item.icon && <span className="text-sm">{item.icon}</span>}
+              <span className="text-sm font-light text-dash-text-body">{item.label}</span>
+            </div>
+            <span className="text-xs text-dash-text-faded">{item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const analyticsPeriods = [
   "Last 7 days",
@@ -652,7 +518,6 @@ function AppAnalytics() {
         </a>
       </TabHeader>
 
-      {/* TLDR Banner */}
       <div className="flex items-center justify-between overflow-hidden rounded-lg bg-gradient-to-r from-[#2d2b55] via-[#3b3875] to-[#2d2b55] px-6 py-5">
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-medium uppercase tracking-[1px] text-white/60">
@@ -677,7 +542,6 @@ function AppAnalytics() {
         </div>
       </div>
 
-      {/* Site Visitors */}
       <div className="rounded-[4px] border-[0.5px] border-dash-border p-5">
         <div className="mb-1 flex items-center justify-between">
           <div>
@@ -722,13 +586,11 @@ function AppAnalytics() {
         <VisitorBarChart />
       </div>
 
-      {/* Top pages + Funnel */}
       <div className="flex gap-4">
         <ListCard title="Top pages" subtitle="Most visited pages" showSeeAll items={topPages.map((p) => ({ label: p.path, value: `${p.visitors} Visitors` }))} />
         <ListCard title="Funnel" subtitle="Where your visitors have come from" items={funnelSources.map((s) => ({ label: s.name, icon: s.icon, value: String(s.visitors) }))} />
       </div>
 
-      {/* Countries + Browser/Devices */}
       <div className="flex gap-4">
         <ListCard title="Countries" subtitle="Pages with the highest amount of visitors" showSeeAll items={countries.map((c) => ({ label: c.name, icon: c.flag, value: `${c.visitors} Visitors` }))} />
         <div className="flex flex-1 flex-col rounded-[4px] border-[0.5px] border-dash-border">
@@ -750,16 +612,13 @@ function AppAnalytics() {
   );
 }
 
-/* ─────────────────────────────────────────────
-   Main page
-   ───────────────────────────────────────────── */
-
 function ObservabilityPage() {
+  const { project, workspace } = parentRoute.useLoaderData() as any;
+  const { metrics, grafanaUrl } = Route.useLoaderData();
   const [section, setSection] = useState<"metrics" | "analytics">("metrics");
 
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 py-8">
-      {/* Section toggle */}
       <div className="flex items-center gap-1 self-start rounded-[4px] border-[0.5px] border-dash-border p-0.5">
         <button
           onClick={() => setSection("metrics")}
@@ -783,7 +642,16 @@ function ObservabilityPage() {
         </button>
       </div>
 
-      {section === "metrics" ? <AppMetrics /> : <AppAnalytics />}
+      {section === "metrics" ? (
+        <AppMetrics
+          project={project}
+          initialMetrics={metrics}
+          grafanaUrl={grafanaUrl}
+          workspace={workspace}
+        />
+      ) : (
+        <AppAnalytics />
+      )}
     </div>
   );
 }

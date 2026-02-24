@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { cn } from "@brimble/ui";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Star, Share2, Check, Rocket } from "lucide-react";
 import { toast } from "sonner";
 import { Spinner } from "../shared/spinner";
@@ -15,6 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import { FolderTrashIcon } from "../shared/folder-trash-icon";
 import { WarningModal } from "../shared/warning-modal";
+import { redeployProjectServerFn } from "@/server/projects/actions";
 
 const tabs = [
   { label: "Projects details", slug: "", Icon: GlobeSimple },
@@ -28,6 +30,13 @@ const tabs = [
 
 export function ProjectSubnav({ projectId }: { projectId: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const redeployProject = useServerFn(redeployProjectServerFn as any) as (args: {
+    data: {
+      projectId: string;
+      workspace?: string;
+    };
+  }) => Promise<{ id?: string; message?: string }>;
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmName, setConfirmName] = useState("");
   const [copied, setCopied] = useState(false);
@@ -35,6 +44,40 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
   // TODO: replace with real project name from API
   const projectName = projectId;
+
+  async function handleRedeploy() {
+    if (deploying) {
+      return;
+    }
+
+    const params = new URLSearchParams(searchStr || "");
+    const workspace = params.get("workspace") || undefined;
+
+    try {
+      setDeploying(true);
+      toast.loading("Redeploying project...", { id: "redeploy" });
+
+      await redeployProject({
+        data: {
+          projectId,
+          workspace,
+        },
+      });
+
+      toast.success("Redeploy started", {
+        id: "redeploy",
+        description: `${projectName} is being redeployed to production.`,
+      });
+    } catch (error: any) {
+      toast.error("Failed to redeploy project", {
+        id: "redeploy",
+        description:
+          typeof error?.message === "string" ? error.message : "Please try again.",
+      });
+    } finally {
+      setDeploying(false);
+    }
+  }
 
   return (
     <>
@@ -54,6 +97,11 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
               <Link
                 key=<span className="hidden md:inline">{tab.label}</span>
                 to={tabPath}
+                preload={
+                  tab.slug === "configuration" || tab.slug === "observability"
+                    ? "render"
+                    : "intent"
+                }
                 className={cn(
                   "flex h-14 items-center gap-2 px-2 text-sm tracking-[-0.09px] transition-colors",
                   isActive
@@ -73,15 +121,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
           <button
             disabled={deploying}
             onClick={() => {
-              setDeploying(true);
-              toast.loading("Redeploying project...", { id: "redeploy" });
-              setTimeout(() => {
-                setDeploying(false);
-                toast.success("Deployment queued successfully", {
-                  id: "redeploy",
-                  description: `${projectName} is being redeployed to production.`,
-                });
-              }, 3000);
+              void handleRedeploy();
             }}
             className="flex items-center gap-1.5 text-sm font-light text-dash-text-body transition-colors hover:text-dash-text-strong disabled:opacity-50"
           >

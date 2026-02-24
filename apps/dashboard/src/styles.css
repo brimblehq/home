@@ -320,6 +320,14 @@ code {
   box-shadow: 0 0 10px #006fff, 0 0 5px #006fff;
 }
 
+.dark #nprogress .bar {
+  background: #b27a22;
+}
+
+.dark #nprogress .peg {
+  box-shadow: 0 0 10px #b27a22, 0 0 5px #b27a22;
+}
+
 /* Hide scrollbars but keep scroll functionality */
 .scrollbar-hidden {
   scrollbar-width: none;

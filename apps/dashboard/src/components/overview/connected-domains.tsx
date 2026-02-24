@@ -2,7 +2,11 @@ import { Plus, ArrowUpRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { DashButton } from "../shared/dash-button";
 
-export function ConnectedDomains() {
+export function ConnectedDomains({
+  activeDomains = 0,
+}: {
+  activeDomains?: number;
+}) {
   return (
     <div className="mb-8 flex rounded-[4px] border-[0.5px] border-dash-border py-2">
       {/* Left content */}
@@ -27,7 +31,7 @@ export function ConnectedDomains() {
       <div className="flex h-[122px] w-[169px] shrink-0 flex-col items-center justify-center border-l-[0.5px] border-dash-border pl-3.5 pr-2">
         <div className="flex flex-col gap-px">
           <span className="text-[56px] font-light leading-none tracking-[-0.09px] text-dash-text-strong">
-            3
+            {activeDomains}
           </span>
           <div className="flex items-center gap-2">
             <span className="text-sm font-light leading-[1.3] text-dash-text-faded">

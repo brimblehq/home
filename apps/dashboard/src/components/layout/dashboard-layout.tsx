@@ -11,23 +11,27 @@ import { OnboardingChecklist } from "../shared/onboarding-checklist";
 import { DashToaster } from "../shared/toaster";
 import { UserProfileDrawer } from "../shared/user-profile-drawer";
 import { ScoutBarProvider } from "../../contexts/scoutbar-context";
+import type { SettingsSidebarSnapshot } from "@/backend/settings";
+import type { ApiListResponse } from "@/backend";
+import type { Workspace } from "@/backend/workspaces";
 
-export function DashboardLayout({ children }: { children: ReactNode }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+export function DashboardLayout({
+  children,
+  initialSettingsSnapshot,
+  initialWorkspaces,
+}: {
+  children: ReactNode;
+  initialSettingsSnapshot?: SettingsSidebarSnapshot | null;
+  initialWorkspaces?: ApiListResponse<Workspace>;
+}) {
+  const pathname = useRouterState({
+    select: (s) => s.resolvedLocation?.pathname ?? s.location.pathname,
+  });
   const navigate = useNavigate();
   const isAuthRoute = /^\/(login|signup)$/.test(pathname);
   const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
   const isCatchAll = pathname !== "/" && !knownPrefixes.test(pathname);
   const isFullWidth = /^\/projects\/[^/]+/.test(pathname) || /^\/workspace\/new/.test(pathname);
-
-  if (isAuthRoute || isCatchAll) {
-    return (
-      <TooltipProvider>
-        <DashToaster />
-        {children}
-      </TooltipProvider>
-    );
-  }
 
   // Settings drawer — shared between sidebar & topbar
   const [profileOpen, setProfileOpen] = useState(false);
@@ -40,13 +44,26 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const [warningDismissed, setWarningDismissed] = useState(false);
   const [errorDismissed, setErrorDismissed] = useState(false);
 
+  if (isAuthRoute || isCatchAll) {
+    return (
+      <TooltipProvider>
+        <DashToaster />
+        {children}
+      </TooltipProvider>
+    );
+  }
+
   return (
     <ScoutBarProvider>
     <TooltipProvider>
       <DashToaster />
       <CommandPalette />
       <div className="flex h-dvh flex-col bg-dash-bg">
-        <Topbar onSettingsClick={() => setProfileOpen(true)} />
+        <Topbar
+          onSettingsClick={() => setProfileOpen(true)}
+          settingsSnapshot={initialSettingsSnapshot ?? null}
+          workspaces={initialWorkspaces?.items ?? []}
+        />
         <AnimatePresence>
           {!welcomeDismissed && (
             <Snackbar
@@ -95,7 +112,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         )}
         <OnboardingChecklist />
-        <UserProfileDrawer open={profileOpen} onOpenChange={setProfileOpen} />
+        <UserProfileDrawer
+          open={profileOpen}
+          onOpenChange={setProfileOpen}
+          initialSnapshot={initialSettingsSnapshot ?? null}
+        />
       </div>
     </TooltipProvider>
     </ScoutBarProvider>

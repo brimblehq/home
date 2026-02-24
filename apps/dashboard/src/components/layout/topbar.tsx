@@ -15,6 +15,10 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../../hooks/use-theme";
 import { DashButton } from "../shared/dash-button";
 import { useScoutBar } from "../../contexts/scoutbar-context";
+import config from "@/config";
+import type { SettingsSidebarSnapshot } from "@/backend/settings";
+import type { Workspace } from "@/backend/workspaces";
+import { toTitleCase } from "@/utils/dashboard";
 
 const allProjects = [
   "Kemdirimdesign",
@@ -91,10 +95,21 @@ function ProjectSwitcher({ projectId }: { projectId: string }) {
   );
 }
 
-function WorkspaceSwitcher() {
+function WorkspaceSwitcher({
+  profile,
+  workspaces,
+  pathname,
+  searchStr,
+}: {
+  profile: SettingsSidebarSnapshot["profile"] | null;
+  workspaces: Workspace[];
+  pathname: string;
+  searchStr: string;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -108,18 +123,66 @@ function WorkspaceSwitcher() {
     }
   }, [open]);
 
+  const personalAvatar =
+    profile?.avatarUrl ||
+    `${config.avatarUrl}/adventurer-neutral/svg?seed=${encodeURIComponent(
+      profile?.username || profile?.firstName || profile?.email || "user",
+    )}`;
+
+  const personalName =
+    profile?.username ||
+    [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
+    profile?.email ||
+    "Personal Account";
+  const personalDisplayName = toTitleCase(personalName);
+  const personalWorkspaceLabel = `${personalDisplayName}'s Workspace`;
+  const params = new URLSearchParams(searchStr || "");
+  const activeWorkspaceSlug = params.get("workspace");
+  const activeTeam =
+    workspaces.find((team) => team.slug === activeWorkspaceSlug) ?? null;
+
+  const activeWorkspaceAvatar = activeTeam?.avatarUrl
+    ? activeTeam.avatarUrl
+    : activeTeam
+      ? `${config.avatarUrl}/initials/svg?seed=${encodeURIComponent(activeTeam.name)}`
+      : personalAvatar;
+
+  const activeWorkspaceLabel = activeTeam
+    ? `${toTitleCase(activeTeam.name)}'s Workspace`
+    : personalWorkspaceLabel;
+
+  const navigateWithWorkspace = (workspaceSlug?: string) => {
+    const nextParams = new URLSearchParams(searchStr || "");
+
+    if (workspaceSlug) {
+      nextParams.set("workspace", workspaceSlug);
+    } else {
+      nextParams.delete("workspace");
+    }
+
+    const nextSearch = nextParams.toString();
+    const nextUrl = nextSearch ? `${pathname}?${nextSearch}` : pathname;
+
+    navigate({ to: nextUrl as any });
+  };
+
+  const filteredTeams = workspaces.filter((team) => {
+    const text = query.trim().toLowerCase();
+    if (!text) {
+      return true;
+    }
+
+    return team.name.toLowerCase().includes(text);
+  });
+
   return (
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 text-sm font-medium text-dash-text-strong"
       >
-        <img
-          src="/icons/workspace.svg"
-          alt=""
-          className="size-6 rounded-full"
-        />
-        Brimble Workspace
+        <img src={activeWorkspaceAvatar} alt="" className="size-6 rounded-full object-cover" />
+        <span>{activeWorkspaceLabel}</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -144,6 +207,8 @@ function WorkspaceSwitcher() {
                 type="text"
                 placeholder="Find team"
                 autoFocus
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
                 className="w-full bg-transparent text-sm text-dash-text-strong outline-none placeholder:text-dash-text-extra-faded"
               />
             </div>
@@ -153,15 +218,23 @@ function WorkspaceSwitcher() {
               <div className="py-2">
                 <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">Personal Accounts</span>
               </div>
-              <button className="flex w-full items-center gap-2 rounded px-px py-1 transition-colors hover:bg-dash-bg-elevated">
-                <div
-                  className="size-6 shrink-0 rounded-full"
-                  style={{
-                    background:
-                      "radial-gradient(circle at 62% 30%, #b8fce8, #91f2d5 25%, #6ae8c3 50%, #43deb0 75%, #1bd49d)",
-                  }}
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  navigateWithWorkspace();
+                }}
+                className={`flex w-full items-center gap-2 rounded px-px py-1 transition-colors hover:bg-dash-bg-elevated ${
+                  !activeTeam ? "bg-dash-bg-elevated" : ""
+                }`}
+              >
+                <img
+                  src={personalAvatar}
+                  alt=""
+                  className="size-6 shrink-0 rounded-full object-cover"
                 />
-                <span className="text-sm text-dash-text-body dark:text-dash-text-strong">Kemdirimakujuobi</span>
+                <span className="text-sm text-dash-text-body dark:text-dash-text-strong">
+                  {personalWorkspaceLabel}
+                </span>
               </button>
             </div>
 
@@ -170,16 +243,41 @@ function WorkspaceSwitcher() {
               <div className="py-2">
                 <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">Teams</span>
               </div>
-              <button className="flex w-full items-center gap-2 rounded px-px py-1 transition-colors hover:bg-dash-bg-elevated">
-                <div
-                  className="size-6 shrink-0 rounded-full"
-                  style={{
-                    background:
-                      "radial-gradient(circle at 62% 30%, #b8cffc, #94b6f8 25%, #6f9cf3 50%, #4b82ee 75%, #2769e9)",
-                  }}
-                />
-                <span className="text-sm text-dash-text-body dark:text-dash-text-strong">Brimble Team</span>
-              </button>
+              {filteredTeams.length > 0 ? (
+                filteredTeams.map((team) => {
+                  const teamAvatar =
+                    team.avatarUrl ||
+                    `${config.avatarUrl}/initials/svg?seed=${encodeURIComponent(team.name)}`;
+
+                  return (
+                    <button
+                      key={team.id || team.name}
+                      onClick={() => {
+                        setOpen(false);
+                        if (team.slug) {
+                          navigateWithWorkspace(team.slug);
+                        }
+                      }}
+                      className={`flex w-full items-center gap-2 rounded px-px py-1 transition-colors hover:bg-dash-bg-elevated ${
+                        activeTeam?.slug === team.slug ? "bg-dash-bg-elevated" : ""
+                      }`}
+                    >
+                      <img
+                        src={teamAvatar}
+                        alt=""
+                        className="size-6 shrink-0 rounded-full object-cover"
+                      />
+                      <span className="text-sm text-dash-text-body dark:text-dash-text-strong">
+                        {`${toTitleCase(team.name)}'s Workspace`}
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="px-px py-1 text-sm text-dash-text-extra-faded">
+                  No teams found
+                </div>
+              )}
             </div>
             {/* Home + Create workspace */}
             <div className="flex flex-col border-t-[0.5px] border-dash-border bg-dash-bg-elevated">
@@ -465,10 +563,19 @@ function CreateDropdown() {
   );
 }
 
-export function Topbar({ onSettingsClick }: { onSettingsClick: () => void }) {
+export function Topbar({
+  onSettingsClick,
+  settingsSnapshot,
+  workspaces,
+}: {
+  onSettingsClick: () => void;
+  settingsSnapshot?: SettingsSidebarSnapshot | null;
+  workspaces?: Workspace[];
+}) {
   const { theme, toggleTheme } = useTheme();
   const { open: openScoutBar } = useScoutBar();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const projectMatch = pathname.match(/^\/projects\/([^/]+)/);
   const projectId = projectMatch ? projectMatch[1] : null;
   const isWorkspaceNew = /^\/workspace\/new/.test(pathname);
@@ -521,7 +628,12 @@ export function Topbar({ onSettingsClick }: { onSettingsClick: () => void }) {
       <div className="border-b border-dash-border-soft">
         <div className="mx-auto flex max-w-screen-xl items-center justify-between py-3">
           <div className="flex items-center">
-            <WorkspaceSwitcher />
+            <WorkspaceSwitcher
+              profile={settingsSnapshot?.profile ?? null}
+              workspaces={workspaces ?? []}
+              pathname={pathname}
+              searchStr={searchStr}
+            />
             <span className="mx-2 text-sm text-dash-text-faded">/</span>
             {isWorkspaceNew ? (
               <span className="text-sm font-medium text-dash-text-faded">New Workspace</span>

@@ -8,6 +8,7 @@ const ease = [0.16, 1, 0.3, 1] as const;
 export interface DropdownOption {
   id: string;
   label: string;
+  icon?: string;
 }
 
 type ObjectProps = {
@@ -41,7 +42,9 @@ export function Dropdown({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
-  const isObject = options.length > 0 && typeof options[0] === "object";
+  const safeOptions = Array.isArray(options) ? options : [];
+  const isObject = safeOptions.length > 0 && typeof safeOptions[0] === "object";
+  const menuWidth = pos.width > 0 ? pos.width : 240;
 
   const updatePos = useCallback(() => {
     if (!triggerRef.current) return;
@@ -74,8 +77,11 @@ export function Dropdown({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
+  const selectedOption = isObject
+    ? (safeOptions as DropdownOption[]).find((o) => o.id === value)
+    : undefined;
   const displayLabel = isObject
-    ? (options as DropdownOption[]).find((o) => o.id === value)?.label
+    ? selectedOption?.label
     : renderOption
       ? renderOption(value)
       : value;
@@ -85,10 +91,18 @@ export function Dropdown({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (!open) {
+            updatePos();
+          }
+          setOpen((prev) => !prev);
+        }}
         className={`flex w-full items-center justify-between input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af] ${className ?? ""}`}
       >
-        <span className={displayLabel ? "" : "text-[#9ca3af]"}>
+        <span className={`flex items-center gap-2 ${displayLabel ? "" : "text-[#9ca3af]"}`}>
+          {selectedOption?.icon && (
+            <img src={selectedOption.icon} alt="" className="size-4 shrink-0 object-contain" />
+          )}
           {displayLabel || placeholder || "Select..."}
         </span>
         <motion.span
@@ -113,30 +127,39 @@ export function Dropdown({
                   position: "fixed",
                   top: pos.top,
                   left: pos.left,
-                  width: pos.width,
+                  width: menuWidth,
                   zIndex: 9999,
                   pointerEvents: "auto",
                 }}
-                className="max-h-[200px] overflow-y-auto overflow-x-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_2px_4px_-4px_rgba(0,0,0,0.07)]"
+                className="max-h-[200px] overflow-x-hidden overflow-y-auto overscroll-contain rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_2px_4px_-4px_rgba(0,0,0,0.07)] [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.15)_transparent]"
+                onWheelCapture={(event) => {
+                  event.stopPropagation();
+                }}
+                onTouchMoveCapture={(event) => {
+                  event.stopPropagation();
+                }}
               >
                 {isObject
-                  ? (options as DropdownOption[]).map((opt) => (
+                  ? (safeOptions as DropdownOption[]).map((opt) => (
                       <button
                         key={opt.id}
                         onClick={() => {
                           (onChange as (id: string) => void)(opt.id);
                           setOpen(false);
                         }}
-                        className={`flex w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-dash-bg-elevated ${
+                        className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-dash-bg-elevated ${
                           opt.id === value
                             ? "font-medium text-dash-text-strong"
                             : "text-dash-text-faded"
                         }`}
                       >
+                        {opt.icon && (
+                          <img src={opt.icon} alt="" className="size-4 shrink-0 object-contain" />
+                        )}
                         {opt.label}
                       </button>
                     ))
-                  : (options as string[]).map((opt) => (
+                  : (safeOptions as string[]).map((opt) => (
                       <button
                         key={opt}
                         onClick={() => {

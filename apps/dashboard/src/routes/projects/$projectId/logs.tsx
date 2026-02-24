@@ -9,6 +9,8 @@ import { FilterDropdown, type FilterOption } from "../../../components/shared/fi
 import { DateRangePicker } from "../../../components/shared/date-range-picker";
 
 export const Route = createFileRoute("/projects/$projectId/logs")({
+  staleTime: 30_000,
+  preloadStaleTime: 30_000,
   component: LogsPage,
 });
 
