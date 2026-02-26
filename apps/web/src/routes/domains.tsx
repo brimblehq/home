@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion, useInView } from "motion/react";
 import { Search } from "lucide-react";
 import { siteConfig } from "@/config/site";
+import { buildSeoHead } from "@/config/seo";
 import { Navbar } from "@/components/layout/navbar";
 import {
   Button,
@@ -17,6 +18,13 @@ import trainStation from "@/assets/images/train-station.svg";
 import arrowRight from "@/assets/icons/arrow-right.svg";
 
 export const Route = createFileRoute("/domains")({
+  head: () =>
+    buildSeoHead({
+      title: "Buy and Manage Domains",
+      description:
+        "Secure your domain in seconds. Buy, connect, and manage custom domains with ease on Brimble.",
+      path: "/domains",
+    }),
   component: DomainsPage,
 });
 

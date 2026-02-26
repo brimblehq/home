@@ -11,6 +11,12 @@ function getServerBackendApi() {
   });
 }
 
+function getPublicBackendApi() {
+  return createBackendApi({
+    baseUrl: config.apiUrl,
+  });
+}
+
 export const listMcpTemplatesServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
@@ -25,14 +31,27 @@ export const listMcpTemplatesServerFn = createServerFn({
       }
     | undefined;
 
-  return getServerBackendApi().mcp.listTemplates({
+  const request = {
     query: payload?.query?.trim() || undefined,
     limit: payload?.limit,
     offset: payload?.offset,
     cursor: payload?.cursor?.trim() || undefined,
     category: payload?.category?.trim() || undefined,
     verified: payload?.verified,
-  }) as Promise<McpServerListResult>;
+  } as const;
+
+  try {
+    return await (getServerBackendApi().mcp.listTemplates(request) as Promise<McpServerListResult>);
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "[listMcpTemplatesServerFn] auth-backed request failed, retrying without auth",
+        error,
+      );
+    }
+
+    return getPublicBackendApi().mcp.listTemplates(request) as Promise<McpServerListResult>;
+  }
 });
 
 export const getMcpTemplateServerFn = createServerFn({

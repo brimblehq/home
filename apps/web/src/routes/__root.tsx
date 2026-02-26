@@ -38,7 +38,8 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'Brimble — Deploy and Scale Modern JavaScript Applications',
+        name: 'theme-color',
+        content: '#ffffff',
       },
     ],
     links: [
@@ -58,6 +59,31 @@ export const Route = createRootRoute({
       {
         rel: 'stylesheet',
         href: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500&display=swap',
+      },
+      {
+        rel: 'icon',
+        href: '/favicon/favicon.ico',
+      },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '16x16',
+        href: '/favicon/favicon-16x16.png',
+      },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '32x32',
+        href: '/favicon/favicon-32x32.png',
+      },
+      {
+        rel: 'apple-touch-icon',
+        sizes: '180x180',
+        href: '/favicon/apple-touch-icon.png',
+      },
+      {
+        rel: 'manifest',
+        href: '/favicon/site.webmanifest',
       },
     ],
   }),

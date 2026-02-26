@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, useInView } from "motion/react";
 import { siteConfig } from "@/config/site";
+import { buildSeoHead } from "@/config/seo";
 import { Navbar } from "@/components/layout/navbar";
 import {
   Accordion,
@@ -13,6 +14,13 @@ import { Cta } from "@/components/sections/cta";
 import trainStation from "@/assets/images/train-station.svg";
 
 export const Route = createFileRoute("/faq")({
+  head: () =>
+    buildSeoHead({
+      title: "FAQs",
+      description:
+        "Got questions? Learn how Brimble works, how billing is structured, what you can deploy, and how to access AI models with a single API.",
+      path: "/faq",
+    }),
   component: FaqPage,
 });
 

@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion, useInView } from "motion/react";
 import { Check, ArrowRight } from "lucide-react";
 import { siteConfig } from "@/config/site";
+import { buildSeoHead } from "@/config/seo";
 import { Navbar } from "@/components/layout/navbar";
 import {
   Button,
@@ -17,6 +18,13 @@ import flower from "@/assets/images/flower.png";
 import arrowRight from "@/assets/icons/arrow-right.svg";
 
 export const Route = createFileRoute("/pricing")({
+  head: () =>
+    buildSeoHead({
+      title: "Pricing",
+      description:
+        "Explore Brimble’s transparent pricing for app hosting, managed databases, domain purchases, and AI API access. Start free, scale as you grow.",
+      path: "/pricing",
+    }),
   component: PricingPage,
 });
 

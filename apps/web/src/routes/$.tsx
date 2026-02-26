@@ -1,6 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { buildSeoHead } from "@/config/seo";
 
 export const Route = createFileRoute("/$")({
+  head: () =>
+    buildSeoHead({
+      title: "Page Not Found",
+      description: "The page you're looking for doesn't exist or has been moved.",
+      noIndex: true,
+    }),
   component: NotFoundPage,
 });
 
