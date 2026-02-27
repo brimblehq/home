@@ -10,6 +10,7 @@ import { createMessagesApi, type MessagesApi } from "./messages";
 import { createMcpApi, type McpApi } from "./mcp";
 import { createObservabilityApi, type ObservabilityApi } from "./observability";
 import { createOverviewApi, type OverviewApi } from "./overview";
+import { createPaymentsApi, type PaymentsApi } from "./payments";
 import { createProjectsApi, type ProjectsApi } from "./projects";
 import { createRepositoriesApi, type RepositoriesApi } from "./repositories";
 import { createSettingsApi, type SettingsApi } from "./settings";
@@ -32,6 +33,7 @@ export * from "./messages";
 export * from "./mcp";
 export * from "./observability";
 export * from "./overview";
+export * from "./payments";
 export * from "./projects";
 export * from "./regions";
 export * from "./repositories";
@@ -56,6 +58,7 @@ export interface BackendApi {
   messages: MessagesApi;
   mcp: McpApi;
   overview: OverviewApi;
+  payments: PaymentsApi;
   deployments: DeploymentsApi;
   workspaces: WorkspacesApi;
   settings: SettingsApi;
@@ -82,6 +85,7 @@ export function createBackendApi(config: BackendClientConfig): BackendApi {
     messages: createMessagesApi(client),
     mcp: createMcpApi(client),
     overview: createOverviewApi(client),
+    payments: createPaymentsApi(client),
     deployments: createDeploymentsApi(client),
     workspaces: createWorkspacesApi(client),
     settings: createSettingsApi(client),

@@ -9,8 +9,7 @@ import {
   ModalContinueButton,
 } from "../shared/modal";
 import { Dropdown } from "../shared/dropdown";
-
-type Step = "name" | "config" | "invite" | "done";
+import { WorkspaceStep } from "../../types/enums";
 
 const inputClass =
   "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
@@ -90,7 +89,10 @@ function StepName({
   function handleNameChange(value: string) {
     onNameChange(value);
     onSlugChange(
-      value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, ""),
     );
   }
 
@@ -197,7 +199,8 @@ function StepConfig({
           Build pricing: ${COST_PER_BUILD}/build container/mo
           <br />
           <span className="font-medium">
-            Estimated total: ${totalCost % 1 === 0 ? totalCost : totalCost.toFixed(2)}/mo
+            Estimated total: $
+            {totalCost % 1 === 0 ? totalCost : totalCost.toFixed(2)}/mo
           </span>
         </InfoBanner>
       </div>
@@ -262,7 +265,8 @@ function MiniRoleDropdown({
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     if (open) {
       document.addEventListener("mousedown", handleClick);
@@ -291,9 +295,14 @@ function MiniRoleDropdown({
             {roles.map((r) => (
               <button
                 key={r}
-                onClick={() => { onChange(r); setOpen(false); }}
+                onClick={() => {
+                  onChange(r);
+                  setOpen(false);
+                }}
                 className={`flex w-full px-2.5 py-1.5 text-left text-sm ${
-                  r === value ? "font-medium text-[#4879f8]" : "text-dash-text-body hover:bg-dash-bg-elevated"
+                  r === value
+                    ? "font-medium text-[#4879f8]"
+                    : "text-dash-text-body hover:bg-dash-bg-elevated"
                 }`}
               >
                 {r}
@@ -408,11 +417,20 @@ function StepDone({ name }: { name: string }) {
 
 /* ─── Modal Container ─── */
 
-const stepDescriptions: Record<Step, { title: string; description: string }> = {
-  name: { title: "Create workspace", description: "Set up a new workspace for your team." },
-  config: { title: "Create workspace", description: "Configure your team size and build capacity." },
-  invite: { title: "Create workspace", description: "Invite people to collaborate." },
-  done: { title: "Create workspace", description: "" },
+const stepDescriptions: Record<WorkspaceStep, { title: string; description: string }> = {
+  [WorkspaceStep.Name]: {
+    title: "Create workspace",
+    description: "Set up a new workspace for your team.",
+  },
+  [WorkspaceStep.Config]: {
+    title: "Create workspace",
+    description: "Configure your team size and build capacity.",
+  },
+  [WorkspaceStep.Invite]: {
+    title: "Create workspace",
+    description: "Invite people to collaborate.",
+  },
+  [WorkspaceStep.Done]: { title: "Create workspace", description: "" },
 };
 
 interface CreateWorkspaceModalProps {
@@ -424,19 +442,21 @@ export function CreateWorkspaceModal({
   open,
   onOpenChange,
 }: CreateWorkspaceModalProps) {
-  const [step, setStep] = useState<Step>("name");
+  const [step, setStep] = useState<WorkspaceStep>(WorkspaceStep.Name);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [teamSize, setTeamSize] = useState(3);
   const [concurrentBuilds, setConcurrentBuilds] = useState(2);
   const [promoCode, setPromoCode] = useState("");
-  const [promoStatus, setPromoStatus] = useState<"idle" | "verifying" | "valid" | "invalid">("idle");
+  const [promoStatus, setPromoStatus] = useState<
+    "idle" | "verifying" | "valid" | "invalid"
+  >("idle");
   const [inviteRows, setInviteRows] = useState<InviteRow[]>([
     { id: inviteNextId++, email: "", role: "Member" },
   ]);
 
   function reset() {
-    setStep("name");
+    setStep(WorkspaceStep.Name);
     setName("");
     setSlug("");
     setTeamSize(3);
@@ -455,7 +475,9 @@ export function CreateWorkspaceModal({
     if (!promoCode.trim()) return;
     setPromoStatus("verifying");
     setTimeout(() => {
-      setPromoStatus(promoCode.toUpperCase().startsWith("BRIMBLE") ? "valid" : "invalid");
+      setPromoStatus(
+        promoCode.toUpperCase().startsWith("BRIMBLE") ? "valid" : "invalid",
+      );
     }, 800);
   }
 
@@ -464,7 +486,7 @@ export function CreateWorkspaceModal({
     setPromoStatus("idle");
   }
 
-  const steps: Step[] = ["name", "config", "invite", "done"];
+  const steps: WorkspaceStep[] = [WorkspaceStep.Name, WorkspaceStep.Config, WorkspaceStep.Invite, WorkspaceStep.Done];
   const stepIdx = steps.indexOf(step);
 
   function next() {
@@ -476,18 +498,17 @@ export function CreateWorkspaceModal({
   }
 
   const canContinue =
-    step === "name" ? name.trim().length > 0 :
-    step === "config" ? true :
-    step === "invite" ? true :
-    false;
+    step === WorkspaceStep.Name
+      ? name.trim().length > 0
+      : step === WorkspaceStep.Config
+        ? true
+        : step === WorkspaceStep.Invite
+          ? true
+          : false;
 
   return (
-    <Modal
-      open={open}
-      onOpenChange={handleClose}
-      width={500}
-    >
-      {step !== "done" && (
+    <Modal open={open} onOpenChange={handleClose} width={500}>
+      {step !== WorkspaceStep.Done && (
         <ModalHeader
           title={stepDescriptions[step].title}
           description={stepDescriptions[step].description}
@@ -495,9 +516,9 @@ export function CreateWorkspaceModal({
       )}
 
       {/* Step indicator */}
-      {step !== "done" && (
+      {step !== WorkspaceStep.Done && (
         <div className="flex items-center gap-1.5 px-6 pt-4">
-          {["name", "config", "invite"].map((s, i) => (
+          {[WorkspaceStep.Name, WorkspaceStep.Config, WorkspaceStep.Invite].map((s, i) => (
             <div
               key={s}
               className={`h-[3px] flex-1 rounded-full transition-colors ${
@@ -516,7 +537,7 @@ export function CreateWorkspaceModal({
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.2, ease }}
         >
-          {step === "name" && (
+          {step === WorkspaceStep.Name && (
             <StepName
               name={name}
               slug={slug}
@@ -524,7 +545,7 @@ export function CreateWorkspaceModal({
               onSlugChange={setSlug}
             />
           )}
-          {step === "config" && (
+          {step === WorkspaceStep.Config && (
             <StepConfig
               teamSize={teamSize}
               concurrentBuilds={concurrentBuilds}
@@ -536,18 +557,18 @@ export function CreateWorkspaceModal({
               onVerifyPromo={handleVerifyPromo}
             />
           )}
-          {step === "invite" && (
+          {step === WorkspaceStep.Invite && (
             <StepInvite
               rows={inviteRows}
               onRowsChange={setInviteRows}
               teamSize={teamSize}
             />
           )}
-          {step === "done" && <StepDone name={name} />}
+          {step === WorkspaceStep.Done && <StepDone name={name} />}
         </motion.div>
       </AnimatePresence>
 
-      {step !== "done" ? (
+      {step !== WorkspaceStep.Done ? (
         <ModalFooter>
           {stepIdx === 0 ? (
             <ModalCancelButton />
@@ -560,7 +581,7 @@ export function CreateWorkspaceModal({
             </button>
           )}
           <div className="flex items-center gap-2">
-            {step === "invite" && (
+            {step === WorkspaceStep.Invite && (
               <button
                 onClick={next}
                 className="flex h-[34px] items-center px-3.5 text-sm text-dash-text-faded transition-colors hover:text-dash-text-strong"
@@ -569,7 +590,7 @@ export function CreateWorkspaceModal({
               </button>
             )}
             <ModalContinueButton onClick={next} disabled={!canContinue}>
-              {step === "invite" ? "Create Team" : "Continue"}
+              {step === WorkspaceStep.Invite ? "New workspace" : "Continue"}
             </ModalContinueButton>
           </div>
         </ModalFooter>

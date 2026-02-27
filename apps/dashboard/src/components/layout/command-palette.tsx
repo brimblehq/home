@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getRouteApi, useNavigate, useRouterState } from "@tanstack/react-router";
+import {
+  getRouteApi,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
 import { Command } from "cmdk";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Moon, Sun, ArrowsClockwise } from "@phosphor-icons/react";
+import { PaletteView } from "../../types/enums";
 import { useScoutBar } from "../../contexts/scoutbar-context";
 import { useTheme } from "../../hooks/use-theme";
 import {
@@ -24,8 +29,6 @@ type CommandDomain = {
   project?: string;
 };
 
-type PaletteView = "root" | "project-search" | "domain-search" | "workspace-search";
-
 function mapDomainItems(items: DomainRecord[]): CommandDomain[] {
   return items.map((domain) => ({
     name: domain.name,
@@ -38,18 +41,21 @@ export function CommandPalette() {
   const { isOpen, setIsOpen } = useScoutBar();
   const { theme, setTheme, toggleTheme } = useTheme();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
-  const { onboardingProjects, workspaces, settingsSnapshot } = rootRoute.useLoaderData() as {
-    onboardingProjects: { items: Project[] } | null;
-    workspaces: { items: Workspace[] };
-    settingsSnapshot: SettingsSidebarSnapshot | null;
-  };
+  const { onboardingProjects, workspaces, settingsSnapshot } =
+    rootRoute.useLoaderData() as {
+      onboardingProjects: { items: Project[] } | null;
+      workspaces: { items: Workspace[] };
+      settingsSnapshot: SettingsSidebarSnapshot | null;
+    };
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<PaletteView>("root");
+  const [view, setView] = useState<PaletteView>(PaletteView.Root);
   const [pastViews, setPastViews] = useState<PaletteView[]>([]);
   const [futureViews, setFutureViews] = useState<PaletteView[]>([]);
   const [domains, setDomains] = useState<CommandDomain[]>([]);
   const [domainsLoading, setDomainsLoading] = useState(false);
-  const [domainsLoadedForKey, setDomainsLoadedForKey] = useState<string | null>(null);
+  const [domainsLoadedForKey, setDomainsLoadedForKey] = useState<string | null>(
+    null,
+  );
   const workspace = getWorkspaceFromSearch({ searchStr });
   const listDomains = useServerFn(listDomainsPageServerFn as any) as (args: {
     data: { workspace?: string; page?: number; q?: string };
@@ -77,7 +83,11 @@ export function CommandPalette() {
 
   const teams = useMemo(
     () => [
-      { name: `${personalName}'s Workspace`, type: "personal" as const, slug: undefined as string | undefined },
+      {
+        name: `${personalName}'s Workspace`,
+        type: "personal" as const,
+        slug: undefined as string | undefined,
+      },
       ...(workspaces?.items ?? []).map((team) => ({
         name: `${team.name}'s Workspace`,
         type: "team" as const,
@@ -105,13 +115,13 @@ export function CommandPalette() {
   useEffect(() => {
     if (!isOpen) {
       setQuery("");
-      setView("root");
+      setView(PaletteView.Root);
       setPastViews([]);
       setFutureViews([]);
       return;
     }
 
-    if (view !== "domain-search") {
+    if (view !== PaletteView.DomainSearch) {
       return;
     }
 
@@ -185,21 +195,21 @@ export function CommandPalette() {
   const openProjectSearch = () => {
     setPastViews((prev) => [...prev, view]);
     setFutureViews([]);
-    setView("project-search");
+    setView(PaletteView.ProjectSearch);
     setQuery("");
   };
 
   const openDomainSearch = () => {
     setPastViews((prev) => [...prev, view]);
     setFutureViews([]);
-    setView("domain-search");
+    setView(PaletteView.DomainSearch);
     setQuery("");
   };
 
   const openWorkspaceSearch = () => {
     setPastViews((prev) => [...prev, view]);
     setFutureViews([]);
-    setView("workspace-search");
+    setView(PaletteView.WorkspaceSearch);
     setQuery("");
   };
 
@@ -248,7 +258,7 @@ export function CommandPalette() {
   }>({ value: "", timeoutId: null });
 
   useEffect(() => {
-    if (!isOpen || view !== "root") {
+    if (!isOpen || view !== PaletteView.Root) {
       if (shortcutBufferRef.current.timeoutId !== null) {
         window.clearTimeout(shortcutBufferRef.current.timeoutId);
       }
@@ -278,7 +288,7 @@ export function CommandPalette() {
     };
 
     const handleBadgeShortcuts = (event: KeyboardEvent) => {
-      if (!isOpen || view !== "root") return;
+      if (!isOpen || view !== PaletteView.Root) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key.length !== 1) return;
 
@@ -347,22 +357,22 @@ export function CommandPalette() {
   ]);
 
   const inputPlaceholder = (() => {
-    if (view === "project-search") return "Search projects...";
-    if (view === "domain-search") return "Search domains...";
-    if (view === "workspace-search") return "Search workspaces...";
+    if (view === PaletteView.ProjectSearch) return "Search projects...";
+    if (view === PaletteView.DomainSearch) return "Search domains...";
+    if (view === PaletteView.WorkspaceSearch) return "Search workspaces...";
     return "Search or jump to";
   })();
 
   const emptyStateLabel = (() => {
-    if (view === "project-search") return "No projects found.";
-    if (view === "domain-search") return "No domains found.";
-    if (view === "workspace-search") return "No workspaces found.";
+    if (view === PaletteView.ProjectSearch) return "No projects found.";
+    if (view === PaletteView.DomainSearch) return "No domains found.";
+    if (view === PaletteView.WorkspaceSearch) return "No workspaces found.";
     return "No results found.";
   })();
 
   const subviewHeading = (() => {
-    if (view === "project-search") return "PROJECTS";
-    if (view === "domain-search") return "DOMAINS";
+    if (view === PaletteView.ProjectSearch) return "PROJECTS";
+    if (view === PaletteView.DomainSearch) return "DOMAINS";
     return "WORKSPACES";
   })();
 
@@ -411,7 +421,7 @@ export function CommandPalette() {
                     <Command.Empty>{emptyStateLabel}</Command.Empty>
 
                     <AnimatePresence mode="wait" initial={false}>
-                      {view === "root" ? (
+                      {view === PaletteView.Root ? (
                         <motion.div
                           key="cmdk-root"
                           initial={{ opacity: 0, x: -8 }}
@@ -538,7 +548,7 @@ export function CommandPalette() {
                                 height="16"
                                 alt=""
                               />
-                              <span>New team</span>
+                              <span>New workspace</span>
                               <span className="cmdk-shortcut cmdk-shortcut-orange">
                                 T
                               </span>
@@ -577,7 +587,10 @@ export function CommandPalette() {
                               value="cli docs documentation"
                               onSelect={() =>
                                 runAction(() =>
-                                  window.open("https://docs.brimble.io", "_blank")
+                                  window.open(
+                                    "https://docs.brimble.io",
+                                    "_blank",
+                                  ),
                                 )
                               }
                             >
@@ -595,7 +608,7 @@ export function CommandPalette() {
                                 runAction(
                                   () =>
                                     (window.location.href =
-                                      "mailto:hello@brimble.app")
+                                      "mailto:hello@brimble.app"),
                                 )
                               }
                             >
@@ -624,71 +637,76 @@ export function CommandPalette() {
                             >
                               <ArrowLeft className="size-4" />
                               <span>
-                                Back to {pastViews.length > 0 ? "previous" : "commands"}
+                                Back to{" "}
+                                {pastViews.length > 0 ? "previous" : "commands"}
                               </span>
                             </Command.Item>
-                            {view === "project-search" &&
+                            {view === PaletteView.ProjectSearch &&
                               projects.map((p) => (
-                                  <Command.Item
-                                    key={p.slug}
-                                    value={`project ${p.name} ${p.slug}`}
-                                    onSelect={() =>
-                                      runAction(() =>
-                                        go(`/projects/${p.slug}`)
-                                      )
-                                    }
-                                  >
-                                    <img
-                                      src="/icons/scoutbar/search-alt.svg"
-                                      width="16"
-                                      height="16"
-                                      alt=""
-                                    />
-                                    <span>{p.name}</span>
-                                  </Command.Item>
-                                ))}
-                            {view === "domain-search" &&
+                                <Command.Item
+                                  key={p.slug}
+                                  value={`project ${p.name} ${p.slug}`}
+                                  onSelect={() =>
+                                    runAction(() => go(`/projects/${p.slug}`))
+                                  }
+                                >
+                                  <img
+                                    src="/icons/scoutbar/search-alt.svg"
+                                    width="16"
+                                    height="16"
+                                    alt=""
+                                  />
+                                  <span>{p.name}</span>
+                                </Command.Item>
+                              ))}
+                            {view === PaletteView.DomainSearch &&
                               domains.map((d) => (
-                                    <Command.Item
-                                      key={d.name}
-                                      value={`domain ${d.name} ${d.project ?? ""}`}
-                                      onSelect={() =>
-                                        runAction(() => go(`/domains/${encodeURIComponent(d.name)}`))
-                                      }
-                                    >
-                                      <img
-                                        src="/icons/scoutbar/earth.svg"
-                                        width="16"
-                                        height="16"
-                                        alt=""
-                                      />
-                                      <span>{d.name}</span>
-                                    </Command.Item>
-                                  ))}
-                            {view === "workspace-search" &&
+                                <Command.Item
+                                  key={d.name}
+                                  value={`domain ${d.name} ${d.project ?? ""}`}
+                                  onSelect={() =>
+                                    runAction(() =>
+                                      go(
+                                        `/domains/${encodeURIComponent(d.name)}`,
+                                      ),
+                                    )
+                                  }
+                                >
+                                  <img
+                                    src="/icons/scoutbar/earth.svg"
+                                    width="16"
+                                    height="16"
+                                    alt=""
+                                  />
+                                  <span>{d.name}</span>
+                                </Command.Item>
+                              ))}
+                            {view === PaletteView.WorkspaceSearch &&
                               teams.map((t) => (
-                                    <Command.Item
-                                      key={`${t.type}:${t.slug ?? "personal"}`}
-                                      value={`workspace ${t.name} ${t.type}`}
-                                      onSelect={() =>
-                                        runAction(() =>
-                                          navigate({
-                                            to: "/projects",
-                                            search: t.slug ? ({ workspace: t.slug } as any) : ({} as any),
-                                          })
-                                        )
-                                      }
-                                    >
-                                      <img
-                                        src="/icons/scoutbar/People.svg"
-                                        width="16"
-                                        height="16"
-                                        alt=""
-                                      />
-                                      <span>{t.name}</span>
-                                    </Command.Item>
-                                  ))}
-                            {view === "domain-search" && domainsLoading ? (
+                                <Command.Item
+                                  key={`${t.type}:${t.slug ?? "personal"}`}
+                                  value={`workspace ${t.name} ${t.type}`}
+                                  onSelect={() =>
+                                    runAction(() =>
+                                      navigate({
+                                        to: "/projects",
+                                        search: t.slug
+                                          ? ({ workspace: t.slug } as any)
+                                          : ({} as any),
+                                      }),
+                                    )
+                                  }
+                                >
+                                  <img
+                                    src="/icons/scoutbar/People.svg"
+                                    width="16"
+                                    height="16"
+                                    alt=""
+                                  />
+                                  <span>{t.name}</span>
+                                </Command.Item>
+                              ))}
+                            {view === PaletteView.DomainSearch && domainsLoading ? (
                               <Command.Item value="domains loading" disabled>
                                 <img
                                   src="/icons/scoutbar/earth.svg"

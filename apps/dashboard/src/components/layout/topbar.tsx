@@ -44,7 +44,10 @@ function splitInternalUrl(url: string) {
   const search = Object.fromEntries(params.entries());
   return {
     to: (to || "/") as string,
-    search: Object.keys(search).length > 0 ? (search as Record<string, string>) : undefined,
+    search:
+      Object.keys(search).length > 0
+        ? (search as Record<string, string>)
+        : undefined,
   };
 }
 
@@ -77,7 +80,8 @@ function ProjectSwitcher({
 
   const displayProjectId = decodeURIComponent(projectId);
   const currentProject = projects.find(
-    (project) => project.slug === displayProjectId || project.name === displayProjectId,
+    (project) =>
+      project.slug === displayProjectId || project.name === displayProjectId,
   );
   let activeProjectLabel = displayProjectId;
   if (currentProject?.name) {
@@ -118,7 +122,8 @@ function ProjectSwitcher({
                   }
 
                   const isActive =
-                    nextProjectId === displayProjectId || project.name === activeProjectLabel;
+                    nextProjectId === displayProjectId ||
+                    project.name === activeProjectLabel;
                   const nextUrl = buildProjectSwitchUrl({
                     pathname,
                     searchStr,
@@ -147,7 +152,9 @@ function ProjectSwitcher({
                   );
                 })
               ) : (
-                <div className="py-1 text-sm text-dash-text-extra-faded">No projects found</div>
+                <div className="py-1 text-sm text-dash-text-extra-faded">
+                  No projects found
+                </div>
               )}
             </div>
             {/* Create project */}
@@ -257,7 +264,11 @@ function WorkspaceSwitcher({
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 text-sm font-medium text-dash-text-strong"
       >
-        <img src={activeWorkspaceAvatar} alt="" className="size-6 rounded-full object-cover" />
+        <img
+          src={activeWorkspaceAvatar}
+          alt=""
+          className="size-6 rounded-full object-cover"
+        />
         <span className="truncate max-w-[180px]">{activeWorkspaceLabel}</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
@@ -292,7 +303,9 @@ function WorkspaceSwitcher({
             {/* Personal Accounts */}
             <div className="border-b-[0.5px] border-dash-border px-2 pb-4 pt-2">
               <div className="py-2">
-                <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">Personal Accounts</span>
+                <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">
+                  Personal Accounts
+                </span>
               </div>
               <button
                 onClick={() => {
@@ -317,7 +330,9 @@ function WorkspaceSwitcher({
             {/* Teams */}
             <div className="border-b-[0.5px] border-dash-border px-2 pb-4 pt-2">
               <div className="py-2">
-                <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">Teams</span>
+                <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">
+                  Teams
+                </span>
               </div>
               {filteredTeams.length > 0 ? (
                 filteredTeams.map((team) => {
@@ -335,7 +350,9 @@ function WorkspaceSwitcher({
                         }
                       }}
                       className={`flex w-full items-center gap-2 rounded px-px py-1 transition-colors hover:bg-dash-bg-elevated ${
-                        activeTeam?.slug === team.slug ? "bg-dash-bg-elevated" : ""
+                        activeTeam?.slug === team.slug
+                          ? "bg-dash-bg-elevated"
+                          : ""
                       }`}
                     >
                       <img
@@ -465,7 +482,13 @@ interface Notification {
 }
 
 function getNotificationId(message: AppTooltipMessage, index: number) {
-  return [message.type || "notification", message.level, message.route || "", message.message, index].join("|");
+  return [
+    message.type || "notification",
+    message.level,
+    message.route || "",
+    message.message,
+    index,
+  ].join("|");
 }
 
 function getNotificationTime(meta?: Record<string, unknown>) {
@@ -484,7 +507,9 @@ function getNotificationTime(meta?: Record<string, unknown>) {
   return undefined;
 }
 
-function mapNotifications(messages: AppTooltipMessage[] | null): Notification[] {
+function mapNotifications(
+  messages: AppTooltipMessage[] | null,
+): Notification[] {
   if (!messages || messages.length === 0) {
     return [];
   }
@@ -507,14 +532,24 @@ function NotificationsDropdown() {
   const navigate = useNavigate();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const workspaceSearch = getWorkspaceSearch(searchStr);
-  const listTooltipMessages = useServerFn(listTooltipMessagesServerFn as any) as (args: {
-    data: { workspace?: string; type: "notifications"; limit?: number; page?: number };
+  const listTooltipMessages = useServerFn(
+    listTooltipMessagesServerFn as any,
+  ) as (args: {
+    data: {
+      workspace?: string;
+      type: "notifications";
+      limit?: number;
+      page?: number;
+    };
   }) => Promise<AppTooltipMessage[] | null>;
   const listTooltipMessagesRef = useRef(listTooltipMessages);
 
   const notificationFetchKey = workspaceSearch?.workspace ?? "__personal__";
 
-  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications],
+  );
 
   useEffect(() => {
     listTooltipMessagesRef.current = listTooltipMessages;
@@ -538,7 +573,9 @@ function NotificationsDropdown() {
       try {
         const messages = await listTooltipMessagesRef.current({
           data: {
-            ...(workspaceSearch?.workspace ? { workspace: workspaceSearch.workspace } : {}),
+            ...(workspaceSearch?.workspace
+              ? { workspace: workspaceSearch.workspace }
+              : {}),
             type: "notifications",
             limit: 8,
             page: 1,
@@ -657,24 +694,34 @@ function NotificationsDropdown() {
                   <span>Loading notifications...</span>
                 </div>
               ) : notifications.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-dash-text-faded">No notifications</div>
-              ) : notifications.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => handleNotificationClick(n)}
-                  className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-dash-bg-elevated"
-                >
-                  <span className={`mt-1.5 size-[6px] shrink-0 rounded-full ${n.read ? "bg-transparent" : "bg-[#ef2f1f]"}`} />
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className={`text-sm leading-[1.4] ${n.read ? "font-light text-dash-text-faded" : "text-dash-text-strong"}`}>
-                      {n.message}
-                    </span>
-                    {n.time ? (
-                      <span className="text-xs text-dash-text-extra-faded">{n.time}</span>
-                    ) : null}
-                  </div>
-                </button>
-              ))}
+                <div className="px-4 py-6 text-sm text-dash-text-faded">
+                  No notifications
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => handleNotificationClick(n)}
+                    className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-dash-bg-elevated"
+                  >
+                    <span
+                      className={`mt-1.5 size-[6px] shrink-0 rounded-full ${n.read ? "bg-transparent" : "bg-[#ef2f1f]"}`}
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span
+                        className={`text-sm leading-[1.4] ${n.read ? "font-light text-dash-text-faded" : "text-dash-text-strong"}`}
+                      >
+                        {n.message}
+                      </span>
+                      {n.time ? (
+                        <span className="text-xs text-dash-text-extra-faded">
+                          {n.time}
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </motion.div>
         )}
@@ -686,7 +733,7 @@ function NotificationsDropdown() {
 const createMenuItems = [
   { label: "Create project", icon: Plus },
   { label: "Register domain", icon: Globe },
-  { label: "Create team", icon: Users },
+  { label: "New workspace", icon: Users },
 ];
 
 function CreateDropdown() {
@@ -714,7 +761,10 @@ function CreateDropdown() {
           type="button"
           onClick={() =>
             navigate({
-              to: withWorkspaceQuery({ pathname: "/projects/new", searchStr }) as any,
+              to: withWorkspaceQuery({
+                pathname: "/projects/new",
+                searchStr,
+              }) as any,
             })
           }
           className="flex items-center gap-1 rounded-l border border-[#3964d5] bg-[#4879f8] py-[5px] pl-3 pr-2 text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)]"
@@ -754,17 +804,26 @@ function CreateDropdown() {
                     setOpen(false);
                     if (item.label === "Create project") {
                       navigate({
-                        to: withWorkspaceQuery({ pathname: "/projects/new", searchStr }) as any,
+                        to: withWorkspaceQuery({
+                          pathname: "/projects/new",
+                          searchStr,
+                        }) as any,
                       });
                     }
                     if (item.label === "Register domain") {
                       navigate({
-                        to: withWorkspaceQuery({ pathname: "/domains/buy", searchStr }) as any,
+                        to: withWorkspaceQuery({
+                          pathname: "/domains/buy",
+                          searchStr,
+                        }) as any,
                       });
                     }
                     if (item.label === "Create team") {
                       navigate({
-                        to: withWorkspaceQuery({ pathname: "/workspace/new", searchStr }) as any,
+                        to: withWorkspaceQuery({
+                          pathname: "/workspace/new",
+                          searchStr,
+                        }) as any,
                       });
                     }
                   }}
@@ -816,7 +875,11 @@ export function Topbar({
                 className="text-dash-text-faded hover:text-dash-text-strong md:hidden"
                 aria-label="Toggle navigation"
               >
-                {mobileNavOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+                {mobileNavOpen ? (
+                  <X className="size-5" />
+                ) : (
+                  <Menu className="size-5" />
+                )}
               </button>
             )}
             <div
@@ -824,7 +887,9 @@ export function Topbar({
               className="flex cursor-pointer items-center gap-2 text-dash-text-extra-faded transition-colors hover:text-dash-text-faded"
             >
               <Search className="size-4" />
-              <span className="hidden text-sm md:inline">Search workspace or use cmd + k</span>
+              <span className="hidden text-sm md:inline">
+                Search workspace or use cmd + k
+              </span>
               <kbd className="ml-1 hidden rounded border border-dash-border-soft px-1.5 py-0.5 text-[10px] font-medium leading-none text-dash-text-extra-faded md:inline">
                 ⌘K
               </kbd>
@@ -832,7 +897,10 @@ export function Topbar({
           </div>
           <div className="flex items-center gap-2 text-dash-text-faded md:gap-4">
             <NotificationsDropdown />
-            <a href="mailto:hello@brimble.app" className="flex items-center gap-1.5 text-sm hover:text-dash-text-strong transition-colors">
+            <a
+              href="mailto:hello@brimble.app"
+              className="flex items-center gap-1.5 text-sm hover:text-dash-text-strong transition-colors"
+            >
               <HelpCircle className="size-4" />
               <span className="hidden md:inline">Help</span>
             </a>
@@ -872,10 +940,14 @@ export function Topbar({
             />
             <span className="mx-2 text-sm text-dash-text-faded">/</span>
             {isWorkspaceNew ? (
-              <span className="text-sm font-medium text-dash-text-faded">New Workspace</span>
+              <span className="text-sm font-medium text-dash-text-faded">
+                New Workspace
+              </span>
             ) : projectId ? (
               projectId === "new" ? (
-                <span className="text-sm font-medium text-dash-text-faded">New Project</span>
+                <span className="text-sm font-medium text-dash-text-faded">
+                  New Project
+                </span>
               ) : (
                 <ProjectSwitcher
                   projectId={projectId}
@@ -885,7 +957,9 @@ export function Topbar({
                 />
               )
             ) : (
-              <span className="text-sm font-medium text-dash-text-faded">Home</span>
+              <span className="text-sm font-medium text-dash-text-faded">
+                Home
+              </span>
             )}
           </div>
           <div className="hidden items-center gap-4 md:flex">

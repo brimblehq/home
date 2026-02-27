@@ -79,7 +79,7 @@ function RadioButton({ selected }: { selected: boolean }) {
   );
 }
 
-type Step = "select-project" | "enter-domain" | "transfer-in";
+import { DomainStep } from "../../types/enums";
 
 function normalizeDomainInput(value: string): string {
   return value.trim().toLowerCase();
@@ -114,7 +114,7 @@ export function AddDomainModal({
   onRegisterDomain,
 }: AddDomainModalProps) {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
-  const [step, setStep] = useState<Step>("select-project");
+  const [step, setStep] = useState<DomainStep>("select-project");
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [domainUrl, setDomainUrl] = useState("");
@@ -141,12 +141,12 @@ export function AddDomainModal({
 
   function handleStepOneContinue() {
     if (selectedProject) {
-      setStep("enter-domain");
+      setStep(DomainStep.EnterDomain);
     }
   }
 
   function handleTransferStepOpen() {
-    setStep("transfer-in");
+    setStep(DomainStep.TransferIn);
   }
 
   async function handleStepTwoContinue() {
@@ -214,7 +214,7 @@ export function AddDomainModal({
 
   function resetAndClose() {
     onOpenChange(false);
-    setStep("select-project");
+    setStep(DomainStep.SelectProject);
     setSelectedProject(null);
     setSearch("");
     setDomainUrl("");
@@ -252,16 +252,16 @@ export function AddDomainModal({
   return (
     <Modal open={open} onOpenChange={handleOpenChange} width={500}>
       <ModalHeader
-        title={step === "transfer-in" ? "Transfer Domain" : "Add Domain"}
+        title={step === DomainStep.TransferIn ? "Transfer Domain" : "Add Domain"}
         description={
-          step === "transfer-in"
+          step === DomainStep.TransferIn
             ? "Transfer an existing domain from another registrar to Brimble"
             : "Select a project to add your domain to"
         }
       />
 
       <AnimatePresence mode="wait" initial={false}>
-        {step === "select-project" ? (
+        {step === DomainStep.SelectProject ? (
           <motion.div
             key="select-project"
             initial={{ opacity: 0, x: -10 }}
@@ -345,7 +345,7 @@ export function AddDomainModal({
               </div>
             </button>
           </motion.div>
-        ) : step === "enter-domain" ? (
+        ) : step === DomainStep.EnterDomain ? (
           <motion.div
             key="enter-domain"
             initial={{ opacity: 0, x: 10 }}
@@ -587,12 +587,12 @@ export function AddDomainModal({
 
       <ModalFooter>
         <ModalCancelButton />
-        {step === "select-project" ? (
+        {step === DomainStep.SelectProject ? (
           <ModalContinueButton
             onClick={handleStepOneContinue}
             disabled={!selectedProject}
           />
-        ) : step === "enter-domain" ? (
+        ) : step === DomainStep.EnterDomain ? (
           <ModalContinueButton
             onClick={() => {
               void handleStepTwoContinue();
@@ -605,7 +605,7 @@ export function AddDomainModal({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setStep("select-project")}
+              onClick={() => setStep(DomainStep.SelectProject)}
               className="flex h-[34px] items-center rounded-[4px] border border-dash-border bg-dash-bg px-3.5 text-sm font-medium text-dash-text-strong shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
             >
               Back

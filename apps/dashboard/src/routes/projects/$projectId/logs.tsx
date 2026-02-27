@@ -39,7 +39,7 @@ export const Route = createFileRoute("/projects/$projectId/logs")({
 
 const parentRoute = getRouteApi("/projects/$projectId");
 
-type Tab = "application" | "request";
+import { LogTab } from "../../../types/enums";
 
 /* ─────────────────────────────────────────────
    Application Logs (terminal-style)
@@ -874,14 +874,14 @@ function LogsPage() {
   const { project, workspace } = parentRoute.useLoaderData() as any;
   const staticProject = isStaticProject(project);
   const databaseProject = isDatabaseProject(project as any);
-  const [activeTab, setActiveTab] = useState<Tab>(staticProject ? "request" : "application");
+  const [activeTab, setActiveTab] = useState<LogTab>(staticProject ? LogTab.Request : LogTab.Application);
 
   useEffect(() => {
-    if (staticProject && activeTab !== "request") {
-      setActiveTab("request");
+    if (staticProject && activeTab !== LogTab.Request) {
+      setActiveTab(LogTab.Request);
     }
-    if (databaseProject && activeTab === "request") {
-      setActiveTab("application");
+    if (databaseProject && activeTab === LogTab.Request) {
+      setActiveTab(LogTab.Application);
     }
   }, [staticProject, databaseProject, activeTab]);
 
@@ -945,9 +945,9 @@ function LogsPage() {
         <div className="flex overflow-clip rounded-[4px] border border-dash-border-soft shadow-[0px_1px_2px_rgba(18,18,23,0.05)]">
           {!staticProject && (
             <button
-              onClick={() => setActiveTab("application")}
+              onClick={() => setActiveTab(LogTab.Application)}
               className={`flex h-[34px] items-center gap-2 border-r border-dash-border-soft px-3.5 text-sm transition-colors ${
-                activeTab === "application"
+                activeTab === LogTab.Application
                   ? "bg-dash-bg font-medium text-dash-text-strong"
                   : "bg-dash-bg-elevated text-dash-text-faded"
               }`}
@@ -958,9 +958,9 @@ function LogsPage() {
           )}
           {!databaseProject && (
             <button
-              onClick={() => setActiveTab("request")}
+              onClick={() => setActiveTab(LogTab.Request)}
               className={`flex h-[34px] items-center gap-2 px-3.5 text-sm transition-colors ${
-                activeTab === "request"
+                activeTab === LogTab.Request
                   ? "bg-dash-bg font-medium text-dash-text-strong"
                   : "bg-dash-bg-elevated text-dash-text-faded"
               }`}
@@ -973,7 +973,7 @@ function LogsPage() {
       </div>
 
       {/* Content */}
-      {activeTab === "application" ? (
+      {activeTab === LogTab.Application ? (
         <ApplicationLogs
           allocationOptions={allocationOptions}
           allocationContainerByOptionId={allocationContainerByOptionId}

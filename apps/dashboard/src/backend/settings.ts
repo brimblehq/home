@@ -5,8 +5,6 @@ import type {
   SettingsApi,
   SettingsApiKeyResult,
   SettingsBillingSnapshot,
-  InitializeSettingsAddCardInput,
-  InitializeSettingsAddCardResult,
   DecryptSettingsApiKeyInput,
   SettingsInvoiceItem,
   SettingsInvoicePage,
@@ -25,8 +23,6 @@ export type {
   SettingsApi,
   SettingsApiKeyResult,
   SettingsBillingSnapshot,
-  InitializeSettingsAddCardInput,
-  InitializeSettingsAddCardResult,
   DecryptSettingsApiKeyInput,
   SettingsInvoiceItem,
   SettingsInvoicePage,
@@ -435,29 +431,6 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
         },
       });
     },
-    async initializeAddCard(input: InitializeSettingsAddCardInput) {
-      const paymentChannel = input.paymentChannel?.trim();
-      if (!paymentChannel) {
-        throw new Error("Payment channel is required");
-      }
-
-      const response = await client.request(endpoints.paymentInitialize, {
-        method: "POST",
-        body: {
-          type: "ADD_CARD",
-          payment_channel: paymentChannel,
-        },
-      });
-
-      const data = unwrapData<any>(response) ?? {};
-      const paymentLink = String(data?.payment_link ?? data?.paymentLink ?? "").trim();
-
-      if (!paymentLink) {
-        throw new Error("Failed to initialize card update");
-      }
-
-      return { paymentLink } satisfies InitializeSettingsAddCardResult;
-    },
     async getInvoices(page = 1, options) {
       const subscriptionId = options?.subscriptionId?.trim() || undefined;
       const response = await client.request(endpoints.paymentInvoices, {
@@ -473,14 +446,26 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
       return getBillingSnapshotInternal(page, options);
     },
     async getSidebarSnapshot(page = 1, options) {
-      const [profileResponse, webhookResponse, billing] = await Promise.all([
-        client.request(endpoints.authUserMe, { method: "GET" }),
-        client.request(endpoints.webhooks, { method: "GET" }),
-        getBillingSnapshotInternal(page, options),
-      ]);
+      const [profileResponse, webhookResult, billingResult] =
+        await Promise.all([
+          client.request(endpoints.authUserMe, { method: "GET" }),
+          client
+            .request(endpoints.webhooks, { method: "GET" })
+            .catch(() => null),
+          getBillingSnapshotInternal(page, options).catch(() => null),
+        ]);
 
       const profile = mapProfile(profileResponse);
-      const webhooks = mapWebhooks(webhookResponse);
+      const webhooks = webhookResult
+        ? mapWebhooks(webhookResult)
+        : { webhookUrl: "", discordUrl: "", slackUrl: "", groups: [] };
+      const billing = billingResult ?? {
+        cards: [],
+        providers: [],
+        spending: { used: 0, spendingLimit: 0 },
+        invoices: { items: [], page: 1, totalPages: 1 },
+        plans: [],
+      };
 
       return { profile, webhooks, billing } satisfies SettingsSidebarSnapshot;
     },

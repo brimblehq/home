@@ -42,7 +42,7 @@ export const Route = createFileRoute("/projects/$projectId/observability")({
   component: ObservabilityPage,
 });
 
-type MetricChart = "Memory Usage" | "CPU Usage" | "Network Egress" | "Response Times";
+import { MetricChart } from "../../../types/enums";
 
 const timeIntervals = [
   "Last 1 Hour",
@@ -121,7 +121,7 @@ function AppMetrics({
   const fetchMetrics = useServerFn(getProjectObservabilityMetricsServerFn as any) as (args: {
     data: { projectId: string; workspace?: string; hrsAgo?: number };
   }) => Promise<ResourceObservabilityMetrics>;
-  const [activeChart, setActiveChart] = useState<MetricChart>("Memory Usage");
+  const [activeChart, setActiveChart] = useState<MetricChart>(MetricChart.MemoryUsage);
   const [responseMetric, setResponseMetric] = useState("P90");
   const [timeInterval, setTimeInterval] = useState("Last 1 Hour");
   const [metrics, setMetrics] = useState<ResourceObservabilityMetrics>(initialMetrics);
@@ -170,8 +170,8 @@ function AppMetrics({
 
   const isDbProject = isDatabaseProject(project as any);
   const chartTabs: MetricChart[] = isDbProject
-    ? ["Memory Usage", "CPU Usage", "Network Egress"]
-    : ["Memory Usage", "CPU Usage", "Network Egress", "Response Times"];
+    ? [MetricChart.MemoryUsage, MetricChart.CpuUsage, MetricChart.NetworkEgress]
+    : [MetricChart.MemoryUsage, MetricChart.CpuUsage, MetricChart.NetworkEgress, MetricChart.ResponseTimes];
 
   const aggregateSeries = useMemo(() => {
     const results = Array.isArray(metrics?.results) ? metrics.results : [];
@@ -217,13 +217,13 @@ function AppMetrics({
   let currentData: { time: string; value: number }[] = [];
   let currentUnit = "";
 
-  if (activeChart === "Response Times") {
+  if (activeChart === MetricChart.ResponseTimes) {
     currentData = responseSeries[responseMetric] || [];
     currentUnit = "ms";
-  } else if (activeChart === "Memory Usage") {
+  } else if (activeChart === MetricChart.MemoryUsage) {
     currentData = aggregateSeries.map((item) => ({ time: item.time, value: item.memory }));
     currentUnit = "%";
-  } else if (activeChart === "CPU Usage") {
+  } else if (activeChart === MetricChart.CpuUsage) {
     currentData = aggregateSeries.map((item) => ({ time: item.time, value: item.cpu }));
     currentUnit = "%";
   } else {
@@ -297,7 +297,7 @@ function AppMetrics({
               ))}
             </div>
           </div>
-          {activeChart === "Response Times" ? (
+          {activeChart === MetricChart.ResponseTimes ? (
             <div className="px-4 pb-3 sm:pb-0 sm:pr-4">
               <SegmentedToggle
                 options={["P90", "P95", "P99", "Average"]}

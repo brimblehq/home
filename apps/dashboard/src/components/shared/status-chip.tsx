@@ -1,26 +1,25 @@
 import { cn } from "@brimble/ui";
+import { ChipVariant } from "../../types/enums";
 
 interface StatusChipProps {
   status: string;
   className?: string;
 }
 
-type ChipVariant = "green" | "red" | "orange" | "gray";
-
 const chipVariants: Record<ChipVariant, { bg: string; border: string }> = {
-  green: {
+  [ChipVariant.Green]: {
     bg: "linear-gradient(180deg, #34e89e 0%, #13d282 30%, #0fba72 100%)",
     border: "border-[#0fba72]",
   },
-  red: {
+  [ChipVariant.Red]: {
     bg: "linear-gradient(180deg, #f07070 0%, #ef4444 30%, #d63031 100%)",
     border: "border-[#d63031]",
   },
-  orange: {
+  [ChipVariant.Orange]: {
     bg: "linear-gradient(180deg, #ffa040 0%, #ff7a00 30%, #e06800 100%)",
     border: "border-[#e06800]",
   },
-  gray: {
+  [ChipVariant.Gray]: {
     bg: "linear-gradient(180deg, #a0a2a7 0%, #7a7c81 30%, #65676c 100%)",
     border: "border-[#65676c]",
   },
@@ -28,10 +27,10 @@ const chipVariants: Record<ChipVariant, { bg: string; border: string }> = {
 
 function getVariant(status: string): ChipVariant {
   const s = status.toUpperCase();
-  if (s === "READY" || s === "ACTIVE") return "green";
-  if (s === "FAILED") return "red";
-  if (s === "BUILDING" || s === "INPROGRESS" || s === "PENDING" || s === "QUEUED") return "orange";
-  return "gray";
+  if (s === "READY" || s === "ACTIVE") return ChipVariant.Green;
+  if (s === "FAILED") return ChipVariant.Red;
+  if (s === "BUILDING" || s === "INPROGRESS" || s === "PENDING" || s === "QUEUED") return ChipVariant.Orange;
+  return ChipVariant.Gray;
 }
 
 export function StatusChip({ status, className }: StatusChipProps) {

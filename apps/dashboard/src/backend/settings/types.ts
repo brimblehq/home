@@ -134,14 +134,6 @@ export interface TestWebhookInput {
   type: "discord" | "slack" | "webhook" | "custom";
 }
 
-export interface InitializeSettingsAddCardInput {
-  paymentChannel: string;
-}
-
-export interface InitializeSettingsAddCardResult {
-  paymentLink: string;
-}
-
 export type GitProvider = "bitbucket" | "github" | "gitlab" | "huggingface";
 
 export interface SettingsApi {
@@ -157,7 +149,6 @@ export interface SettingsApi {
   getWebhooks(): Promise<SettingsWebhookState>;
   updateWebhooks(input: UpdateSettingsWebhooksInput): Promise<SettingsWebhookState>;
   testWebhook(input: TestWebhookInput): Promise<void>;
-  initializeAddCard(input: InitializeSettingsAddCardInput): Promise<InitializeSettingsAddCardResult>;
   getBillingSnapshot(page?: number, options?: { subscriptionId?: string }): Promise<SettingsBillingSnapshot>;
   getInvoices(page?: number, options?: { subscriptionId?: string }): Promise<SettingsInvoicePage>;
   disconnectGitProvider(provider: GitProvider): Promise<void>;

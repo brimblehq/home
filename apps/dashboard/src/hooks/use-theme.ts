@@ -1,15 +1,14 @@
 import { useCallback, useSyncExternalStore } from "react";
-
-type Theme = "light" | "dark";
+import { Theme } from "../types/enums";
 
 const listeners = new Set<() => void>();
 
 function getSnapshot(): Theme {
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  return document.documentElement.classList.contains("dark") ? Theme.Dark : Theme.Light;
 }
 
 function getServerSnapshot(): Theme {
-  return "light";
+  return Theme.Light;
 }
 
 function subscribe(cb: () => void) {
@@ -18,7 +17,7 @@ function subscribe(cb: () => void) {
 }
 
 function applyTheme(t: Theme) {
-  document.documentElement.classList.toggle("dark", t === "dark");
+  document.documentElement.classList.toggle("dark", t === Theme.Dark);
   localStorage.setItem("theme", t);
   for (const cb of listeners) cb();
 }
@@ -31,8 +30,8 @@ export function useTheme() {
   }, []);
 
   const toggleTheme = useCallback(() => {
-    const current = document.documentElement.classList.contains("dark") ? "dark" : "light";
-    applyTheme(current === "dark" ? "light" : "dark");
+    const current = document.documentElement.classList.contains("dark") ? Theme.Dark : Theme.Light;
+    applyTheme(current === Theme.Dark ? Theme.Light : Theme.Dark);
   }, []);
 
   return { theme, setTheme, toggleTheme };

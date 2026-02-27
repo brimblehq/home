@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/re
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import { Formik, Form as FormikForm } from "formik";
+import axios from "axios";
 import {
   ArrowLeft,
   ChevronDown,
@@ -14,9 +15,11 @@ import {
   Info,
   Settings,
 } from "lucide-react";
+import { ImageSquare } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { Dropdown } from "../../components/shared/dropdown";
+import config from "@/config";
 import {
   createWorkspaceServerFn,
   verifyWorkspacePromoCodeServerFn,
@@ -208,9 +211,12 @@ function Phase1Name({
   onSubmit,
   initialValues,
 }: {
-  onSubmit: (name: string, slug: string) => void;
+  onSubmit: (name: string, slug: string, imageUrl: string) => void;
   initialValues: WorkspaceNameStepValues;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -230,11 +236,110 @@ function Phase1Name({
         validationSchema={workspaceNameStepSchema}
         enableReinitialize
         onSubmit={(values) => {
-          onSubmit(values.name.trim(), values.slug.trim());
+          onSubmit(values.name.trim(), values.slug.trim(), values.imageUrl.trim());
         }}
       >
         {({ values, errors, touched, setFieldValue, handleSubmit }) => (
           <FormikForm onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label className="mb-3 block text-sm text-dash-text-body">
+                Workspace image (optional)
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                className="hidden"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+
+                  setIsUploadingImage(true);
+                  try {
+                    const formData = new FormData();
+                    formData.append("file", file);
+                    formData.append("upload_preset", "profile-photos");
+
+                    const response = await axios.post(config.uploadUrl, formData, {
+                      headers: {
+                        "Content-Type": "multipart/form-data",
+                      },
+                    });
+
+                    const uploadedUrl = response.data?.secure_url || response.data?.url;
+                    if (typeof uploadedUrl === "string" && uploadedUrl.length > 0) {
+                      setFieldValue("imageUrl", uploadedUrl);
+                      toast.success("Workspace image uploaded.");
+                    } else {
+                      toast.error("Upload succeeded but no image URL was returned.");
+                    }
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "Failed to upload image",
+                    );
+                  } finally {
+                    setIsUploadingImage(false);
+                    if (event.target) event.target.value = "";
+                  }
+                }}
+              />
+
+              {values.imageUrl ? (
+                <div className="flex items-center gap-3 rounded-[10px] border border-dashed border-dash-border p-3">
+                  <div className="relative size-12 shrink-0 overflow-hidden rounded-full">
+                    <img
+                      src={values.imageUrl}
+                      alt="Workspace preview"
+                      className="h-full w-full object-cover"
+                    />
+                    {isUploadingImage && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                        <div className="size-4 animate-spin rounded-full border-2 border-white/80 border-t-transparent" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingImage}
+                      className="text-sm font-medium text-dash-text-body transition-colors hover:text-dash-text-strong disabled:opacity-50"
+                    >
+                      Change image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFieldValue("imageUrl", "")}
+                      disabled={isUploadingImage}
+                      className="text-xs text-dash-text-faded transition-colors hover:text-dash-text-strong disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingImage}
+                  className="flex w-full flex-col items-center gap-1.5 rounded-[10px] border border-dashed border-dash-border px-4 py-6 transition-colors hover:border-dash-text-extra-faded"
+                >
+                  {isUploadingImage ? (
+                    <>
+                      <div className="size-5 animate-spin rounded-full border-2 border-dash-text-extra-faded border-t-transparent" />
+                      <span className="text-sm font-medium text-dash-text-body">Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ImageSquare size={28} weight="light" className="text-dash-text-extra-faded" />
+                      <span className="text-sm font-medium text-dash-text-body">Upload image</span>
+                      <span className="text-xs text-dash-text-extra-faded">PNG, JPG or WebP</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
             <div className="flex flex-col gap-4">
               <div>
                 <label className="mb-1.5 block text-sm text-dash-text-body">
@@ -624,15 +729,17 @@ function NewWorkspacePage() {
   const [phase, setPhase] = useState<Phase>(1);
   const [workspaceName, setWorkspaceName] = useState("");
   const [workspaceSlug, setWorkspaceSlug] = useState("");
+  const [workspaceImageUrl, setWorkspaceImageUrl] = useState("");
   const [teamConfig, setTeamConfig] = useState<TeamConfig | null>(null);
   const [inviteRows, setInviteRows] = useState<WorkspaceInviteRow[]>([
     { id: inviteNextId++, email: "", role: "Member" },
   ]);
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
 
-  function handleNameSubmit(name: string, slug: string) {
+  function handleNameSubmit(name: string, slug: string, imageUrl: string) {
     setWorkspaceName(name);
     setWorkspaceSlug(slug);
+    setWorkspaceImageUrl(imageUrl);
     setPhase(2);
   }
 
@@ -646,6 +753,7 @@ function NewWorkspacePage() {
     if (target === 1) {
       setWorkspaceName("");
       setWorkspaceSlug("");
+      setWorkspaceImageUrl("");
       setTeamConfig(null);
       setInviteRows([{ id: inviteNextId++, email: "", role: "Member" }]);
     }
@@ -666,6 +774,7 @@ function NewWorkspacePage() {
 
     const payload = buildCreateWorkspacePayload({
       workspaceName,
+      imageUrl: workspaceImageUrl,
       teamSize: teamConfig.teamSize,
       concurrentBuilds: teamConfig.concurrentBuilds,
       promoCode: teamConfig.promoCode,
@@ -724,7 +833,7 @@ function NewWorkspacePage() {
               <Phase1Name
                 key="phase1"
                 onSubmit={handleNameSubmit}
-                initialValues={{ name: workspaceName, slug: workspaceSlug }}
+                initialValues={{ name: workspaceName, slug: workspaceSlug, imageUrl: workspaceImageUrl }}
               />
             </AnimatePresence>
           )

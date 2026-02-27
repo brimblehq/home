@@ -111,7 +111,7 @@ function isGitSource(type: string): boolean {
   return gitProviders.some((p) => p.id === type);
 }
 
-type SourceType = "github" | "docker" | "database";
+import { SourceType } from "../../types/enums";
 type Phase = 1 | 2 | 3;
 
 type RegionOption = { id: string; label: string };
@@ -326,13 +326,13 @@ function Phase1SourceType({
       desc: p.description,
     })),
     {
-      type: "docker",
+      type: SourceType.Docker,
       Icon: Container,
       title: "Deploy Docker image",
       desc: "Deploy from a public or private registry",
     },
     {
-      type: "database",
+      type: SourceType.Database,
       Icon: Database,
       title: "Provision a Database",
       desc: "Deploy a managed database instance",
@@ -1533,7 +1533,7 @@ function Phase3Configure({
   };
 }) {
   const defaultName =
-    sourceType === "docker"
+    sourceType === SourceType.Docker
       ? inferProjectNameFromDockerImage(sourceName) || sourceName
       : (sourceName.split(":")[0].split("/").pop() ?? sourceName);
   const lastAppliedSourceRef = useRef<string>("");
@@ -1826,7 +1826,7 @@ function Phase3Configure({
         </>
       )}
 
-      {!isGit && sourceType === "docker" && (
+      {!isGit && sourceType === SourceType.Docker && (
         <>
           <h4 className="mb-4 text-sm font-medium text-dash-text-strong">
             Runtime Settings
@@ -2300,7 +2300,7 @@ function NewProjectPage() {
   }
 
   useEffect(() => {
-    if (sourceType === "github" && phase >= 2 && githubAccounts.length === 0 && !githubAccountsLoading) {
+    if (sourceType === SourceType.Github && phase >= 2 && githubAccounts.length === 0 && !githubAccountsLoading) {
       void refreshGithubAccounts({ silent: false });
     }
   }, [sourceType, phase]); // intentionally not depending on refresh function identity
@@ -2482,10 +2482,10 @@ function NewProjectPage() {
       setDockerImageValidationError(null);
     } else if (target <= 2) {
       setSourceName("");
-      if (sourceType === "docker") {
+      if (sourceType === SourceType.Docker) {
         setDockerImageValidationError(null);
       }
-      if (sourceType === "github") {
+      if (sourceType === SourceType.Github) {
         setSelectedGithubRepo(null);
       }
     }
@@ -2539,7 +2539,7 @@ function NewProjectPage() {
 
     let payload: Record<string, unknown>;
 
-    if (sourceType === "github") {
+    if (sourceType === SourceType.Github) {
       if (!selectedGithubRepo?.repo || !selectedGithubRepo?.metadata) {
         toast.error("Please select a repository first.");
         return;
@@ -2588,7 +2588,7 @@ function NewProjectPage() {
         experimental: {},
         authEnabled: false,
       };
-    } else if (sourceType === "docker") {
+    } else if (sourceType === SourceType.Docker) {
       if (!selectedDockerSource?.imageUri) {
         toast.error("Please validate a Docker image first.");
         return;
@@ -2779,13 +2779,13 @@ function NewProjectPage() {
                   const { Icon } = provider;
                   return <Icon className="size-3" />;
                 }
-                if (sourceType === "database") return <Database className="size-3" />;
+                if (sourceType === SourceType.Database) return <Database className="size-3" />;
                 return <Container className="size-3" />;
               })()}
               label={(() => {
                 const provider = getGitProvider(sourceType);
                 if (provider) return provider.name;
-                if (sourceType === "database") return "Database";
+                if (sourceType === SourceType.Database) return "Database";
                 return "Docker";
               })()}
               onChangeClick={() => handleChangePhase(1)}
@@ -2806,9 +2806,9 @@ function NewProjectPage() {
         {phase > 2 && sourceName ? (
           <div className="mb-6">
             <SummaryChip
-              icon={sourceType === "database" ? <Database className="size-3" /> : <Check className="size-3" />}
+              icon={sourceType === SourceType.Database ? <Database className="size-3" /> : <Check className="size-3" />}
               label={
-                sourceType === "database"
+                sourceType === SourceType.Database
                   ? (databaseEngineOptions.find((e) => e.id === sourceName)?.name ?? sourceName)
                   : sourceName
               }
@@ -2820,7 +2820,7 @@ function NewProjectPage() {
           sourceType && (
             <AnimatePresence mode="wait">
               {(() => {
-                if (sourceType === "database") {
+                if (sourceType === SourceType.Database) {
                   return (
                     <Phase2DbEngine
                       key="phase2-db-engine"
@@ -2891,7 +2891,7 @@ function NewProjectPage() {
         {/* Phase 3 */}
         {phase === 3 && sourceType && sourceName && (
           <AnimatePresence mode="wait">
-            {sourceType === "database" ? (
+            {sourceType === SourceType.Database ? (
               (() => {
                 const selectedEngine = databaseEngineOptions.find((engine) => engine.id === sourceName);
                 if (!selectedEngine) {
@@ -2931,7 +2931,7 @@ function NewProjectPage() {
                 sourceName={sourceName}
                 detectedFramework={selectedGithubRepo?.metadata.framework}
                 repoBrowser={
-                  sourceType === "github"
+                  sourceType === SourceType.Github
                     ? {
                       repoName:
                         selectedGithubRepo?.metadata.fullName ||
@@ -2945,7 +2945,7 @@ function NewProjectPage() {
                 frameworkOptions={frameworkOptions}
                 regionOptions={regionOptions}
                 branchOptions={
-                  sourceType === "github"
+                  sourceType === SourceType.Github
                     ? (selectedGithubRepo?.metadata.branches?.length
                       ? selectedGithubRepo.metadata.branches
                       : selectedGithubRepo?.repo.branch

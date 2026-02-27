@@ -1,3 +1,4 @@
+import { cn } from "@brimble/ui";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
 import { LoadingButtonContent } from "./loading-button-content";
@@ -8,9 +9,11 @@ interface ModalProps {
   children: React.ReactNode;
   /** Width of the modal. Default: 500px */
   width?: number;
+  /** Extra classes merged onto the modal container */
+  className?: string;
 }
 
-export function Modal({ open, onOpenChange, children, width = 500 }: ModalProps) {
+export function Modal({ open, onOpenChange, children, width = 500, className }: ModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
@@ -52,7 +55,7 @@ export function Modal({ open, onOpenChange, children, width = 500 }: ModalProps)
                   ease: [0.16, 1, 0.3, 1],
                 }}
                 style={{ width, maxWidth: "calc(100vw - 32px)" }}
-                className="fixed left-1/2 top-1/2 z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border-[0.5px] border-dash-border bg-dash-bg shadow-[0px_2px_3px_rgba(0,0,0,0.06),inset_0px_-3px_2px_rgba(245,245,245,0.3)] dark:shadow-[0px_2px_3px_rgba(0,0,0,0.2)]"
+                className={cn("fixed left-1/2 top-1/2 z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border-[0.5px] border-dash-border bg-dash-bg shadow-[0px_2px_3px_rgba(0,0,0,0.06),inset_0px_-3px_2px_rgba(245,245,245,0.3)] dark:shadow-[0px_2px_3px_rgba(0,0,0,0.2)]", className)}
               >
                 {children}
               </motion.div>

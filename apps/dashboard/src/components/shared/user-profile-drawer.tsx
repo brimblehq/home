@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, Fragment } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { Drawer } from "vaul";
 import { cn } from "@brimble/ui";
@@ -22,18 +22,13 @@ import { toast } from "sonner";
 import { InviteMembersModal } from "../settings/invite-members-modal";
 import { WarningModal } from "./warning-modal";
 import { GlossyButton } from "./glossy-button";
-import { Spinner } from "./spinner";
 import { OtpInput } from "../auth/auth-split-layout";
-import { ChangePlanModal, billingPlans } from "./change-plan-modal";
-import { NumberPagination } from "./pagination";
 import { logoutServerFn } from "@/server/auth/actions";
 import {
   createSettingsApiKeyServerFn,
   decryptSettingsApiKeyServerFn,
   disconnectGitProviderServerFn,
   getSettingsSidebarSnapshotServerFn,
-  initializeSettingsAddCardServerFn,
-  listSettingsInvoicesServerFn,
   requestSettingsEmailVerificationServerFn,
   resetSettingsApiKeyServerFn,
   testSettingsWebhookServerFn,
@@ -42,6 +37,7 @@ import {
   updateSettingsProfileServerFn,
   updateSettingsWebhooksServerFn,
 } from "@/server/settings/actions";
+import { BillingForm } from "../settings/billing-form";
 import {
   getWorkspaceTeamMembersServerFn,
   inviteWorkspaceTeamMembersServerFn,
@@ -50,7 +46,6 @@ import {
 } from "@/server/teams/actions";
 import { listGithubAccountsServerFn } from "@/server/repositories/actions";
 import type {
-  SettingsInvoicePage,
   SettingsSidebarSnapshot,
   SettingsWebhookGroup as ServerWebhookGroup,
 } from "@/backend/settings";
@@ -66,15 +61,16 @@ import {
   TEAM_MEMBER_SEAT_PRICE_MONTHLY,
   formatUsdMonthly,
 } from "@/utils/billing";
+import { ProfileTab } from "../../types/enums";
 type UserProfile = DrawerUserProfile;
 
-export type ProfileTab = "profile" | "members" | "notifications" | "billing";
+export { ProfileTab };
 
 const accountNav: { label: string; key: ProfileTab }[] = [
-  { label: "Profile", key: "profile" },
-  { label: "Members", key: "members" },
-  { label: "Notifications", key: "notifications" },
-  { label: "Billing", key: "billing" },
+  { label: "Profile", key: ProfileTab.Profile },
+  { label: "Members", key: ProfileTab.Members },
+  { label: "Notifications", key: ProfileTab.Notifications },
+  { label: "Billing", key: ProfileTab.Billing },
 ];
 
 const reachUsNav = [
@@ -852,7 +848,7 @@ function ProfileNavSidebar({
 }) {
   const accountNavItems = showMembersTab
     ? accountNav
-    : accountNav.filter((item) => item.key !== "members");
+    : accountNav.filter((item) => item.key !== ProfileTab.Members);
 
   return (
     <div className="flex h-full w-[380px] shrink-0 flex-col border-l border-dash-border bg-dash-bg pb-6 pt-5">
@@ -970,16 +966,6 @@ export function UserProfileDrawer({
   const getWorkspaceTeamMembers = useServerFn(
     getWorkspaceTeamMembersServerFn as any,
   ) as (args: { data: { workspace: string } }) => Promise<TeamDetails>;
-  const listInvoices = useServerFn(
-    listSettingsInvoicesServerFn as any,
-  ) as (args: {
-    data: { page: number; workspace?: string };
-  }) => Promise<SettingsInvoicePage>;
-  const initializeAddCard = useServerFn(
-    initializeSettingsAddCardServerFn as any,
-  ) as (args: {
-    data: { paymentChannel: string };
-  }) => Promise<{ paymentLink: string }>;
   const updateProfile = useServerFn(
     updateSettingsProfileServerFn as any,
   ) as (args: {
@@ -1026,14 +1012,9 @@ export function UserProfileDrawer({
   ) as (args: {
     data: { url: string; type: "discord" | "slack" | "custom" };
   }) => Promise<{ ok: true }>;
-  const [activeTab, setActiveTab] = useState<ProfileTab>("profile");
+  const [activeTab, setActiveTab] = useState<ProfileTab>(ProfileTab.Profile);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isInitializingAddCard, setIsInitializingAddCard] = useState(false);
-  const [isLoadingInvoicePage, setIsLoadingInvoicePage] = useState(false);
-  const [pendingInvoicePage, setPendingInvoicePage] = useState<number | null>(
-    null,
-  );
   const [snapshot, setSnapshot] = useState<SettingsSidebarSnapshot | null>(
     initialSnapshot,
   );
@@ -1120,8 +1101,8 @@ export function UserProfileDrawer({
   }, [open]);
 
   useEffect(() => {
-    if (!hasActiveWorkspace && activeTab === "members") {
-      setActiveTab("profile");
+    if (!hasActiveWorkspace && activeTab === ProfileTab.Members) {
+      setActiveTab(ProfileTab.Profile);
     }
   }, [activeTab, hasActiveWorkspace]);
 
@@ -1130,8 +1111,8 @@ export function UserProfileDrawer({
       return;
     }
 
-    if (requestedTab === "members" && !hasActiveWorkspace) {
-      setActiveTab("profile");
+    if (requestedTab === ProfileTab.Members && !hasActiveWorkspace) {
+      setActiveTab(ProfileTab.Profile);
       return;
     }
 
@@ -1192,94 +1173,10 @@ export function UserProfileDrawer({
     }
   }
 
-  async function handleInvoicePageChange(page: number) {
-    if (isLoadingInvoicePage) {
-      return;
-    }
-
-    setIsLoadingInvoicePage(true);
-    setPendingInvoicePage(page);
-
-    try {
-      const invoicePage = await listInvoices({
-        data: {
-          page,
-          workspace: activeWorkspaceSlug || undefined,
-        },
-      });
-
-      setSnapshot((prev) => {
-        if (!prev) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          billing: {
-            ...prev.billing,
-            invoices: invoicePage,
-          },
-        };
-      });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to load invoices",
-      );
-    } finally {
-      setIsLoadingInvoicePage(false);
-      setPendingInvoicePage(null);
-    }
-  }
-
-  async function handleUpdateCardInformation() {
-    if (isInitializingAddCard) {
-      return;
-    }
-
-    const startedAt = Date.now();
-    try {
-      setIsInitializingAddCard(true);
-      const result = await initializeAddCard({
-        data: { paymentChannel: "STRIPE" },
-      });
-
-      const paymentLink = result?.paymentLink?.trim();
-      if (!paymentLink) {
-        throw new Error("Failed to initialize card update");
-      }
-
-      const popup = window.open(paymentLink, "_blank");
-      if (popup) {
-        try {
-          popup.opener = null;
-        } catch {
-          // noop
-        }
-      } else {
-        window.location.href = paymentLink;
-      }
-
-      toast.success("Redirecting to payment provider...");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to initialize card update",
-      );
-    } finally {
-      const elapsed = Date.now() - startedAt;
-      const remaining = Math.max(0, 450 - elapsed);
-      if (remaining > 0) {
-        await new Promise((resolve) => window.setTimeout(resolve, remaining));
-      }
-      setIsInitializingAddCard(false);
-    }
-  }
-
   let drawerTitle: string = activeTab;
-  if (activeTab === "billing") {
+  if (activeTab === ProfileTab.Billing) {
     drawerTitle = "Plan & billing";
-  } else if (activeTab === "members") {
+  } else if (activeTab === ProfileTab.Members) {
     drawerTitle = "Members";
   }
 
@@ -1331,7 +1228,7 @@ export function UserProfileDrawer({
                   Loading settings…
                 </div>
               ) : null}
-              {activeTab === "profile" && profile && (
+              {activeTab === ProfileTab.Profile && profile && (
                 <ProfileForm
                   profile={profile}
                   isSaving={isSavingProfile}
@@ -1541,12 +1438,12 @@ export function UserProfileDrawer({
                   }}
                 />
               )}
-              {activeTab === "profile" && !profile && !isLoadingSettings && (
+              {activeTab === ProfileTab.Profile && !profile && !isLoadingSettings && (
                 <div className="text-sm text-dash-text-faded">
                   Profile settings are unavailable right now.
                 </div>
               )}
-              {activeTab === "members" && activeWorkspaceSlug && (
+              {activeTab === ProfileTab.Members && activeWorkspaceSlug && (
                 <MembersForm
                   workspace={activeWorkspaceSlug}
                   initialTeam={
@@ -1559,7 +1456,7 @@ export function UserProfileDrawer({
                   }
                 />
               )}
-              {activeTab === "notifications" && profile && (
+              {activeTab === ProfileTab.Notifications && profile && (
                 <NotificationsForm
                   profile={profile}
                   webhooks={snapshot?.webhooks}
@@ -1622,25 +1519,17 @@ export function UserProfileDrawer({
                   }}
                 />
               )}
-              {activeTab === "notifications" &&
+              {activeTab === ProfileTab.Notifications &&
                 !profile &&
                 !isLoadingSettings && (
                   <div className="text-sm text-dash-text-faded">
                     Notification settings are unavailable right now.
                   </div>
                 )}
-              {activeTab === "billing" && profile && (
-                <BillingForm
-                  profile={profile}
-                  billing={snapshot?.billing}
-                  onInvoicesPageChange={handleInvoicePageChange}
-                  onUpdateCardInformation={handleUpdateCardInformation}
-                  isUpdatingCardInformation={isInitializingAddCard}
-                  isLoadingInvoicesPage={isLoadingInvoicePage}
-                  pendingInvoicesPage={pendingInvoicePage}
-                />
+              {activeTab === ProfileTab.Billing && profile && (
+                <BillingForm profile={profile} />
               )}
-              {activeTab === "billing" && !profile && !isLoadingSettings && (
+              {activeTab === ProfileTab.Billing && !profile && !isLoadingSettings && (
                 <div className="text-sm text-dash-text-faded">
                   Billing settings are unavailable right now.
                 </div>
@@ -1707,558 +1596,7 @@ function NotificationRow({
 }
 void NotificationRow;
 
-function PaymentFailureBanner({
-  daysSinceFailure,
-}: {
-  daysSinceFailure: number;
-}) {
-  if (daysSinceFailure <= 0) return null;
 
-  const isBuildsDisabled = daysSinceFailure >= 7;
-  const isDeactivated = daysSinceFailure >= 14;
-
-  return (
-    <div
-      className={`rounded-[4px] border px-4 py-3 ${isDeactivated ? "border-[#ef2f1f]/30 bg-[#ef2f1f]/[0.06]" : "border-[#f5a623]/30 bg-[#f5a623]/[0.06]"}`}
-    >
-      <p
-        className={`text-sm font-medium leading-5 ${isDeactivated ? "text-[#ef2f1f]" : "text-[#b37a10] dark:text-[#f5a623]"}`}
-      >
-        {isDeactivated
-          ? "Your subscription has been deactivated. Update payment to reactivate."
-          : isBuildsDisabled
-            ? "Builds are disabled due to payment failure. Update your payment method to resume."
-            : `Payment failed ${daysSinceFailure} day${daysSinceFailure === 1 ? "" : "s"} ago. Please update your payment method.`}
-      </p>
-    </div>
-  );
-}
-
-function UsageBar({
-  label,
-  used,
-  limit,
-  unit,
-  overageNote,
-}: {
-  label: string;
-  used: number;
-  limit: number;
-  unit: string;
-  overageNote?: string;
-}) {
-  const overage = Math.max(0, used - limit);
-  const pct = Math.min(100, (used / limit) * 100);
-  const isOver = used > limit;
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-dash-text-body">{label}</span>
-        <span className="text-sm tabular-nums text-dash-text-faded">
-          {used.toLocaleString()} / {limit.toLocaleString()} {unit}
-        </span>
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-dash-bg-elevated">
-        <div
-          className={`h-full rounded-full transition-all ${isOver ? "bg-[#f5a623]" : "bg-[#4879f8]"}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      {overage > 0 && overageNote && (
-        <p className="text-xs text-[#f5a623]">
-          {overage.toLocaleString()} {unit} overage — {overageNote}
-        </p>
-      )}
-    </div>
-  );
-}
-
-interface BreakdownLine {
-  label: string;
-  detail: string;
-  amount: number;
-}
-
-interface SpendingResource {
-  label: string;
-  allocated: string;
-  cost: number;
-  breakdown: BreakdownLine[];
-}
-
-const mockResources: SpendingResource[] = [
-  {
-    label: "CPU",
-    allocated: "0.5 vCPU",
-    cost: 4.5,
-    breakdown: [
-      { label: "Base allocation", detail: "0.25 vCPU", amount: 2.25 },
-      { label: "Burst usage", detail: "0.25 vCPU avg", amount: 1.5 },
-      { label: "Autoscale overhead", detail: "2 spike events", amount: 0.75 },
-    ],
-  },
-  {
-    label: "Memory",
-    allocated: "512 MB",
-    cost: 2.25,
-    breakdown: [
-      { label: "Base allocation", detail: "256 MB", amount: 1.25 },
-      { label: "Peak usage", detail: "512 MB max", amount: 1.0 },
-    ],
-  },
-  {
-    label: "Storage",
-    allocated: "1 GB",
-    cost: 0.5,
-    breakdown: [
-      { label: "Build artifacts", detail: "620 MB", amount: 0.31 },
-      { label: "Cache layers", detail: "380 MB", amount: 0.19 },
-    ],
-  },
-  {
-    label: "Persistent Disk",
-    allocated: "—",
-    cost: 0,
-    breakdown: [],
-  },
-];
-
-function SpendingOverview() {
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const total = mockResources.reduce((s, r) => s + r.cost, 0);
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-[2px]">
-        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-          Spending overview
-        </p>
-        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-          Resource costs for the current billing period
-        </p>
-      </div>
-
-      <div className="overflow-hidden rounded-[4px] border-[0.5px] border-dash-border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-dash-border bg-dash-bg-elevated/50">
-              <th className="px-3 py-2 text-left font-medium text-dash-text-faded">
-                Resource
-              </th>
-              <th className="px-3 py-2 text-left font-medium text-dash-text-faded">
-                Allocated
-              </th>
-              <th className="px-3 py-2 text-right font-medium text-dash-text-faded">
-                Cost
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockResources.map((r) => {
-              const isOpen = expanded === r.label;
-              const isClickable = r.breakdown.length > 0;
-
-              return (
-                <Fragment key={r.label}>
-                  <tr
-                    onClick={() =>
-                      isClickable && setExpanded(isOpen ? null : r.label)
-                    }
-                    className={cn(
-                      "border-b border-dash-border transition-colors",
-                      isClickable &&
-                        "cursor-pointer hover:bg-dash-bg-elevated/60",
-                    )}
-                  >
-                    <td className="px-3 py-2 text-dash-text-body">{r.label}</td>
-                    <td className="px-3 py-2 tabular-nums text-dash-text-faded">
-                      {r.allocated}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-dash-text-strong">
-                      {r.cost > 0 ? `$${r.cost.toFixed(2)}` : "—"}
-                    </td>
-                  </tr>
-                  <AnimatePresence>
-                    {isOpen && (
-                      <tr>
-                        <td colSpan={3} className="p-0">
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{
-                              duration: 0.2,
-                              ease: [0.16, 1, 0.3, 1],
-                            }}
-                            className="overflow-hidden"
-                          >
-                            <table className="w-full border-b border-dash-border bg-dash-bg-elevated/30 text-xs">
-                              <tbody>
-                                {r.breakdown.map((line) => (
-                                  <tr key={line.label}>
-                                    <td className="py-1.5 pl-6 pr-3 text-dash-text-faded">
-                                      {line.label}
-                                    </td>
-                                    <td className="px-3 py-1.5 tabular-nums text-dash-text-extra-faded">
-                                      {line.detail}
-                                    </td>
-                                    <td className="py-1.5 pl-3 pr-3 text-right tabular-nums text-dash-text-faded">
-                                      ${line.amount.toFixed(2)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </motion.div>
-                        </td>
-                      </tr>
-                    )}
-                  </AnimatePresence>
-                </Fragment>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr className="bg-dash-bg-elevated/50">
-              <td
-                colSpan={2}
-                className="px-3 py-2 font-medium text-dash-text-strong"
-              >
-                Total
-              </td>
-              <td className="px-3 py-2 text-right font-medium tabular-nums text-dash-text-strong">
-                ${total.toFixed(2)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-  );
-}
-void SpendingOverview;
-
-function UsageSection({
-  spending,
-}: {
-  spending?: { used: number; spendingLimit: number };
-}) {
-  const used = Number(spending?.used ?? 0);
-  const limit = Number(spending?.spendingLimit ?? 0);
-  const hasBudget = limit > 0;
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-[2px]">
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-            Current usage
-          </p>
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            Billing usage for the current period
-          </p>
-        </div>
-
-        {hasBudget ? (
-          <UsageBar
-            label="Spending budget"
-            used={used}
-            limit={limit}
-            unit="USD"
-            overageNote="Overage may be added to the next invoice"
-          />
-        ) : (
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            No spending budget configured yet.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function BillingInvoices({
-  invoices,
-  onPageChange,
-  isPageLoading = false,
-  pendingPage = null,
-}: {
-  invoices?: SettingsInvoicePage;
-  onPageChange?: (page: number) => Promise<void> | void;
-  isPageLoading?: boolean;
-  pendingPage?: number | null;
-}) {
-  const currentPage = invoices?.page ?? 1;
-  const totalPages = invoices?.totalPages ?? 1;
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-[2px] py-2">
-        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-          Payment history and invoices
-        </p>
-        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-          See your billing history with Brimble including invoices
-        </p>
-      </div>
-      <div className="flex flex-col gap-4">
-        {(invoices?.items ?? []).map((invoice) => {
-          let label = "Unknown date";
-
-          if (invoice.createdAt) {
-            const parsed = new Date(invoice.createdAt);
-            if (!Number.isNaN(parsed.getTime())) {
-              label = new Intl.DateTimeFormat("en-US", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              }).format(parsed);
-            }
-          }
-
-          return (
-            <div
-              key={invoice.id}
-              className="flex items-center justify-between gap-4"
-            >
-              <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                {label}
-              </p>
-              {invoice.downloadLink ? (
-                <a
-                  href={invoice.downloadLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-[8px] border border-dash-border bg-dash-bg px-3 py-1.5 text-sm leading-5 tracking-[-0.0224px] text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
-                >
-                  view
-                </a>
-              ) : (
-                <span className="text-xs text-dash-text-extra-faded">
-                  {invoice.due ? "overdue" : "paid"} • $
-                  {invoice.total.toFixed(2)}
-                </span>
-              )}
-            </div>
-          );
-        })}
-        {(invoices?.items.length ?? 0) === 0 && (
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            No invoices yet.
-          </p>
-        )}
-      </div>
-      <div className="flex justify-end pt-1">
-        <NumberPagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          isLoading={isPageLoading}
-          loadingPage={pendingPage}
-          onPageChange={(nextPage) => {
-            if (
-              nextPage >= 1 &&
-              nextPage <= totalPages &&
-              nextPage !== currentPage
-            ) {
-              void onPageChange?.(nextPage);
-            }
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function BillingForm({
-  profile,
-  billing,
-  onInvoicesPageChange,
-  onUpdateCardInformation,
-  isUpdatingCardInformation = false,
-  isLoadingInvoicesPage = false,
-  pendingInvoicesPage = null,
-}: {
-  profile: UserProfile;
-  billing?: SettingsSidebarSnapshot["billing"];
-  onInvoicesPageChange?: (page: number) => Promise<void> | void;
-  onUpdateCardInformation?: () => Promise<void> | void;
-  isUpdatingCardInformation?: boolean;
-  isLoadingInvoicesPage?: boolean;
-  pendingInvoicesPage?: number | null;
-}) {
-  const [cancelOpen, setCancelOpen] = useState(false);
-  const [changePlanOpen, setChangePlanOpen] = useState(false);
-
-  let currentPlan = "Free";
-  const normalizedPlanType = (profile.subscriptionPlanType || "").toLowerCase();
-
-  if (normalizedPlanType.includes("developer")) {
-    currentPlan = "Pro";
-  } else if (normalizedPlanType.includes("hacker")) {
-    currentPlan = "Hacker";
-  } else if (normalizedPlanType.includes("team")) {
-    currentPlan = "Team";
-  }
-
-  const activePlan =
-    billingPlans.find((plan) => plan.name === currentPlan) ?? billingPlans[0];
-  const canChangePlan = currentPlan !== "Team";
-  const primaryCard =
-    billing?.cards.find((card) => card.preferred) ?? billing?.cards[0];
-  const daysSinceFailure = profile.subscriptionDue ? 1 : 0;
-
-  return (
-    <div className="flex max-w-[488px] flex-col gap-8">
-      <PaymentFailureBanner daysSinceFailure={daysSinceFailure} />
-
-      <div className="relative overflow-hidden rounded-[4px] bg-[#fcfcfc] dark:bg-[#121418]">
-        <div className="px-6 py-3 pr-[116px]">
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body dark:text-dash-text-faded">
-            You are currently on the Brimble{" "}
-            <span className="text-dash-text-strong dark:text-dash-text-strong">
-              {activePlan.name}
-            </span>{" "}
-            plan
-            {activePlan.price > 0 ? (
-              <>
-                , you pay{" "}
-                <span className="text-dash-text-strong dark:text-dash-text-strong">
-                  ${activePlan.price}
-                </span>{" "}
-                per month.
-              </>
-            ) : (
-              "."
-            )}
-          </p>
-          {canChangePlan && (
-            <button
-              onClick={() => setChangePlanOpen(true)}
-              className="mt-1.5 text-sm font-medium text-[#4879f8] underline underline-offset-2 hover:text-[#3a6ae6]"
-            >
-              Change plan
-            </button>
-          )}
-        </div>
-        <div className="absolute inset-y-0 right-0 hidden w-[96px] overflow-hidden sm:block">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_28%,#ffffff_0%,#ececec_48%,#f7f7f7_100%)] dark:bg-[radial-gradient(circle_at_72%_28%,rgba(72,121,248,0.18)_0%,rgba(28,33,42,0.65)_45%,rgba(18,20,24,0.95)_100%)]" />
-        </div>
-      </div>
-
-      <UsageSection spending={billing?.spending} />
-
-      <hr className="-ml-8 border-dash-border-soft" />
-
-      <div className="flex flex-col gap-[30px]">
-        <div className="flex items-center gap-[14px]">
-          <img
-            src="/images/card-payment.svg"
-            alt=""
-            className="h-12 w-[68px] shrink-0"
-          />
-          <div className="flex flex-col gap-[2px] py-2">
-            <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-              Payment card
-            </p>
-            <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-              Connected • Powered by Stripe
-            </p>
-          </div>
-        </div>
-
-        {primaryCard ? (
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex flex-col gap-[2px]">
-              <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                {primaryCard.cardType || "Card"}
-              </p>
-              <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                <span className="tabular-nums text-dash-text-strong">
-                  {primaryCard.last4 || "••••"}
-                </span>
-                , expiring{" "}
-                <span className="tabular-nums text-dash-text-strong">
-                  {primaryCard.expMonth || "--"}/{primaryCard.expYear || "----"}
-                </span>
-              </p>
-            </div>
-            <button
-              type="button"
-              disabled={isUpdatingCardInformation}
-              onClick={async () => {
-                if (isUpdatingCardInformation) return;
-                await onUpdateCardInformation?.();
-              }}
-              className="shrink-0 rounded-[8px] border border-dash-border bg-dash-bg px-3.5 py-2 text-sm font-medium leading-5 tracking-[-0.0224px] text-dash-text-body shadow-[0px_1px_2px_rgba(16,24,40,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:opacity-60"
-            >
-              {isUpdatingCardInformation ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Spinner size="size-3.5" className="text-current" />
-                  Redirecting...
-                </span>
-              ) : (
-                "Update card information"
-              )}
-            </button>
-          </div>
-        ) : (
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            No payment methods added yet.
-          </p>
-        )}
-      </div>
-
-      <hr className="-ml-8 border-dash-border-soft" />
-
-      <BillingInvoices
-        invoices={billing?.invoices}
-        onPageChange={onInvoicesPageChange}
-        isPageLoading={isLoadingInvoicesPage}
-        pendingPage={pendingInvoicesPage}
-      />
-
-      <hr className="-ml-8 border-dash-border-soft" />
-
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-[2px] py-2">
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-            Manage your subscription
-          </p>
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            Cancel your current subscription
-          </p>
-        </div>
-        <div>
-          <GlossyButton variant="red" onClick={() => setCancelOpen(true)}>
-            Cancel subscription
-          </GlossyButton>
-        </div>
-      </div>
-
-      <WarningModal
-        open={cancelOpen}
-        onOpenChange={setCancelOpen}
-        title="Cancel your subscription?"
-        description={`Your plan will be cancelled at the end of the current billing period. You will be moved to the Free plan and lose access to ${activePlan.name} features.`}
-        confirmLabel="Cancel subscription"
-        cancelLabel="Keep my plan"
-        onConfirm={() => {
-          console.log("Subscription cancelled");
-        }}
-      />
-
-      <ChangePlanModal
-        open={changePlanOpen}
-        onOpenChange={setChangePlanOpen}
-        currentPlan={currentPlan}
-        onChangePlan={() => {
-          setChangePlanOpen(false);
-        }}
-      />
-    </div>
-  );
-}
 
 /* ── Event notification data ── */
 

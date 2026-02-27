@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { createBackendApi } from "@/backend";
 import type {
   GitProvider,
-  InitializeSettingsAddCardInput,
   SettingsSidebarSnapshot,
   TestWebhookInput,
   UpdateSettingsBuildsInput,
@@ -115,13 +114,6 @@ export const testSettingsWebhookServerFn = createServerFn({
   const input = data as unknown as TestWebhookInput;
   await getServerBackendApi().settings.testWebhook(input);
   return { ok: true } as const;
-});
-
-export const initializeSettingsAddCardServerFn = createServerFn({
-  method: "POST",
-}).handler(async ({ data }) => {
-  const input = data as unknown as InitializeSettingsAddCardInput;
-  return getServerBackendApi().settings.initializeAddCard(input);
 });
 
 export const updateSettingsWebhooksServerFn = createServerFn({

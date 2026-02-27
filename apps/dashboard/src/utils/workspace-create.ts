@@ -7,6 +7,7 @@ export const WORKSPACE_MAX_BUILDS = 10;
 export type WorkspaceNameStepValues = {
   name: string;
   slug: string;
+  imageUrl: string;
 };
 
 export type WorkspaceConfigStepValues = {
@@ -98,6 +99,7 @@ export function extractInvitedEmails(rows: WorkspaceInviteRow[]) {
 
 export function buildCreateWorkspacePayload(input: {
   workspaceName: string;
+  imageUrl?: string;
   teamSize: number;
   concurrentBuilds: number;
   promoCode?: string;
@@ -108,6 +110,7 @@ export function buildCreateWorkspacePayload(input: {
     team_name: input.workspaceName.trim(),
     type: TEAM_PLAN_TYPE,
     members: input.invitedEmails,
+    image: input.imageUrl?.trim() || null,
     startup_code_reference:
       input.startupCodeReference?.trim() || input.promoCode?.trim() || "",
     specifications: {

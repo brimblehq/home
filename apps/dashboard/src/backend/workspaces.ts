@@ -16,6 +16,7 @@ export interface CreateWorkspaceInput {
   team_name: string;
   type: "TEAM_PLAN";
   members: string[];
+  image?: string | null;
   startup_code_reference: string;
   specifications: {
     members: number;

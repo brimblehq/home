@@ -11,6 +11,7 @@ import { CommandPalette } from "./command-palette";
 import { TooltipProvider } from "../shared/tooltip";
 import { Snackbar } from "../shared/snackbar";
 import { OnboardingChecklist } from "../shared/onboarding-checklist";
+import { WelcomeModal } from "../shared/welcome-modal";
 import { DashToaster } from "../shared/toaster";
 import { UserProfileDrawer } from "../shared/user-profile-drawer";
 import { ScoutBarProvider } from "../../contexts/scoutbar-context";
@@ -21,7 +22,7 @@ import type { Workspace } from "@/backend/workspaces";
 import type { Project } from "@/backend/projects";
 import type { TeamDetails } from "@/backend/teams";
 import type { AppTooltipMessage } from "@/backend/messages";
-import type { ProfileTab } from "../shared/user-profile-drawer";
+import { ProfileTab } from "../../types/enums";
 import { listTooltipMessagesServerFn } from "@/server/messages/actions";
 
 const mobileNavItemBase =
@@ -453,7 +454,7 @@ export function DashboardLayout({
                           label: actionLabel,
                           onClick: () => {
                             if (isPaymentMessage) {
-                              setProfileRequestedTab("billing");
+                              setProfileRequestedTab(ProfileTab.Billing);
                               setProfileOpen(true);
                               return;
                             }
@@ -512,6 +513,7 @@ export function DashboardLayout({
             </main>
           </div>
         )}
+        <WelcomeModal />
         <OnboardingChecklist
           projects={
             matchedProjects ??

@@ -46,6 +46,8 @@ export const config = {
     "BRIMBLE_DEPLOYMENT_LOGS",
   apiKey: readEnv("NEXT_PUBLIC_AUTH_TOKEN") ?? readEnv("VITE_AUTH_TOKEN") ?? "",
   api_key: readEnv("NEXT_PUBLIC_AUTH_TOKEN") ?? readEnv("VITE_AUTH_TOKEN") ?? "",
+  stripePublishableKey:
+    readEnv("NEXT_PUBLIC_STRIPE_KEY") ?? readEnv("VITE_STRIPE_KEY") ?? "",
 } as const;
 
 export default config;

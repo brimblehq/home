@@ -36,6 +36,7 @@ export const createWorkspaceServerFn = createServerFn({
         team_name?: string;
         type?: "TEAM_PLAN";
         members?: string[];
+        image?: string | null;
         startup_code_reference?: string;
         specifications?: {
           members?: number;
@@ -62,11 +63,13 @@ export const createWorkspaceServerFn = createServerFn({
   const members = Array.isArray(payload?.members)
     ? payload!.members.filter((member): member is string => typeof member === "string")
     : [];
+  const image = payload?.image?.trim() || null;
 
   return getServerBackendApi().workspaces.create({
     team_name: teamName,
     type: "TEAM_PLAN",
     members,
+    image,
     startup_code_reference: payload?.startup_code_reference?.trim() ?? "",
     specifications: {
       members: Math.floor(memberCount),

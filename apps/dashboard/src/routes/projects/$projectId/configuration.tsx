@@ -206,14 +206,14 @@ const diskSizes = Array.from({ length: 15 }, (_, index) => {
   };
 });
 
-type Section = "general" | "build" | "resources" | "danger";
+import { ConfigSection } from "../../../types/enums";
 
-const allSections: { id: Section; label: string; icon: React.ReactNode }[] = [
-  { id: "general", label: "General", icon: <GearSix size={16} weight="duotone" /> },
-  { id: "build", label: "Build & Deploy", icon: <Hammer size={16} weight="duotone" /> },
-  { id: "resources", label: "Resources", icon: <Cpu size={16} weight="duotone" /> },
+const allSections: { id: ConfigSection; label: string; icon: React.ReactNode }[] = [
+  { id: ConfigSection.General, label: "General", icon: <GearSix size={16} weight="duotone" /> },
+  { id: ConfigSection.Build, label: "Build & Deploy", icon: <Hammer size={16} weight="duotone" /> },
+  { id: ConfigSection.Resources, label: "Resources", icon: <Cpu size={16} weight="duotone" /> },
   {
-    id: "danger",
+    id: ConfigSection.Danger,
     label: "Danger zone",
     icon: <Warning size={16} weight="duotone" />,
   },
@@ -1057,7 +1057,7 @@ function ConfigurationPage() {
       whitelistedIps?: string[];
     };
   }) => Promise<{ message?: string }>;
-  const [activeSection, setActiveSection] = useState<Section>("general");
+  const [activeSection, setActiveSection] = useState<ConfigSection>(ConfigSection.General);
 
   // Build settings (read-only section, not Formik-managed)
   const [installCmd, setInstallCmd] = useState(project?.installCommand || "");
@@ -1220,15 +1220,15 @@ function ConfigurationPage() {
   const mcpAuthToggleVisible = shouldShowMcpAuthToggle(project);
 
   const sections = allSections.filter((section) => {
-    if (databaseProject && section.id === "build") {
+    if (databaseProject && section.id === ConfigSection.Build) {
       return false;
     }
 
-    if (isStaticProject(project) && section.id === "resources") {
+    if (isStaticProject(project) && section.id === ConfigSection.Resources) {
       return false;
     }
 
-    if (!buildSectionVisible && section.id === "build") {
+    if (!buildSectionVisible && section.id === ConfigSection.Build) {
       return false;
     }
 
@@ -1237,7 +1237,7 @@ function ConfigurationPage() {
 
   useEffect(() => {
     if (!sections.some((section) => section.id === activeSection)) {
-      setActiveSection("general");
+      setActiveSection(ConfigSection.General);
     }
   }, [activeSection, sections]);
 
@@ -1362,12 +1362,12 @@ function ConfigurationPage() {
                 s.id === activeSection
                   ? "bg-dash-bg-elevated font-medium text-dash-text-strong"
                   : "text-dash-text-faded hover:bg-dash-bg-elevated/50 hover:text-dash-text-body"
-              } ${s.id === "danger" ? "text-red-400/80 hover:text-red-400 lg:mt-4" : ""}`}
+              } ${s.id === ConfigSection.Danger ? "text-red-400/80 hover:text-red-400 lg:mt-4" : ""}`}
             >
               <span
                 className={
                   s.id === activeSection
-                    ? s.id === "danger"
+                    ? s.id === ConfigSection.Danger
                       ? "text-red-400"
                       : "text-dash-text-strong"
                     : ""
@@ -1390,7 +1390,7 @@ function ConfigurationPage() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15, ease }}
             >
-              {activeSection === "general" && (
+              {activeSection === ConfigSection.General && (
                 databaseProject ? (
                   <DatabaseConfigurationPanel
                     initialValues={databaseInitialValues}
@@ -1415,7 +1415,7 @@ function ConfigurationPage() {
                   />
                 )
               )}
-              {activeSection === "build" && (
+              {activeSection === ConfigSection.Build && (
                 <BuildSection
                   installCmd={installCmd}
                   setInstallCmd={setInstallCmd}
@@ -1434,7 +1434,7 @@ function ConfigurationPage() {
                   showDockerSourceFields={dockerSourceFieldsVisible}
                 />
               )}
-              {activeSection === "resources" && (
+              {activeSection === ConfigSection.Resources && (
                 <ResourcesSection
                   initialValues={resourcesInitialValues}
                   onSubmit={databaseProject ? handleSubmitResources : undefined}
@@ -1444,7 +1444,7 @@ function ConfigurationPage() {
                   canSave={databaseProject}
                 />
               )}
-              {activeSection === "danger" && (
+              {activeSection === ConfigSection.Danger && (
                 <DangerSection
                   maintenanceMode={maintenanceMode}
                   setMaintenanceMode={setMaintenanceMode}
