@@ -28,8 +28,8 @@ async function resolveLogOwnerId(api: BackendApi, workspace?: string) {
     throw new Error("Workspace not found for deployment logs");
   }
 
-  const session = await api.auth.getCurrentSession();
-  const userId = session?.user?.id?.trim();
+  const profile = await api.settings.getProfile();
+  const userId = profile?.id?.trim();
 
   if (!userId) {
     throw new Error("Unable to resolve current user for deployment logs");

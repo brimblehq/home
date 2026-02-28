@@ -15,6 +15,7 @@ import { Spinner } from "../shared/spinner";
 import { CursorPagination } from "../shared/pagination";
 import { WarningModal } from "../shared/warning-modal";
 import { ChangePlanModal } from "../shared/change-plan-modal";
+import { SimpleTooltip } from "../shared/tooltip";
 import {
   usePaymentMethods,
   useSubscription,
@@ -390,19 +391,27 @@ function BillingFormInner({
               )}
             </p>
             {canEditSpendingLimit ? (
-              <button
-                onClick={() => {
-                  setSpendingLimitInput(
-                    typeof savedSpendingLimit === "number"
-                      ? String(savedSpendingLimit)
-                      : "5",
-                  );
-                  setIsEditingLimit(true);
-                }}
-                className="text-sm font-medium text-[#4879f8] hover:text-[#3a6ae6]"
-              >
-                {hasSpendingLimit ? "Edit" : "Set"}
-              </button>
+              paymentMethods.length === 0 ? (
+                <SimpleTooltip content="Add a payment method first" side="right">
+                  <span className="cursor-not-allowed text-sm font-medium text-[#4879f8] opacity-50">
+                    {hasSpendingLimit ? "Edit" : "Set"}
+                  </span>
+                </SimpleTooltip>
+              ) : (
+                <button
+                  onClick={() => {
+                    setSpendingLimitInput(
+                      typeof savedSpendingLimit === "number"
+                        ? String(savedSpendingLimit)
+                        : "5",
+                    );
+                    setIsEditingLimit(true);
+                  }}
+                  className="text-sm font-medium text-[#4879f8] hover:text-[#3a6ae6]"
+                >
+                  {hasSpendingLimit ? "Edit" : "Set"}
+                </button>
+              )
             ) : (
               <span className="text-xs text-dash-text-extra-faded">
                 Only the workspace creator can update this limit
@@ -430,44 +439,48 @@ function BillingFormInner({
         }}
       />
 
-      <hr className="-ml-8 border-dash-border-soft" />
+      {hasActivePaidSubscription && (
+        <>
+        <hr className="-ml-8 border-dash-border-soft" />
 
-      {/* ── Cancel subscription ── */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-[2px] py-2">
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-            Manage your subscription
-          </p>
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            Cancel your current subscription
-          </p>
+        {/* ── Cancel subscription ── */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-[2px] py-2">
+            <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
+              Manage your subscription
+            </p>
+            <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+              Cancel your current subscription
+            </p>
+          </div>
+          <div>
+            <GlossyButton variant="red" onClick={() => setCancelOpen(true)}>
+              Cancel subscription
+            </GlossyButton>
+          </div>
         </div>
-        <div>
-          <GlossyButton variant="red" onClick={() => setCancelOpen(true)}>
-            Cancel subscription
-          </GlossyButton>
-        </div>
-      </div>
 
-      <WarningModal
-        open={cancelOpen}
-        onOpenChange={setCancelOpen}
-        title="Cancel your subscription?"
-        description={`Your plan will be cancelled at the end of the current billing period. You will be moved to the Free plan and lose access to ${currentPlan} features.`}
-        confirmLabel="Cancel subscription"
-        cancelLabel="Keep my plan"
-        onConfirm={() => {
-          cancelMutation.mutate(undefined, {
-            onSuccess: () => {
-              toast.success("Subscription cancelled. You'll keep access until the end of this billing period.");
-              setCancelOpen(false);
-            },
-            onError: (err) => {
-              toast.error(err instanceof Error ? err.message : "Failed to cancel subscription");
-            },
-          });
-        }}
-      />
+        <WarningModal
+          open={cancelOpen}
+          onOpenChange={setCancelOpen}
+          title="Cancel your subscription?"
+          description={`Your plan will be cancelled at the end of the current billing period. You will be moved to the Free plan and lose access to ${currentPlan} features.`}
+          confirmLabel="Cancel subscription"
+          cancelLabel="Keep my plan"
+          onConfirm={() => {
+            cancelMutation.mutate(undefined, {
+              onSuccess: () => {
+                toast.success("Subscription cancelled. You'll keep access until the end of this billing period.");
+                setCancelOpen(false);
+              },
+              onError: (err) => {
+                toast.error(err instanceof Error ? err.message : "Failed to cancel subscription");
+              },
+            });
+          }}
+        />
+        </>
+      )}
 
       <ChangePlanModal
         open={changePlanOpen}

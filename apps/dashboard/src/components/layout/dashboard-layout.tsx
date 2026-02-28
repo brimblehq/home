@@ -27,6 +27,7 @@ import type { PaymentMethod } from "@/backend/payments";
 import type { Pricing } from "@/types/pricing";
 import { PricingProvider } from "@/contexts/pricing-context";
 import { PlanTypeProvider } from "@/contexts/plan-type-context";
+import { ProfileDrawerProvider } from "@/contexts/profile-drawer-context";
 import { DEFAULT_PRICING } from "@/utils/default-pricing";
 import { ProfileTab } from "../../types/enums";
 import { listTooltipMessagesServerFn } from "@/server/messages/actions";
@@ -342,6 +343,11 @@ export function DashboardLayout({
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileRequestedTab, setProfileRequestedTab] = useState<ProfileTab | undefined>(undefined);
 
+  const openProfileDrawer = useCallback((tab?: ProfileTab) => {
+    setProfileRequestedTab(tab);
+    setProfileOpen(true);
+  }, []);
+
   const currentWorkspace = useMemo(() => {
     const params = new URLSearchParams(searchStr || "");
     return params.get("workspace")?.trim() || undefined;
@@ -427,6 +433,7 @@ export function DashboardLayout({
     <PlanTypeProvider value={planType}>
     <ScoutBarProvider>
     <TooltipProvider>
+    <ProfileDrawerProvider onOpen={openProfileDrawer}>
       <DashToaster />
       <CommandPalette />
       <div className="flex h-dvh flex-col bg-dash-bg">
@@ -558,6 +565,7 @@ export function DashboardLayout({
             []
           }
           settingsSnapshot={initialSettingsSnapshot}
+          initialPaymentMethods={initialPaymentMethods ?? null}
           isTeamWorkspace={isTeamWorkspace}
           teamDetails={initialWorkspaceTeamMembers}
         />
@@ -571,6 +579,7 @@ export function DashboardLayout({
           initialInvoices={initialInvoices ?? null}
         />
       </div>
+    </ProfileDrawerProvider>
     </TooltipProvider>
     </ScoutBarProvider>
     </PlanTypeProvider>

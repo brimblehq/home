@@ -42,6 +42,8 @@ import {
 import type { Workspace } from "@/backend/workspaces";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { usePricing } from "@/contexts/pricing-context";
+import { useProfileDrawer } from "@/contexts/profile-drawer-context";
+import { ProfileTab } from "@/types/enums";
 import { calculateTeamBilling } from "@/utils/team-billing";
 
 export const Route = createFileRoute("/workspace/new")({
@@ -211,9 +213,11 @@ function MiniRoleDropdown({
 function Phase1Name({
   onSubmit,
   initialValues,
+  disabled,
 }: {
   onSubmit: (name: string, slug: string, imageUrl: string) => void;
   initialValues: WorkspaceNameStepValues;
+  disabled?: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -392,7 +396,7 @@ function Phase1Name({
                 type="submit"
                 variant="blue"
                 fullWidth
-                disabled={!values.name.trim() || !values.slug.trim()}
+                disabled={disabled || !values.name.trim() || !values.slug.trim()}
               >
                 Continue
               </GlossyButton>
@@ -419,12 +423,14 @@ function Phase2Config({
   initialValues,
   costPerMember,
   costPerBuild,
+  disabled,
 }: {
   onSubmit: (config: TeamConfig) => void;
   onVerifyPromo: (code: string) => Promise<{ valid: boolean; reference?: string }>;
   initialValues: WorkspaceConfigStepValues;
   costPerMember: number;
   costPerBuild: number;
+  disabled?: boolean;
 }) {
   const [promoStatus, setPromoStatus] = useState<"idle" | "verifying" | "valid" | "invalid">("idle");
 
@@ -564,6 +570,7 @@ function Phase2Config({
                   type="submit"
                   variant="blue"
                   fullWidth
+                  disabled={disabled}
                 >
                   Continue
                 </GlossyButton>
@@ -586,6 +593,7 @@ function Phase3Invite({
   concurrentBuilds,
   initialValues,
   creating,
+  disabled,
   onSubmit,
   costPerMember,
   costPerBuild,
@@ -595,6 +603,7 @@ function Phase3Invite({
   concurrentBuilds: number;
   initialValues: WorkspaceInviteStepValues;
   creating?: boolean;
+  disabled?: boolean;
   onSubmit: (rows: WorkspaceInviteRow[]) => Promise<void> | void;
   costPerMember: number;
   costPerBuild: number;
@@ -624,7 +633,7 @@ function Phase3Invite({
         {({ values, errors, setFieldValue, handleSubmit, isSubmitting }) => {
           const rows = values.invites;
           const filled = rows.filter((r) => r.email.trim().length > 0).length;
-          const busy = creating || isSubmitting;
+          const busy = creating || isSubmitting || disabled;
 
           function addRow() {
             setFieldValue("invites", [
@@ -747,6 +756,7 @@ function Phase3Invite({
 
 function NewWorkspacePage() {
   const pricing = usePricing();
+  const profileDrawer = useProfileDrawer();
   const navigate = useNavigate({ from: "/workspace/new" });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const createWorkspace = useServerFn(createWorkspaceServerFn as any) as (args: {
@@ -766,12 +776,16 @@ function NewWorkspacePage() {
   ]);
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
   const [defaultPaymentMethod, setDefaultPaymentMethod] = useState<string | null>(null);
+  const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
 
   useEffect(() => {
     getPaymentMethodsServerFn().then((methods: any[]) => {
       const defaultPm = methods.find((m: any) => m.is_default) ?? methods[0];
       if (defaultPm?.id) setDefaultPaymentMethod(defaultPm.id);
-    }).catch(() => {});
+      setHasPaymentMethod(Array.isArray(methods) && methods.length > 0);
+    }).catch(() => {
+      setHasPaymentMethod(false);
+    });
   }, []);
 
   function handleNameSubmit(name: string, slug: string, imageUrl: string) {
@@ -857,6 +871,19 @@ function NewWorkspacePage() {
           </p>
         </div>
 
+        {hasPaymentMethod === false && (
+          <div className="mb-6"><InfoBanner>
+            A payment method is required to create a workspace.{" "}
+            <button
+              type="button"
+              onClick={() => profileDrawer.open(ProfileTab.Billing)}
+              className="font-medium text-[#4879f8] hover:text-[#3a6ae6]"
+            >
+              Add a payment method
+            </button>
+          </InfoBanner></div>
+        )}
+
         {/* Phase 1 */}
         {phase > 1 && workspaceName ? (
           <div className="mb-6">
@@ -873,6 +900,7 @@ function NewWorkspacePage() {
                 key="phase1"
                 onSubmit={handleNameSubmit}
                 initialValues={{ name: workspaceName, slug: workspaceSlug, imageUrl: workspaceImageUrl }}
+                disabled={hasPaymentMethod === false}
               />
             </AnimatePresence>
           )
@@ -902,6 +930,7 @@ function NewWorkspacePage() {
                   promoCode: teamConfig?.promoCode ?? "",
                   startupCodeReference: teamConfig?.startupCodeReference ?? "",
                 }}
+                disabled={hasPaymentMethod === false}
               />
             </AnimatePresence>
           )
@@ -919,6 +948,7 @@ function NewWorkspacePage() {
               costPerBuild={pricing.team.costPerBuild}
               initialValues={{ invites: inviteRows }}
               creating={creatingWorkspace}
+              disabled={hasPaymentMethod === false}
               onSubmit={async (rows) => {
                 setInviteRows(rows);
                 await submitWorkspaceCreate(rows);

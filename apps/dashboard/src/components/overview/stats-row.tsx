@@ -128,7 +128,7 @@ export function StatsRow({
           {bandwidthSummaryText}
         </p>
         <div className="mt-auto h-[65px] min-w-0">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
             <AreaChart
               data={chartData}
               margin={{ top: 0, right: 0, bottom: 0, left: 0 }}

@@ -54,7 +54,12 @@ const swap = swapPlanServerFn as unknown as (args: {
 }) => Promise<any>;
 
 const purchase = purchaseServerFn as unknown as (args: {
-  data: { items: Array<{ id: string; quantity?: number }>; payment_method_id: string };
+  data: {
+    type: "PURCHASE_DOMAIN" | "RENEW_DOMAIN" | "SERVICE_PURCHASE" | "LLM_TOKENS" | "BUILD_MINUTES";
+    amount: number;
+    metadata: Record<string, unknown>;
+    team_id?: string;
+  };
 }) => Promise<any>;
 
 const updateLimit = updateSpendingLimitServerFn as unknown as (args: {
@@ -178,7 +183,12 @@ export function useCancelSubscription() {
 export function usePurchase() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { items: Array<{ id: string; quantity?: number }>; payment_method_id: string }) =>
+    mutationFn: (input: {
+      type: "PURCHASE_DOMAIN" | "RENEW_DOMAIN" | "SERVICE_PURCHASE" | "LLM_TOKENS" | "BUILD_MINUTES";
+      amount: number;
+      metadata: Record<string, unknown>;
+      team_id?: string;
+    }) =>
       purchase({ data: input }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: paymentKeys.estimate() });

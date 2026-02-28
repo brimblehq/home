@@ -39,6 +39,7 @@ import {
   updateSettingsWebhooksServerFn,
 } from "@/server/settings/actions";
 import { BillingForm } from "../settings/billing-form";
+import { Avatar } from "./avatar";
 import { usePlanGate } from "@/hooks/use-plan-gate";
 import type { PaymentMethod } from "@/backend/payments";
 import {
@@ -263,7 +264,7 @@ function ProfileForm({
     profile.username || profile.firstName || profile.email || "user";
   const avatarSrc =
     avatarUrl ||
-    `${config.avatarUrl}/adventurer-neutral/svg?seed=${encodeURIComponent(avatarSeed)}`;
+    `https://avatar.vercel.sh/${encodeURIComponent(avatarSeed)}`;
 
   return (
     <div className="flex max-w-[488px] flex-col gap-8">
@@ -277,8 +278,9 @@ function ProfileForm({
           onChange={handleAvatarFileChange}
         />
         <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-dash-border-soft bg-dash-bg-elevated">
-          <img
+          <Avatar
             src={avatarSrc}
+            fallbackSeed={avatarSeed}
             alt="Profile avatar"
             className="h-full w-full object-cover"
           />
@@ -923,7 +925,7 @@ function WorkspaceProfileForm({
   const avatarSeed = team.name || "workspace";
   const avatarSrc =
     avatarUrl ||
-    `${config.avatarUrl}/initials/svg?seed=${encodeURIComponent(avatarSeed)}`;
+    `https://avatar.vercel.sh/${encodeURIComponent(avatarSeed)}`;
 
   return (
     <div className="flex max-w-[488px] flex-col gap-8">
@@ -936,8 +938,9 @@ function WorkspaceProfileForm({
           onChange={handleAvatarFileChange}
         />
         <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-dash-border-soft bg-dash-bg-elevated">
-          <img
+          <Avatar
             src={avatarSrc}
+            fallbackSeed={avatarSeed}
             alt="Workspace avatar"
             className="h-full w-full object-cover"
           />
@@ -1100,6 +1103,8 @@ function ProfileNavSidebar({
             <a
               key={item.label}
               href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
               className={cn(
                 navItemBase,
                 "text-dash-text-body hover:bg-dash-bg-elevated",

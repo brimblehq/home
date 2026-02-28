@@ -17,6 +17,26 @@ export function getServerBackendApi() {
 export async function withTokenRefresh<T>(
   fn: (api: BackendApi) => Promise<T>,
 ): Promise<T> {
+  const accessToken = getServerAccessToken();
+  const refreshToken = getServerRefreshToken();
+
+  if (!accessToken && refreshToken) {
+    try {
+      const bootstrapApi = getServerBackendApi();
+      const session = await bootstrapApi.auth.refreshTokens(refreshToken);
+      setServerAuthCookies(session);
+
+      const freshApi = createBackendApi({
+        baseUrl: config.apiUrl,
+        getAccessToken: () => session.accessToken ?? null,
+      });
+
+      return await fn(freshApi);
+    } catch {
+      clearServerAuthCookies();
+    }
+  }
+
   const api = getServerBackendApi();
   try {
     return await fn(api);

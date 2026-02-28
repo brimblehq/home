@@ -4,13 +4,14 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { SUBSCRIPTION_PLAN_TYPE } from "@brimble/models/dist/enum";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
-import { listDomainsPageServerFn } from "@/server/domains/actions";
+import { useProfileDrawer } from "@/contexts/profile-drawer-context";
+import { ProfileTab } from "@/types/enums";
 import { listGithubAccountsServerFn } from "@/server/repositories/actions";
 import { getWorkspaceTeamMembersServerFn } from "@/server/teams/actions";
 import type { Project } from "@/backend/projects";
 import type { SettingsSidebarSnapshot } from "@/backend/settings";
+import type { PaymentMethod } from "@/backend/payments";
 import type { TeamDetails } from "@/backend/teams";
-import type { DomainRecord } from "@/backend/domains";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const FOLLOW_KEY = "brimble:followed-on-x";
@@ -20,6 +21,7 @@ interface OnboardingTask {
   done: boolean;
   action?: string;
   external?: boolean;
+  onClick?: () => void;
 }
 
 function buildTasks({
@@ -27,7 +29,8 @@ function buildTasks({
   hasProject,
   isFreePlan,
   hasFollowed,
-  hasDomain,
+  hasPaymentCard,
+  onAddPaymentCard,
   isTeamWorkspace,
   hasTeamMembers,
   showInviteTeamMemberTask,
@@ -36,7 +39,8 @@ function buildTasks({
   hasProject: boolean;
   isFreePlan: boolean;
   hasFollowed: boolean;
-  hasDomain: boolean;
+  hasPaymentCard: boolean;
+  onAddPaymentCard?: () => void;
   isTeamWorkspace: boolean;
   hasTeamMembers: boolean;
   showInviteTeamMemberTask: boolean;
@@ -59,9 +63,9 @@ function buildTasks({
   });
 
   tasks.push({
-    label: "Buy or connect custom domain",
-    done: hasDomain,
-    action: "/domains",
+    label: "Add a payment card",
+    done: hasPaymentCard,
+    onClick: onAddPaymentCard,
   });
 
   // Only show "Invite a team member" on team workspaces
@@ -75,14 +79,17 @@ function buildTasks({
 export function OnboardingChecklist({
   projects,
   settingsSnapshot,
+  initialPaymentMethods,
   isTeamWorkspace,
   teamDetails,
 }: {
   projects?: Project[] | null;
   settingsSnapshot?: SettingsSidebarSnapshot | null;
+  initialPaymentMethods?: PaymentMethod[] | null;
   isTeamWorkspace?: boolean;
   teamDetails?: TeamDetails | null;
 }) {
+  const profileDrawer = useProfileDrawer();
   const [expanded, setExpanded] = useState(false);
   const [hasFollowed, setHasFollowed] = useState(() => {
     if (typeof window === "undefined") {
@@ -101,9 +108,6 @@ export function OnboardingChecklist({
   const getTeamMembers = useServerFn(getWorkspaceTeamMembersServerFn as any) as (args: {
     data: { workspace: string };
   }) => Promise<TeamDetails>;
-  const listDomains = useServerFn(listDomainsPageServerFn as any) as (args: {
-    data: { workspace?: string; page?: number };
-  }) => Promise<{ items: DomainRecord[] }>;
   const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<unknown[]>;
   const activeWorkspaceSlug = (() => {
     const params = new URLSearchParams(searchStr || "");
@@ -111,8 +115,6 @@ export function OnboardingChecklist({
     return workspace || null;
   })();
   const [teamDetailsByWorkspace, setTeamDetailsByWorkspace] = useState<Record<string, TeamDetails>>({});
-  const [customDomainByWorkspace, setCustomDomainByWorkspace] = useState<Record<string, boolean>>({});
-  const [customDomainFetchFailedByWorkspace, setCustomDomainFetchFailedByWorkspace] = useState<Record<string, true>>({});
   const [teamMembersFetchFailedByWorkspace, setTeamMembersFetchFailedByWorkspace] = useState<Record<string, true>>({});
   const [hasConnectedGit, setHasConnectedGit] = useState<boolean | null>(null);
   const [gitRefreshKey, setGitRefreshKey] = useState(0);
@@ -151,42 +153,6 @@ export function OnboardingChecklist({
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps -- listGithubAccounts is stable in behavior but unstable in reference (useServerFn)
   }, [gitRefreshKey]);
-
-  useEffect(() => {
-    if (workspaceCacheKey in customDomainByWorkspace) {
-      return;
-    }
-
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const result = await listDomains({
-          data: activeWorkspaceSlug ? { workspace: activeWorkspaceSlug } : {},
-        });
-        if (cancelled) {
-          return;
-        }
-        const hasCustom = (result.items ?? []).some((domain) => domain.isCustom === true);
-        setCustomDomainByWorkspace((prev) => ({
-          ...prev,
-          [workspaceCacheKey]: hasCustom,
-        }));
-      } catch {
-        if (!cancelled) {
-          setCustomDomainFetchFailedByWorkspace((prev) => ({
-            ...prev,
-            [workspaceCacheKey]: true,
-          }));
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- listDomains is stable in behavior but unstable in reference (useServerFn)
-  }, [activeWorkspaceSlug, customDomainByWorkspace, workspaceCacheKey]);
 
   useEffect(() => {
     if (!isTeamWorkspace || !activeWorkspaceSlug) {
@@ -247,11 +213,9 @@ export function OnboardingChecklist({
   const planType = (settingsSnapshot?.profile?.subscription?.planType ?? "").toUpperCase();
   const isFreePlan =
     !planType || planType === SUBSCRIPTION_PLAN_TYPE.FreePlan;
-  const hasDomainFromProjects = deployableProjects.some(
-    (p) => p.domains && p.domains.some((d) => !d.isDefault),
-  );
-  const hasDomain =
-    customDomainByWorkspace[workspaceCacheKey] ?? hasDomainFromProjects;
+  const hasPaymentCard =
+    (Array.isArray(initialPaymentMethods) && initialPaymentMethods.length > 0) ||
+    (Array.isArray(settingsSnapshot?.billing?.cards) && settingsSnapshot.billing.cards.length > 0);
   const resolvedTeamDetails =
     (activeWorkspaceSlug ? teamDetailsByWorkspace[activeWorkspaceSlug] : null) ?? teamDetails ?? null;
   const acceptedTeamMembersCount =
@@ -278,17 +242,19 @@ export function OnboardingChecklist({
         hasProject,
         isFreePlan,
         hasFollowed,
-        hasDomain,
+        hasPaymentCard,
+        onAddPaymentCard: () => profileDrawer.open(ProfileTab.Billing),
         isTeamWorkspace: isTeamWorkspace ?? false,
         hasTeamMembers,
         showInviteTeamMemberTask,
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       hasGit,
       hasProject,
       isFreePlan,
       hasFollowed,
-      hasDomain,
+      hasPaymentCard,
       isTeamWorkspace,
       hasTeamMembers,
       showInviteTeamMemberTask,
@@ -298,20 +264,20 @@ export function OnboardingChecklist({
   const completedCount = tasks.filter((t) => t.done).length;
   const progress = completedCount / tasks.length;
 
-  const customDomainResolved =
-    workspaceCacheKey in customDomainByWorkspace ||
-    workspaceCacheKey in customDomainFetchFailedByWorkspace;
   const teamMembersResolved =
     !isTeamWorkspace ||
     Boolean(resolvedTeamDetails) ||
     (activeWorkspaceSlug ? activeWorkspaceSlug in teamMembersFetchFailedByWorkspace : false);
   const checklistSignalsReady =
     hasConnectedGit !== null &&
-    (customDomainResolved || hasDomainFromProjects) &&
     teamMembersResolved;
 
   const handleTaskClick = useCallback(
     (task: OnboardingTask) => {
+      if (task.onClick) {
+        task.onClick();
+        return;
+      }
       if (task.external && task.action) {
         // Mark as followed when clicking the X link
         if (task.action.includes("x.com")) {
@@ -485,7 +451,7 @@ export function OnboardingChecklist({
                         </svg>
                       )}
                     </span>
-                    {task.action && !task.done ? (
+                    {(task.action || task.onClick) && !task.done ? (
                       <button
                         onClick={() => handleTaskClick(task)}
                         className="text-left text-sm text-dash-text-strong transition-colors hover:text-[#3c6ce7]"

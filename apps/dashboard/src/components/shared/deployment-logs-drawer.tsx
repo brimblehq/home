@@ -123,19 +123,7 @@ export function DeploymentLogsDrawer({
   );
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
-  const drawerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
-        onOpenChange(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open, onOpenChange]);
 
   useEffect(() => {
     if (!open) {
@@ -252,7 +240,6 @@ export function DeploymentLogsDrawer({
       <Drawer.Portal>
         <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 flex flex-col outline-none">
           <motion.div
-            ref={drawerRef}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}

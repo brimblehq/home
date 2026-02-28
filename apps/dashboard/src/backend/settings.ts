@@ -119,6 +119,28 @@ function mapWebhooks(payload: any): SettingsWebhookState {
   };
 }
 
+function createEmptyWebhookState(): SettingsWebhookState {
+  return {
+    webhookUrl: "",
+    discordUrl: "",
+    slackUrl: "",
+    groups: [],
+  };
+}
+
+function supportsWebhookPlan(planType?: string): boolean {
+  const normalized = String(planType ?? "").trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    normalized.includes("developer") ||
+    normalized.includes("pro") ||
+    normalized.includes("team")
+  );
+}
+
 function mapCards(payload: any): SettingsPaymentCard[] {
   const data = unwrapData<any[]>(payload) ?? [];
 
@@ -404,10 +426,24 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
       return String(first.value);
     },
     async getWebhooks() {
+      const profile = mapProfile(
+        await client.request(endpoints.authUserMe, { method: "GET" }),
+      );
+      if (!supportsWebhookPlan(profile.subscription?.planType)) {
+        return createEmptyWebhookState();
+      }
+
       const response = await client.request(endpoints.webhooks, { method: "GET" });
       return mapWebhooks(response);
     },
     async updateWebhooks(input) {
+      const profile = mapProfile(
+        await client.request(endpoints.authUserMe, { method: "GET" }),
+      );
+      if (!supportsWebhookPlan(profile.subscription?.planType)) {
+        return createEmptyWebhookState();
+      }
+
       await client.request(endpoints.webhooks, {
         method: "PATCH",
         body: {
@@ -425,6 +461,13 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
       return mapWebhooks(refreshed);
     },
     async testWebhook(input) {
+      const profile = mapProfile(
+        await client.request(endpoints.authUserMe, { method: "GET" }),
+      );
+      if (!supportsWebhookPlan(profile.subscription?.planType)) {
+        return;
+      }
+
       let providerType: "webhook" | "discord" | "slack";
       if (input.type === "custom") {
         providerType = "webhook";
@@ -460,19 +503,21 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
       return getBillingSnapshotInternal(page, options);
     },
     async getSidebarSnapshot(page = 1, options) {
-      const [profileResponse, webhookResult, billingResult] =
-        await Promise.all([
-          client.request(endpoints.authUserMe, { method: "GET" }),
-          client
-            .request(endpoints.webhooks, { method: "GET" })
-            .catch(() => null),
-          getBillingSnapshotInternal(page, options).catch(() => null),
-        ]);
-
+      const profileResponse = await client.request(endpoints.authUserMe, {
+        method: "GET",
+      });
       const profile = mapProfile(profileResponse);
+
+      const [webhookResult, billingResult] = await Promise.all([
+        supportsWebhookPlan(profile.subscription?.planType)
+          ? client.request(endpoints.webhooks, { method: "GET" }).catch(() => null)
+          : Promise.resolve(null),
+        getBillingSnapshotInternal(page, options).catch(() => null),
+      ]);
+
       const webhooks = webhookResult
         ? mapWebhooks(webhookResult)
-        : { webhookUrl: "", discordUrl: "", slackUrl: "", groups: [] };
+        : createEmptyWebhookState();
       const billing = billingResult ?? {
         cards: [],
         providers: [],

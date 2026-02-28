@@ -706,7 +706,7 @@ function ScalingPage() {
         <hr className="-ml-4 mb-6 border-dash-border-soft md:-ml-10" />
         <PlanUpgradePrompt
           feature="Autoscaling"
-          description="Autoscaling automatically adjusts your instance count based on CPU and memory usage. Upgrade your plan to enable autoscaling."
+          description="Upgrade your plan to enable autoscaling."
         />
       </div>
     );

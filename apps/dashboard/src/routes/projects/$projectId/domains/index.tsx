@@ -180,7 +180,7 @@ function ProjectDomainsPage() {
         </TabHeader>
         <PlanUpgradePrompt
           feature="Custom Domains"
-          description="Custom domains allow you to serve your project on your own domain. Upgrade your plan to connect a custom domain."
+          description="Upgrade to connect your own domain to this project."
         />
       </div>
     );

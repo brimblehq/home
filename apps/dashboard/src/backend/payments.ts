@@ -1,4 +1,5 @@
 import config from "@/config";
+import { BackendApiError } from "./errors";
 import type { ApiClient } from "./types";
 import type {
   PaymentsApi,
@@ -32,6 +33,7 @@ export type {
   InvoicePage,
   PurchaseInput,
   PurchaseResult,
+  VerifyTransactionResult,
   UpdateSpendingLimitInput,
   UpdateTeamSpendingLimitInput,
   UpdateTeamSubscriptionInput,
@@ -179,19 +181,77 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
     },
 
     async purchase(input: PurchaseInput): Promise<PurchaseResult> {
-      const res = await client.request<any>(`${base}/purchases`, {
-        method: "POST",
-        body: {
-          items: input.items,
-          payment_method_id: input.payment_method_id,
-        },
-        headers: { "Idempotency-Key": generateIdempotencyKey() },
+      try {
+        const res = await client.request<any>(`${base}/payment/purchase`, {
+          method: "POST",
+          body: {
+            type: input.type,
+            amount: input.amount,
+            metadata: input.metadata,
+            ...(input.team_id ? { team_id: input.team_id } : {}),
+          },
+        });
+        const data = unwrapData<any>(res);
+        return {
+          status: "success",
+          message:
+            typeof res?.message === "string"
+              ? res.message
+              : "Payment processed successfully",
+          reference: String(data?.reference ?? ""),
+          transaction_status: String(
+            data?.status ?? "SUCCESSFUL",
+          ) as PurchaseResult["transaction_status"],
+          amount: Number(data?.amount ?? input.amount ?? 0),
+          type: String(data?.type ?? input.type),
+          metadata:
+            data && typeof data?.metadata === "object" && !Array.isArray(data.metadata)
+              ? data.metadata
+              : {},
+        };
+      } catch (error) {
+        if (!(error instanceof BackendApiError) || error.status !== 402) {
+          throw error;
+        }
+
+        const payload = error.details as any;
+        const data = unwrapData<any>(payload);
+
+        return {
+          status: "pending",
+          message: error.message || "Payment requires confirmation",
+          reference: String(data?.reference ?? ""),
+          transaction_status: String(
+            data?.status ?? "PENDING",
+          ) as PurchaseResult["transaction_status"],
+          amount: Number(data?.amount ?? input.amount ?? 0),
+          type: String(data?.type ?? input.type),
+          metadata:
+            data && typeof data?.metadata === "object" && !Array.isArray(data.metadata)
+              ? data.metadata
+              : {},
+          client_secret:
+            typeof data?.client_secret === "string" ? data.client_secret : undefined,
+        };
+      }
+    },
+
+    async verifyTransaction(reference: string): Promise<VerifyTransactionResult> {
+      const res = await client.request<any>(`${base}/verify-transaction`, {
+        method: "GET",
+        query: { reference },
+        headers: config.apiKey ? { "X-API-Key": config.apiKey } : {},
       });
       const data = unwrapData<any>(res);
       return {
-        success: Boolean(data?.success),
-        requires_action: data?.requires_action,
-        payment_intent_client_secret: data?.payment_intent_client_secret,
+        reference: String(data?.reference ?? reference),
+        status: String(data?.status ?? "PROCESSING") as VerifyTransactionResult["status"],
+        amount: Number(data?.amount ?? 0),
+        type: String(data?.type ?? ""),
+        metadata:
+          data && typeof data?.metadata === "object" && !Array.isArray(data.metadata)
+            ? data.metadata
+            : {},
       };
     },
 

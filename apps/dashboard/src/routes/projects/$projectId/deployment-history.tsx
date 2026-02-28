@@ -19,27 +19,22 @@ import { format, differenceInSeconds } from "date-fns";
 import { TabHeader } from "../../../components/shared/tab-header";
 import { Tooltip } from "../../../components/shared/tooltip";
 import { DateRangePicker } from "../../../components/shared/date-range-picker";
-import { DeploymentLogsDrawer } from "../../../components/shared/deployment-logs-drawer";
 import {
   listDeploymentsServerFn,
   redeployServerFn,
   cancelDeploymentServerFn,
-  listDeploymentRunLogsServerFn,
 } from "@/server/deployments/actions";
 import type {
   PaginatedDeploymentsResponse,
   DeploymentLog,
 } from "@/backend/deployments";
-import type { DeploymentDrawerLogEntry } from "@/utils/deployment-logs";
-import { getSupabaseClient } from "@/lib/supabase";
-import { mapDeploymentRunLogsToDrawerEntries } from "@/utils/deployment-logs";
 import {
   defaultDeploymentHistoryDateRange,
   deploymentStatusColor as statusColor,
   deploymentStatusLabel as statusLabel,
   formatDeploymentTimeAgo,
 } from "@/utils/deployment-history";
-import config from "@/config";
+import { useProjectDeploymentLogsDrawer } from "@/contexts/project-deployment-logs-drawer-context";
 
 const parentRoute = getRouteApi("/projects/$projectId");
 
@@ -566,14 +561,6 @@ function DeploymentHistoryPage() {
   );
   const [environment, setEnvironment] = useState("All");
   const [status, setStatus] = useState("All");
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedDeployment, setSelectedDeployment] =
-    useState<DeploymentLog | null>(null);
-  const [drawerLogsByDeploymentId, setDrawerLogsByDeploymentId] = useState<
-    Record<string, DeploymentDrawerLogEntry[]>
-  >({});
-  const [drawerLogsLoading, setDrawerLogsLoading] = useState(false);
-  const [drawerLogsError, setDrawerLogsError] = useState<string | null>(null);
   const [isPageVisible, setIsPageVisible] = useState(() => {
     if (typeof document === "undefined") {
       return true;
@@ -581,15 +568,7 @@ function DeploymentHistoryPage() {
 
     return document.visibilityState === "visible";
   });
-
-  const getDeploymentRunLogs = useServerFn(
-    listDeploymentRunLogsServerFn as any,
-  ) as (args: {
-    data: {
-      logId: string;
-      workspace?: string;
-    };
-  }) => Promise<{ entries: DeploymentDrawerLogEntry[] }>;
+  const { drawerOpen, openDeploymentDrawer } = useProjectDeploymentLogsDrawer();
 
   const projectId = project?.id || project?.name;
 
@@ -636,18 +615,6 @@ function DeploymentHistoryPage() {
 
         setDeployments(result);
         setCurrentPage(result.currentPage);
-        setSelectedDeployment((prev) => {
-          if (!prev) {
-            return prev;
-          }
-
-          const updated = result.items.find((item) => item.id === prev.id);
-          if (!updated) {
-            return prev;
-          }
-
-          return updated;
-        });
       } catch {
         // keep existing data
       } finally {
@@ -703,108 +670,6 @@ function DeploymentHistoryPage() {
       (d.message?.toLowerCase().includes(q))
     );
   });
-
-  let drawerStatus: "Successful" | "Failed" | "Pending" = "Pending";
-  const selectedStatus = selectedDeployment?.status?.toLowerCase();
-
-  if (selectedStatus === "active" || selectedStatus === "ready") {
-    drawerStatus = "Successful";
-  } else if (selectedStatus === "failed") {
-    drawerStatus = "Failed";
-  }
-
-  const selectedDeploymentLogs = selectedDeployment
-    ? drawerLogsByDeploymentId[selectedDeployment.id] ?? []
-    : [];
-
-  const fetchLogsForDeployment = useCallback(
-    async (deployment: DeploymentLog) => {
-      if (!deployment.id) {
-        setDrawerLogsError("Missing deployment log ID.");
-        setDrawerLogsLoading(false);
-        return;
-      }
-
-      const cached = drawerLogsByDeploymentId[deployment.id];
-      if (cached) {
-        setDrawerLogsError(null);
-        setDrawerLogsLoading(false);
-        return;
-      }
-
-      setDrawerLogsLoading(true);
-      setDrawerLogsError(null);
-
-      try {
-        const result = await getDeploymentRunLogs({
-          data: {
-            logId: deployment.id,
-            workspace,
-          },
-        });
-
-        setDrawerLogsByDeploymentId((prev) => ({
-          ...prev,
-          [deployment.id]: Array.isArray(result?.entries) ? result.entries : [],
-        }));
-      } catch (error) {
-        let message = "Failed to load deployment logs.";
-        if (error instanceof Error && error.message.trim()) {
-          message = error.message;
-        }
-        setDrawerLogsError(message);
-      } finally {
-        setDrawerLogsLoading(false);
-      }
-    },
-    [drawerLogsByDeploymentId, getDeploymentRunLogs, workspace],
-  );
-
-  // Supabase realtime: subscribe to new log rows while drawer is open
-  useEffect(() => {
-    if (!drawerOpen || !selectedDeployment) return;
-
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
-    const logId = selectedDeployment.id;
-    const channel = supabase
-      .channel(`deployment-logs-${logId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: config.supabaseTableName,
-        },
-        (payload) => {
-          const row = payload.new as any;
-          if (row.logId !== logId) return;
-
-          const [entry] = mapDeploymentRunLogsToDrawerEntries([row]);
-          if (!entry) return;
-
-          setDrawerLogsByDeploymentId((prev) => ({
-            ...prev,
-            [logId]: [...(prev[logId] ?? []), entry],
-          }));
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [drawerOpen, selectedDeployment]);
-
-  const openDeploymentDrawer = useCallback(
-    (deployment: DeploymentLog) => {
-      setSelectedDeployment(deployment);
-      setDrawerOpen(true);
-      void fetchLogsForDeployment(deployment);
-    },
-    [fetchLogsForDeployment],
-  );
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -968,18 +833,6 @@ function DeploymentHistoryPage() {
         </div>
       )}
 
-      {/* Deployment logs drawer */}
-      {selectedDeployment && (
-        <DeploymentLogsDrawer
-          open={drawerOpen}
-          onOpenChange={setDrawerOpen}
-          environment={selectedDeployment.environment || "Production"}
-          status={drawerStatus}
-          logs={selectedDeploymentLogs}
-          loading={drawerLogsLoading}
-          emptyMessage={drawerLogsError || "No logs available for this deployment yet."}
-        />
-      )}
     </div>
   );
 }

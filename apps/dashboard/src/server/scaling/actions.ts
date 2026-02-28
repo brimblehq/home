@@ -2,6 +2,24 @@ import { createServerFn } from "@tanstack/react-start";
 import type { ScalingGroup, BackendApi } from "@/backend";
 import { withTokenRefresh } from "@/server/shared/backend";
 
+function supportsAutoscalingPlan(planType?: string) {
+  const normalized = String(planType ?? "").trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    normalized.includes("developer") ||
+    normalized.includes("pro") ||
+    normalized.includes("team")
+  );
+}
+
+async function canUseAutoscaling(api: BackendApi) {
+  const profile = await api.settings.getProfile();
+  return supportsAutoscalingPlan(profile.subscription?.planType);
+}
+
 async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
   const workspaceSlug = workspace?.trim().toLowerCase();
   if (!workspaceSlug) {
@@ -23,6 +41,10 @@ export const listScalingGroupsServerFn = createServerFn({
   const payload = data as { workspace?: string } | undefined;
 
   return withTokenRefresh(async (api) => {
+    if (!(await canUseAutoscaling(api))) {
+      return { items: [], message: null };
+    }
+
     const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
     return api.scaling.list({ teamId });
   });
@@ -54,6 +76,10 @@ export const saveScalingGroupServerFn = createServerFn({
   }
 
   return withTokenRefresh(async (api) => {
+    if (!(await canUseAutoscaling(api))) {
+      throw new Error("Autoscaling is not available on your current plan");
+    }
+
     const teamId = await resolveTeamIdFromWorkspace(api, payload.workspace);
     const input = {
       teamId,
@@ -84,6 +110,10 @@ export const toggleScalingGroupServerFn = createServerFn({
   }
 
   return withTokenRefresh(async (api) => {
+    if (!(await canUseAutoscaling(api))) {
+      throw new Error("Autoscaling is not available on your current plan");
+    }
+
     const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
     return api.scaling.toggle(groupId, {
       active: Boolean(payload?.active),
@@ -102,6 +132,10 @@ export const deleteScalingGroupServerFn = createServerFn({
   }
 
   return withTokenRefresh(async (api) => {
+    if (!(await canUseAutoscaling(api))) {
+      throw new Error("Autoscaling is not available on your current plan");
+    }
+
     const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
     return api.scaling.remove(groupId, { teamId });
   });

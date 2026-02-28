@@ -65,7 +65,7 @@ export function TimeSeriesChart({
   if (chartData.length === 0) return null;
 
   return (
-    <ResponsiveContainer width="100%" height={338}>
+    <ResponsiveContainer width="100%" height={338} minWidth={0} minHeight={1}>
       <BarChart
         data={chartData}
         margin={{ top: 10, right: 10, left: 10, bottom: 0 }}

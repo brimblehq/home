@@ -132,6 +132,21 @@ export const purchaseServerFn = createServerFn({
   });
 });
 
+export const verifyTransactionServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as { reference?: string } | undefined;
+  const reference = payload?.reference?.trim();
+
+  if (!reference) {
+    throw new Error("Transaction reference is required");
+  }
+
+  return withTokenRefresh(async (api) => {
+    return api.payments.verifyTransaction(reference);
+  });
+});
+
 export const updateSpendingLimitServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {

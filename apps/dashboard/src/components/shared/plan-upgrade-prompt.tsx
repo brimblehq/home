@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Lock } from "lucide-react";
-import { DashButton } from "./dash-button";
+import { LockSimple } from "@phosphor-icons/react";
+import { GlossyButton } from "./glossy-button";
 import { ChangePlanModal } from "./change-plan-modal";
 import { usePlanGate } from "@/hooks/use-plan-gate";
 
@@ -23,19 +23,20 @@ export function PlanUpgradePrompt({
   const currentPlan = PLAN_DISPLAY[planKey] ?? "Free";
 
   return (
-    <div className="flex max-w-[488px] flex-col items-start gap-3 rounded-lg border border-dash-border bg-dash-bg-elevated p-6">
-      <div className="flex size-10 items-center justify-center rounded-full bg-dash-bg">
-        <Lock className="size-4 text-dash-text-faded" />
-      </div>
-      <h3 className="text-sm font-medium leading-5 text-dash-text-strong">
+    <div className="flex flex-col items-center justify-center py-20">
+      <LockSimple
+        weight="fill"
+        className="mb-4 size-10 text-dash-text-extra-faded opacity-40"
+      />
+      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
         {feature} is not available on your current plan
       </h3>
-      <p className="text-sm leading-5 text-dash-text-faded">
+      <p className="mb-5 max-w-[320px] text-center text-sm text-dash-text-faded">
         {description ?? `Upgrade your plan to access ${feature.toLowerCase()}.`}
       </p>
-      <DashButton onClick={() => setChangePlanOpen(true)}>
+      <GlossyButton variant="blue" onClick={() => setChangePlanOpen(true)}>
         Upgrade plan
-      </DashButton>
+      </GlossyButton>
 
       <ChangePlanModal
         open={changePlanOpen}

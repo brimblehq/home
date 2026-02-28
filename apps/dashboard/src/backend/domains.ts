@@ -90,7 +90,6 @@ export interface SearchDomainResult {
 export interface PurchaseDomainInput {
   name: string;
   duration: number;
-  cardId: string;
   projectId?: string;
   privacyEnabled: boolean;
   autoRenewal: boolean;
@@ -494,7 +493,6 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
       const body = {
         name: input.name,
         duration: input.duration,
-        cardId: input.cardId,
         ...(input.projectId ? { projectId: input.projectId } : {}),
         privacyEnabled: input.privacyEnabled,
         autoRenewal: input.autoRenewal,

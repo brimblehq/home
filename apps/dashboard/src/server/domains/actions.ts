@@ -249,7 +249,6 @@ export const purchaseDomainServerFn = createServerFn({
         workspace?: string;
         name: string;
         duration: number;
-        cardId: string;
         projectId?: string;
         privacyEnabled: boolean;
         autoRenewal: boolean;
@@ -261,17 +260,11 @@ export const purchaseDomainServerFn = createServerFn({
     throw new Error("Domain name is required");
   }
 
-  const cardId = payload?.cardId?.trim();
-  if (!cardId) {
-    throw new Error("Payment method is required");
-  }
-
   return withTokenRefresh(async (api) => {
     const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
     const requestPayload = {
       name,
       duration: payload?.duration ?? 1,
-      cardId,
       projectId: payload?.projectId,
       privacyEnabled: payload?.privacyEnabled ?? false,
       autoRenewal: payload?.autoRenewal ?? false,

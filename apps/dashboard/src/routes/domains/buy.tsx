@@ -166,7 +166,6 @@ function BuyDomainPage() {
       workspace?: string;
       name: string;
       duration: number;
-      cardId: string;
       projectId?: string;
       privacyEnabled: boolean;
       autoRenewal: boolean;
@@ -180,6 +179,7 @@ function BuyDomainPage() {
     last4: m.card?.last4 ?? m.last4,
     preferred: m.is_default,
   }));
+  const defaultCard = cards.find((c) => c.preferred) ?? cards[0] ?? null;
   const workspace = getWorkspaceFromSearch({ searchStr });
 
   const [query, setQuery] = useState("");
@@ -189,10 +189,6 @@ function BuyDomainPage() {
   const [hasSearched, setHasSearched] = useState(false);
   const [purchaseTarget, setPurchaseTarget] = useState<DomainResult | null>(null);
   const [years, setYears] = useState(1);
-  const [selectedCardId, setSelectedCardId] = useState(() => {
-    const preferred = cards.find((c) => c.preferred);
-    return preferred?.id ?? cards[0]?.id ?? "";
-  });
   const [privacyEnabled, setPrivacyEnabled] = useState(false);
   const [autoRenewal, setAutoRenewal] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
@@ -242,13 +238,10 @@ function BuyDomainPage() {
     setYears(isAiDomain(domain.domainName) ? 2 : 1);
     setPrivacyEnabled(false);
     setAutoRenewal(false);
-
-    const preferred = cards.find((c) => c.preferred);
-    setSelectedCardId(preferred?.id ?? cards[0]?.id ?? "");
   }
 
   async function handlePurchase() {
-    if (!purchaseTarget || !selectedCardId || purchasing) return;
+    if (!purchaseTarget || !defaultCard || purchasing) return;
 
     setPurchasing(true);
 
@@ -258,7 +251,6 @@ function BuyDomainPage() {
           ...(workspace ? { workspace } : {}),
           name: purchaseTarget.domainName,
           duration: years,
-          cardId: selectedCardId,
           privacyEnabled: effectivePrivacy,
           autoRenewal,
         },
@@ -366,11 +358,14 @@ function BuyDomainPage() {
         <div>
           {results.length > 0 ? (
             <>
-              <p className="mb-3 text-sm text-dash-text-faded">
+              <p className="mb-1 text-sm text-dash-text-faded">
                 Showing results for{" "}
                 <span className="font-medium text-dash-text-strong">
                   {searchedQuery}
                 </span>
+              </p>
+              <p className="mb-3 text-xs text-dash-text-extra-faded">
+                Only domains available for purchase are shown. If you don't see a domain, it's likely already taken.
               </p>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {paginatedResults.map((result, i) => (
@@ -436,29 +431,23 @@ function BuyDomainPage() {
               <label className="text-sm text-dash-text-faded">
                 Payment method
               </label>
-              {cards.length > 0 ? (
-                cards.length === 1 ? (
+              {defaultCard ? (
+                <>
                   <div className="flex items-center gap-3 rounded-[4px] border-[0.5px] border-dash-border px-3.5 py-2.5">
                     <CardChip />
                     <div className="flex flex-col">
                       <span className="text-sm font-medium text-dash-text-strong">
-                        {formatCardType(cards[0].cardType)}
+                        {formatCardType(defaultCard.cardType)}
                       </span>
                       <span className="text-xs text-dash-text-faded">
-                        ending in {cards[0].last4 ?? "****"}
+                        ending in {defaultCard.last4 ?? "****"}
                       </span>
                     </div>
                   </div>
-                ) : (
-                  <Dropdown
-                    value={selectedCardId}
-                    options={cards.map((card) => ({
-                      id: card.id,
-                      label: `${formatCardType(card.cardType)} ending in ${card.last4 ?? "****"}`,
-                    }))}
-                    onChange={(id) => setSelectedCardId(id)}
-                  />
-                )
+                  <p className="text-xs text-dash-text-extra-faded">
+                    Domain purchases use your available saved card automatically.
+                  </p>
+                </>
               ) : (
                 <div className="rounded-[4px] border-[0.5px] border-dash-border px-4 py-3 text-center">
                   <p className="text-sm text-dash-text-faded">
@@ -550,7 +539,7 @@ function BuyDomainPage() {
           <GlossyButton
             variant="blue"
             onClick={handlePurchase}
-            disabled={!selectedCardId || purchasing}
+            disabled={!defaultCard || purchasing}
             loading={purchasing}
             loadingLabel="Purchasing..."
           >

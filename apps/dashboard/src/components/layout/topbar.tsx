@@ -18,6 +18,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../../hooks/use-theme";
 import { DashButton } from "../shared/dash-button";
+import { Avatar } from "../shared/avatar";
 import { useScoutBar } from "../../contexts/scoutbar-context";
 import config from "@/config";
 import type { SettingsSidebarSnapshot } from "@/backend/settings";
@@ -207,11 +208,7 @@ function WorkspaceSwitcher({
     }
   }, [open]);
 
-  const personalAvatar =
-    profile?.avatarUrl ||
-    `${config.avatarUrl}/adventurer-neutral/svg?seed=${encodeURIComponent(
-      profile?.username || profile?.firstName || profile?.email || "user",
-    )}`;
+  const personalAvatarSeed = profile?.username || profile?.firstName || profile?.email || "user";
 
   const personalName =
     profile?.username ||
@@ -225,11 +222,8 @@ function WorkspaceSwitcher({
   const activeTeam =
     workspaces.find((team) => team.slug === activeWorkspaceSlug) ?? null;
 
-  const activeWorkspaceAvatar = activeTeam?.avatarUrl
-    ? activeTeam.avatarUrl
-    : activeTeam
-      ? `${config.avatarUrl}/initials/svg?seed=${encodeURIComponent(activeTeam.name)}`
-      : personalAvatar;
+  const activeAvatarSrc = activeTeam?.avatarUrl || profile?.avatarUrl;
+  const activeAvatarSeed = activeTeam ? activeTeam.name : personalAvatarSeed;
 
   const activeWorkspaceLabel = activeTeam
     ? `${toTitleCase(activeTeam.name)}'s Workspace`
@@ -264,8 +258,9 @@ function WorkspaceSwitcher({
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 text-sm font-medium text-dash-text-strong"
       >
-        <img
-          src={activeWorkspaceAvatar}
+        <Avatar
+          src={activeAvatarSrc}
+          fallbackSeed={activeAvatarSeed}
           alt=""
           className="size-6 rounded-full object-cover"
         />
@@ -316,8 +311,9 @@ function WorkspaceSwitcher({
                   !activeTeam ? "bg-dash-bg-elevated" : ""
                 }`}
               >
-                <img
-                  src={personalAvatar}
+                <Avatar
+                  src={profile?.avatarUrl}
+                  fallbackSeed={personalAvatarSeed}
                   alt=""
                   className="size-6 shrink-0 rounded-full object-cover"
                 />
@@ -336,10 +332,6 @@ function WorkspaceSwitcher({
               </div>
               {filteredTeams.length > 0 ? (
                 filteredTeams.map((team) => {
-                  const teamAvatar =
-                    team.avatarUrl ||
-                    `${config.avatarUrl}/initials/svg?seed=${encodeURIComponent(team.name)}`;
-
                   return (
                     <button
                       key={team.id || team.name}
@@ -355,8 +347,9 @@ function WorkspaceSwitcher({
                           : ""
                       }`}
                     >
-                      <img
-                        src={teamAvatar}
+                      <Avatar
+                        src={team.avatarUrl}
+                        fallbackSeed={team.name}
                         alt=""
                         className="size-6 shrink-0 rounded-full object-cover"
                       />

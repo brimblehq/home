@@ -83,9 +83,18 @@ export interface SwapPlanInput {
   target_plan: string;
 }
 
+export type PurchaseType =
+  | "PURCHASE_DOMAIN"
+  | "RENEW_DOMAIN"
+  | "SERVICE_PURCHASE"
+  | "LLM_TOKENS"
+  | "BUILD_MINUTES";
+
 export interface PurchaseInput {
-  items: Array<{ id: string; quantity?: number }>;
-  payment_method_id: string;
+  type: PurchaseType;
+  amount: number;
+  metadata: Record<string, unknown>;
+  team_id?: string;
 }
 
 export interface UpdateSpendingLimitInput {
@@ -106,9 +115,22 @@ export interface UpdateTeamSubscriptionInput {
 /* ── Purchase result (SCA handling) ── */
 
 export interface PurchaseResult {
-  success: boolean;
-  requires_action?: boolean;
-  payment_intent_client_secret?: string;
+  status: "success" | "pending";
+  message: string;
+  reference: string;
+  transaction_status: "PROCESSING" | "SUCCESSFUL" | "PENDING" | "FAILED";
+  amount: number;
+  type: string;
+  metadata: Record<string, unknown>;
+  client_secret?: string;
+}
+
+export interface VerifyTransactionResult {
+  reference: string;
+  status: "PROCESSING" | "SUCCESSFUL" | "PENDING" | "FAILED" | "REFUNDED";
+  amount: number;
+  type: string;
+  metadata: Record<string, unknown>;
 }
 
 /* ── API interface ── */
@@ -130,6 +152,7 @@ export interface PaymentsApi {
     team_id?: string;
   }): Promise<InvoicePage>;
   purchase(input: PurchaseInput): Promise<PurchaseResult>;
+  verifyTransaction(reference: string): Promise<VerifyTransactionResult>;
   updateSpendingLimit(input: UpdateSpendingLimitInput): Promise<void>;
   updateTeamSpendingLimit(input: UpdateTeamSpendingLimitInput): Promise<void>;
   updateTeamSubscription(input: UpdateTeamSubscriptionInput): Promise<void>;
