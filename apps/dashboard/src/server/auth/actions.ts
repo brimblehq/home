@@ -11,15 +11,10 @@ import config from "@/config";
 import {
   clearServerAuthCookies,
   getServerAccessToken,
+  getServerRefreshToken,
   setServerAuthCookies,
 } from "./cookies";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
+import { getServerBackendApi } from "@/server/shared/backend";
 
 export const requestLoginOtpServerFn = createServerFn({ method: "POST" }).handler(
   async ({ data }) => {
@@ -66,8 +61,9 @@ export const verifyEmailCodeServerFn = createServerFn({ method: "POST" }).handle
 );
 
 export const logoutServerFn = createServerFn({ method: "POST" }).handler(async () => {
+  const refreshToken = getServerRefreshToken();
   clearServerAuthCookies();
-  await getServerBackendApi().auth.logout().catch(() => {});
+  await getServerBackendApi().auth.logout(refreshToken ?? undefined).catch(() => {});
   return { ok: true } as const;
 });
 
@@ -88,6 +84,22 @@ export const getCurrentSessionServerFn = createServerFn({ method: "GET" }).handl
     return {
       user: session.user,
     };
+  },
+);
+
+export const refreshSessionServerFn = createServerFn({ method: "POST" }).handler(
+  async () => {
+    const refreshToken = getServerRefreshToken();
+    if (!refreshToken) return null;
+
+    try {
+      const session = await getServerBackendApi().auth.refreshTokens(refreshToken);
+      setServerAuthCookies(session);
+      return { user: session.user };
+    } catch {
+      clearServerAuthCookies();
+      return null;
+    }
   },
 );
 

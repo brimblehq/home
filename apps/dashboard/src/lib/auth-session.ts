@@ -1,11 +1,6 @@
 import type { AuthSession } from "@/backend";
 import config from "@/config";
 
-const cookieMaxAgeSeconds = {
-  access: 60 * 60 * 24 * 14,
-  refresh: 60 * 60 * 24 * 30 * 12,
-} as const;
-
 function setCookie(name: string, value: string, maxAge: number) {
   if (typeof document === "undefined") return;
 
@@ -20,11 +15,11 @@ function clearCookie(name: string) {
 
 export function persistAuthSession(session: AuthSession) {
   if (session.accessToken) {
-    setCookie(config.accessTokenCookie, session.accessToken, cookieMaxAgeSeconds.access);
+    setCookie(config.accessTokenCookie, session.accessToken, config.accessTokenTtl);
   }
 
   if (session.refreshToken) {
-    setCookie(config.refreshTokenCookie, session.refreshToken, cookieMaxAgeSeconds.refresh);
+    setCookie(config.refreshTokenCookie, session.refreshToken, config.refreshTokenTtl);
   }
 }
 

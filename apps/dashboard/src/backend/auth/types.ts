@@ -48,7 +48,8 @@ export interface AuthApi {
   verifyEmailCode(input: VerifyEmailCodeInput): Promise<AuthSession>;
   resendCode(email: string): Promise<void>;
   lookup(input: UserLookupInput): Promise<UserLookupResult>;
-  logout(): Promise<void>;
+  refreshTokens(refreshToken: string): Promise<AuthSession>;
+  logout(refreshToken?: string): Promise<void>;
   getCurrentSession(): Promise<AuthSession | null>;
 }
 

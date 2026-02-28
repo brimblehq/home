@@ -1,14 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
+import { withTokenRefresh } from "@/server/shared/backend";
 
 export const listTagsServerFn = createServerFn({
   method: "GET",
@@ -16,17 +7,19 @@ export const listTagsServerFn = createServerFn({
   const payload = data as { workspace?: string } | undefined;
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
 
-  let teamId: string | undefined;
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
 
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  return getServerBackendApi().tags.list({ teamId });
+    return api.tags.list({ teamId });
+  });
 });
 
 export const createTagServerFn = createServerFn({
@@ -45,20 +38,23 @@ export const createTagServerFn = createServerFn({
   }
 
   const workspaceSlug = payload.workspace?.trim().toLowerCase();
-  let teamId: string | undefined;
 
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
+
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  return getServerBackendApi().tags.create({
-    name: payload.name.trim(),
-    color: payload.color,
-    teamId,
+    return api.tags.create({
+      name: payload.name.trim(),
+      color: payload.color,
+      teamId,
+    });
   });
 });
 
@@ -78,10 +74,12 @@ export const updateTagServerFn = createServerFn({
     throw new Error("Tag ID is required");
   }
 
-  return getServerBackendApi().tags.update(tagId, {
-    name: payload?.name,
-    color: payload?.color,
-  });
+  return withTokenRefresh((api) =>
+    api.tags.update(tagId, {
+      name: payload?.name,
+      color: payload?.color,
+    }),
+  );
 });
 
 export const deleteTagServerFn = createServerFn({
@@ -94,8 +92,10 @@ export const deleteTagServerFn = createServerFn({
     throw new Error("Tag ID is required");
   }
 
-  await getServerBackendApi().tags.remove(tagId);
-  return { success: true };
+  return withTokenRefresh(async (api) => {
+    await api.tags.remove(tagId);
+    return { success: true };
+  });
 });
 
 export const toggleTagAssignmentServerFn = createServerFn({
@@ -118,5 +118,5 @@ export const toggleTagAssignmentServerFn = createServerFn({
     throw new Error("Project ID is required");
   }
 
-  return getServerBackendApi().tags.toggleAssignment({ tagId, projectId });
+  return withTokenRefresh((api) => api.tags.toggleAssignment({ tagId, projectId }));
 });

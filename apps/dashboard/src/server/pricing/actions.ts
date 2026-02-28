@@ -1,23 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
+import { withTokenRefresh } from "@/server/shared/backend";
 import { DEFAULT_PRICING } from "@/utils/default-pricing";
 import type { Pricing } from "@/types/pricing";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
 
 export const getSubscriptionSpecsServerFn = createServerFn({
   method: "GET",
 }).handler(async (): Promise<Pricing> => {
   try {
-    const api = getServerBackendApi();
-    const res = await api.payments.getSubscriptionSpecs();
+    const res = await withTokenRefresh((api) =>
+      api.payments.getSubscriptionSpecs(),
+    );
     return normalizePricing(res);
   } catch {
     return DEFAULT_PRICING;

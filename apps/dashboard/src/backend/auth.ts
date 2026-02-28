@@ -24,7 +24,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
     login: "/auth/beta/login",
     signup: "/auth/beta/signup",
     verifyEmail: "/auth/beta/verify-email",
-    logoutCore: "/core/v1/logout",
+    refresh: "/auth/beta/refresh",
     logoutAuth: "/auth/beta/logout",
     me: "/auth/user/me",
     lookup: "/auth/beta/lookup",
@@ -114,11 +114,18 @@ export function createAuthApi(client: ApiClient): AuthApi {
         return { available: false, message };
       }
     },
-    async logout() {
-      await Promise.allSettled([
-        client.request(endpoints.logoutCore, { method: "POST" }),
-        client.request(endpoints.logoutAuth, { method: "POST" }),
-      ]);
+    async refreshTokens(refreshToken) {
+      const response = await client.request(endpoints.refresh, {
+        method: "POST",
+        body: { refresh_token: refreshToken },
+      });
+      return mapSession(response);
+    },
+    async logout(refreshToken?) {
+      await client.request(endpoints.logoutAuth, {
+        method: "POST",
+        body: refreshToken ? { refresh_token: refreshToken } : {},
+      });
     },
     async getCurrentSession() {
       try {

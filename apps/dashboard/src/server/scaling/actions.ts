@@ -1,22 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi, type ScalingGroup } from "@/backend";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
+import type { ScalingGroup, BackendApi } from "@/backend";
+import { withTokenRefresh } from "@/server/shared/backend";
 
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
-
-async function resolveTeamIdFromWorkspace(workspace?: string) {
+async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
   const workspaceSlug = workspace?.trim().toLowerCase();
   if (!workspaceSlug) {
     return undefined;
   }
 
-  const teams = await getServerBackendApi().workspaces.list();
+  const teams = await api.workspaces.list();
   const match = teams.items.find((item) => item.slug === workspaceSlug);
   if (!match?.id) {
     return undefined;
@@ -29,8 +21,11 @@ export const listScalingGroupsServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
   const payload = data as { workspace?: string } | undefined;
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  return getServerBackendApi().scaling.list({ teamId });
+
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    return api.scaling.list({ teamId });
+  });
 });
 
 type SaveScalingGroupRequest = {
@@ -58,23 +53,25 @@ export const saveScalingGroupServerFn = createServerFn({
     throw new Error("Scaling group name is required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload.workspace);
-  const input = {
-    teamId,
-    name,
-    active: Boolean(payload.active),
-    replicas: payload.replicas,
-    minContainers: payload.minContainers,
-    maxContainers: payload.maxContainers,
-    maxCpuThreshold: payload.maxCpuThreshold,
-    maxMemoryThreshold: payload.maxMemoryThreshold,
-  };
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload.workspace);
+    const input = {
+      teamId,
+      name,
+      active: Boolean(payload.active),
+      replicas: payload.replicas,
+      minContainers: payload.minContainers,
+      maxContainers: payload.maxContainers,
+      maxCpuThreshold: payload.maxCpuThreshold,
+      maxMemoryThreshold: payload.maxMemoryThreshold,
+    };
 
-  if (payload.id?.trim()) {
-    return getServerBackendApi().scaling.update(payload.id.trim(), input);
-  }
+    if (payload.id?.trim()) {
+      return api.scaling.update(payload.id.trim(), input);
+    }
 
-  return getServerBackendApi().scaling.create(input);
+    return api.scaling.create(input);
+  });
 });
 
 export const toggleScalingGroupServerFn = createServerFn({
@@ -86,10 +83,12 @@ export const toggleScalingGroupServerFn = createServerFn({
     throw new Error("Scaling group ID is required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  return getServerBackendApi().scaling.toggle(groupId, {
-    active: Boolean(payload?.active),
-    teamId,
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    return api.scaling.toggle(groupId, {
+      active: Boolean(payload?.active),
+      teamId,
+    });
   });
 });
 
@@ -102,8 +101,10 @@ export const deleteScalingGroupServerFn = createServerFn({
     throw new Error("Scaling group ID is required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  return getServerBackendApi().scaling.remove(groupId, { teamId });
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    return api.scaling.remove(groupId, { teamId });
+  });
 });
 
 export type { ScalingGroup };

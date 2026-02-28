@@ -15,18 +15,22 @@ export function getServerAccessToken(): string | null {
   return getCookie(config.accessTokenCookie) ?? null;
 }
 
+export function getServerRefreshToken(): string | null {
+  return getCookie(config.refreshTokenCookie) ?? null;
+}
+
 export function setServerAuthCookies(session: AuthSession) {
   if (session.accessToken) {
     setCookie(config.accessTokenCookie, session.accessToken, {
       ...cookieOptions,
-      maxAge: 60 * 60 * 24 * 14,
+      maxAge: config.accessTokenTtl,
     });
   }
 
   if (session.refreshToken) {
     setCookie(config.refreshTokenCookie, session.refreshToken, {
       ...cookieOptions,
-      maxAge: 60 * 60 * 24 * 30 * 12,
+      maxAge: config.refreshTokenTtl,
     });
   }
 }

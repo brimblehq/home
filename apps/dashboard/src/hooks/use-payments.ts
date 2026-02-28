@@ -84,11 +84,13 @@ export function useBillEstimate() {
   });
 }
 
-export function useInvoices(cursor?: string | null, teamId?: string) {
+export function useInvoices(cursor?: string | null, teamId?: string, initialData?: any) {
+  const isFirstPage = !cursor;
   return useQuery({
     queryKey: paymentKeys.invoices(cursor ?? null, teamId),
     queryFn: () => getInvoices({ data: { cursor: cursor ?? null, ...(teamId ? { team_id: teamId } : {}) } }),
     placeholderData: (prev: any) => prev,
+    ...(initialData && isFirstPage ? { initialData } : {}),
   });
 }
 

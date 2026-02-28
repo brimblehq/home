@@ -2,14 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createBackendApi } from "@/backend";
 import type { McpServerListResult, McpServerTemplate } from "@/backend/mcp";
 import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
+import { withTokenRefresh } from "@/server/shared/backend";
 
 function getPublicBackendApi() {
   return createBackendApi({
@@ -41,7 +34,9 @@ export const listMcpTemplatesServerFn = createServerFn({
   } as const;
 
   try {
-    return await (getServerBackendApi().mcp.listTemplates(request) as Promise<McpServerListResult>);
+    return await withTokenRefresh(
+      (api) => api.mcp.listTemplates(request) as Promise<McpServerListResult>,
+    );
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
@@ -64,7 +59,9 @@ export const getMcpTemplateServerFn = createServerFn({
     throw new Error("MCP template id is required");
   }
 
-  return getServerBackendApi().mcp.getTemplate(id) as Promise<McpServerTemplate | null>;
+  return withTokenRefresh(
+    (api) => api.mcp.getTemplate(id) as Promise<McpServerTemplate | null>,
+  );
 });
 
 export const deployMcpTemplateServerFn = createServerFn({
@@ -101,26 +98,29 @@ export const deployMcpTemplateServerFn = createServerFn({
   }
 
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
-  let teamId: string | undefined;
 
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
+
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  return getServerBackendApi().projects.create({
-    git: "github",
-    type: "clone",
-    clone: {
-      name: templateName,
-      private: false,
-    },
-    installationId,
-    template,
-    serviceType: "mcp",
-    ...(teamId ? { teamId } : {}),
-  } as any);
+    return api.projects.create({
+      git: "github",
+      type: "clone",
+      clone: {
+        name: templateName,
+        private: false,
+      },
+      installationId,
+      template,
+      serviceType: "mcp",
+      ...(teamId ? { teamId } : {}),
+    } as any);
+  });
 });

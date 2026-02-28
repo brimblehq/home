@@ -1,5 +1,5 @@
 import { redirect } from "@tanstack/react-router";
-import { getCurrentSessionServerFn } from "@/server/auth/actions";
+import { getCurrentSessionServerFn, refreshSessionServerFn } from "@/server/auth/actions";
 
 const publicRoutes = new Set<string>(["/login", "/signup"]);
 
@@ -34,6 +34,11 @@ export async function enforceRouteAuth(pathname: string, search?: string) {
     session = cachedSession;
   } else {
     session = await getCurrentSessionServerFn();
+
+    if (!session) {
+      session = await refreshSessionServerFn();
+    }
+
     cachedSession = session || null;
     cacheTimestamp = now;
   }

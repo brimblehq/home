@@ -1,14 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
+import { withTokenRefresh } from "@/server/shared/backend";
 
 export const getProjectEnvironmentServerFn = createServerFn({
   method: "GET",
@@ -26,7 +17,10 @@ export const getProjectEnvironmentServerFn = createServerFn({
   }
 
   const target = payload?.target?.trim() || undefined;
-  return getServerBackendApi().environments.get(projectId, { target });
+
+  return withTokenRefresh(async (api) => {
+    return api.environments.get(projectId, { target });
+  });
 });
 
 export const listProjectEnvironmentTargetsServerFn = createServerFn({
@@ -39,7 +33,9 @@ export const listProjectEnvironmentTargetsServerFn = createServerFn({
     throw new Error("Project ID is required");
   }
 
-  return getServerBackendApi().environments.listTargets(projectId);
+  return withTokenRefresh(async (api) => {
+    return api.environments.listTargets(projectId);
+  });
 });
 
 export const addProjectEnvironmentVariablesServerFn = createServerFn({
@@ -66,10 +62,12 @@ export const addProjectEnvironmentVariablesServerFn = createServerFn({
     throw new Error("At least one environment variable is required");
   }
 
-  return getServerBackendApi().environments.add(projectId, {
-    target: payload?.target,
-    editor: Boolean(payload?.editor),
-    environments,
+  return withTokenRefresh(async (api) => {
+    return api.environments.add(projectId, {
+      target: payload?.target,
+      editor: Boolean(payload?.editor),
+      environments,
+    });
   });
 });
 
@@ -103,9 +101,11 @@ export const updateProjectEnvironmentVariableServerFn = createServerFn({
     throw new Error("Environment variable value is required");
   }
 
-  return getServerBackendApi().environments.update(projectId, envId, {
-    name,
-    value,
+  return withTokenRefresh(async (api) => {
+    return api.environments.update(projectId, envId, {
+      name,
+      value,
+    });
   });
 });
 
@@ -123,7 +123,9 @@ export const deleteProjectEnvironmentVariableServerFn = createServerFn({
     throw new Error("Environment variable ID is required");
   }
 
-  return getServerBackendApi().environments.remove(projectId, envId);
+  return withTokenRefresh(async (api) => {
+    return api.environments.remove(projectId, envId);
+  });
 });
 
 export const decryptProjectEnvironmentValuesServerFn = createServerFn({
@@ -143,5 +145,7 @@ export const decryptProjectEnvironmentValuesServerFn = createServerFn({
     return [];
   }
 
-  return getServerBackendApi().environments.decrypt(environments);
+  return withTokenRefresh(async (api) => {
+    return api.environments.decrypt(environments);
+  });
 });

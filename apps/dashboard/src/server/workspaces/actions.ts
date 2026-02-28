@@ -1,19 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
+import { withTokenRefresh } from "@/server/shared/backend";
 
 export const listWorkspacesServerFn = createServerFn({
   method: "GET",
 }).handler(async () => {
-  return getServerBackendApi().workspaces.list();
+  return withTokenRefresh((api) => api.workspaces.list());
 });
 
 export const verifyWorkspacePromoCodeServerFn = createServerFn({
@@ -25,7 +16,7 @@ export const verifyWorkspacePromoCodeServerFn = createServerFn({
     throw new Error("Promo code is required");
   }
 
-  return getServerBackendApi().workspaces.verifyStartupCode(code);
+  return withTokenRefresh((api) => api.workspaces.verifyStartupCode(code));
 });
 
 export const createWorkspaceServerFn = createServerFn({
@@ -80,10 +71,12 @@ export const createWorkspaceServerFn = createServerFn({
     ...(payload?.payment_method ? { payment_method: payload.payment_method } : {}),
   };
   console.log("[createWorkspace] request body:", JSON.stringify(body, null, 2));
-  try {
-    return await getServerBackendApi().workspaces.create(body);
-  } catch (err: any) {
-    console.error("[createWorkspace] full error:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-    throw err;
-  }
+  return withTokenRefresh(async (api) => {
+    try {
+      return await api.workspaces.create(body);
+    } catch (err: any) {
+      console.error("[createWorkspace] full error:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+      throw err;
+    }
+  });
 });

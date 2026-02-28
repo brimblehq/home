@@ -38,12 +38,14 @@ const settingsInputClass =
 export function BillingForm({
   profile,
   initialPaymentMethods,
+  initialInvoices,
   hidePaymentMethods = false,
   hideCurrentPlan = false,
   teamId,
 }: {
   profile: UserProfile;
   initialPaymentMethods?: PaymentMethod[] | null;
+  initialInvoices?: any;
   hidePaymentMethods?: boolean;
   hideCurrentPlan?: boolean;
   teamId?: string;
@@ -53,6 +55,7 @@ export function BillingForm({
       <BillingFormInner
         profile={profile}
         initialPaymentMethods={initialPaymentMethods}
+        initialInvoices={initialInvoices}
         hidePaymentMethods={hidePaymentMethods}
         hideCurrentPlan={hideCurrentPlan}
         teamId={teamId}
@@ -66,12 +69,14 @@ export function BillingForm({
 function BillingFormInner({
   profile,
   initialPaymentMethods,
+  initialInvoices,
   hidePaymentMethods = false,
   hideCurrentPlan = false,
   teamId,
 }: {
   profile: UserProfile;
   initialPaymentMethods?: PaymentMethod[] | null;
+  initialInvoices?: any;
   hidePaymentMethods?: boolean;
   hideCurrentPlan?: boolean;
   teamId?: string;
@@ -87,7 +92,7 @@ function BillingFormInner({
   const { data: paymentMethods = [], isLoading: isLoadingMethods } = usePaymentMethods(initialPaymentMethods ?? undefined);
   const { data: subscription } = useSubscription();
   const { data: estimate } = useBillEstimate();
-  const { data: invoices } = useInvoices(invoiceCursor, teamId);
+  const { data: invoices } = useInvoices(invoiceCursor, teamId, initialInvoices);
   const cancelMutation = useCancelSubscription();
   const spendingLimitMutation = useUpdateSpendingLimit();
 

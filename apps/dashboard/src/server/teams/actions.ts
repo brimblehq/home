@@ -1,22 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
+import type { BackendApi } from "@/backend";
+import { withTokenRefresh } from "@/server/shared/backend";
 
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
-
-async function resolveWorkspaceTeam(workspace?: string) {
+async function resolveWorkspaceTeam(api: BackendApi, workspace?: string) {
   const workspaceSlug = workspace?.trim().toLowerCase();
   if (!workspaceSlug) {
     throw new Error("Workspace is required");
   }
 
-  const api = getServerBackendApi();
   const teams = await api.workspaces.list();
   const match = teams.items.find((item) => item.slug === workspaceSlug);
 
@@ -34,14 +25,15 @@ export const getWorkspaceTeamMembersServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
   const payload = data as { workspace?: string } | undefined;
-  const { teamId, teamName } = await resolveWorkspaceTeam(payload?.workspace);
-  const api = getServerBackendApi();
+  return withTokenRefresh(async (api) => {
+    const { teamId, teamName } = await resolveWorkspaceTeam(api, payload?.workspace);
 
-  try {
-    return await api.teams.getByName(teamName);
-  } catch {
-    return api.teams.getByName(teamId);
-  }
+    try {
+      return await api.teams.getByName(teamName);
+    } catch {
+      return api.teams.getByName(teamId);
+    }
+  });
 });
 
 export const inviteWorkspaceTeamMembersServerFn = createServerFn({
@@ -64,8 +56,10 @@ export const inviteWorkspaceTeamMembersServerFn = createServerFn({
     throw new Error("At least one email is required");
   }
 
-  const { teamId } = await resolveWorkspaceTeam(payload?.workspace);
-  return getServerBackendApi().teams.inviteMembers({ teamId, members });
+  return withTokenRefresh(async (api) => {
+    const { teamId } = await resolveWorkspaceTeam(api, payload?.workspace);
+    return api.teams.inviteMembers({ teamId, members });
+  });
 });
 
 export const updateWorkspaceTeamProfileServerFn = createServerFn({
@@ -80,17 +74,19 @@ export const updateWorkspaceTeamProfileServerFn = createServerFn({
       }
     | undefined;
 
-  const { teamId } = await resolveWorkspaceTeam(payload?.workspace);
   const name = payload?.name?.trim();
 
   if (!name) {
     throw new Error("Workspace name is required");
   }
 
-  return getServerBackendApi().teams.update(teamId, {
-    name,
-    description: payload?.description,
-    avatarUrl: payload?.avatarUrl,
+  return withTokenRefresh(async (api) => {
+    const { teamId } = await resolveWorkspaceTeam(api, payload?.workspace);
+    return api.teams.update(teamId, {
+      name,
+      description: payload?.description,
+      avatarUrl: payload?.avatarUrl,
+    });
   });
 });
 
@@ -109,11 +105,13 @@ export const resendWorkspaceTeamInviteServerFn = createServerFn({
     throw new Error("Invite email is required");
   }
 
-  const { teamId } = await resolveWorkspaceTeam(payload?.workspace);
-  return getServerBackendApi().teams.inviteMembers({
-    teamId,
-    members: [email],
-    resend: true,
+  return withTokenRefresh(async (api) => {
+    const { teamId } = await resolveWorkspaceTeam(api, payload?.workspace);
+    return api.teams.inviteMembers({
+      teamId,
+      members: [email],
+      resend: true,
+    });
   });
 });
 
@@ -132,6 +130,8 @@ export const removeWorkspaceTeamMemberServerFn = createServerFn({
     throw new Error("Member ID is required");
   }
 
-  const { teamId } = await resolveWorkspaceTeam(payload?.workspace);
-  return getServerBackendApi().teams.removeMember(teamId, memberId);
+  return withTokenRefresh(async (api) => {
+    const { teamId } = await resolveWorkspaceTeam(api, payload?.workspace);
+    return api.teams.removeMember(teamId, memberId);
+  });
 });

@@ -1,15 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
 import type { AppTooltipMessage } from "@/backend/messages";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
+import { withTokenRefresh } from "@/server/shared/backend";
 
 export const listTooltipMessagesServerFn = createServerFn({
   method: "GET",
@@ -23,34 +14,34 @@ export const listTooltipMessagesServerFn = createServerFn({
       }
     | undefined;
 
-  const backend = getServerBackendApi();
-  const workspaceSlug = payload?.workspace?.trim().toLowerCase();
+  return withTokenRefresh(async (api) => {
+    const workspaceSlug = payload?.workspace?.trim().toLowerCase();
 
-  let subscriptionId: string | undefined;
+    let subscriptionId: string | undefined;
 
-  if (workspaceSlug) {
-    try {
-      const team = await backend.teams.getByName(workspaceSlug);
-      subscriptionId = team.subscriptionId?.trim() || undefined;
-    } catch {
-      subscriptionId = undefined;
+    if (workspaceSlug) {
+      try {
+        const team = await api.teams.getByName(workspaceSlug);
+        subscriptionId = team.subscriptionId?.trim() || undefined;
+      } catch {
+        subscriptionId = undefined;
+      }
     }
-  }
 
-  if (!subscriptionId) {
-    const profile = await backend.settings.getProfile();
-    subscriptionId = profile.subscription?.id?.trim() || undefined;
-  }
+    if (!subscriptionId) {
+      const profile = await api.settings.getProfile();
+      subscriptionId = profile.subscription?.id?.trim() || undefined;
+    }
 
-  if (!subscriptionId) {
-    return null as AppTooltipMessage[] | null;
-  }
+    if (!subscriptionId) {
+      return null as AppTooltipMessage[] | null;
+    }
 
-  return backend.messages.listTooltipMessages({
-    subscriptionId,
-    type: payload?.type,
-    limit: payload?.limit,
-    page: payload?.page,
-  }) as Promise<AppTooltipMessage[] | null>;
+    return api.messages.listTooltipMessages({
+      subscriptionId,
+      type: payload?.type,
+      limit: payload?.limit,
+      page: payload?.page,
+    }) as Promise<AppTooltipMessage[] | null>;
+  });
 });
-

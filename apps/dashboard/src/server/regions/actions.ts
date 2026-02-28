@@ -1,14 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
+import { withTokenRefresh } from "@/server/shared/backend";
 
 export const listRegionsServerFn = createServerFn({
   method: "GET",
@@ -29,17 +20,19 @@ export const listRegionsServerFn = createServerFn({
       ? payload.workspace.trim().toLowerCase()
       : undefined;
 
-  if (!teamId && workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+  return withTokenRefresh(async (api) => {
+    if (!teamId && workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  return getServerBackendApi().regions.list({
-    type: payload?.type,
-    enabled: payload?.enabled,
-    teamId,
+    return api.regions.list({
+      type: payload?.type,
+      enabled: payload?.enabled,
+      teamId,
+    });
   });
 });

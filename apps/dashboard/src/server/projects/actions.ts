@@ -1,14 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
+import { withTokenRefresh } from "@/server/shared/backend";
 
 function assignFiniteNumber(
   target: Record<string, unknown>,
@@ -26,19 +17,21 @@ export const listHomeProjectsServerFn = createServerFn({
   const payload = data as unknown as { workspace?: string } | undefined;
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
 
-  let teamId: string | undefined;
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
 
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  return getServerBackendApi().projects.list({
-    sort: "updatedAt",
-    teamId,
+    return api.projects.list({
+      sort: "updatedAt",
+      teamId,
+    });
   });
 });
 
@@ -66,23 +59,25 @@ export const listProjectsPageServerFn = createServerFn({
     page = Math.floor(requestedPage);
   }
 
-  let teamId: string | undefined;
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
 
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  return getServerBackendApi().projects.list({
-    q: query || undefined,
-    serviceType: serviceType || undefined,
-    status: status || undefined,
-    sort: "updatedAt",
-    page,
-    teamId,
+    return api.projects.list({
+      q: query || undefined,
+      serviceType: serviceType || undefined,
+      status: status || undefined,
+      sort: "updatedAt",
+      page,
+      teamId,
+    });
   });
 });
 
@@ -99,15 +94,6 @@ export const createProjectServerFn = createServerFn({
     typeof payload?.workspace === "string"
       ? payload.workspace.trim().toLowerCase()
       : undefined;
-  let teamId: string | undefined;
-
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
-    }
-  }
 
   const body: Record<string, unknown> = { ...(payload ?? {}) };
   delete body.workspace;
@@ -116,35 +102,47 @@ export const createProjectServerFn = createServerFn({
     throw new Error("Project name is required");
   }
 
-  const finalBody: Record<string, unknown> = {
-    ...body,
-    ...(teamId ? { teamId } : {}),
-  };
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
 
-  if (process.env.NODE_ENV !== "production") {
-    const maskedBody: Record<string, unknown> = { ...finalBody };
-    if (Array.isArray(maskedBody.environments)) {
-      maskedBody.environments = maskedBody.environments.map((env) => {
-        if (!env || typeof env !== "object") return env;
-        const row = env as Record<string, unknown>;
-        return {
-          ...row,
-          value:
-            typeof row.value === "string" && row.value.length > 0
-              ? "[REDACTED]"
-              : row.value,
-        };
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
+    }
+
+    const finalBody: Record<string, unknown> = {
+      ...body,
+      ...(teamId ? { teamId } : {}),
+    };
+
+    if (process.env.NODE_ENV !== "production") {
+      const maskedBody: Record<string, unknown> = { ...finalBody };
+      if (Array.isArray(maskedBody.environments)) {
+        maskedBody.environments = maskedBody.environments.map((env) => {
+          if (!env || typeof env !== "object") return env;
+          const row = env as Record<string, unknown>;
+          return {
+            ...row,
+            value:
+              typeof row.value === "string" && row.value.length > 0
+                ? "[REDACTED]"
+                : row.value,
+          };
+        });
+      }
+
+      console.log("[createProjectServerFn] resolved deploy payload", {
+        teamId,
+        body: maskedBody,
       });
     }
 
-    console.log("[createProjectServerFn] resolved deploy payload", {
-      teamId,
-      body: maskedBody,
+    return api.projects.create({
+      ...finalBody,
     });
-  }
-
-  return getServerBackendApi().projects.create({
-    ...finalBody,
   });
 });
 
@@ -175,23 +173,25 @@ export const validateDockerImageServerFn = createServerFn({
     throw new Error("Provide both registry username and token for private images.");
   }
 
-  return getServerBackendApi().projects.validateDockerImage({
-    imageUri,
-    ...(hasBothCredentials
-      ? {
-          credentials: {
-            username: username!,
-            token: token!,
-          },
-        }
-      : {}),
-  });
+  return withTokenRefresh((api) =>
+    api.projects.validateDockerImage({
+      imageUri,
+      ...(hasBothCredentials
+        ? {
+            credentials: {
+              username: username!,
+              token: token!,
+            },
+          }
+        : {}),
+    }),
+  );
 });
 
 export const listAvailableDatabasesServerFn = createServerFn({
   method: "GET",
 }).handler(async () => {
-  return getServerBackendApi().projects.listAvailableDatabases();
+  return withTokenRefresh((api) => api.projects.listAvailableDatabases());
 });
 
 export const createDatabaseProjectServerFn = createServerFn({
@@ -243,15 +243,6 @@ export const createDatabaseProjectServerFn = createServerFn({
   }
 
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
-  let teamId: string | undefined;
-
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
-    }
-  }
 
   const environments = Array.isArray(payload?.environments)
     ? payload!.environments
@@ -266,18 +257,30 @@ export const createDatabaseProjectServerFn = createServerFn({
     ? payload!.whitelistedIps.map((ip) => ip.trim()).filter(Boolean)
     : [];
 
-  return getServerBackendApi().projects.createDatabase({
-    name,
-    dbImage,
-    teamId,
-    configurations: {
-      cpu,
-      memory,
-      storage,
-      region,
-    },
-    whitelistedIps,
-    environments,
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
+
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
+    }
+
+    return api.projects.createDatabase({
+      name,
+      dbImage,
+      teamId,
+      configurations: {
+        cpu,
+        memory,
+        storage,
+        region,
+      },
+      whitelistedIps,
+      environments,
+    });
   });
 });
 
@@ -296,7 +299,7 @@ export const getProjectDetailsServerFn = createServerFn({
     throw new Error("Project ID is required");
   }
 
-  return getServerBackendApi().projects.getById(projectId);
+  return withTokenRefresh((api) => api.projects.getById(projectId));
 });
 
 export const getProjectScreenshotServerFn = createServerFn({
@@ -313,7 +316,7 @@ export const getProjectScreenshotServerFn = createServerFn({
     throw new Error("Project ID is required");
   }
 
-  return getServerBackendApi().projects.getScreenshot(projectId);
+  return withTokenRefresh((api) => api.projects.getScreenshot(projectId));
 });
 
 export const redeployProjectServerFn = createServerFn({
@@ -334,20 +337,23 @@ export const redeployProjectServerFn = createServerFn({
   }
 
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
-  let teamId: string | undefined;
 
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
+
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  return getServerBackendApi().projects.redeploy(projectId, {
-    teamId,
-    logId: payload?.logId,
-    startOnly: payload?.startOnly,
+    return api.projects.redeploy(projectId, {
+      teamId,
+      logId: payload?.logId,
+      startOnly: payload?.startOnly,
+    });
   });
 });
 
@@ -382,15 +388,6 @@ export const saveProjectGeneralConfigServerFn = createServerFn({
   }
 
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
-  let teamId: string | undefined;
-
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
-    }
-  }
 
   const body: Record<string, unknown> = {
     name,
@@ -435,9 +432,21 @@ export const saveProjectGeneralConfigServerFn = createServerFn({
     body.configurations = nextConfigurations;
   }
 
-  return getServerBackendApi().projects.redeploy(projectId, {
-    teamId,
-    payload: body,
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
+
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
+    }
+
+    return api.projects.redeploy(projectId, {
+      teamId,
+      payload: body,
+    });
   });
 });
 
@@ -457,17 +466,20 @@ export const backupDatabaseProjectServerFn = createServerFn({
   }
 
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
-  let teamId: string | undefined;
 
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
+
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  return getServerBackendApi().projects.databaseBackup(projectId, { teamId });
+    return api.projects.databaseBackup(projectId, { teamId });
+  });
 });
 
 export const refreshDatabaseProjectServerFn = createServerFn({
@@ -486,17 +498,20 @@ export const refreshDatabaseProjectServerFn = createServerFn({
   }
 
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
-  let teamId: string | undefined;
 
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
+
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  return getServerBackendApi().projects.databaseRefresh(projectId, { teamId });
+    return api.projects.databaseRefresh(projectId, { teamId });
+  });
 });
 
 export const updateDatabaseProjectConfigServerFn = createServerFn({
@@ -526,22 +541,25 @@ export const updateDatabaseProjectConfigServerFn = createServerFn({
   const password = payload?.password ?? "";
 
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
-  let teamId: string | undefined;
 
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
+
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  return getServerBackendApi().projects.updateDatabaseConfig(projectId, {
-    teamId,
-    name,
-    password,
-    configurations: payload?.configurations ?? null,
-    whitelistedIps: Array.isArray(payload?.whitelistedIps) ? payload.whitelistedIps : [],
+    return api.projects.updateDatabaseConfig(projectId, {
+      teamId,
+      name,
+      password,
+      configurations: payload?.configurations ?? null,
+      whitelistedIps: Array.isArray(payload?.whitelistedIps) ? payload.whitelistedIps : [],
+    });
   });
 });
 
@@ -555,19 +573,21 @@ export const decryptDatabaseConnectionUriServerFn = createServerFn({
     throw new Error("Encrypted connection URI is required");
   }
 
-  const decrypted = await getServerBackendApi().environments.decrypt([
-    {
-      name: "DATABASE_URL",
-      value: encryptedConnectionUri,
-    },
-  ]);
+  return withTokenRefresh(async (api) => {
+    const decrypted = await api.environments.decrypt([
+      {
+        name: "DATABASE_URL",
+        value: encryptedConnectionUri,
+      },
+    ]);
 
-  const connectionUri = decrypted[0]?.value?.trim();
-  if (!connectionUri) {
-    throw new Error("Failed to decrypt database connection URI");
-  }
+    const connectionUri = decrypted[0]?.value?.trim();
+    if (!connectionUri) {
+      throw new Error("Failed to decrypt database connection URI");
+    }
 
-  return { connectionUri } as const;
+    return { connectionUri } as const;
+  });
 });
 
 export const deleteProjectServerFn = createServerFn({
@@ -586,16 +606,19 @@ export const deleteProjectServerFn = createServerFn({
   }
 
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
-  let teamId: string | undefined;
 
-  if (workspaceSlug) {
-    const teams = await getServerBackendApi().workspaces.list();
-    const match = teams.items.find((item) => item.slug === workspaceSlug);
-    if (match?.id) {
-      teamId = match.id;
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
+
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      if (match?.id) {
+        teamId = match.id;
+      }
     }
-  }
 
-  await getServerBackendApi().projects.remove(projectId, { teamId });
-  return { success: true };
+    await api.projects.remove(projectId, { teamId });
+    return { success: true };
+  });
 });

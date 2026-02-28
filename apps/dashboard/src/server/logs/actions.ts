@@ -1,26 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
 import type { RequestLogsPage } from "@/backend/logs";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
-
-async function resolveTeamIdFromWorkspace(workspace?: string) {
-  const workspaceSlug = workspace?.trim().toLowerCase();
-  if (!workspaceSlug) {
-    return undefined;
-  }
-
-  const teams = await getServerBackendApi().workspaces.list();
-  const match = teams.items.find((item) => item.slug === workspaceSlug);
-  return match?.id ?? undefined;
-}
+import { withTokenRefresh } from "@/server/shared/backend";
 
 export const listRequestLogsServerFn = createServerFn({
   method: "GET",
@@ -42,15 +22,24 @@ export const listRequestLogsServerFn = createServerFn({
     throw new Error("Project ID is required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
+  return withTokenRefresh(async (api) => {
+    const workspaceSlug = payload?.workspace?.trim().toLowerCase();
+    let teamId: string | undefined;
 
-  return getServerBackendApi().logs.listRequestLogs(projectId, {
-    page: payload?.page,
-    limit: payload?.limit,
-    status: payload?.status,
-    methods: payload?.methods,
-    hostname: payload?.hostname,
-    teamId,
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      teamId = match?.id ?? undefined;
+    }
+
+    return api.logs.listRequestLogs(projectId, {
+      page: payload?.page,
+      limit: payload?.limit,
+      status: payload?.status,
+      methods: payload?.methods,
+      hostname: payload?.hostname,
+      teamId,
+    });
   });
 });
 

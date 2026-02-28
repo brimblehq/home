@@ -1,28 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
+import type { BackendApi } from "@/backend";
 import type {
   DomainDetailsRecord,
   DomainRecord,
   PaginatedDomainsResponse,
 } from "@/backend/domains";
 import type { PaginatedProjectsResponse } from "@/backend/projects";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
+import { withTokenRefresh } from "@/server/shared/backend";
 
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
-
-async function resolveTeamIdFromWorkspace(workspace?: string) {
+async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
   const workspaceSlug = workspace?.trim().toLowerCase();
   if (!workspaceSlug) {
     return undefined;
   }
 
-  const teams = await getServerBackendApi().workspaces.list();
+  const teams = await api.workspaces.list();
   const match = teams.items.find((item) => item.slug === workspaceSlug);
   if (match?.id) {
     return match.id;
@@ -43,13 +35,15 @@ export const listDomainsPageServerFn = createServerFn({
       }
     | undefined;
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
 
-  return getServerBackendApi().domains.list({
-    page: payload?.page,
-    q: payload?.q,
-    projectName: payload?.projectName,
-    teamId,
+    return api.domains.list({
+      page: payload?.page,
+      q: payload?.q,
+      projectName: payload?.projectName,
+      teamId,
+    });
   });
 });
 
@@ -68,8 +62,10 @@ export const refreshDomainStatusServerFn = createServerFn({
     throw new Error("Domain name is required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  return getServerBackendApi().domains.getStatus(domainName, { teamId });
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    return api.domains.getStatus(domainName, { teamId });
+  });
 });
 
 export const getDomainDetailsServerFn = createServerFn({
@@ -87,20 +83,21 @@ export const getDomainDetailsServerFn = createServerFn({
     throw new Error("Domain name is required");
   }
 
-  const api = getServerBackendApi();
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
 
-  let domain = await api.domains.getByName(domainName, { teamId });
+    let domain = await api.domains.getByName(domainName, { teamId });
 
-  if (!domain && teamId) {
-    domain = await api.domains.getByName(domainName, {});
-  }
+    if (!domain && teamId) {
+      domain = await api.domains.getByName(domainName, {});
+    }
 
-  if (!domain) {
-    throw new Error(`Domain not found: ${domainName}`);
-  }
+    if (!domain) {
+      throw new Error(`Domain not found: ${domainName}`);
+    }
 
-  return domain;
+    return domain;
+  });
 });
 
 export const createProjectDomainServerFn = createServerFn({
@@ -119,11 +116,13 @@ export const createProjectDomainServerFn = createServerFn({
     throw new Error("Domain name is required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  return getServerBackendApi().domains.add({
-    name,
-    projectId: payload?.projectId,
-    teamId,
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    return api.domains.add({
+      name,
+      projectId: payload?.projectId,
+      teamId,
+    });
   });
 });
 
@@ -147,12 +146,14 @@ export const updateDomainServerFn = createServerFn({
     throw new Error("Domain id is required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  return getServerBackendApi().domains.update({
-    id,
-    name: payload?.name?.trim(),
-    redirect: payload?.redirect ?? null,
-    teamId,
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    return api.domains.update({
+      id,
+      name: payload?.name?.trim(),
+      redirect: payload?.redirect ?? null,
+      teamId,
+    });
   });
 });
 
@@ -176,14 +177,16 @@ export const transferDomainServerFn = createServerFn({
     throw new Error("Project id is required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  await getServerBackendApi().domains.transfer({
-    domainId,
-    projectId,
-    teamId,
-  });
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    await api.domains.transfer({
+      domainId,
+      projectId,
+      teamId,
+    });
 
-  return { success: true };
+    return { success: true };
+  });
 });
 
 export const deleteDomainServerFn = createServerFn({
@@ -207,14 +210,16 @@ export const deleteDomainServerFn = createServerFn({
     projectId = payload.projectId.trim();
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  await getServerBackendApi().domains.remove({
-    domainId,
-    projectId,
-    teamId,
-  });
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    await api.domains.remove({
+      domainId,
+      projectId,
+      teamId,
+    });
 
-  return { success: true };
+    return { success: true };
+  });
 });
 
 export const searchDomainSaleServerFn = createServerFn({
@@ -231,7 +236,9 @@ export const searchDomainSaleServerFn = createServerFn({
     return [];
   }
 
-  return getServerBackendApi().domains.searchSale(name);
+  return withTokenRefresh(async (api) => {
+    return api.domains.searchSale(name);
+  });
 });
 
 export const purchaseDomainServerFn = createServerFn({
@@ -259,20 +266,22 @@ export const purchaseDomainServerFn = createServerFn({
     throw new Error("Payment method is required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  const requestPayload = {
-    name,
-    duration: payload?.duration ?? 1,
-    cardId,
-    projectId: payload?.projectId,
-    privacyEnabled: payload?.privacyEnabled ?? false,
-    autoRenewal: payload?.autoRenewal ?? false,
-    teamId,
-  };
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    const requestPayload = {
+      name,
+      duration: payload?.duration ?? 1,
+      cardId,
+      projectId: payload?.projectId,
+      privacyEnabled: payload?.privacyEnabled ?? false,
+      autoRenewal: payload?.autoRenewal ?? false,
+      teamId,
+    };
 
-  await getServerBackendApi().domains.purchaseSale(requestPayload);
+    await api.domains.purchaseSale(requestPayload);
 
-  return { success: true };
+    return { success: true };
+  });
 });
 
 export const renewDomainSaleServerFn = createServerFn({
@@ -297,24 +306,26 @@ export const renewDomainSaleServerFn = createServerFn({
     ? Math.floor(durationRaw)
     : 1;
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  const requestPayload = {
-    domainId,
-    duration,
-    autoRenew: Boolean(payload?.autoRenew),
-    teamId,
-  };
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    const requestPayload = {
+      domainId,
+      duration,
+      autoRenew: Boolean(payload?.autoRenew),
+      teamId,
+    };
 
-  console.log("[domains.renew] server action payload", {
-    workspace: payload?.workspace,
-    resolvedTeamId: teamId,
-    endpoint: "/core/v1/domains/sale/renew",
-    payload: requestPayload,
+    console.log("[domains.renew] server action payload", {
+      workspace: payload?.workspace,
+      resolvedTeamId: teamId,
+      endpoint: "/core/v1/domains/sale/renew",
+      payload: requestPayload,
+    });
+
+    await api.domains.renewSale(requestPayload);
+
+    return { success: true };
   });
-
-  await getServerBackendApi().domains.renewSale(requestPayload);
-
-  return { success: true };
 });
 
 export const listDomainProjectsServerFn = createServerFn({
@@ -326,14 +337,16 @@ export const listDomainProjectsServerFn = createServerFn({
       }
     | undefined;
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
 
-  return getServerBackendApi().projects.list({
-    teamId,
-    sort: "updatedAt",
-    page: 1,
-    limit: 100,
-  }) as Promise<PaginatedProjectsResponse>;
+    return api.projects.list({
+      teamId,
+      sort: "updatedAt",
+      page: 1,
+      limit: 100,
+    }) as Promise<PaginatedProjectsResponse>;
+  });
 });
 
 export const createDomainDnsRecordServerFn = createServerFn({
@@ -359,24 +372,26 @@ export const createDomainDnsRecordServerFn = createServerFn({
     throw new Error("Record type, name, and value are required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  const requestPayload = {
-    domain: domainName,
-    teamId,
-    record: {
-      type,
-      name,
-      value,
-      ttl: typeof payload?.record?.ttl === "number" ? payload.record.ttl : 3600,
-      isProxied: Boolean(payload?.record?.isProxied),
-    },
-  };
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    const requestPayload = {
+      domain: domainName,
+      teamId,
+      record: {
+        type,
+        name,
+        value,
+        ttl: typeof payload?.record?.ttl === "number" ? payload.record.ttl : 3600,
+        isProxied: Boolean(payload?.record?.isProxied),
+      },
+    };
 
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[domains.dns] create", requestPayload);
-  }
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[domains.dns] create", requestPayload);
+    }
 
-  return getServerBackendApi().domains.createDnsRecord(requestPayload);
+    return api.domains.createDnsRecord(requestPayload);
+  });
 });
 
 export const updateDomainDnsRecordServerFn = createServerFn({
@@ -407,25 +422,27 @@ export const updateDomainDnsRecordServerFn = createServerFn({
     throw new Error("Record type, name, and value are required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  const requestPayload = {
-    domain: domainName,
-    recordId,
-    teamId,
-    record: {
-      type,
-      name,
-      value,
-      ttl: typeof payload?.record?.ttl === "number" ? payload.record.ttl : 3600,
-      isProxied: Boolean(payload?.record?.isProxied),
-    },
-  };
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    const requestPayload = {
+      domain: domainName,
+      recordId,
+      teamId,
+      record: {
+        type,
+        name,
+        value,
+        ttl: typeof payload?.record?.ttl === "number" ? payload.record.ttl : 3600,
+        isProxied: Boolean(payload?.record?.isProxied),
+      },
+    };
 
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[domains.dns] update", requestPayload);
-  }
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[domains.dns] update", requestPayload);
+    }
 
-  return getServerBackendApi().domains.updateDnsRecord(requestPayload);
+    return api.domains.updateDnsRecord(requestPayload);
+  });
 });
 
 export const deleteDomainDnsRecordServerFn = createServerFn({
@@ -448,21 +465,23 @@ export const deleteDomainDnsRecordServerFn = createServerFn({
     throw new Error("Record id is required");
   }
 
-  const teamId = await resolveTeamIdFromWorkspace(payload?.workspace);
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[domains.dns] delete", {
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[domains.dns] delete", {
+        domain: domainName,
+        recordId,
+        teamId,
+      });
+    }
+    await api.domains.deleteDnsRecord({
       domain: domainName,
       recordId,
       teamId,
     });
-  }
-  await getServerBackendApi().domains.deleteDnsRecord({
-    domain: domainName,
-    recordId,
-    teamId,
-  });
 
-  return { success: true };
+    return { success: true };
+  });
 });
 
 export type { DomainDetailsRecord, DomainRecord, PaginatedDomainsResponse };

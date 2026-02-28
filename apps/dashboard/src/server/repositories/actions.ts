@@ -1,20 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
 import type {
   GithubAccount,
   GithubRepoListResult,
   RepositoryMetadata,
   RepositoryRootDirResult,
 } from "@/backend/repositories";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
-
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
+import { withTokenRefresh } from "@/server/shared/backend";
 
 export const getGithubRepoServerFn = createServerFn({
   method: "GET",
@@ -30,16 +21,20 @@ export const getGithubRepoServerFn = createServerFn({
     throw new Error("Repository name is required");
   }
 
-  return getServerBackendApi().repositories.getGithubRepo({
-    repoName: payload.repoName.trim(),
-    installationId: payload.installationId,
-  }) as Promise<RepositoryMetadata>;
+  return withTokenRefresh((api) =>
+    api.repositories.getGithubRepo({
+      repoName: payload.repoName.trim(),
+      installationId: payload.installationId,
+    }),
+  ) as Promise<RepositoryMetadata>;
 });
 
 export const listGithubAccountsServerFn = createServerFn({
   method: "GET",
 }).handler(async () => {
-  return getServerBackendApi().repositories.listGithubAccounts() as Promise<GithubAccount[]>;
+  return withTokenRefresh((api) =>
+    api.repositories.listGithubAccounts(),
+  ) as Promise<GithubAccount[]>;
 });
 
 export const listGithubReposServerFn = createServerFn({
@@ -54,12 +49,14 @@ export const listGithubReposServerFn = createServerFn({
       }
     | undefined;
 
-  return getServerBackendApi().repositories.listGithubRepos({
-    q: payload?.q?.trim() || undefined,
-    page: payload?.page,
-    limit: payload?.limit,
-    installationId: payload?.installationId,
-  }) as Promise<GithubRepoListResult>;
+  return withTokenRefresh((api) =>
+    api.repositories.listGithubRepos({
+      q: payload?.q?.trim() || undefined,
+      page: payload?.page,
+      limit: payload?.limit,
+      installationId: payload?.installationId,
+    }),
+  ) as Promise<GithubRepoListResult>;
 });
 
 export const getGithubRootDirServerFn = createServerFn({
@@ -82,10 +79,12 @@ export const getGithubRootDirServerFn = createServerFn({
     throw new Error("Branch is required");
   }
 
-  return getServerBackendApi().repositories.getGithubRootDir({
-    repoName: payload.repoName.trim(),
-    installationId: payload.installationId,
-    branch: payload.branch.trim(),
-    path: payload.path?.trim() || undefined,
-  }) as Promise<RepositoryRootDirResult>;
+  return withTokenRefresh((api) =>
+    api.repositories.getGithubRootDir({
+      repoName: payload.repoName.trim(),
+      installationId: payload.installationId,
+      branch: payload.branch.trim(),
+      path: payload.path?.trim() || undefined,
+    }),
+  ) as Promise<RepositoryRootDirResult>;
 });

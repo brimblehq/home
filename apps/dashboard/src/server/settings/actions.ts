@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createBackendApi } from "@/backend";
+import type { BackendApi } from "@/backend";
 import type {
   GitProvider,
   SettingsSidebarSnapshot,
@@ -9,17 +9,9 @@ import type {
   UpdateSettingsProfileInput,
   UpdateSettingsWebhooksInput,
 } from "@/backend/settings";
-import config from "@/config";
-import { getServerAccessToken } from "@/server/auth/cookies";
+import { withTokenRefresh } from "@/server/shared/backend";
 
-function getServerBackendApi() {
-  return createBackendApi({
-    baseUrl: config.apiUrl,
-    getAccessToken: getServerAccessToken,
-  });
-}
-
-async function resolveWorkspaceSubscriptionId(backend: ReturnType<typeof getServerBackendApi>, workspace?: string) {
+async function resolveWorkspaceSubscriptionId(backend: BackendApi, workspace?: string) {
   const workspaceSlug = workspace?.trim().toLowerCase();
   if (!workspaceSlug) {
     return undefined;
@@ -34,7 +26,7 @@ async function resolveWorkspaceSubscriptionId(backend: ReturnType<typeof getServ
 }
 
 async function resolveWorkspaceTeamId(
-  backend: ReturnType<typeof getServerBackendApi>,
+  backend: BackendApi,
   workspace?: string,
 ) {
   const workspaceSlug = workspace?.trim().toLowerCase();
@@ -55,10 +47,11 @@ export const getSettingsSidebarSnapshotServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
   const payload = data as { workspace?: string } | undefined;
-  const backend = getServerBackendApi();
-  const subscriptionId = await resolveWorkspaceSubscriptionId(backend, payload?.workspace);
-  const snapshot = await backend.settings.getSidebarSnapshot(1, { subscriptionId });
-  return snapshot satisfies SettingsSidebarSnapshot;
+  return withTokenRefresh(async (api) => {
+    const subscriptionId = await resolveWorkspaceSubscriptionId(api, payload?.workspace);
+    const snapshot = await api.settings.getSidebarSnapshot(1, { subscriptionId });
+    return snapshot satisfies SettingsSidebarSnapshot;
+  });
 });
 
 export const listSettingsInvoicesServerFn = createServerFn({
@@ -71,85 +64,95 @@ export const listSettingsInvoicesServerFn = createServerFn({
     page = Math.max(1, Math.floor(payload.page));
   }
 
-  const backend = getServerBackendApi();
-  const subscriptionId = await resolveWorkspaceSubscriptionId(backend, payload?.workspace);
-  return backend.settings.getInvoices(page, { subscriptionId });
+  return withTokenRefresh(async (api) => {
+    const subscriptionId = await resolveWorkspaceSubscriptionId(api, payload?.workspace);
+    return api.settings.getInvoices(page, { subscriptionId });
+  });
 });
 
 export const updateSettingsProfileServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
   const input = data as unknown as UpdateSettingsProfileInput;
-  return getServerBackendApi().settings.updateProfile(input);
+  return withTokenRefresh((api) => api.settings.updateProfile(input));
 });
 
 export const requestSettingsEmailVerificationServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
   const input = data as unknown as { email: string };
-  await getServerBackendApi().settings.requestEmailVerification(input.email);
-  return { ok: true } as const;
+  return withTokenRefresh(async (api) => {
+    await api.settings.requestEmailVerification(input.email);
+    return { ok: true } as const;
+  });
 });
 
 export const updateSettingsNotificationsServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
   const input = data as unknown as UpdateSettingsNotificationsInput;
-  await getServerBackendApi().settings.updateNotifications(input);
-  return { ok: true } as const;
+  return withTokenRefresh(async (api) => {
+    await api.settings.updateNotifications(input);
+    return { ok: true } as const;
+  });
 });
 
 export const updateSettingsBuildsServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
   const payload = data as unknown as UpdateSettingsBuildsInput & { workspace?: string };
-  const backend = getServerBackendApi();
-  const teamId = await resolveWorkspaceTeamId(backend, payload.workspace);
-  await backend.settings.updateBuilds({
-    buildDisabled: payload.buildDisabled,
-    ...(teamId ? { teamId } : {}),
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveWorkspaceTeamId(api, payload.workspace);
+    await api.settings.updateBuilds({
+      buildDisabled: payload.buildDisabled,
+      ...(teamId ? { teamId } : {}),
+    });
+    return { ok: true } as const;
   });
-  return { ok: true } as const;
 });
 
 export const createSettingsApiKeyServerFn = createServerFn({
   method: "POST",
 }).handler(async () => {
-  return getServerBackendApi().settings.createApiKey();
+  return withTokenRefresh((api) => api.settings.createApiKey());
 });
 
 export const resetSettingsApiKeyServerFn = createServerFn({
   method: "POST",
 }).handler(async () => {
-  return getServerBackendApi().settings.resetApiKey();
+  return withTokenRefresh((api) => api.settings.resetApiKey());
 });
 
 export const decryptSettingsApiKeyServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
   const input = data as unknown as { encryptedApiKey: string };
-  return getServerBackendApi().settings.decryptApiKey(input);
+  return withTokenRefresh((api) => api.settings.decryptApiKey(input));
 });
 
 export const testSettingsWebhookServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
   const input = data as unknown as TestWebhookInput;
-  await getServerBackendApi().settings.testWebhook(input);
-  return { ok: true } as const;
+  return withTokenRefresh(async (api) => {
+    await api.settings.testWebhook(input);
+    return { ok: true } as const;
+  });
 });
 
 export const updateSettingsWebhooksServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
   const input = data as unknown as UpdateSettingsWebhooksInput;
-  return getServerBackendApi().settings.updateWebhooks(input);
+  return withTokenRefresh((api) => api.settings.updateWebhooks(input));
 });
 
 export const disconnectGitProviderServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
   const input = data as unknown as { provider: GitProvider };
-  await getServerBackendApi().settings.disconnectGitProvider(input.provider);
-  return { ok: true } as const;
+  return withTokenRefresh(async (api) => {
+    await api.settings.disconnectGitProvider(input.provider);
+    return { ok: true } as const;
+  });
 });

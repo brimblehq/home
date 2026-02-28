@@ -1825,6 +1825,20 @@ export function UserProfileDrawer({
                 <BillingForm
                   profile={profile}
                   initialPaymentMethods={initialPaymentMethods}
+                  initialInvoices={snapshot?.billing?.invoices ? {
+                    items: snapshot.billing.invoices.items.map((inv) => ({
+                      id: inv.id,
+                      number: inv.description,
+                      total: inv.total != null ? `$${Number(inv.total / 100).toFixed(2)}` : undefined,
+                      status: inv.due ? "open" : "paid",
+                      date: inv.createdAt ?? "",
+                      invoice_pdf: inv.downloadLink,
+                    })),
+                    next_cursor: null,
+                    previous_cursor: null,
+                    has_more: (snapshot.billing.invoices.totalPages ?? 1) > 1,
+                    per_page: snapshot.billing.invoices.limit ?? 10,
+                  } : undefined}
                   hidePaymentMethods={hasActiveWorkspace}
                   hideCurrentPlan={hasActiveWorkspace}
                   teamId={activeWorkspaceSlug || undefined}

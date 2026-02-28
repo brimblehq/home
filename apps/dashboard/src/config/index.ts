@@ -60,6 +60,9 @@ export const config = {
   defaultTeamLogRetentionDays: Number(readEnv("VITE_DEFAULT_TEAM_LOG_RETENTION_DAYS") ?? "30"),
   defaultOverageBandwidthPerGb: Number(readEnv("VITE_DEFAULT_OVERAGE_BANDWIDTH_PER_GB") ?? "0.25"),
   defaultOverageBuildMinutesPerMin: Number(readEnv("VITE_DEFAULT_OVERAGE_BUILD_MINUTES_PER_MIN") ?? "0.002"),
+
+  accessTokenTtl: Number(readEnv("VITE_ACCESS_TOKEN_TTL") ?? String(60 * 30)),
+  refreshTokenTtl: Number(readEnv("VITE_REFRESH_TOKEN_TTL") ?? String(60 * 60 * 24 * 14)),
 } as const;
 
 export default config;
