@@ -302,22 +302,15 @@ export const renewDomainSaleServerFn = createServerFn({
   return withTokenRefresh(async (api) => {
     const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
     const requestPayload = {
-      domainId,
+      id: domainId,
       duration,
       autoRenew: Boolean(payload?.autoRenew),
       teamId,
     };
 
-    console.log("[domains.renew] server action payload", {
-      workspace: payload?.workspace,
-      resolvedTeamId: teamId,
-      endpoint: "/core/v1/domains/sale/renew",
-      payload: requestPayload,
-    });
+    console.log("[domains.renew] request payload:", requestPayload);
 
-    await api.domains.renewSale(requestPayload);
-
-    return { success: true };
+    return api.domains.renewSale(requestPayload);
   });
 });
 

@@ -16,6 +16,18 @@ import {
 } from "./cookies";
 import { getServerBackendApi } from "@/server/shared/backend";
 
+function getErrorMeta(error: any) {
+  return {
+    status: error?.status ?? null,
+    message:
+      typeof error?.message === "string"
+        ? error.message
+        : typeof error?.data?.message === "string"
+          ? error.data.message
+          : null,
+  };
+}
+
 export const requestLoginOtpServerFn = createServerFn({ method: "POST" }).handler(
   async ({ data }) => {
     const input = data as LoginInput;
@@ -53,6 +65,12 @@ export const verifyEmailCodeServerFn = createServerFn({ method: "POST" }).handle
     const session = await getServerBackendApi().auth.verifyEmailCode(input);
     setServerAuthCookies(session);
 
+    console.info("[auth] verifyEmailCode success", {
+      userId: session.user?.id ?? null,
+      hasAccessToken: Boolean(session.accessToken),
+      hasRefreshToken: Boolean(session.refreshToken),
+    });
+
     return {
       ok: true as const,
       user: session.user,
@@ -62,8 +80,17 @@ export const verifyEmailCodeServerFn = createServerFn({ method: "POST" }).handle
 
 export const logoutServerFn = createServerFn({ method: "POST" }).handler(async () => {
   const refreshToken = getServerRefreshToken();
-  await getServerBackendApi().auth.logout(refreshToken ?? undefined).catch(() => {});
+  console.info("[auth] logout start", {
+    hasAccessToken: Boolean(getServerAccessToken()),
+    hasRefreshToken: Boolean(refreshToken),
+  });
+
+  await getServerBackendApi().auth.logout(refreshToken ?? undefined).catch((error: any) => {
+    console.warn("[auth] logout endpoint failed", getErrorMeta(error));
+  });
+
   clearServerAuthCookies();
+  console.info("[auth] logout complete");
   return { ok: true } as const;
 });
 
@@ -90,13 +117,29 @@ export const getCurrentSessionServerFn = createServerFn({ method: "GET" }).handl
 export const refreshSessionServerFn = createServerFn({ method: "POST" }).handler(
   async () => {
     const refreshToken = getServerRefreshToken();
-    if (!refreshToken) return null;
+    if (!refreshToken) {
+      console.warn("[auth] refreshSession skipped: missing refresh token");
+      return null;
+    }
 
     try {
+      console.info("[auth] refreshSession start", {
+        hasAccessToken: Boolean(getServerAccessToken()),
+        hasRefreshToken: true,
+      });
+
       const session = await getServerBackendApi().auth.refreshTokens(refreshToken);
       setServerAuthCookies(session);
+
+      console.info("[auth] refreshSession success", {
+        userId: session.user?.id ?? null,
+        hasNewAccessToken: Boolean(session.accessToken),
+        hasNewRefreshToken: Boolean(session.refreshToken),
+      });
+
       return { user: session.user };
-    } catch {
+    } catch (error: any) {
+      console.warn("[auth] refreshSession failed", getErrorMeta(error));
       clearServerAuthCookies();
       return null;
     }
@@ -135,6 +178,12 @@ export const finalizeOauthSessionServerFn = createServerFn({ method: "POST" }).h
     };
 
     setServerAuthCookies(session);
+
+    console.info("[auth] finalizeOauthSession success", {
+      userId: session.user?.id ?? null,
+      hasAccessToken: Boolean(session.accessToken),
+      hasRefreshToken: Boolean(session.refreshToken),
+    });
 
     return {
       ok: true as const,

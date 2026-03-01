@@ -15,6 +15,8 @@ export function buildWorkspaceSwitchUrl(input: {
 
   if (/^\/projects\/[^/]+(?:\/|$)/.test(input.pathname)) {
     nextPathname = "/projects";
+  } else if (/^\/domains\/[^/]+(?:\/|$)/.test(input.pathname)) {
+    nextPathname = "/domains";
   }
 
   const nextSearch = params.toString();

@@ -943,7 +943,7 @@ function NewWorkspacePage() {
               key="phase3"
               workspaceName={workspaceName}
               teamSize={teamConfig?.teamSize ?? 3}
-              concurrentBuilds={teamConfig?.concurrentBuilds ?? 1}
+              concurrentBuilds={teamConfig?.concurrentBuilds ?? WORKSPACE_MIN_BUILDS}
               costPerMember={pricing.team.costPerMember}
               costPerBuild={pricing.team.costPerBuild}
               initialValues={{ invites: inviteRows }}

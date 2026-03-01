@@ -118,6 +118,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
       const response = await client.request(endpoints.refresh, {
         method: "POST",
         body: { refresh_token: refreshToken },
+        headers: { Authorization: "" },
       });
       return mapSession(response);
     },

@@ -1,7 +1,7 @@
 import * as Yup from "yup";
 
 export const TEAM_PLAN_TYPE = "TEAM_PLAN" as const;
-export const WORKSPACE_MIN_BUILDS = 1;
+export const WORKSPACE_MIN_BUILDS = 2;
 export const WORKSPACE_MAX_BUILDS = 10;
 
 export type WorkspaceNameStepValues = {

@@ -16,7 +16,7 @@ import { FilterDropdown, type FilterOption } from "./filter-dropdown";
 import { SearchFilterBar } from "./search-filter-bar";
 import { Spinner } from "./spinner";
 import { SimpleTooltip } from "./tooltip";
-import { CheckCircle } from "@phosphor-icons/react";
+import { CheckCircle, Warning } from "@phosphor-icons/react";
 import { FolderTrashIcon } from "./folder-trash-icon";
 import { Modal, ModalHeader, ModalFooter, ModalCancelButton, ModalContinueButton } from "./modal";
 import { WarningModal } from "./warning-modal";
@@ -556,7 +556,8 @@ export function DomainList({
   });
 
   const failedDomains = filtered.filter((d) => d.status === "Failed");
-  const activeDomains = filtered.filter((d) => d.status === "Active");
+  const expiredDomains = filtered.filter((d) => d.status === "Active" && d.isExpired);
+  const activeDomains = filtered.filter((d) => d.status === "Active" && !d.isExpired);
 
   let workspaceSuffix = "";
   if (searchStr) {
@@ -767,6 +768,96 @@ export function DomainList({
                   Change settings
                 </button>
               )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Expired domains (each in its own card) */}
+      {expiredDomains.map((domain, i) => {
+        const originalIndex = domains.indexOf(domain);
+        const actions = actionsFor(domain);
+        const domainDetailsPath = getDomainDetailsPath(domain);
+        const isAssigned = hasAssignedProject(domain);
+        return (
+          <div key={`expired-${i}`} className="overflow-visible rounded-[4px] border-[0.5px] border-dash-border">
+            <table className="w-full border-collapse">
+              <tbody>
+                <tr className="h-[68px] bg-dash-bg">
+                  <td className="w-10 pl-3.5">
+                    <DomainCheckbox checked={selected.has(originalIndex)} onChange={() => toggleOne(originalIndex)} />
+                  </td>
+                  <td className="py-2">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5">
+                        {domainDetailsPath ? (
+                          <Link
+                            to={domainDetailsPath}
+                            className="text-sm tracking-[-0.084px] text-dash-text-body transition-colors hover:text-dash-text-strong hover:underline"
+                          >
+                            {domain.name}
+                          </Link>
+                        ) : (
+                          <span className="text-sm tracking-[-0.084px] text-dash-text-body">
+                            {domain.name}
+                          </span>
+                        )}
+                        {domain.purchased && (
+                          <SimpleTooltip content={<><CheckCircle size={13} weight="fill" className="text-[#34d399]" />Purchased from Brimble</>} side="right">
+                            <span className="text-[#4879f8]">
+                              <CheckCircle size={14} weight="fill" />
+                            </span>
+                          </SimpleTooltip>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!isAssigned && (
+                          <span className="inline-flex items-center rounded-full bg-[#f5a623]/10 px-2 py-0.5 text-[11px] font-medium leading-none text-[#c48418] dark:bg-[#f5a623]/15 dark:text-[#f5a623]">
+                            Unassigned
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="w-[140px] py-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="size-[6px] shrink-0 rounded-full bg-[#f5a623]" />
+                      <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
+                        Expired
+                      </span>
+                    </div>
+                  </td>
+                  <td className="w-[180px] py-2">
+                    <div className="flex flex-col gap-1 text-right">
+                      <span className="text-sm tracking-[-0.084px] text-dash-text-body">
+                        {domain.addedAt}
+                      </span>
+                      <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">
+                        {domain.addedBy}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="w-10 pr-3.5 text-right">
+                    <DomainActionsMenu {...actions} />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="flex items-center justify-between border-t-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5 py-2.5">
+              <div className="flex items-center gap-2">
+                <Warning size={20} weight="fill" className="shrink-0 text-[#f5a623]" />
+                <span className="text-sm font-light leading-[18px] tracking-[-0.02px] text-dash-text-body">
+                  This domain has expired. Renew it to keep your site online and avoid losing ownership.
+                </span>
+              </div>
+              {domainDetailsPath ? (
+                <Link
+                  to={domainDetailsPath}
+                  className="shrink-0 text-sm tracking-[-0.02px] text-dash-text-body underline hover:text-dash-text-strong"
+                >
+                  Renew domain
+                </Link>
+              ) : null}
             </div>
           </div>
         );

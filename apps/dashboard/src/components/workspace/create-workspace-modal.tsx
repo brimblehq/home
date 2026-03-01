@@ -17,7 +17,7 @@ const inputClass =
 
 const teamSizeOptions = Array.from({ length: 48 }, (_, i) => i + 3);
 
-const MIN_BUILDS = 1;
+const MIN_BUILDS = 2;
 const MAX_BUILDS = 10;
 
 const ease = [0.16, 1, 0.3, 1] as const;

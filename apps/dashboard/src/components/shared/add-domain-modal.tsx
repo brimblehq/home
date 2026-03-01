@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, SlidersHorizontal, Plus, ArrowRightLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, getRouteApi, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   Modal,
@@ -12,6 +12,8 @@ import {
 } from "./modal";
 import { Dropdown } from "./dropdown";
 import type { SettingsPaymentCard } from "@/backend/settings/types";
+import type { PaymentMethod } from "@/backend/payments";
+import { usePaymentMethods } from "@/hooks/use-payments";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 
 interface Project {
@@ -81,6 +83,8 @@ function RadioButton({ selected }: { selected: boolean }) {
 
 import { DomainStep } from "../../types/enums";
 
+const rootRoute = getRouteApi("__root__");
+
 function normalizeDomainInput(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -113,7 +117,19 @@ export function AddDomainModal({
   onValidate,
   onRegisterDomain,
 }: AddDomainModalProps) {
+  const { paymentMethods: initialPaymentMethods } = rootRoute.useLoaderData() as {
+    paymentMethods?: PaymentMethod[] | null;
+  };
+  const { data: paymentMethods = [] } = usePaymentMethods(initialPaymentMethods ?? undefined);
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const livePaymentCards: SettingsPaymentCard[] = paymentMethods.map((method: any) => ({
+    id: method.id,
+    cardType: method.card?.brand ?? method.brand,
+    last4: method.card?.last4 ?? method.last4,
+    preferred: method.is_default,
+  }));
+  const availablePaymentCards =
+    livePaymentCards.length > 0 ? livePaymentCards : paymentCards;
   const [step, setStep] = useState<DomainStep>("select-project");
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -125,12 +141,27 @@ export function AddDomainModal({
   const [transferRegistrantEmail, setTransferRegistrantEmail] = useState(
     defaultRegistrantEmail?.trim() ?? "",
   );
-  const [transferCardId, setTransferCardId] = useState(() => getPreferredCardId(paymentCards));
+  const [transferCardId, setTransferCardId] = useState(() => getPreferredCardId(availablePaymentCards));
   const [transferChecklist, setTransferChecklist] = useState({
     domainUnlocked: false,
     registrantEmailAccess: false,
     acknowledgeTransferTime: false,
   });
+
+  useEffect(() => {
+    const preferredCardId = getPreferredCardId(availablePaymentCards);
+    if (!preferredCardId) {
+      if (transferCardId) {
+        setTransferCardId("");
+      }
+      return;
+    }
+
+    const cardStillExists = availablePaymentCards.some((card) => card.id === transferCardId);
+    if (!transferCardId || !cardStillExists) {
+      setTransferCardId(preferredCardId);
+    }
+  }, [availablePaymentCards, transferCardId]);
 
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
@@ -222,7 +253,7 @@ export function AddDomainModal({
     setTransferDomain("");
     setTransferAuthCode("");
     setTransferRegistrantEmail(defaultRegistrantEmail?.trim() ?? "");
-    setTransferCardId(getPreferredCardId(paymentCards));
+    setTransferCardId(getPreferredCardId(availablePaymentCards));
     setTransferChecklist({
       domainUnlocked: false,
       registrantEmailAccess: false,
@@ -499,23 +530,23 @@ export function AddDomainModal({
                   <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
                     Payment method
                   </label>
-                  {paymentCards.length > 0 ? (
-                    paymentCards.length === 1 ? (
+                  {availablePaymentCards.length > 0 ? (
+                    availablePaymentCards.length === 1 ? (
                       <div className="flex items-center gap-3 rounded-[4px] border-[0.5px] border-dash-border px-3.5 py-2.5">
                         <CardChip />
                         <div className="flex flex-col">
                           <span className="text-sm font-medium text-dash-text-strong">
-                            {formatCardType(paymentCards[0].cardType)}
+                            {formatCardType(availablePaymentCards[0].cardType)}
                           </span>
                           <span className="text-xs text-dash-text-faded">
-                            ending in {paymentCards[0].last4 ?? "****"}
+                            ending in {availablePaymentCards[0].last4 ?? "****"}
                           </span>
                         </div>
                       </div>
                     ) : (
                       <Dropdown
                         value={transferCardId}
-                        options={paymentCards.map((card) => ({
+                        options={availablePaymentCards.map((card) => ({
                           id: card.id,
                           label: `${formatCardType(card.cardType)} ending in ${card.last4 ?? "****"}`,
                         }))}

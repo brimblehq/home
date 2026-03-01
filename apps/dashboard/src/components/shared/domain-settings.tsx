@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, Share2, Reply, Plus, AlertCircle, ChevronDown, Pencil, RefreshCw, ArrowUpRight } from "lucide-react";
-import { CheckCircle, ShieldCheck } from "@phosphor-icons/react";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { CheckCircle, ShieldCheck, Warning } from "@phosphor-icons/react";
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
@@ -18,6 +18,7 @@ import {
 import { SimpleTooltip } from "./tooltip";
 import { ToggleSwitch } from "./toggle-switch";
 import { WarningModal } from "./warning-modal";
+import { Dropdown } from "./dropdown";
 import {
   createDomainDnsRecordServerFn,
   deleteDomainDnsRecordServerFn,
@@ -45,13 +46,18 @@ export interface DomainInfo {
   registrar: string;
   nameserversType: string;
   expirationDate: string;
-  creator: string;
+  connectedProjectName?: string;
+  connectedProjectId?: string;
+  connectedProjectSlug?: string;
   dnsRecords: DnsRecord[];
   nameservers: string[];
   nameserverWarning?: string;
   purchased?: boolean;
   isExpired?: boolean;
   active?: boolean;
+  expiresAt?: string;
+  canTransferOut?: boolean;
+  transferOutMessage?: string;
   renewalPrice?: number;
   renewalDuration?: number;
   autoRenewal?: boolean;
@@ -350,6 +356,14 @@ export function DomainSettings({
   const [transferAuthLoading, setTransferAuthLoading] = useState(false);
   const [domainActive, setDomainActive] = useState(Boolean(domain.active));
   const [refreshingStatus, setRefreshingStatus] = useState(false);
+
+  const expiringSoon = (() => {
+    if (domain.isExpired || !domain.expiresAt) return false;
+    const expiry = new Date(domain.expiresAt);
+    if (Number.isNaN(expiry.getTime())) return false;
+    const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / 86_400_000);
+    return daysLeft >= 0 && daysLeft <= 7;
+  })();
   const refreshDomainStatus = useServerFn(refreshDomainStatusServerFn as any) as (args: {
     data: { workspace?: string; domainName: string };
   }) => Promise<{ active?: boolean } | null>;
@@ -543,6 +557,10 @@ export function DomainSettings({
 
   const renewalUnitPrice = Number(domain.renewalPrice ?? 0);
   const totalRenewalPrice = renewalUnitPrice * renewDuration;
+  const canAutomaticallyTransfer = domain.canTransferOut !== false;
+  const transferSupportMessage =
+    domain.transferOutMessage
+    || "This domain does not support automatic transfer in the dashboard. Contact support and we will help you complete the transfer manually.";
   const canContinueTransfer =
     transferChecklist.unlocked
     && transferChecklist.registrantEmailReady
@@ -637,12 +655,33 @@ export function DomainSettings({
             <InfoColumn label="Registrar" value={domain.registrar} />
             <InfoColumn label="Nameservers" value={domain.nameserversType} />
             <InfoColumn label="Expiration date" value={domain.expirationDate} />
-            <InfoColumn label="Creator" value={domain.creator} />
+            <InfoColumn
+              label="Connected project"
+              value={
+                domain.connectedProjectName ? (
+                  <Link
+                    to={
+                      `${`/projects/${encodeURIComponent(
+                        domain.connectedProjectSlug
+                          || domain.connectedProjectName
+                          || domain.connectedProjectId
+                          || "",
+                      )}`}${workspace ? `?workspace=${encodeURIComponent(workspace)}` : ""}` as any
+                    }
+                    className="underline decoration-dash-border-soft underline-offset-2 transition-colors hover:text-dash-text-strong"
+                  >
+                    {domain.connectedProjectName}
+                  </Link>
+                ) : (
+                  "Not linked"
+                )
+              }
+            />
           </div>
         </div>
 
-        {/* Expired domain banner */}
-        {domain.isExpired && (
+        {/* Domain status banner — priority: expired > expiring soon > nameserver warning > DNS status */}
+        {domain.isExpired ? (
           <div className="flex items-center gap-3 rounded-[4px] bg-[#fef2f2] px-4 py-3 dark:bg-[#2a1818]">
             <AlertCircle className="size-5 shrink-0 text-[#ef4444]" />
             <span className="text-sm text-dash-text-body">
@@ -657,33 +696,43 @@ export function DomainSettings({
               Renew now
             </GlossyButton>
           </div>
-        )}
-
-        {/* Domain status banner */}
-        {!domain.isExpired && !domain.nameserverWarning && (
-          domainActive ? (
-            <div className="flex items-center gap-3 rounded-[4px] bg-[#f0fdf4] px-4 py-3 dark:bg-[#162317]">
-              <CheckCircle className="size-5 shrink-0 text-[#34d399]" weight="fill" />
-              <span className="text-sm text-dash-text-body">
-                Domain is active — DNS has propagated and your settings are live.
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 rounded-[4px] bg-[#fffbeb] px-4 py-3 dark:bg-[#2a2518]">
-              <AlertCircle className="size-5 shrink-0 text-[#e89c30]" />
-              <span className="text-sm text-dash-text-body">
-                DNS is still propagating. This can take up to 48 hours.
-              </span>
-              <button
-                onClick={handleCheckDnsStatus}
-                disabled={refreshingStatus}
-                className="ml-auto flex shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-2.5 py-1.5 text-xs font-medium text-dash-text-body transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-50"
-              >
-                <RefreshCw className={`size-3 ${refreshingStatus ? "animate-spin" : ""}`} />
-                {refreshingStatus ? "Checking..." : "Check status"}
-              </button>
-            </div>
-          )
+        ) : expiringSoon ? (
+          <div className="flex items-center gap-3 rounded-[4px] bg-[#fffbeb] px-4 py-3 dark:bg-[#2a2518]">
+            <Warning size={20} weight="fill" className="shrink-0 text-[#f5a623]" />
+            <span className="text-sm text-dash-text-body">
+              This domain expires in less than 7 days. Renew it soon to avoid losing ownership.
+            </span>
+            <GlossyButton
+              type="button"
+              variant="black"
+              onClick={() => setRenewOpen(true)}
+              className="ml-auto h-8 shrink-0 rounded-[6px] px-2.5 text-xs"
+            >
+              Renew now
+            </GlossyButton>
+          </div>
+        ) : domain.nameserverWarning ? null : domainActive ? (
+          <div className="flex items-center gap-3 rounded-[4px] bg-[#f0fdf4] px-4 py-3 dark:bg-[#162317]">
+            <CheckCircle className="size-5 shrink-0 text-[#34d399]" weight="fill" />
+            <span className="text-sm text-dash-text-body">
+              Domain is active — DNS has propagated and your settings are live.
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 rounded-[4px] bg-[#fffbeb] px-4 py-3 dark:bg-[#2a2518]">
+            <AlertCircle className="size-5 shrink-0 text-[#e89c30]" />
+            <span className="text-sm text-dash-text-body">
+              DNS is still propagating. This can take up to 48 hours.
+            </span>
+            <button
+              onClick={handleCheckDnsStatus}
+              disabled={refreshingStatus}
+              className="ml-auto flex shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-2.5 py-1.5 text-xs font-medium text-dash-text-body transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-50"
+            >
+              <RefreshCw className={`size-3 ${refreshingStatus ? "animate-spin" : ""}`} />
+              {refreshingStatus ? "Checking..." : "Check status"}
+            </button>
+          </div>
         )}
 
         {/* DNS Records section */}
@@ -695,9 +744,14 @@ export function DomainSettings({
               </h2>
               <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
                 Manage the domain name system for your domain "
-                <span className="font-normal text-dash-text-body">
+                <a
+                  href={`https://${domain.domainName}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-normal text-dash-text-body underline-offset-2 transition-colors hover:text-dash-text-strong hover:underline"
+                >
                   {domain.domainName}
-                </span>
+                </a>
                 "
               </p>
             </div>
@@ -828,9 +882,14 @@ export function DomainSettings({
               To use Brimble Name Servers, Kindly enable DNS for this domain. It
               can always be disabled too from the Domains Page. Point your domain
               nameservers of "
-              <span className="font-normal text-dash-text-body">
+              <a
+                href={`https://${domain.domainName}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-normal text-dash-text-body underline-offset-2 transition-colors hover:text-dash-text-strong hover:underline"
+              >
                 {domain.domainName}
-              </span>
+              </a>
               " to Brimble name servers listed below.
             </p>
           </div>
@@ -879,14 +938,32 @@ export function DomainSettings({
                   GoDaddy). The transfer is finalized at the destination provider.
                 </p>
               </div>
-              <GlossyButton
-                variant="black"
-                type="button"
-                onClick={() => setTransferOutOpen(true)}
-                className="shrink-0"
-              >
-                Start transfer
-              </GlossyButton>
+              {domain.isExpired ? (
+                <SimpleTooltip
+                  content="This domain can't be transferred because it has expired"
+                  side="left"
+                >
+                  <span className="shrink-0">
+                    <GlossyButton
+                      variant="black"
+                      type="button"
+                      disabled
+                      className="shrink-0 cursor-not-allowed opacity-50"
+                    >
+                      Start transfer
+                    </GlossyButton>
+                  </span>
+                </SimpleTooltip>
+              ) : (
+                <GlossyButton
+                  variant="black"
+                  type="button"
+                  onClick={() => setTransferOutOpen(true)}
+                  className="shrink-0"
+                >
+                  Start transfer
+                </GlossyButton>
+              )}
             </div>
           </div>
         )}
@@ -958,65 +1035,83 @@ export function DomainSettings({
                 </div>
               </div>
 
-              <div className="rounded-[8px] border border-dash-border bg-dash-bg-elevated px-4 py-3">
-                <p className="text-sm font-medium text-dash-text-strong">Pre-transfer checklist</p>
-                <div className="mt-3 flex flex-col gap-3">
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={transferChecklist.unlocked}
-                      onChange={(e) =>
-                        setTransferChecklist((prev) => ({ ...prev, unlocked: e.target.checked }))
-                      }
-                      className="mt-0.5 size-4 rounded border-dash-border"
-                    />
-                    <span className="text-sm text-dash-text-body">
-                      I have unlocked the domain for transfer (or I am ready to do so).
-                    </span>
-                  </label>
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={transferChecklist.registrantEmailReady}
-                      onChange={(e) =>
-                        setTransferChecklist((prev) => ({
-                          ...prev,
-                          registrantEmailReady: e.target.checked,
-                        }))
-                      }
-                      className="mt-0.5 size-4 rounded border-dash-border"
-                    />
-                    <span className="text-sm text-dash-text-body">
-                      I can access the registrant email to approve transfer verification emails.
-                    </span>
-                  </label>
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={transferChecklist.understandDnsImpact}
-                      onChange={(e) =>
-                        setTransferChecklist((prev) => ({
-                          ...prev,
-                          understandDnsImpact: e.target.checked,
-                        }))
-                      }
-                      className="mt-0.5 size-4 rounded border-dash-border"
-                    />
-                    <span className="text-sm text-dash-text-body">
-                      I understand DNS and renewal settings may be managed at the new registrar after
-                      transfer completes.
-                    </span>
-                  </label>
-                </div>
-              </div>
+              {canAutomaticallyTransfer ? (
+                <>
+                  <div className="rounded-[8px] border border-dash-border bg-dash-bg-elevated px-4 py-3">
+                    <p className="text-sm font-medium text-dash-text-strong">Pre-transfer checklist</p>
+                    <div className="mt-3 flex flex-col gap-3">
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={transferChecklist.unlocked}
+                          onChange={(e) =>
+                            setTransferChecklist((prev) => ({ ...prev, unlocked: e.target.checked }))
+                          }
+                          className="mt-0.5 size-4 rounded border-dash-border"
+                        />
+                        <span className="text-sm text-dash-text-body">
+                          I have unlocked the domain for transfer (or I am ready to do so).
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={transferChecklist.registrantEmailReady}
+                          onChange={(e) =>
+                            setTransferChecklist((prev) => ({
+                              ...prev,
+                              registrantEmailReady: e.target.checked,
+                            }))
+                          }
+                          className="mt-0.5 size-4 rounded border-dash-border"
+                        />
+                        <span className="text-sm text-dash-text-body">
+                          I can access the registrant email to approve transfer verification emails.
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={transferChecklist.understandDnsImpact}
+                          onChange={(e) =>
+                            setTransferChecklist((prev) => ({
+                              ...prev,
+                              understandDnsImpact: e.target.checked,
+                            }))
+                          }
+                          className="mt-0.5 size-4 rounded border-dash-border"
+                        />
+                        <span className="text-sm text-dash-text-body">
+                          I understand DNS and renewal settings may be managed at the new registrar after
+                          transfer completes.
+                        </span>
+                      </label>
+                    </div>
+                  </div>
 
-              <div className="rounded-[8px] border border-dash-border bg-dash-bg px-4 py-3">
-                <p className="text-sm font-medium text-dash-text-strong">Authorization code (EPP)</p>
-                <p className="mt-1 text-xs leading-4 text-dash-text-faded">
-                  Some providers ask for an EPP/Auth code during transfer. Click Continue to load the
-                  code for this domain.
-                </p>
-              </div>
+                  <div className="rounded-[8px] border border-dash-border bg-dash-bg px-4 py-3">
+                    <p className="text-sm font-medium text-dash-text-strong">Authorization code (EPP)</p>
+                    <p className="mt-1 text-xs leading-4 text-dash-text-faded">
+                      Some providers ask for an EPP/Auth code during transfer. Click Continue to load the
+                      code for this domain.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-start gap-3 px-1 py-2">
+                  <Warning size={18} weight="fill" className="mt-0.5 shrink-0 text-[#f5a623]" />
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-medium text-dash-text-strong">
+                      Automatic transfer is not available
+                    </p>
+                    <p className="text-sm leading-5 text-dash-text-faded">
+                      Automatic transfer isn't supported for this domain. Reach out at{" "}
+                      <a href="mailto:hello@brimble.app" className="underline hover:text-dash-text-body">hello@brimble.app</a>{" "}
+                      or use the support chat and a representative will help you complete the transfer.
+                    </p>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -1089,7 +1184,7 @@ export function DomainSettings({
                 </GlossyButton>
               )}
             </div>
-            {transferStep === "setup" ? (
+            {transferStep === "setup" && canAutomaticallyTransfer ? (
               <ModalContinueButton
                 disabled={!canContinueTransfer}
                 loading={transferAuthLoading}
@@ -1098,7 +1193,7 @@ export function DomainSettings({
               >
                 Continue
               </ModalContinueButton>
-            ) : (
+            ) : transferStep === "auth-code" ? (
               <ModalContinueButton
                 onClick={() => {
                   setTransferOutOpen(false);
@@ -1107,7 +1202,7 @@ export function DomainSettings({
               >
                 Done
               </ModalContinueButton>
-            )}
+            ) : null}
           </div>
         </ModalFooter>
       </Modal>
@@ -1125,20 +1220,25 @@ export function DomainSettings({
         confirmLoadingLabel="Renewing domain..."
         confirmDisabled={!domain.domainId}
         onConfirm={async () => {
-          await renewDomain({
-            data: {
-              ...(workspace ? { workspace } : {}),
-              domainId: domain.domainId,
-              duration: renewDuration,
-              autoRenew: renewAutoRenew,
-            },
-          });
+          try {
+            await renewDomain({
+              data: {
+                ...(workspace ? { workspace } : {}),
+                domainId: domain.domainId,
+                duration: renewDuration,
+                autoRenew: renewAutoRenew,
+              },
+            });
 
-          toast.success("Domain renewal submitted");
-          window.location.reload();
+            toast.success("Domain renewal submitted");
+            window.location.reload();
+          } catch (err: any) {
+            toast.error(err?.message || "Failed to renew domain");
+            throw err;
+          }
         }}
       >
-        <div className="flex flex-col gap-3 text-left">
+        <div className="flex flex-col gap-4 text-left">
           <div className="flex items-center justify-between rounded-[8px] border border-dash-border bg-dash-bg-elevated px-3 py-2">
             <span className="text-sm text-dash-text-faded">Domain</span>
             <span className="text-sm font-medium text-dash-text-strong">
@@ -1148,24 +1248,19 @@ export function DomainSettings({
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm text-dash-text-faded">Renewal duration</label>
-            <select
-              value={renewDuration}
-              onChange={(e) => setRenewDuration(Number(e.target.value) || 1)}
-              className="input-base input-focus h-10 px-2.5 text-sm text-dash-text-strong"
-            >
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((year) => (
-                <option key={year} value={year}>
-                  {year} year{year > 1 ? "s" : ""}
-                  {renewalUnitPrice > 0
-                    ? ` — $${(renewalUnitPrice * year).toFixed(2)}`
-                    : ""}
-                </option>
-              ))}
-            </select>
+            <Dropdown
+              value={String(renewDuration)}
+              options={Array.from({ length: 10 }, (_, i) => ({
+                id: String(i + 1),
+                label: `${i + 1} year${i + 1 > 1 ? "s" : ""}${renewalUnitPrice > 0 ? ` — $${(renewalUnitPrice * (i + 1)).toFixed(2)}` : ""}`,
+              }))}
+              onChange={(val) => setRenewDuration(Number(val) || 1)}
+              placeholder="Select duration..."
+            />
           </div>
 
-          <div className="flex items-center justify-between rounded-[8px] border border-dash-border bg-dash-bg-elevated px-3 py-2.5">
-            <div className="flex flex-col">
+          <div className="flex items-center justify-between py-1">
+            <div className="flex flex-col gap-0.5">
               <span className="text-sm text-dash-text-body">Auto renewal</span>
               <span className="text-xs text-dash-text-faded">
                 Renew automatically before expiration
@@ -1189,7 +1284,7 @@ export function DomainSettings({
   );
 }
 
-function InfoColumn({ label, value }: { label: string; value: string }) {
+function InfoColumn({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex w-[200px] flex-col gap-1">
       <span className="text-sm font-light leading-[1.3] text-dash-text-faded">

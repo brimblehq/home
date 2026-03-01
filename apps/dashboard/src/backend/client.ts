@@ -173,12 +173,17 @@ export function createBackendClient(config: BackendClientConfig): BackendClient 
         }
       }
 
+      const skipAuth = headers.Authorization === "";
+      if (skipAuth) {
+        delete headers.Authorization;
+      }
+
       const accessToken = await config.getAccessToken?.();
-      if (accessToken && !headers.Authorization) {
+      if (accessToken && !skipAuth && !headers.Authorization) {
         headers.Authorization = `Bearer ${accessToken}`;
       }
 
-      if (accessToken && !headers["X-Payment-Key"]) {
+      if (accessToken && !skipAuth && !headers["X-Payment-Key"]) {
         const paymentKey = await createPaymentKeyHeader(16);
         if (paymentKey) {
           headers["X-Payment-Key"] = paymentKey;

@@ -305,7 +305,11 @@ code {
     @apply bg-background text-foreground;
   }
   button,
-  [role="button"] {
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"],
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
     cursor: pointer;
   }
 }

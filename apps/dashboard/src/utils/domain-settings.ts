@@ -44,7 +44,11 @@ function formatExpiryDate(value?: string): string {
     return value;
   }
 
-  return date.toLocaleDateString();
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
 }
 
 function getNameserversType(domain: DomainDetailsRecord): string {
@@ -97,7 +101,9 @@ export function mapDomainDetailsToDomainInfo(domain: DomainDetailsRecord): Domai
     registrar: domain.registrar || (domain.isCustom ? "Custom domain" : "-"),
     nameserversType: getNameserversType(domain),
     expirationDate: formatExpiryDate(domain.expiresAt),
-    creator: domain.creatorName || domain.createdByName || "Brimble",
+    connectedProjectName: domain.projectName,
+    connectedProjectId: domain.projectId,
+    connectedProjectSlug: domain.projectSlug,
     dnsRecords: domain.dnsRecords.map((record) => ({
       id: record.id,
       type: record.type || "-",
@@ -111,6 +117,9 @@ export function mapDomainDetailsToDomainInfo(domain: DomainDetailsRecord): Domai
     nameserverWarning: buildNameserverWarning(domain),
     purchased: domain.purchased,
     active: domain.active,
+    expiresAt: domain.expiresAt,
+    canTransferOut: domain.canTransferOut,
+    transferOutMessage: domain.transferOutMessage,
     isExpired: domain.isExpired ?? isDateExpired(domain.expiresAt),
     renewalPrice: domain.renewalPrice,
     renewalDuration: domain.renewalDuration,

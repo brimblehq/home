@@ -300,8 +300,7 @@ export function DashboardLayout({
   const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
   const isCatchAll = layoutPathname !== "/" && !knownPrefixes.test(layoutPathname);
   const resolvedIsFullWidth = isFullWidthLayoutPath(layoutPathname);
-  const targetIsFullWidth = isFullWidthLayoutPath(pathname);
-  const shouldRenderDesktopSidebar = !(resolvedIsFullWidth && targetIsFullWidth);
+  const shouldRenderDesktopSidebar = !resolvedIsFullWidth;
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const [stableWorkspaces, setStableWorkspaces] = useState<Workspace[]>(
     initialWorkspaces?.items ?? [],

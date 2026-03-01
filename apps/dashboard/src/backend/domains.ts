@@ -14,6 +14,7 @@ export interface DomainRecord {
   name: string;
   projectId?: string;
   projectName?: string;
+  projectSlug?: string;
   active: boolean;
   enabled?: boolean;
   isCustom?: boolean;
@@ -44,6 +45,8 @@ export interface DomainDetailsRecord extends DomainRecord {
   renewalPrice?: number;
   renewalDuration?: number;
   autoRenewal?: boolean;
+  canTransferOut?: boolean;
+  transferOutMessage?: string;
   nameservers?: string[];
   nameserver?: {
     expected: string[];
@@ -97,7 +100,7 @@ export interface PurchaseDomainInput {
 }
 
 export interface RenewDomainInput {
-  domainId: string;
+  id: string;
   duration: number;
   autoRenew: boolean;
   teamId?: string;
@@ -116,7 +119,7 @@ export interface DomainsApi {
   transferOut(domainName: string, teamId?: string): Promise<{ domainName: string; authCode: string; unlocked: boolean }>;
   searchSale(domainName: string): Promise<SearchDomainResult[]>;
   purchaseSale(input: PurchaseDomainInput): Promise<void>;
-  renewSale(input: RenewDomainInput): Promise<void>;
+  renewSale(input: RenewDomainInput): Promise<{ domain: string; renewal_date: string; reference: string }>;
   verify(domainId: string): Promise<DomainRecord>;
   remove(input: { domainId: string; projectId?: string; teamId?: string }): Promise<void>;
   createDnsRecord(input: {
@@ -146,11 +149,13 @@ function mapDomainRecord(domain: any): DomainRecord | null {
 
   let projectId: string | undefined;
   let projectName: string | undefined;
+  let projectSlug: string | undefined;
   if (projectRecord) {
     if (projectRecord.id != null || projectRecord._id != null) {
       projectId = String(projectRecord.id ?? projectRecord._id);
     }
     projectName = pickNonEmptyString(projectRecord, "name");
+    projectSlug = pickNonEmptyString(projectRecord, "slug");
   } else {
     projectId = asNonEmptyString(row.project);
   }
@@ -162,7 +167,7 @@ function mapDomainRecord(domain: any): DomainRecord | null {
     createdByName = `${firstName} ${lastName}`.trim();
   }
 
-  const active = pickBoolean(row, "active", "enabled") ?? false;
+  const active = pickBoolean(row, "active", "enabled") ?? true;
   const enabled = pickBoolean(row, "enabled");
 
   let isCustom = pickBoolean(row, "isCustom", "is_custom");
@@ -196,6 +201,7 @@ function mapDomainRecord(domain: any): DomainRecord | null {
     name,
     projectId,
     projectName,
+    projectSlug,
     active,
     enabled,
     isCustom,
@@ -231,6 +237,8 @@ function mapDomainDetailsRecord(domain: any): DomainDetailsRecord | null {
   const renewalPrice = pickNumber(whoisRecord, "renewal_price", "renewalPrice");
   const renewalDuration = pickNumber(row, "renewal_duration", "renewalDuration");
   const autoRenewal = pickBoolean(row, "auto_renewal", "autoRenewal");
+  const canTransferOut = pickBoolean(row, "canTransferOut", "can_transfer_out");
+  const transferOutMessage = pickNonEmptyString(row, "transferOutMessage", "transfer_out_message");
 
   let nameservers: string[] = [];
   if (Array.isArray(row.nameservers)) {
@@ -301,6 +309,8 @@ function mapDomainDetailsRecord(domain: any): DomainDetailsRecord | null {
     renewalPrice,
     renewalDuration,
     autoRenewal,
+    canTransferOut,
+    transferOutMessage,
     nameservers,
     nameserver,
     dnsRecords,
@@ -398,6 +408,7 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
       );
 
       const root = response?.data?.data ?? response?.data ?? response ?? null;
+      console.log("[domains.getByName] response:", root);
       if (!root) {
         return null;
       }
@@ -530,53 +541,22 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
     },
 
     async renewSale(input) {
-      const endpoint = "/core/v1/domains/sale/renew";
-      const body = {
-        id: input.domainId,
-        duration: input.duration,
-        auto_renew: input.autoRenew,
-        teamId: input.teamId,
-      };
-
-      console.log("[domains.renewSale] request", {
-        endpoint,
-        payload: body,
+      const response = await client.request<any>("/core/v1/domains/sale/renew", {
+        method: "POST",
+        body: {
+          id: input.id,
+          duration: input.duration,
+          auto_renew: input.autoRenew,
+          teamId: input.teamId,
+        },
       });
 
-      try {
-        const response = await client.request<any>(endpoint, {
-          method: "POST",
-          body,
-        });
-
-        console.log("[domains.renewSale] response", {
-          endpoint,
-          response,
-        });
-      } catch (error) {
-        const err = error as {
-          message?: string;
-          status?: number;
-          code?: string;
-          details?: unknown;
-        };
-
-        console.log("[domains.renewSale] error", {
-          endpoint,
-          error: {
-            message: err?.message,
-            status: err?.status,
-            code: err?.code,
-            details: err?.details,
-          },
-        });
-        console.log(
-          "[domains.renewSale] error details json",
-          JSON.stringify(err?.details ?? null, null, 2),
-        );
-
-        throw error;
-      }
+      const root = response?.data?.data ?? response?.data ?? response ?? {};
+      return {
+        domain: root.domain ?? "",
+        renewal_date: root.renewal_date ?? "",
+        reference: root.reference ?? "",
+      };
     },
 
     async verify() {
