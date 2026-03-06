@@ -19,6 +19,11 @@ export const DEFAULT_PRICING: Pricing = {
     bandwidthPerGb: config.defaultOverageBandwidthPerGb,
     buildMinutesPerMin: config.defaultOverageBuildMinutesPerMin,
   },
+  metered: {
+    cpuPerGbMonth: 4,
+    memoryPerGbMonth: 4,
+    storagePerGbMonth: 0.25,
+  },
   specs: {
     free: {
       projectLimit: 3,

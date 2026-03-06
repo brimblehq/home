@@ -2,6 +2,7 @@ import { cn } from "@brimble/ui";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 import { Spinner } from "./spinner";
+import { useHaptics } from "@/hooks/use-haptics";
 
 /* ─────────────────────────────────────────────
    Shared styles
@@ -88,6 +89,8 @@ export function NumberPagination({
   isLoading = false,
   loadingPage = null,
 }: NumberPaginationProps) {
+  const haptics = useHaptics();
+
   if (totalPages <= 1) return null;
 
   const pages = getPageRange(currentPage, totalPages, maxVisible);
@@ -97,7 +100,10 @@ export function NumberPagination({
   return (
     <nav aria-label="Pagination" className="flex items-center justify-center gap-1">
       <button
-        onClick={() => onPageChange(currentPage - 1)}
+        onClick={() => {
+          haptics.selection();
+          onPageChange(currentPage - 1);
+        }}
         disabled={isFirst || isLoading}
         aria-label="Previous page"
         className="flex size-8 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated disabled:opacity-30"
@@ -121,7 +127,10 @@ export function NumberPagination({
         ) : (
           <button
             key={page}
-            onClick={() => onPageChange(page)}
+            onClick={() => {
+              haptics.selection();
+              onPageChange(page);
+            }}
             disabled={isLoading}
             aria-current={page === currentPage ? "page" : undefined}
             aria-label={`Page ${page}`}
@@ -141,7 +150,10 @@ export function NumberPagination({
       )}
 
       <button
-        onClick={() => onPageChange(currentPage + 1)}
+        onClick={() => {
+          haptics.selection();
+          onPageChange(currentPage + 1);
+        }}
         disabled={isLast || isLoading}
         aria-label="Next page"
         className="flex size-8 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated disabled:opacity-30"
@@ -179,6 +191,8 @@ export function CursorPagination({
   label,
   showLabels = false,
 }: CursorPaginationProps) {
+  const haptics = useHaptics();
+
   if (!hasNextPage && !hasPrevPage) return null;
 
   return (
@@ -186,7 +200,10 @@ export function CursorPagination({
       {/* Previous */}
       <motion.button
         whileTap={hasPrevPage ? tapScale : undefined}
-        onClick={onPrev}
+        onClick={() => {
+          haptics.selection();
+          onPrev();
+        }}
         disabled={!hasPrevPage}
         aria-label="Previous page"
         className={cn(
@@ -207,7 +224,10 @@ export function CursorPagination({
       {/* Next */}
       <motion.button
         whileTap={hasNextPage ? tapScale : undefined}
-        onClick={onNext}
+        onClick={() => {
+          haptics.selection();
+          onNext();
+        }}
         disabled={!hasNextPage}
         aria-label="Next page"
         className={cn(

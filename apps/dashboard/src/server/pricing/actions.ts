@@ -66,6 +66,12 @@ function normalizePricing(raw: any): Pricing {
 
   const overage = DEFAULT_PRICING.overage;
 
+  const metered = {
+    cpuPerGbMonth: Number(prices.metered?.cpu_per_gb_month?.unit_amount ?? DEFAULT_PRICING.metered.cpuPerGbMonth),
+    memoryPerGbMonth: Number(prices.metered?.memory_per_gb_month?.unit_amount ?? DEFAULT_PRICING.metered.memoryPerGbMonth),
+    storagePerGbMonth: Number(prices.metered?.storage_per_gb_month?.unit_amount ?? DEFAULT_PRICING.metered.storagePerGbMonth),
+  };
+
   const specsMap: Record<string, PlanSpecs> = {};
   for (const key of ["free", "hacker", "developer", "team"] as const) {
     if (specs[key]) {
@@ -73,7 +79,7 @@ function normalizePricing(raw: any): Pricing {
     }
   }
 
-  return { plans, team, overage, specs: { ...DEFAULT_PRICING.specs, ...specsMap } };
+  return { plans, team, overage, metered, specs: { ...DEFAULT_PRICING.specs, ...specsMap } };
 }
 
 /** Parse a value that may be a boolean, string "true"/"false", or number 0/1. */

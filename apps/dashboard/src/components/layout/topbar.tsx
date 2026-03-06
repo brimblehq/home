@@ -11,12 +11,14 @@ import {
   Users,
   Menu,
   X,
+  ArrowRightLeft,
 } from "lucide-react";
-import { House } from "@phosphor-icons/react";
+import { House, ShoppingBag } from "@phosphor-icons/react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../../hooks/use-theme";
+import { useHaptics } from "../../hooks/use-haptics";
 import { DashButton } from "../shared/dash-button";
 import { Avatar } from "../shared/avatar";
 import { useScoutBar } from "../../contexts/scoutbar-context";
@@ -64,7 +66,9 @@ function ProjectSwitcher({
   projects: Project[];
 }) {
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -75,14 +79,19 @@ function ProjectSwitcher({
     }
     if (open) {
       document.addEventListener("mousedown", handleClick);
+      filterRef.current?.focus();
       return () => document.removeEventListener("mousedown", handleClick);
+    } else {
+      setFilter("");
     }
   }, [open]);
 
   const displayProjectId = decodeURIComponent(projectId);
   const currentProject = projects.find(
     (project) =>
-      project.slug === displayProjectId || project.name === displayProjectId,
+      project.id === displayProjectId ||
+      project.slug === displayProjectId ||
+      project.name === displayProjectId,
   );
   let activeProjectLabel = displayProjectId;
   if (currentProject?.name) {
@@ -113,10 +122,21 @@ function ProjectSwitcher({
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="absolute left-0 top-full z-50 mt-2 w-[200px] origin-top-left overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg shadow-[0px_2px_3px_rgba(0,0,0,0.06)]"
           >
+            {/* Search filter */}
+            <div className="border-b-[0.5px] border-dash-border px-3 py-2">
+              <input
+                ref={filterRef}
+                type="text"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Search projects…"
+                className="w-full bg-transparent text-sm text-dash-text-body placeholder:text-dash-text-extra-faded outline-none"
+              />
+            </div>
             {/* Project list */}
             <div className="scrollbar-hidden flex max-h-[240px] flex-col gap-2 overflow-y-auto border-b-[0.5px] border-dash-border px-3.5 py-2">
               {projects.length > 0 ? (
-                projects.map((project) => {
+                projects.filter((p) => !filter || (p.name || p.slug || "").toLowerCase().includes(filter.toLowerCase())).map((project) => {
                   const nextProjectId = project.slug || project.name;
                   if (!nextProjectId) {
                     return null;
@@ -211,12 +231,12 @@ function WorkspaceSwitcher({
   const personalAvatarSeed = profile?.username || profile?.firstName || profile?.email || "user";
 
   const personalName =
+    profile?.firstName ||
     profile?.username ||
-    [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
-    profile?.email ||
-    "Personal Account";
-  const personalDisplayName = toTitleCase(personalName);
-  const personalWorkspaceLabel = `${personalDisplayName}'s Workspace`;
+    profile?.email;
+  const personalWorkspaceLabel = personalName
+    ? `${toTitleCase(personalName)}'s Workspace`
+    : "";
   const params = new URLSearchParams(searchStr || "");
   const activeWorkspaceSlug = params.get("workspace");
   const activeTeam =
@@ -296,32 +316,34 @@ function WorkspaceSwitcher({
             </div>
 
             {/* Personal Accounts */}
-            <div className="border-b-[0.5px] border-dash-border px-2 pb-4 pt-2">
-              <div className="py-2">
-                <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">
-                  Personal Accounts
-                </span>
+            {personalWorkspaceLabel ? (
+              <div className="border-b-[0.5px] border-dash-border px-2 pb-4 pt-2">
+                <div className="py-2">
+                  <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">
+                    Personal Accounts
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    navigateWithWorkspace();
+                  }}
+                  className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[4px] px-2 py-2 transition-colors hover:bg-dash-bg-elevated ${
+                    !activeTeam ? "bg-dash-bg-elevated" : ""
+                  }`}
+                >
+                  <Avatar
+                    src={profile?.avatarUrl}
+                    fallbackSeed={personalAvatarSeed}
+                    alt=""
+                    className="size-6 shrink-0 rounded-full object-cover"
+                  />
+                  <span className="text-sm text-dash-text-body dark:text-dash-text-strong">
+                    {personalWorkspaceLabel}
+                  </span>
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  setOpen(false);
-                  navigateWithWorkspace();
-                }}
-                className={`flex w-full items-center gap-2.5 rounded-[4px] px-2 py-2 transition-colors hover:bg-dash-bg-elevated ${
-                  !activeTeam ? "bg-dash-bg-elevated" : ""
-                }`}
-              >
-                <Avatar
-                  src={profile?.avatarUrl}
-                  fallbackSeed={personalAvatarSeed}
-                  alt=""
-                  className="size-6 shrink-0 rounded-full object-cover"
-                />
-                <span className="text-sm text-dash-text-body dark:text-dash-text-strong">
-                  {personalWorkspaceLabel}
-                </span>
-              </button>
-            </div>
+            ) : null}
 
             {/* Teams */}
             <div className="border-b-[0.5px] border-dash-border px-2 pb-4 pt-2">
@@ -342,7 +364,7 @@ function WorkspaceSwitcher({
                             navigateWithWorkspace(team.slug);
                           }
                         }}
-                        className={`flex w-full items-center gap-2.5 rounded-[4px] px-2 py-2 transition-colors hover:bg-dash-bg-elevated ${
+                        className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[4px] px-2 py-2 transition-colors hover:bg-dash-bg-elevated ${
                           activeTeam?.slug === team.slug
                             ? "bg-dash-bg-elevated"
                             : ""
@@ -518,7 +540,7 @@ function mapNotifications(
   }));
 }
 
-function NotificationsDropdown() {
+function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHaptics> }) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -643,7 +665,7 @@ function NotificationsDropdown() {
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => { haptics?.selection(); setOpen(!open); }}
         className="flex items-center gap-1.5 text-sm text-dash-text-faded hover:text-dash-text-strong transition-colors"
       >
         <span className="relative">
@@ -725,17 +747,27 @@ function NotificationsDropdown() {
   );
 }
 
-const createMenuItems = [
+const defaultCreateMenuItems = [
   { label: "Create project", icon: Plus },
   { label: "Register domain", icon: Globe },
   { label: "New workspace", icon: Users },
+];
+
+const domainsCreateMenuItems = [
+  { label: "Buy domain", icon: ShoppingBag },
+  { label: "Transfer in", icon: ArrowRightLeft },
 ];
 
 function CreateDropdown() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const haptics = useHaptics();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+
+  const isDomainsPage = /^\/domains(\/|$)/.test(pathname);
+  const menuItems = isDomainsPage ? domainsCreateMenuItems : defaultCreateMenuItems;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -749,27 +781,70 @@ function CreateDropdown() {
     }
   }, [open]);
 
+  function handlePrimaryClick() {
+    haptics.light();
+    if (isDomainsPage) {
+      window.dispatchEvent(new CustomEvent("brimble:add-domain"));
+    } else {
+      navigate({
+        to: withWorkspaceQuery({
+          pathname: "/projects/new",
+          searchStr,
+        }) as any,
+      });
+    }
+  }
+
+  function handleMenuItemClick(label: string) {
+    haptics.light();
+    setOpen(false);
+    if (label === "Buy domain") {
+      navigate({
+        to: withWorkspaceQuery({
+          pathname: "/domains/buy",
+          searchStr,
+        }) as any,
+      });
+    } else if (label === "Transfer in") {
+      window.dispatchEvent(new CustomEvent("brimble:transfer-in"));
+    } else if (label === "Create project") {
+      navigate({
+        to: withWorkspaceQuery({
+          pathname: "/projects/new",
+          searchStr,
+        }) as any,
+      });
+    } else if (label === "Register domain") {
+      navigate({
+        to: withWorkspaceQuery({
+          pathname: "/domains/buy",
+          searchStr,
+        }) as any,
+      });
+    } else if (label === "New workspace") {
+      navigate({
+        to: withWorkspaceQuery({
+          pathname: "/workspace/new",
+          searchStr,
+        }) as any,
+      });
+    }
+  }
+
   return (
     <div className="relative" ref={ref}>
       <div className="flex items-stretch">
         <button
           type="button"
-          onClick={() =>
-            navigate({
-              to: withWorkspaceQuery({
-                pathname: "/projects/new",
-                searchStr,
-              }) as any,
-            })
-          }
+          onClick={handlePrimaryClick}
           className="flex items-center gap-1 rounded-l border border-[#3964d5] bg-[#4879f8] py-[5px] pl-3 pr-2 text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)]"
         >
           <img src="/icons/plus-white.svg" alt="" className="size-4" />
-          Create
+          {isDomainsPage ? "Add Domain" : "Create"}
         </button>
         <button
           type="button"
-          onClick={() => setOpen(!open)}
+          onClick={() => { haptics.selection(); setOpen(!open); }}
           className="flex items-center rounded-r border border-l-0 border-[#3964d5] bg-[#4879f8] px-1.5 shadow-[0px_1px_2px_rgba(18,18,23,0.05)]"
         >
           <motion.span
@@ -790,38 +865,12 @@ function CreateDropdown() {
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="absolute right-0 top-full z-50 mt-2 w-[200px] origin-top-right overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_2px_4px_-4px_rgba(0,0,0,0.07)]"
           >
-            {createMenuItems.map((item) => {
+            {menuItems.map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.label}
-                  onClick={() => {
-                    setOpen(false);
-                    if (item.label === "Create project") {
-                      navigate({
-                        to: withWorkspaceQuery({
-                          pathname: "/projects/new",
-                          searchStr,
-                        }) as any,
-                      });
-                    }
-                    if (item.label === "Register domain") {
-                      navigate({
-                        to: withWorkspaceQuery({
-                          pathname: "/domains/buy",
-                          searchStr,
-                        }) as any,
-                      });
-                    }
-                    if (item.label === "New workspace") {
-                      navigate({
-                        to: withWorkspaceQuery({
-                          pathname: "/workspace/new",
-                          searchStr,
-                        }) as any,
-                      });
-                    }
-                  }}
+                  onClick={() => handleMenuItemClick(item.label)}
                   className="mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-[2px] px-2 py-1.5 text-sm font-light text-dash-text-body dark:text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                 >
                   <Icon className="size-4" />
@@ -841,6 +890,7 @@ export function Topbar({
   onMobileNavToggle,
   mobileNavOpen,
   settingsSnapshot,
+  userProfile,
   workspaces,
   projectSwitcherProjects,
 }: {
@@ -848,10 +898,12 @@ export function Topbar({
   onMobileNavToggle?: () => void;
   mobileNavOpen?: boolean;
   settingsSnapshot?: SettingsSidebarSnapshot | null;
+  userProfile?: SettingsSidebarSnapshot["profile"] | null;
   workspaces?: Workspace[];
   projectSwitcherProjects?: Project[];
 }) {
   const { theme, toggleTheme } = useTheme();
+  const haptics = useHaptics();
   const { open: openScoutBar } = useScoutBar();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
@@ -866,7 +918,7 @@ export function Topbar({
           <div className="flex items-center gap-3">
             {onMobileNavToggle && (
               <button
-                onClick={onMobileNavToggle}
+                onClick={() => { haptics.selection(); onMobileNavToggle!(); }}
                 className="text-dash-text-faded hover:text-dash-text-strong md:hidden"
                 aria-label="Toggle navigation"
               >
@@ -891,7 +943,7 @@ export function Topbar({
             </div>
           </div>
           <div className="flex items-center gap-2 text-dash-text-faded md:gap-4">
-            <NotificationsDropdown />
+            <NotificationsDropdown haptics={haptics} />
             <a
               href="mailto:hello@brimble.app"
               className="flex items-center gap-1.5 text-sm hover:text-dash-text-strong transition-colors"
@@ -900,7 +952,7 @@ export function Topbar({
               <span className="hidden md:inline">Help</span>
             </a>
             <button
-              onClick={onSettingsClick}
+              onClick={() => { haptics.selection(); onSettingsClick(); }}
               className="flex items-center gap-1.5 text-sm transition-colors hover:text-dash-text-strong"
             >
               <img
@@ -910,7 +962,7 @@ export function Topbar({
               />
             </button>
             <button
-              onClick={toggleTheme}
+              onClick={() => { haptics.selection(); toggleTheme(); }}
               className="flex items-center gap-1.5 text-sm hover:text-dash-text-strong"
             >
               {theme === "dark" ? (
@@ -928,7 +980,7 @@ export function Topbar({
         <div className="mx-auto flex max-w-screen-xl items-center justify-between px-4 py-3 md:px-0">
           <div className="flex min-w-0 items-center">
             <WorkspaceSwitcher
-              profile={settingsSnapshot?.profile ?? null}
+              profile={userProfile ?? null}
               workspaces={workspaces ?? []}
               pathname={pathname}
               searchStr={searchStr}

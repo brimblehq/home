@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { withTokenRefresh } from "@/server/shared/backend";
+import { projectsLogger } from "@/server/shared/logger";
 
 function assignFiniteNumber(
   target: Record<string, unknown>,
@@ -118,27 +119,25 @@ export const createProjectServerFn = createServerFn({
       ...(teamId ? { teamId } : {}),
     };
 
-    if (process.env.NODE_ENV !== "production") {
-      const maskedBody: Record<string, unknown> = { ...finalBody };
-      if (Array.isArray(maskedBody.environments)) {
-        maskedBody.environments = maskedBody.environments.map((env) => {
-          if (!env || typeof env !== "object") return env;
-          const row = env as Record<string, unknown>;
-          return {
-            ...row,
-            value:
-              typeof row.value === "string" && row.value.length > 0
-                ? "[REDACTED]"
-                : row.value,
-          };
-        });
-      }
-
-      console.log("[createProjectServerFn] resolved deploy payload", {
-        teamId,
-        body: maskedBody,
+    const maskedBody: Record<string, unknown> = { ...finalBody };
+    if (Array.isArray(maskedBody.environments)) {
+      maskedBody.environments = maskedBody.environments.map((env) => {
+        if (!env || typeof env !== "object") return env;
+        const row = env as Record<string, unknown>;
+        return {
+          ...row,
+          value:
+            typeof row.value === "string" && row.value.length > 0
+              ? "[REDACTED]"
+              : row.value,
+        };
       });
     }
+
+    projectsLogger.debug("resolved deploy payload", {
+      teamId,
+      body: maskedBody,
+    });
 
     return api.projects.create({
       ...finalBody,

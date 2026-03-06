@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, Search } from "lucide-react";
+import { useHaptics } from "@/hooks/use-haptics";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
@@ -42,6 +43,7 @@ export function Dropdown({
   searchable = false,
   searchPlaceholder = "Search...",
 }: DropdownProps) {
+  const haptics = useHaptics();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -231,6 +233,7 @@ export function Dropdown({
                       <button
                         key={opt.id}
                         onClick={() => {
+                          haptics.selection();
                           (onChange as (id: string) => void)(opt.id);
                           setOpen(false);
                         }}
@@ -250,6 +253,7 @@ export function Dropdown({
                       <button
                         key={opt}
                         onClick={() => {
+                          haptics.selection();
                           (onChange as (v: string) => void)(opt);
                           setOpen(false);
                         }}

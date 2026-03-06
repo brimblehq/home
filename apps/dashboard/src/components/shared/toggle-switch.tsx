@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { cn } from "@brimble/ui";
+import { useHaptics } from "@/hooks/use-haptics";
 
 interface ToggleSwitchProps {
   checked: boolean;
@@ -20,6 +21,7 @@ export function ToggleSwitch({
   size = "default",
 }: ToggleSwitchProps) {
   const s = sizes[size];
+  const haptics = useHaptics();
 
   return (
     <button
@@ -27,10 +29,14 @@ export function ToggleSwitch({
       role="switch"
       aria-checked={checked}
       disabled={disabled}
-      onClick={() => onChange(!checked)}
+      onClick={() => {
+        if (!disabled) haptics.rigid();
+        onChange(!checked);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
+          if (!disabled) haptics.rigid();
           onChange(!checked);
         }
       }}

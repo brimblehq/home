@@ -19,7 +19,11 @@ import {
 } from "@/contexts/project-deployment-logs-drawer-context";
 import { getSupabaseClient } from "@/lib/supabase";
 import { mapDeploymentRunLogsToDrawerEntries } from "@/utils/deployment-logs";
+import { usePushNotification } from "@/hooks/use-push-notification";
 import config from "@/config";
+
+const SUCCESS_LOG_PATTERN = /site (is )?(live|running)\b/i;
+const FAILURE_LOG_PATTERN = /deployment failed|build failed|failed to deploy/i;
 
 const PROJECT_CACHE_MS = 60_000;
 const projectCache = new Map<string, { project: BackendProject; timestamp: number }>();
@@ -94,6 +98,7 @@ function ProjectLayout() {
     };
   }) => Promise<{ entries: DeploymentDrawerLogEntry[] }>;
 
+  const { sendNotification } = usePushNotification(workspace);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedDeployment, setSelectedDeployment] =
     useState<DeploymentLog | null>(null);
@@ -149,12 +154,8 @@ function ProjectLayout() {
           ...prev,
           [deployment.id]: Array.isArray(result?.entries) ? result.entries : [],
         }));
-      } catch (error) {
-        let message = "Failed to load deployment logs.";
-        if (error instanceof Error && error.message.trim()) {
-          message = error.message;
-        }
-        setDrawerLogsError(message);
+      } catch {
+        setDrawerLogsError("Failed to load deployment logs.");
       } finally {
         setDrawerLogsLoading(false);
       }
@@ -185,6 +186,24 @@ function ProjectLayout() {
           const [entry] = mapDeploymentRunLogsToDrawerEntries([row]);
           if (!entry) return;
 
+          // Fire push notification on terminal log messages
+          const msg = entry.message;
+          const env = selectedDeployment.environment || "Production";
+          const name = (project as BackendProject)?.name || projectId;
+          if (SUCCESS_LOG_PATTERN.test(msg)) {
+            sendNotification({
+              title: "Deployment Successful",
+              body: `${name} (${env}) deployed successfully.`,
+              onClick: () => window.focus(),
+            });
+          } else if (FAILURE_LOG_PATTERN.test(msg)) {
+            sendNotification({
+              title: "Deployment Failed",
+              body: `${name} (${env}) deployment failed.`,
+              onClick: () => window.focus(),
+            });
+          }
+
           setDrawerLogsByDeploymentId((prev) => ({
             ...prev,
             [logId]: [...(prev[logId] ?? []), entry],
@@ -196,7 +215,7 @@ function ProjectLayout() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [drawerOpen, selectedDeployment]);
+  }, [drawerOpen, selectedDeployment, sendNotification, project, projectId]);
 
   const openDeploymentDrawer = useCallback(
     (deployment: DeploymentLog) => {

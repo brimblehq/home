@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Code2, Copy as CopyIcon, Eye, EyeOff, Lock, Search, X } from "lucide-react";
-import { toast } from "sonner";
+import { Info } from "@phosphor-icons/react";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@brimble/ui";
 import { TabHeader } from "../../../components/shared/tab-header";
 import { GlossyButton } from "../../../components/shared/glossy-button";
@@ -148,8 +150,12 @@ function HighlightedEditor({
 
 function InfoBanner({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-[4px] bg-[#f59e0b]/8 px-3.5 py-3 text-sm text-dash-text-body">
-      {children}
+    <div className="flex items-start gap-2.5 rounded-[4px] bg-[#f59e0b]/8 px-3.5 py-3">
+      <Info className="mt-0.5 size-4 shrink-0 text-[#f59e0b]" weight="fill" />
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs font-medium uppercase tracking-wide text-[#b37a10] dark:text-[#f59e0b]">Quick Tip</span>
+        <span className="text-sm text-dash-text-body">{children}</span>
+      </div>
     </div>
   );
 }
@@ -195,6 +201,7 @@ function EnvAccordionRow({
     data: { projectId: string; envId: string };
   }) => Promise<{ success: boolean }>;
 
+  const haptics = useHaptics();
   const [name, setName] = useState(row.name);
   const [value, setValue] = useState(decryptedValue ?? row.value);
   const [showValue, setShowValue] = useState(false);
@@ -324,6 +331,7 @@ function EnvAccordionRow({
                   type="button"
                   onClick={async () => {
                     await navigator.clipboard.writeText(value);
+                    haptics.light();
                     setValueCopied(true);
                     setTimeout(() => setValueCopied(false), 1500);
                   }}

@@ -9,7 +9,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
 import { Search, Globe } from "lucide-react";
 import { CheckCircle } from "@phosphor-icons/react";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { Dropdown } from "../../components/shared/dropdown";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { Spinner } from "../../components/shared/spinner";
@@ -180,7 +180,7 @@ function BuyDomainPage() {
       autoRenewal: boolean;
     };
   }) => Promise<{ success: boolean }>;
-  const { paymentMethods: initialPaymentMethods } = rootRoute.useLoaderData() as { paymentMethods?: PaymentMethod[] | null };
+  const { paymentMethods: initialPaymentMethods } = (rootRoute.useLoaderData() ?? {}) as { paymentMethods?: PaymentMethod[] | null };
   const { data: paymentMethods = [] } = usePaymentMethods(initialPaymentMethods ?? undefined);
   const cards = paymentMethods.map((m: any) => ({
     id: m.id,

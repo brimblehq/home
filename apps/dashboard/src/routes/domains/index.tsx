@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { PageHeader } from "../../components/shared/page-header";
 import { DomainList, type Domain } from "../../components/shared/domain-list";
 import { NumberPagination } from "../../components/shared/pagination";
@@ -9,6 +9,7 @@ import {
   AddDomainModal,
   type DomainValidationError,
 } from "../../components/shared/add-domain-modal";
+import { DomainStep } from "@/types/enums";
 import { Route as RootRoute } from "@/routes/__root";
 import type { DomainRecord, PaginatedDomainsResponse } from "@/backend/domains";
 import type { PaginatedProjectsResponse } from "@/backend/projects";
@@ -145,10 +146,11 @@ function mapDomainToRow(domain: DomainRecord): Domain {
 function DomainsPage() {
   const search = Route.useSearch();
   const { domains: domainsResult, projects, workspace } = Route.useLoaderData();
-  const { settingsSnapshot } = RootRoute.useLoaderData();
+  const { settingsSnapshot } = RootRoute.useLoaderData() ?? ({} as any);
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const workspaceFromUrl = getWorkspaceFromSearch({ searchStr });
   const [addDomainOpen, setAddDomainOpen] = useState(false);
+  const [addDomainStep, setAddDomainStep] = useState<DomainStep | undefined>();
   const [searchQuery, setSearchQuery] = useState(search.q ?? "");
   const [rows, setRows] = useState<Domain[]>(() =>
     domainsResult.items.map((item) => mapDomainToRow(item)),
@@ -215,6 +217,28 @@ function DomainsPage() {
       window.clearTimeout(timeout);
     };
   }, [navigate, search, search.q, searchQuery]);
+
+  const openAddDomain = useCallback((step?: DomainStep) => {
+    setAddDomainStep(step);
+    setAddDomainOpen(true);
+  }, []);
+
+  // Listen for topbar "add domain" / "transfer in" events
+  useEffect(() => {
+    function handleAddDomainEvent() {
+      openAddDomain();
+    }
+    function handleTransferInEvent() {
+      openAddDomain(DomainStep.TransferIn);
+    }
+
+    window.addEventListener("brimble:add-domain", handleAddDomainEvent);
+    window.addEventListener("brimble:transfer-in", handleTransferInEvent);
+    return () => {
+      window.removeEventListener("brimble:add-domain", handleAddDomainEvent);
+      window.removeEventListener("brimble:transfer-in", handleTransferInEvent);
+    };
+  }, [openAddDomain]);
 
   const settledSearchQuery = search.q?.trim() ?? "";
   const pendingSearchQuery = searchQuery.trim();
@@ -385,7 +409,6 @@ function DomainsPage() {
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         searchLoading={isSearchSettling}
-        onAddDomain={() => setAddDomainOpen(true)}
         onRefreshDomain={handleRefreshDomain}
         onConfigureDomain={handleConfigureDomain}
         onDeleteDomain={handleDeleteDomain}
@@ -405,6 +428,7 @@ function DomainsPage() {
         projects={projects}
         defaultRegistrantEmail={settingsSnapshot?.profile?.email ?? ""}
         paymentCards={settingsSnapshot?.billing?.cards ?? []}
+        initialStep={addDomainStep}
         onValidate={validateDomain}
         onContinue={(projectId, domainUrl) => {
           void handleAddDomain(projectId, domainUrl);

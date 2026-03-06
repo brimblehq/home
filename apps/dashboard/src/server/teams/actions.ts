@@ -135,3 +135,42 @@ export const removeWorkspaceTeamMemberServerFn = createServerFn({
     return api.teams.removeMember(teamId, memberId);
   });
 });
+
+export const checkTeamInvitationServerFn = createServerFn({
+  method: "GET",
+}).handler(async ({ data }) => {
+  const payload = data as { workspace?: string } | undefined;
+  const teamName = payload?.workspace?.trim().toLowerCase();
+  if (!teamName) {
+    throw new Error("Workspace is required");
+  }
+  return withTokenRefresh(async (api) => {
+    return api.teams.checkInvitation(teamName);
+  });
+});
+
+export const acceptTeamInvitationServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as { teamId?: string } | undefined;
+  const teamId = payload?.teamId?.trim();
+  if (!teamId) {
+    throw new Error("Team ID is required");
+  }
+  return withTokenRefresh(async (api) => {
+    return api.teams.acceptInvite(teamId);
+  });
+});
+
+export const declineTeamInvitationServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as { teamId?: string } | undefined;
+  const teamId = payload?.teamId?.trim();
+  if (!teamId) {
+    throw new Error("Team ID is required");
+  }
+  return withTokenRefresh(async (api) => {
+    return api.teams.denyInvite(teamId);
+  });
+});

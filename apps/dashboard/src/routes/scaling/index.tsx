@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import { Search, Plus, Pencil } from "lucide-react";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { PageHeader } from "../../components/shared/page-header";
 import { DashButton } from "../../components/shared/dash-button";
 import { GlossyButton } from "../../components/shared/glossy-button";
@@ -47,7 +47,7 @@ export const Route = createFileRoute("/scaling/")({
 const ease = [0.16, 1, 0.3, 1] as const;
 
 const inputClass =
-  "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+  "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
 type UiScalingGroup = {
   id: string;

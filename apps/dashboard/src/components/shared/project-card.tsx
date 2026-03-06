@@ -3,6 +3,7 @@ export interface Project {
   slug?: string;
   id?: string;
   status?: string;
+  serviceType?: string;
   commitMessage: string;
   branch: string;
   updatedAt: string;
@@ -14,7 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Star, MoreVertical } from "lucide-react";
-import { withWorkspaceQuery } from "@/utils/topbar-navigation";
+import { getWorkspaceFromSearch } from "@/utils/topbar-navigation";
 import { ProjectCardTags } from "@/components/projects/project-card-tags";
 import { TagAssignmentPopover } from "@/components/projects/tag-assignment-popover";
 import { StatusChip } from "@/components/shared/status-chip";
@@ -28,13 +29,15 @@ export function ProjectCard({
   onTagsChange?: (tags: Project["tags"]) => void;
 }) {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const workspace = getWorkspaceFromSearch({ searchStr });
   const slug = (project.slug || project.name).toLowerCase().replace(/\s+/g, "-");
-  const projectId = project.id || slug;
+  const projectId = slug || project.id;
   const [starred, setStarred] = useState(project.starred ?? false);
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
   const dotsRef = useRef<HTMLButtonElement>(null);
   const allTags = useTagsStore((s) => s.tags);
   const [assignedTagIds, setAssignedTagIds] = useState<string[]>((project.tags ?? []).map((t) => t.id));
+  const isDatabaseProject = project.serviceType === "database";
 
   useEffect(() => {
     setAssignedTagIds((project.tags ?? []).map((t) => t.id));
@@ -65,7 +68,9 @@ export function ProjectCard({
 
   return (
     <Link
-      to={withWorkspaceQuery({ pathname: `/projects/${slug}`, searchStr }) as any}
+      to="/projects/$projectId"
+      params={{ projectId }}
+      search={workspace ? { workspace } : {}}
       className="block"
     >
     <motion.div
@@ -95,8 +100,11 @@ export function ProjectCard({
       <div className="relative flex shrink-0 items-center gap-2 px-3 pb-1 pt-0.5">
         {/* Vertical line above icon */}
         <div className="absolute left-[23px] top-[-6px] h-[16px] w-px bg-dash-border" />
-        {/* Git icon */}
-        <img src="/icons/git-circle.svg" alt="" className="size-6 shrink-0" />
+        {isDatabaseProject ? (
+          <img src="/icons/database.svg" alt="" className="size-5 shrink-0" />
+        ) : (
+          <img src="/icons/git-circle.svg" alt="" className="size-6 shrink-0" />
+        )}
         <span className="text-sm tracking-[-0.02px] text-dash-text-strong">
           From {project.branch}
         </span>

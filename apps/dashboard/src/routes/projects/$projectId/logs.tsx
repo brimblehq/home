@@ -14,6 +14,7 @@ import { NumberPagination } from "../../../components/shared/pagination";
 import type { DropdownOption } from "../../../components/shared/dropdown";
 import { listRequestLogsServerFn } from "@/server/logs/actions";
 import type { RequestLogsPage as RequestLogsResponse, RequestLogEntry as ApiRequestLogEntry } from "@/backend/logs";
+import { useHaptics } from "@/hooks/use-haptics";
 import { useLiveApplicationLogs } from "@/hooks/use-live-application-logs";
 import {
   buildRequestLogRawData,
@@ -109,6 +110,7 @@ function ApplicationLogs({
   allocationOptions: DropdownOption[];
   allocationContainerByOptionId: Record<string, string>;
 }) {
+  const haptics = useHaptics();
   const [autoScroll, setAutoScroll] = useState(true);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -331,6 +333,7 @@ function ApplicationLogs({
                   onClick={() => {
                     const raw = `${line.timestamp}  ${levelBadge[line.level]}  ${line.message}`;
                     navigator.clipboard.writeText(raw);
+                    haptics.light();
                     setCopiedIdx(i);
                     setTimeout(() => setCopiedIdx((prev) => (prev === i ? null : prev)), 1200);
                   }}
@@ -451,6 +454,7 @@ function RequestDetailDrawer({
 }) {
   const [tab, setTab] = useState<"details" | "raw">("details");
   const [copied, setCopied] = useState(false);
+  const haptics = useHaptics();
 
   if (!log) return null;
 
@@ -488,6 +492,7 @@ function RequestDetailDrawer({
 
   function handleCopy() {
     navigator.clipboard.writeText(rawJson);
+    haptics.light();
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -872,6 +877,7 @@ function RequestLogs({
 
 function LogsPage() {
   const { project, workspace } = parentRoute.useLoaderData() as any;
+  const haptics = useHaptics();
   const staticProject = isStaticProject(project);
   const databaseProject = isDatabaseProject(project as any);
   const [activeTab, setActiveTab] = useState<LogTab>(staticProject ? LogTab.Request : LogTab.Application);
@@ -945,7 +951,10 @@ function LogsPage() {
         <div className="flex overflow-clip rounded-[4px] border border-dash-border-soft shadow-[0px_1px_2px_rgba(18,18,23,0.05)]">
           {!staticProject && (
             <button
-              onClick={() => setActiveTab(LogTab.Application)}
+              onClick={() => {
+                haptics.selection();
+                setActiveTab(LogTab.Application);
+              }}
               className={`flex h-[34px] items-center gap-2 border-r border-dash-border-soft px-3.5 text-sm transition-colors ${
                 activeTab === LogTab.Application
                   ? "bg-dash-bg font-medium text-dash-text-strong"
@@ -958,7 +967,10 @@ function LogsPage() {
           )}
           {!databaseProject && (
             <button
-              onClick={() => setActiveTab(LogTab.Request)}
+              onClick={() => {
+                haptics.selection();
+                setActiveTab(LogTab.Request);
+              }}
               className={`flex h-[34px] items-center gap-2 px-3.5 text-sm transition-colors ${
                 activeTab === LogTab.Request
                   ? "bg-dash-bg font-medium text-dash-text-strong"

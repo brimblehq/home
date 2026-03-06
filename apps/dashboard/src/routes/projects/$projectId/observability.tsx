@@ -13,6 +13,7 @@ import {
   getProjectObservabilityMetricsServerFn,
 } from "@/server/observability/actions";
 import { normalizeMemoryGbValue } from "@/utils/project-configuration";
+import { useHaptics } from "@/hooks/use-haptics";
 import { isDatabaseProject, shouldShowProjectObservabilityTab } from "@/utils/project-capabilities";
 import { usePlanGate } from "@/hooks/use-plan-gate";
 import { PlanUpgradePrompt } from "@/components/shared/plan-upgrade-prompt";
@@ -123,6 +124,7 @@ function AppMetrics({
   const fetchMetrics = useServerFn(getProjectObservabilityMetricsServerFn as any) as (args: {
     data: { projectId: string; workspace?: string; hrsAgo?: number };
   }) => Promise<ResourceObservabilityMetrics>;
+  const haptics = useHaptics();
   const [activeChart, setActiveChart] = useState<MetricChart>(MetricChart.MemoryUsage);
   const [responseMetric, setResponseMetric] = useState("P90");
   const [timeInterval, setTimeInterval] = useState("Last 1 Hour");
@@ -287,7 +289,10 @@ function AppMetrics({
               {chartTabs.map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveChart(tab)}
+                  onClick={() => {
+                    haptics.selection();
+                    setActiveChart(tab);
+                  }}
                   className={`whitespace-nowrap px-4 py-3 text-sm transition-colors ${
                     activeChart === tab
                       ? "border-b-2 border-[#f5a623] font-medium text-[#f5a623]"

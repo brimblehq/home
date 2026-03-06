@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, Check, Eye, EyeOff } from "lucide-react";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import {
   Modal,
   ModalCancelButton,
@@ -86,6 +87,7 @@ export function DatabaseConnectionModal({
   connectionUri,
   isActive,
 }: DatabaseConnectionModalProps) {
+  const haptics = useHaptics();
   const decryptConnectionUri = useServerFn(decryptDatabaseConnectionUriServerFn as any) as (args: {
     data: { encryptedConnectionUri: string };
   }) => Promise<{ connectionUri: string }>;
@@ -135,8 +137,8 @@ export function DatabaseConnectionModal({
       await ensureDecrypted();
       setRevealed(true);
     } catch (error: any) {
-      toast.error("Failed to decrypt connection URI", {
-        description: typeof error?.message === "string" ? error.message : "Please try again.",
+      toast.error("Unable to reveal connection details", {
+        description: "Something went wrong while retrieving your credentials. Please try again or contact support if the issue persists.",
       });
     }
   }
@@ -147,6 +149,7 @@ export function DatabaseConnectionModal({
     try {
       const decrypted = await ensureDecrypted();
       await navigator.clipboard.writeText(decrypted);
+      haptics.light();
       setUriCopied(true);
       setTimeout(() => setUriCopied(false), 1500);
       toast.success("Connection URI copied");
@@ -168,6 +171,7 @@ export function DatabaseConnectionModal({
         return;
       }
       await navigator.clipboard.writeText(buildCopyableParams(p));
+      haptics.light();
       setParamsCopied(true);
       setTimeout(() => setParamsCopied(false), 1500);
       toast.success("Connection parameters copied");

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { DomainList, type Domain } from "../../../../components/shared/domain-list";
 import { TabHeader } from "../../../../components/shared/tab-header";
 import { NumberPagination } from "../../../../components/shared/pagination";
@@ -160,7 +160,7 @@ function ProjectDomainsPage() {
   const { projectId } = Route.useParams();
   const search = Route.useSearch();
   const { project, workspace } = parentRoute.useLoaderData() as any;
-  const { settingsSnapshot } = RootRoute.useLoaderData() as any;
+  const { settingsSnapshot } = (RootRoute.useLoaderData() ?? {}) as any;
   const { customDomain } = usePlanGate();
   if (!shouldShowProjectDomainsTab(project)) {
     return (

@@ -1,5 +1,6 @@
 import { cn } from "@brimble/ui";
 import { LoadingButtonContent } from "./loading-button-content";
+import { useHaptics } from "@/hooks/use-haptics";
 
 const variants = {
   blue: {
@@ -29,6 +30,7 @@ interface GlossyButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
   fullWidth?: boolean;
   loading?: boolean;
   loadingLabel?: React.ReactNode;
+  disableHaptic?: boolean;
 }
 
 export function GlossyButton({
@@ -36,15 +38,23 @@ export function GlossyButton({
   fullWidth,
   loading = false,
   loadingLabel,
+  disableHaptic = false,
   className,
   children,
   ...props
 }: GlossyButtonProps) {
   const v = variants[variant];
+  const haptics = useHaptics();
 
   return (
     <button
       {...props}
+      onClick={(e) => {
+        if (!disableHaptic && !props.disabled && !loading) {
+          variant === "red" ? haptics.medium() : haptics.light();
+        }
+        props.onClick?.(e);
+      }}
       style={{ background: v.bg, ...props.style }}
       className={cn(
         "flex h-[40px] items-center justify-center rounded-[8px] border px-3.5 text-sm font-medium leading-5 text-white shadow-[0px_1px_2px_rgba(16,24,40,0.1),inset_0px_1px_0px_rgba(255,255,255,0.25)] transition-all hover:brightness-110 disabled:pointer-events-none disabled:opacity-40",

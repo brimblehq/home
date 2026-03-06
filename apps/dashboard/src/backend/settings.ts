@@ -141,6 +141,28 @@ function supportsWebhookPlan(planType?: string): boolean {
   );
 }
 
+async function getCurrentPersonalPlanType(
+  client: ApiClient,
+  currentSubscriptionEndpoint: string,
+): Promise<string | undefined> {
+  try {
+    const response = await client.request(currentSubscriptionEndpoint, {
+      method: "GET",
+    });
+    const data = unwrapData<any>(response);
+    const plan =
+      data?.plan_type ??
+      data?.planType ??
+      data?.plan;
+
+    return typeof plan === "string" && plan.trim()
+      ? String(plan)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function mapCards(payload: any): SettingsPaymentCard[] {
   const data = unwrapData<any[]>(payload) ?? [];
 
@@ -311,6 +333,7 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
     paymentInitialize: `${config.paymentApiUrl}/payment/initialize/payment`,
     paymentInvoices: `${config.paymentApiUrl}/payment/invoices`,
     paymentStats: `${config.paymentApiUrl}/subscription/stats`,
+    currentSubscription: `${config.paymentApiUrl}/subscriptions/current`,
     paymentPlans: "/core/v1/plans",
     disconnectProvider: `${config.authApiUrl}/user/disconnect`,
   } as const;
@@ -507,9 +530,20 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
         method: "GET",
       });
       const profile = mapProfile(profileResponse);
+      const effectivePlanType = options?.subscriptionId
+        ? "TEAM_PLAN"
+        : await getCurrentPersonalPlanType(client, endpoints.currentSubscription);
+
+      if (effectivePlanType) {
+        profile.subscription = {
+          ...profile.subscription,
+          ...(options?.subscriptionId ? { id: options.subscriptionId } : {}),
+          planType: effectivePlanType,
+        };
+      }
 
       const [webhookResult, billingResult] = await Promise.all([
-        supportsWebhookPlan(profile.subscription?.planType)
+        supportsWebhookPlan(effectivePlanType ?? profile.subscription?.planType)
           ? client.request(endpoints.webhooks, { method: "GET" }).catch(() => null)
           : Promise.resolve(null),
         getBillingSnapshotInternal(page, options).catch(() => null),

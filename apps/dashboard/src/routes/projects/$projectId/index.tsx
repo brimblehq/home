@@ -5,7 +5,13 @@ import { SimpleTooltip } from "../../../components/shared/tooltip";
 import { StatusChip } from "../../../components/shared/status-chip";
 import { DeploymentLogsDrawer } from "../../../components/shared/deployment-logs-drawer";
 import { getProjectScreenshotServerFn } from "@/server/projects/actions";
+import { useHaptics } from "@/hooks/use-haptics";
 import { formatRelativeTime } from "@/utils/dashboard";
+import {
+  isDatabaseProject as getIsDatabaseProject,
+  isMcpProject as getIsMcpProject,
+  isWebLikeProject,
+} from "@/utils/project-capabilities";
 
 const parentRoute = getRouteApi("/projects/$projectId");
 
@@ -39,13 +45,20 @@ export const Route = createFileRoute("/projects/$projectId/")({
 function ProjectDetailPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const haptics = useHaptics();
   const navigate = useNavigate();
   const { projectId } = Route.useParams();
   const { project } = parentRoute.useLoaderData() as any;
   const { screenshotUrl } = Route.useLoaderData();
 
   const projectName = project?.name || projectId;
-  const isDatabaseProject = project?.serviceType === "database";
+  const isDatabaseProject = getIsDatabaseProject(project);
+  const isMcpProject = getIsMcpProject(project);
+  const showPreviewBanner = isWebLikeProject(project);
+  const showSitePasswordRow = isWebLikeProject(project);
+  const showFrameworkRow = !isMcpProject;
+  const showMcpAuthRow = isMcpProject;
+  const showBuildCacheRow = !isDatabaseProject;
   const liveUrl = project?.previewUrl || project?.domains?.[0]?.name || "";
   let liveHref = "";
   if (liveUrl) {
@@ -82,6 +95,9 @@ function ProjectDetailPage() {
   const lastUpdatedText = project?.updatedAt
     ? formatRelativeTime(project.updatedAt)
     : "unknown";
+  const mcpServerUrl = project?.domains?.[0]?.name
+    ? `https://${project.domains[0].name}/mcp`
+    : "";
 
   const deploymentRows: Array<{ url: string; date: string }> = [];
 
@@ -122,7 +138,7 @@ function ProjectDetailPage() {
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 py-8">
       {/* Project preview banner */}
       <div className="flex flex-col gap-4">
-        {!isDatabaseProject ? (
+        {showPreviewBanner ? (
           <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
             {/* Gradient banner */}
             <div className="relative h-[232px] overflow-clip bg-gradient-to-b from-[#ea51bd] to-[#f1558a]">
@@ -174,6 +190,50 @@ function ProjectDetailPage() {
           </div>
         ) : null}
 
+        {isMcpProject ? (
+          <div className="rounded-[4px] bg-dash-bg-elevated p-3.5">
+            <p className="text-sm font-medium text-dash-text-strong">MCP Server</p>
+            <p className="mt-1 text-sm font-light leading-[1.35] text-dash-text-faded">
+              {mcpServerUrl ? (
+                <>
+                  You can access this MCP server at{" "}
+                  <code className="rounded bg-dash-bg px-1.5 py-0.5 font-mono text-xs text-dash-text-strong">
+                    {mcpServerUrl}
+                  </code>{" "}
+                  and connect over SSE.
+                </>
+              ) : (
+                "Add a domain to access this MCP server over SSE at /mcp."
+              )}
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              {mcpServerUrl ? (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(mcpServerUrl);
+                    haptics.light();
+                    setCopiedIdx(-1);
+                    setTimeout(() => setCopiedIdx(null), 2000);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-[4px] px-2.5 py-1.5 text-xs text-dash-text-body transition-colors hover:bg-dash-bg"
+                >
+                  {copiedIdx === -1 ? <Check className="size-3.5 text-[#13d282]" /> : <Copy className="size-3.5" />}
+                  {copiedIdx === -1 ? "Copied" : "Copy MCP URL"}
+                </button>
+              ) : null}
+              <a
+                href="https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-[#7ca2ff] hover:underline"
+              >
+                Learn MCP SSE
+                <ArrowUpRight className="size-3.5" />
+              </a>
+            </div>
+          </div>
+        ) : null}
+
         {/* Meta / deployments cards */}
         <div className={`flex flex-col gap-4 ${isDatabaseProject ? "" : "md:flex-row"}`}>
           {/* Project meta card */}
@@ -215,13 +275,33 @@ function ProjectDetailPage() {
                   {regionText}
                 </span>
               </div>
-              {!isDatabaseProject ? (
+              {showSitePasswordRow ? (
                 <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
                   <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
                     Site password enabled
                   </span>
                   <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
                     {passwordEnabledText}
+                  </span>
+                </div>
+              ) : null}
+              {showMcpAuthRow ? (
+                <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
+                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
+                    Authentication enabled
+                  </span>
+                  <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
+                    {project?.authEnabled ? "Yes" : "No"}
+                  </span>
+                </div>
+              ) : null}
+              {showBuildCacheRow ? (
+                <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
+                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
+                    Build cache enabled
+                  </span>
+                  <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
+                    {project?.buildCacheEnabled ? "Yes" : "No"}
                   </span>
                 </div>
               ) : null}
@@ -233,23 +313,25 @@ function ProjectDetailPage() {
                   {computeSizeText}
                 </span>
               </div>
-              <div
-                className={`flex items-center justify-between p-3.5 ${!isDatabaseProject ? "border-b-[0.5px] border-dash-border" : ""}`}
-              >
-                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                  Framework
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                    {frameworkLabel}
+              {showFrameworkRow ? (
+                <div
+                  className={`flex items-center justify-between p-3.5 ${!isDatabaseProject ? "border-b-[0.5px] border-dash-border" : ""}`}
+                >
+                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
+                    Framework
                   </span>
-                  <img
-                    src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg"
-                    alt="React"
-                    className="size-5"
-                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
+                      {frameworkLabel}
+                    </span>
+                    <img
+                      src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg"
+                      alt="Framework"
+                      className="size-5"
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : null}
               {!isDatabaseProject ? (
                 <div className="flex items-center justify-between p-3.5">
                   <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-faded">
@@ -435,6 +517,7 @@ function ProjectDetailPage() {
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(domain.url);
+                        haptics.light();
                         setCopiedIdx(i);
                         setTimeout(() => setCopiedIdx(null), 2000);
                       }}

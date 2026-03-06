@@ -110,15 +110,19 @@ export function Tooltip({
                   </span>
                 </div>
 
-                {/* Divider */}
-                <div className="h-px w-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                {user.role ? (
+                  <>
+                    {/* Divider */}
+                    <div className="h-px w-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-                {/* Role row */}
-                <div className="pl-1 pr-2 pb-px">
-                  <span className="text-xs font-light leading-5 tracking-[-0.019px] text-white/70">
-                    {user.role}
-                  </span>
-                </div>
+                    {/* Role row */}
+                    <div className="pl-1 pr-2 pb-px">
+                      <span className="text-xs font-light leading-5 tracking-[-0.019px] text-white/70">
+                        {user.role}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
               </motion.div>
             </RadixTooltip.Content>
           </RadixTooltip.Portal>

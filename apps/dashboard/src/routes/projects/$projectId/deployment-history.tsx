@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -35,8 +35,19 @@ import {
   formatDeploymentTimeAgo,
 } from "@/utils/deployment-history";
 import { useProjectDeploymentLogsDrawer } from "@/contexts/project-deployment-logs-drawer-context";
+import { usePushNotification } from "@/hooks/use-push-notification";
+import { Route as RootRoute } from "@/routes/__root";
+import type { TeamDetails, TeamMember } from "@/backend/teams";
 
 const parentRoute = getRouteApi("/projects/$projectId");
+
+function normalizeMemberRole(member: TeamMember): string {
+  if (member.isCreator) return "Creator";
+  const role = (member.role ?? "").toLowerCase();
+  if (role.includes("admin")) return "Administrator";
+  if (role.includes("creator") || role.includes("owner")) return "Creator";
+  return "Member";
+}
 
 const PAGE_LIMIT = 10;
 
@@ -425,6 +436,7 @@ function DeploymentRow({
   projectId,
   workspace,
   projectStatus,
+  memberRoleMap,
   onClick,
   onRedeployed,
 }: {
@@ -432,6 +444,7 @@ function DeploymentRow({
   projectId: string;
   workspace?: string;
   projectStatus?: string;
+  memberRoleMap: Record<string, string>;
   onClick: () => void;
   onRedeployed: () => void;
 }) {
@@ -490,7 +503,7 @@ function DeploymentRow({
         <Tooltip
           user={{
             name: deployment.username || "Unknown",
-            role: "",
+            role: (deployment.username && memberRoleMap[deployment.username]) || "",
             avatarUrl: deployment.avatar,
           }}
           side="bottom"
@@ -549,11 +562,47 @@ function DeploymentHistoryPage() {
   const { project, workspace } = parentRoute.useLoaderData() as any;
   const loaderData = Route.useLoaderData();
   const initialData = loaderData.deployments as PaginatedDeploymentsResponse;
+  const { workspaceTeamMembers } = (RootRoute.useLoaderData() ?? {}) as {
+    workspaceTeamMembers?: TeamDetails | null;
+  };
+
+  const memberRoleMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    if (workspaceTeamMembers?.members) {
+      for (const m of workspaceTeamMembers.members) {
+        const role = normalizeMemberRole(m);
+        // Index by every field the deployment username could match
+        const keys = [
+          m.username,
+          m.firstName,
+          m.email,
+          m.firstName && m.lastName
+            ? `${m.firstName} ${m.lastName}`
+            : undefined,
+        ];
+        for (const k of keys) {
+          if (k) map[k] = role;
+        }
+      }
+    }
+    return map;
+  }, [workspaceTeamMembers]);
 
   const [deployments, setDeployments] =
     useState<PaginatedDeploymentsResponse>(initialData);
   const [currentPage, setCurrentPage] = useState(initialData?.currentPage ?? 1);
   const [fetching, setFetching] = useState(false);
+
+  // Seed status map from initial data so first poll doesn't fire false notifications
+  useEffect(() => {
+    if (initialData?.items && Object.keys(prevStatusMapRef.current).length === 0) {
+      const map: Record<string, string> = {};
+      for (const item of initialData.items) {
+        map[item.id] = item.status?.toLowerCase() ?? "";
+      }
+      prevStatusMapRef.current = map;
+    }
+  }, [initialData]);
 
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(
@@ -569,8 +618,11 @@ function DeploymentHistoryPage() {
     return document.visibilityState === "visible";
   });
   const { drawerOpen, openDeploymentDrawer } = useProjectDeploymentLogsDrawer();
+  const { sendNotification } = usePushNotification(workspace);
+  const prevStatusMapRef = useRef<Record<string, string>>({});
 
   const projectId = project?.id || project?.name;
+  const projectName = project?.name || projectId;
 
   const statusFilterMap: Record<string, string> = {
     Successful: "ACTIVE",
@@ -613,6 +665,48 @@ function DeploymentHistoryPage() {
           },
         });
 
+        // Detect status transitions on silent polls for push notifications
+        if (silent && result?.items) {
+          const SUCCESS_STATUSES = new Set(["active", "ready", "successful"]);
+          const FAIL_STATUSES = new Set(["failed", "cancelled", "canceled"]);
+
+          for (const item of result.items) {
+            const newStatus = item.status?.toLowerCase() ?? "";
+            const prevStatus = prevStatusMapRef.current[item.id];
+
+            if (
+              prevStatus &&
+              !TERMINAL_STATUSES.has(prevStatus) &&
+              TERMINAL_STATUSES.has(newStatus)
+            ) {
+              const env = item.environment || "Production";
+              if (SUCCESS_STATUSES.has(newStatus)) {
+                sendNotification({
+                  title: "Deployment Successful",
+                  body: `${projectName} (${env}) deployed successfully.`,
+                  onClick: () => window.focus(),
+                });
+              } else if (FAIL_STATUSES.has(newStatus)) {
+                const label = newStatus.startsWith("cancel") ? "cancelled" : "failed";
+                sendNotification({
+                  title: "Deployment Failed",
+                  body: `${projectName} (${env}) deployment ${label}.`,
+                  onClick: () => window.focus(),
+                });
+              }
+            }
+          }
+        }
+
+        // Update the previous status map
+        if (result?.items) {
+          const nextMap: Record<string, string> = {};
+          for (const item of result.items) {
+            nextMap[item.id] = item.status?.toLowerCase() ?? "";
+          }
+          prevStatusMapRef.current = nextMap;
+        }
+
         setDeployments(result);
         setCurrentPage(result.currentPage);
       } catch {
@@ -623,7 +717,7 @@ function DeploymentHistoryPage() {
         }
       }
     },
-    [projectId, workspace, environment, status, dateRange],
+    [projectId, workspace, environment, status, dateRange, projectName, sendNotification],
   );
 
   // Re-fetch when filters change
@@ -805,6 +899,7 @@ function DeploymentHistoryPage() {
               projectId={projectId}
               workspace={workspace}
               projectStatus={project?.status}
+              memberRoleMap={memberRoleMap}
               onClick={() => {
                 openDeploymentDrawer(deployment);
               }}

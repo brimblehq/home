@@ -14,7 +14,8 @@ import {
   getServerRefreshToken,
   setServerAuthCookies,
 } from "./cookies";
-import { getServerBackendApi } from "@/server/shared/backend";
+import { getServerBackendApi, refreshServerSession } from "@/server/shared/backend";
+import { authLogger } from "@/server/shared/logger";
 
 function getErrorMeta(error: any) {
   return {
@@ -65,7 +66,7 @@ export const verifyEmailCodeServerFn = createServerFn({ method: "POST" }).handle
     const session = await getServerBackendApi().auth.verifyEmailCode(input);
     setServerAuthCookies(session);
 
-    console.info("[auth] verifyEmailCode success", {
+    authLogger.info("verifyEmailCode success", {
       userId: session.user?.id ?? null,
       hasAccessToken: Boolean(session.accessToken),
       hasRefreshToken: Boolean(session.refreshToken),
@@ -80,17 +81,17 @@ export const verifyEmailCodeServerFn = createServerFn({ method: "POST" }).handle
 
 export const logoutServerFn = createServerFn({ method: "POST" }).handler(async () => {
   const refreshToken = getServerRefreshToken();
-  console.info("[auth] logout start", {
+  authLogger.info("logout start", {
     hasAccessToken: Boolean(getServerAccessToken()),
     hasRefreshToken: Boolean(refreshToken),
   });
 
   await getServerBackendApi().auth.logout(refreshToken ?? undefined).catch((error: any) => {
-    console.warn("[auth] logout endpoint failed", getErrorMeta(error));
+    authLogger.warn("logout endpoint failed", getErrorMeta(error));
   });
 
   clearServerAuthCookies();
-  console.info("[auth] logout complete");
+  authLogger.info("logout complete");
   return { ok: true } as const;
 });
 
@@ -102,15 +103,20 @@ export const getAccessTokenServerFn = createServerFn({ method: "GET" }).handler(
 
 export const getCurrentSessionServerFn = createServerFn({ method: "GET" }).handler(
   async () => {
-    const session = await getServerBackendApi().auth.getCurrentSession();
-
-    if (!session) {
+    const accessToken = getServerAccessToken();
+    if (!accessToken) {
       return null;
     }
 
-    return {
-      user: session.user,
-    };
+    try {
+      const session = await getServerBackendApi().auth.getCurrentSession();
+      if (!session) return null;
+      return { user: session.user };
+    } catch (error: any) {
+      if (error?.status === 401) return null;
+      authLogger.warn("getCurrentSession error", getErrorMeta(error));
+      throw error;
+    }
   },
 );
 
@@ -118,20 +124,22 @@ export const refreshSessionServerFn = createServerFn({ method: "POST" }).handler
   async () => {
     const refreshToken = getServerRefreshToken();
     if (!refreshToken) {
-      console.warn("[auth] refreshSession skipped: missing refresh token");
+      authLogger.warn("refreshSession skipped: missing refresh token");
       return null;
     }
 
     try {
-      console.info("[auth] refreshSession start", {
+      authLogger.info("refreshSession start", {
         hasAccessToken: Boolean(getServerAccessToken()),
         hasRefreshToken: true,
       });
 
-      const session = await getServerBackendApi().auth.refreshTokens(refreshToken);
-      setServerAuthCookies(session);
+      const session = await refreshServerSession(refreshToken);
+      if (!session) {
+        return null;
+      }
 
-      console.info("[auth] refreshSession success", {
+      authLogger.info("refreshSession success", {
         userId: session.user?.id ?? null,
         hasNewAccessToken: Boolean(session.accessToken),
         hasNewRefreshToken: Boolean(session.refreshToken),
@@ -139,8 +147,7 @@ export const refreshSessionServerFn = createServerFn({ method: "POST" }).handler
 
       return { user: session.user };
     } catch (error: any) {
-      console.warn("[auth] refreshSession failed", getErrorMeta(error));
-      clearServerAuthCookies();
+      authLogger.warn("refreshSession failed", getErrorMeta(error));
       return null;
     }
   },
@@ -179,7 +186,7 @@ export const finalizeOauthSessionServerFn = createServerFn({ method: "POST" }).h
 
     setServerAuthCookies(session);
 
-    console.info("[auth] finalizeOauthSession success", {
+    authLogger.info("finalizeOauthSession success", {
       userId: session.user?.id ?? null,
       hasAccessToken: Boolean(session.accessToken),
       hasRefreshToken: Boolean(session.refreshToken),

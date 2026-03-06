@@ -22,6 +22,7 @@ function mapBackendProject(project: BackendProject): Project {
     slug: project.slug || project.name,
     id: project.id,
     status: project.status,
+    serviceType: project.serviceType,
     commitMessage: project.log?.message || "No recent activity",
     branch: project.repo?.branch || "main",
     updatedAt: formatRelativeTime(project.updatedAt),

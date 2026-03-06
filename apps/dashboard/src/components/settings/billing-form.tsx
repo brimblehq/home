@@ -1,13 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import type { StripeCardElementOptions } from "@stripe/stripe-js";
 import { motion } from "motion/react";
 import { useTheme } from "@/hooks/use-theme";
 import { usePricing } from "@/contexts/pricing-context";
-import { ArrowSquareOut, PencilSimple } from "@phosphor-icons/react";
+import { ArrowSquareOut, CreditCard, PencilSimple } from "@phosphor-icons/react";
 import { Theme } from "@/types/enums";
-import { Plus, Star, X, CreditCard } from "lucide-react";
+import { Plus, Star, X } from "lucide-react";
 import { FolderTrashIcon } from "../shared/folder-trash-icon";
 import { PaymentProvider } from "@/providers/payment-provider";
 import { GlossyButton } from "../shared/glossy-button";
@@ -114,12 +114,13 @@ function BillingFormInner({
   const { data: invoices } = useInvoices(invoiceCursor, teamId, initialInvoices);
   const cancelMutation = useCancelSubscription();
   const spendingLimitMutation = useUpdateSpendingLimit(teamId);
+  const isTeamMode = hideCurrentPlan || Boolean(teamId);
 
   const daysSinceFailure = profile.subscriptionDue ? 1 : 0;
 
   let currentPlan = "Free";
   const normalizedPlanType = (
-    subscription?.plan || profile.subscriptionPlanType || ""
+    profile.subscriptionPlanType || subscription?.plan || ""
   ).toLowerCase();
 
   if (normalizedPlanType.includes("developer")) {
@@ -132,10 +133,10 @@ function BillingFormInner({
 
   const pricing = usePricing();
   const activePlanPrice = pricing.plans.find((p) => p.name === currentPlan)?.amount ?? 0;
-  const canChangePlan = currentPlan !== "Team";
+  const canChangePlan = !isTeamMode && currentPlan !== "Team";
   const hasActivePaidSubscription =
-    currentPlan !== "Free" && subscription?.status !== "canceled";
-  const isTeamMode = hideCurrentPlan || Boolean(teamId);
+    currentPlan !== "Free" &&
+    (isTeamMode || subscription?.status !== "canceled");
   const canEditSpendingLimit = isTeamMode
     ? Boolean(teamId) && workspaceTeam?.isCreator !== false
     : true;
@@ -248,7 +249,7 @@ function BillingFormInner({
             {paymentMethods.length === 0 && (
               <div className="flex items-center gap-[14px]">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-dash-bg-elevated">
-                  <CreditCard className="h-5 w-5 text-dash-text-faded" />
+                  <CreditCard size={20} className="text-dash-text-faded" />
                 </div>
                 <div className="flex flex-col gap-[2px] py-2">
                   <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
@@ -289,7 +290,7 @@ function BillingFormInner({
               </div>
             )}
 
-            {paymentMethods.length === 0 && (
+            {!isLoadingMethods && paymentMethods.length === 0 && (
               !showAddCard ? (
                 <button
                   type="button"
@@ -426,6 +427,7 @@ function BillingFormInner({
       {/* ── Invoices ── */}
       <InvoicesSection
         invoices={invoices}
+        isTeamMode={isTeamMode}
         page={invoicePage}
         onNextPage={() => {
           if (!invoices?.next_cursor) return;
@@ -889,6 +891,7 @@ function AddCardForm({
 
 function InvoicesSection({
   invoices,
+  isTeamMode,
   page,
   onNextPage,
   onPreviousPage,
@@ -908,6 +911,7 @@ function InvoicesSection({
     previous_cursor: string | null;
     has_more: boolean;
   } | null;
+  isTeamMode?: boolean;
   page: number;
   onNextPage: () => void;
   onPreviousPage: () => void;
@@ -921,7 +925,9 @@ function InvoicesSection({
           Payment history and invoices
         </p>
         <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-          See your billing history with Brimble including invoices
+          {isTeamMode
+            ? "View this team's billing history and invoices"
+            : "See your billing history with Brimble including invoices"}
         </p>
       </div>
       <div className="flex flex-col gap-4">

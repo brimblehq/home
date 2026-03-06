@@ -20,9 +20,10 @@ const PLAN_TYPE_TO_SPEC_KEY: Record<string, string> = {
   team_plan: "team",
 };
 
-export function usePlanGate(): PlanSpecs & { planKey: string } {
+export function usePlanGate(planTypeOverride?: string): PlanSpecs & { planKey: string } {
   const pricing = usePricing();
-  const planType = usePlanType();
+  const contextPlanType = usePlanType();
+  const planType = planTypeOverride ?? contextPlanType;
 
   const planKey = PLAN_TYPE_TO_SPEC_KEY[planType ?? ""] ?? "free";
   const specs = pricing.specs[planKey] ?? pricing.specs.free;

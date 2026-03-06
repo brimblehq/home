@@ -134,8 +134,12 @@ export function createAuthApi(client: ApiClient): AuthApi {
           method: "GET",
         });
         return mapSession(response);
-      } catch {
-        return null;
+      } catch (error: any) {
+        if (error?.status === 401 || error?.status === 403) {
+          return null;
+        }
+
+        throw error;
       }
     },
   };

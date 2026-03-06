@@ -3,10 +3,6 @@ import { getCurrentSessionServerFn, refreshSessionServerFn } from "@/server/auth
 
 const publicRoutes = new Set<string>(["/login", "/signup"]);
 
-let cachedSession: unknown = undefined;
-let cacheTimestamp = 0;
-const SESSION_CACHE_MS = 60_000;
-
 function buildNextPath(pathname: string, search?: string) {
   if (!search) {
     return pathname;
@@ -20,30 +16,26 @@ function buildNextPath(pathname: string, search?: string) {
 }
 
 export function invalidateSessionCache() {
-  cachedSession = undefined;
-  cacheTimestamp = 0;
+  // Auth checks are request-driven now; no process-global cache to clear.
 }
 
 export async function enforceRouteAuth(pathname: string, search?: string) {
   const isPublicRoute = publicRoutes.has(pathname);
+  let session: unknown = null;
+  let authCheckFailed = false;
 
-  const now = Date.now();
-  let session: unknown;
-
-  if (cachedSession !== undefined && now - cacheTimestamp < SESSION_CACHE_MS) {
-    session = cachedSession;
-  } else {
+  try {
     session = await getCurrentSessionServerFn();
-
-    if (!session) {
-      session = await refreshSessionServerFn();
-    }
-
-    cachedSession = session || null;
-    cacheTimestamp = now;
+  } catch (error) {
+    authCheckFailed = true;
+    console.warn("[auth] enforceRouteAuth session check failed", error);
   }
 
-  if (!session && !isPublicRoute) {
+  if (!session && !authCheckFailed) {
+    session = await refreshSessionServerFn();
+  }
+
+  if (!session && !isPublicRoute && !authCheckFailed) {
     invalidateSessionCache();
     throw redirect({
       to: "/login",
@@ -54,9 +46,9 @@ export async function enforceRouteAuth(pathname: string, search?: string) {
   }
 
   if (session && isPublicRoute) {
-    throw redirect({ to: "/" });
+    const nextParam = new URLSearchParams(search?.startsWith("?") ? search : `?${search || ""}`).get("next");
+    throw redirect({ to: nextParam || "/" });
   }
 
   return { session };
 }
-

@@ -1,5 +1,6 @@
 import { Plus, ArrowUpRight } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { motion } from "motion/react";
 import { DashButton } from "../shared/dash-button";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 
@@ -35,12 +36,20 @@ export function ConnectedDomains({
           <span className="text-[56px] font-light leading-none tracking-[-0.09px] text-dash-text-strong">
             {activeDomains}
           </span>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
+          <Link
+            to={withWorkspaceQuery({ pathname: "/domains", searchStr }) as any}
+            className="group flex items-center gap-2"
+          >
+            <span className="text-sm font-light leading-[1.3] text-dash-text-faded transition-colors group-hover:text-dash-text-strong">
               Active domains
             </span>
-            <ArrowUpRight className="size-3 text-dash-text-faded" />
-          </div>
+            <motion.span
+              whileTap={{ x: 2, y: -2 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            >
+              <ArrowUpRight className="size-3 text-dash-text-faded transition-colors group-hover:text-dash-text-strong" />
+            </motion.span>
+          </Link>
         </div>
       </div>
     </div>

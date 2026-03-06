@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Github, ArrowLeft, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { invalidateSessionCache } from "../lib/auth-guards";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import {
   AuthDivider,
   AuthField,
@@ -216,7 +217,21 @@ function OtpStep({
 
 /* ─── Page ─── */
 
+function getNextUrl(): string {
+  if (typeof window === "undefined") return "/";
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (!next) return "/";
+  try {
+    const url = new URL(next, window.location.origin);
+    if (url.origin !== window.location.origin) return "/";
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return next.startsWith("/") ? next : "/";
+  }
+}
+
 function SignupPage() {
+  const haptics = useHaptics();
   const lookupAuth = useServerFn(lookupAuthServerFn);
   const startSignup = useServerFn(startSignupServerFn);
   const resendAuthCode = useServerFn(resendAuthCodeServerFn);
@@ -233,6 +248,7 @@ function SignupPage() {
     if (oauthLoadingProvider) {
       return;
     }
+    haptics.selection();
 
     setOauthLoadingProvider(provider);
 
@@ -258,7 +274,7 @@ function SignupPage() {
         `Welcome${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
       );
       invalidateSessionCache();
-      window.location.replace("/");
+      window.location.replace(getNextUrl());
       return;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "OAuth sign up failed");
@@ -268,6 +284,7 @@ function SignupPage() {
   }
 
   async function handleSendOtp() {
+    haptics.selection();
     if (!email.trim() || !username.trim()) return;
     setLoading(true);
     try {
@@ -292,13 +309,14 @@ function SignupPage() {
   }
 
   async function handleVerify() {
+    haptics.selection();
     if (otp.length < 6) return;
     setLoading(true);
     try {
       await verifyEmailCode({ data: { email, code: otp } });
       toast.success("Account created successfully");
       invalidateSessionCache();
-      window.location.replace("/");
+      window.location.replace(getNextUrl());
       return;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Verification failed");
@@ -308,6 +326,7 @@ function SignupPage() {
   }
 
   async function handleResend() {
+    haptics.selection();
     setOtp("");
     if (!email.trim()) return;
     setLoading(true);
@@ -372,6 +391,7 @@ function SignupPage() {
             onOtpChange={setOtp}
             onVerify={handleVerify}
             onBack={() => {
+              haptics.selection();
               setStep("details");
               setOtp("");
             }}

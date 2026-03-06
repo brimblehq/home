@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { withTokenRefresh } from "@/server/shared/backend";
+import { workspacesLogger } from "@/server/shared/logger";
 
 export const listWorkspacesServerFn = createServerFn({
   method: "GET",
@@ -70,12 +71,12 @@ export const createWorkspaceServerFn = createServerFn({
     accept_terms: payload?.accept_terms !== false,
     ...(payload?.payment_method ? { payment_method: payload.payment_method } : {}),
   };
-  console.log("[createWorkspace] request body:", JSON.stringify(body, null, 2));
+  workspacesLogger.debug("createWorkspace request body:", body);
   return withTokenRefresh(async (api) => {
     try {
       return await api.workspaces.create(body);
     } catch (err: any) {
-      console.error("[createWorkspace] full error:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+      workspacesLogger.error("createWorkspace failed:", err);
       throw err;
     }
   });

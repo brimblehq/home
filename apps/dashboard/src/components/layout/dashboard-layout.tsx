@@ -31,6 +31,8 @@ import { ProfileDrawerProvider } from "@/contexts/profile-drawer-context";
 import { DEFAULT_PRICING } from "@/utils/default-pricing";
 import { ProfileTab } from "../../types/enums";
 import { listTooltipMessagesServerFn } from "@/server/messages/actions";
+import { getSettingsSidebarSnapshotServerFn } from "@/server/settings/actions";
+import { getWorkspaceTeamMembersServerFn } from "@/server/teams/actions";
 
 const dashboardQueryClient = new QueryClient({
   defaultOptions: {
@@ -238,6 +240,7 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
 
 export function DashboardLayout({
   children,
+  initialWorkspaceSlug,
   initialSettingsSnapshot,
   initialWorkspaces,
   initialProjectSwitcherProjects,
@@ -249,6 +252,7 @@ export function DashboardLayout({
   initialPricing,
 }: {
   children: ReactNode;
+  initialWorkspaceSlug?: string | null;
   initialSettingsSnapshot?: SettingsSidebarSnapshot | null;
   initialWorkspaces?: ApiListResponse<Workspace>;
   initialProjectSwitcherProjects?: ApiListResponse<Project> | null;
@@ -302,8 +306,25 @@ export function DashboardLayout({
   const resolvedIsFullWidth = isFullWidthLayoutPath(layoutPathname);
   const shouldRenderDesktopSidebar = !resolvedIsFullWidth;
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const currentWorkspace = useMemo(() => {
+    const params = new URLSearchParams(searchStr || "");
+    return params.get("workspace")?.trim() || undefined;
+  }, [searchStr]);
+  const settingsScopeKey = currentWorkspace ?? "__personal__";
   const [stableWorkspaces, setStableWorkspaces] = useState<Workspace[]>(
     initialWorkspaces?.items ?? [],
+  );
+  const [settingsSnapshotCache, setSettingsSnapshotCache] = useState<
+    Record<string, SettingsSidebarSnapshot | null>
+  >(() => ({
+    [(initialWorkspaceSlug ?? "__personal__")]: initialSettingsSnapshot ?? null,
+  }));
+  const [workspaceTeamMembersCache, setWorkspaceTeamMembersCache] = useState<
+    Record<string, TeamDetails | null>
+  >(() =>
+    initialWorkspaceSlug
+      ? { [initialWorkspaceSlug]: initialWorkspaceTeamMembers ?? null }
+      : {},
   );
 
   useEffect(() => {
@@ -321,13 +342,13 @@ export function DashboardLayout({
 
   const effectiveWorkspaces =
     stableWorkspaces.length > 0 ? stableWorkspaces : (initialWorkspaces?.items ?? []);
+  const isKnownWorkspace = Boolean(
+    currentWorkspace &&
+      effectiveWorkspaces.some((workspace) => workspace.slug === currentWorkspace),
+  );
 
   const isTeamWorkspace = (() => {
-    const params = new URLSearchParams(searchStr || "");
-    const ws = params.get("workspace");
-    return Boolean(
-      ws && effectiveWorkspaces.some((w) => w.slug === ws),
-    );
+    return isKnownWorkspace;
   })();
 
   // Mobile navigation drawer
@@ -347,13 +368,17 @@ export function DashboardLayout({
     setProfileOpen(true);
   }, []);
 
-  const currentWorkspace = useMemo(() => {
-    const params = new URLSearchParams(searchStr || "");
-    return params.get("workspace")?.trim() || undefined;
-  }, [searchStr]);
   const getTooltipMessages = useServerFn(listTooltipMessagesServerFn as any) as (args: {
     data?: { workspace?: string; type?: "notifications"; limit?: number; page?: number };
   }) => Promise<AppTooltipMessage[] | null>;
+  const getSettingsSnapshot = useServerFn(
+    getSettingsSidebarSnapshotServerFn as any,
+  ) as (args?: {
+    data?: { workspace?: string };
+  }) => Promise<SettingsSidebarSnapshot>;
+  const getWorkspaceTeamMembers = useServerFn(
+    getWorkspaceTeamMembersServerFn as any,
+  ) as (args: { data: { workspace: string } }) => Promise<TeamDetails>;
   const [tooltipMessages, setTooltipMessages] = useState<AppTooltipMessage[] | null>(
     initialTooltipMessages ?? null,
   );
@@ -361,6 +386,129 @@ export function DashboardLayout({
   const [dismissedSnackbarKeys, setDismissedSnackbarKeys] = useState<Set<string>>(
     () => new Set(),
   );
+  const activeSettingsSnapshot =
+    settingsSnapshotCache[settingsScopeKey] ?? null;
+
+  // Profile is workspace-independent — extract once and keep stable across workspace switches
+  const [userProfile, setUserProfile] = useState<SettingsSidebarSnapshot["profile"] | null>(
+    initialSettingsSnapshot?.profile ?? null,
+  );
+
+  useEffect(() => {
+    const p = initialSettingsSnapshot?.profile;
+    if (p && (p.firstName || p.lastName || p.username || p.email)) {
+      setUserProfile(p);
+    }
+  }, [initialSettingsSnapshot?.profile]);
+
+  // Also update from cache if a newer snapshot has richer profile data
+  useEffect(() => {
+    const p = activeSettingsSnapshot?.profile;
+    if (p && (p.firstName || p.lastName || p.username || p.email)) {
+      setUserProfile((prev) => {
+        if (!prev || (!prev.firstName && !prev.lastName && p.firstName)) return p;
+        return prev;
+      });
+    }
+  }, [activeSettingsSnapshot?.profile]);
+  const activeWorkspaceTeamMembers =
+    currentWorkspace && isKnownWorkspace
+      ? (workspaceTeamMembersCache[currentWorkspace] ?? null)
+      : null;
+
+  useEffect(() => {
+    setSettingsSnapshotCache((prev) => ({
+      ...prev,
+      [(initialWorkspaceSlug ?? "__personal__")]: initialSettingsSnapshot ?? null,
+    }));
+  }, [initialSettingsSnapshot, initialWorkspaceSlug]);
+
+  useEffect(() => {
+    if (!initialWorkspaceSlug) {
+      return;
+    }
+
+    setWorkspaceTeamMembersCache((prev) => ({
+      ...prev,
+      [initialWorkspaceSlug]: initialWorkspaceTeamMembers ?? null,
+    }));
+  }, [initialWorkspaceSlug, initialWorkspaceTeamMembers]);
+
+  useEffect(() => {
+    if (Object.prototype.hasOwnProperty.call(settingsSnapshotCache, settingsScopeKey)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void getSettingsSnapshot({
+      data: { workspace: currentWorkspace },
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        setSettingsSnapshotCache((prev) => ({
+          ...prev,
+          [settingsScopeKey]: result ?? null,
+        }));
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setSettingsSnapshotCache((prev) => ({
+          ...prev,
+          [settingsScopeKey]: null,
+        }));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentWorkspace, getSettingsSnapshot, settingsScopeKey, settingsSnapshotCache]);
+
+  useEffect(() => {
+    if (!currentWorkspace || !isKnownWorkspace) {
+      return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(workspaceTeamMembersCache, currentWorkspace)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void getWorkspaceTeamMembers({
+      data: { workspace: currentWorkspace },
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        setWorkspaceTeamMembersCache((prev) => ({
+          ...prev,
+          [currentWorkspace]: result ?? null,
+        }));
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setWorkspaceTeamMembersCache((prev) => ({
+          ...prev,
+          [currentWorkspace]: null,
+        }));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentWorkspace, getWorkspaceTeamMembers, isKnownWorkspace, workspaceTeamMembersCache]);
 
   useEffect(() => {
     let cancelled = false;
@@ -409,7 +557,7 @@ export function DashboardLayout({
   }, [dismissedSnackbarKeys, tooltipMessages]);
 
   const pricing = initialPricing ?? DEFAULT_PRICING;
-  const planType = initialSettingsSnapshot?.profile?.subscription?.planType;
+  const planType = activeSettingsSnapshot?.profile?.subscription?.planType;
 
   if (isAuthRoute || isCatchAll) {
     return (
@@ -440,7 +588,8 @@ export function DashboardLayout({
           onSettingsClick={() => setProfileOpen(true)}
           onMobileNavToggle={() => setMobileNavOpen((v) => !v)}
           mobileNavOpen={mobileNavOpen}
-          settingsSnapshot={initialSettingsSnapshot ?? null}
+          settingsSnapshot={activeSettingsSnapshot}
+          userProfile={userProfile}
           workspaces={effectiveWorkspaces}
           projectSwitcherProjects={
             matchedProjectSwitcherProjects ?? initialProjectSwitcherProjects?.items ?? []
@@ -563,17 +712,17 @@ export function DashboardLayout({
             initialProjectSwitcherProjects?.items ??
             []
           }
-          settingsSnapshot={initialSettingsSnapshot}
+          settingsSnapshot={activeSettingsSnapshot}
           initialPaymentMethods={initialPaymentMethods ?? null}
           isTeamWorkspace={isTeamWorkspace}
-          teamDetails={initialWorkspaceTeamMembers}
+          teamDetails={activeWorkspaceTeamMembers}
         />
         <UserProfileDrawer
-          initialWorkspaceTeamMembers={initialWorkspaceTeamMembers ?? null}
+          initialWorkspaceTeamMembers={activeWorkspaceTeamMembers}
           open={profileOpen}
           onOpenChange={setProfileOpen}
           requestedTab={profileRequestedTab}
-          initialSnapshot={initialSettingsSnapshot ?? null}
+          initialSnapshot={activeSettingsSnapshot}
           initialPaymentMethods={initialPaymentMethods ?? null}
           initialInvoices={initialInvoices ?? null}
         />

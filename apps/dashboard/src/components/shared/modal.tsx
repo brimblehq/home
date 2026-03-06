@@ -1,7 +1,9 @@
 import { cn } from "@brimble/ui";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
+import { useEffect, useRef } from "react";
 import { LoadingButtonContent } from "./loading-button-content";
+import { useHaptics } from "@/hooks/use-haptics";
 
 interface ModalProps {
   open: boolean;
@@ -14,6 +16,14 @@ interface ModalProps {
 }
 
 export function Modal({ open, onOpenChange, children, width = 500, className }: ModalProps) {
+  const haptics = useHaptics();
+  const prevOpen = useRef(false);
+
+  useEffect(() => {
+    if (open && !prevOpen.current) haptics.soft();
+    prevOpen.current = open;
+  }, [open, haptics]);
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
@@ -97,10 +107,14 @@ export function ModalFooter({ children }: { children: React.ReactNode }) {
 }
 
 export function ModalCancelButton({ onClick }: { onClick?: () => void }) {
+  const haptics = useHaptics();
   return (
     <Dialog.Close asChild>
       <button
-        onClick={onClick}
+        onClick={() => {
+          haptics.selection();
+          onClick?.();
+        }}
         className="flex h-[34px] items-center rounded-[4px] border border-dash-border bg-dash-bg px-3.5 text-sm font-medium text-dash-text-strong shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
       >
         Cancel
@@ -122,9 +136,13 @@ export function ModalContinueButton({
   loadingLabel?: React.ReactNode;
   children?: React.ReactNode;
 }) {
+  const haptics = useHaptics();
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        if (!disabled && !loading) haptics.medium();
+        onClick?.();
+      }}
       disabled={disabled || loading}
       className="flex items-center rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-4 py-[5px] text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
     >

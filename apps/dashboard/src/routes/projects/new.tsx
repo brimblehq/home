@@ -5,8 +5,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
-  Github,
-  Container,
   Search,
   ChevronDown,
   Plus,
@@ -20,13 +18,15 @@ import {
   ShieldAlert,
   HardDrive,
 } from "lucide-react";
-import { Database } from "@phosphor-icons/react";
-import { toast } from "sonner";
+import { GithubLogo, Cube, Database } from "@phosphor-icons/react";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { DashButton } from "../../components/shared/dash-button";
 import { ToggleSwitch } from "../../components/shared/toggle-switch";
 import { RangeSlider } from "../../components/shared/range-slider";
 import { Dropdown } from "../../components/shared/dropdown";
+import { DiskSizeSelect, diskSizes } from "../../components/shared/disk-size-select";
 import { RootDirectoryTrigger } from "../../components/shared/root-directory-trigger";
 import { RootDirectoryDrawer } from "../../components/project/root-directory-drawer";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
@@ -64,6 +64,9 @@ import type {
 } from "@/backend/repositories";
 import type { Project } from "@/backend/projects";
 import { usePlanGate } from "@/hooks/use-plan-gate";
+import { usePricing } from "@/contexts/pricing-context";
+import { estimateComputeCost } from "@/utils/compute-pricing";
+import { formatUsdMonthly } from "@/utils/billing";
 
 export const Route = createFileRoute("/projects/new")({
   component: NewProjectPage,
@@ -94,7 +97,7 @@ const gitProviders: GitProvider[] = [
   {
     id: "github",
     name: "GitHub",
-    Icon: Github,
+    Icon: GithubLogo,
     description: "Connect a repository from your GitHub account",
     permissions: [
       { label: "Read access to your repositories", desc: "Browse and import repos" },
@@ -221,8 +224,6 @@ const fallbackDbEngines: DbEngine[] = [
 
 const cpuSteps = [0.5, 1, 2, 4, 8];
 const memorySteps = [0.5, 1, 1.5, 2, 4, 8, 12, 16];
-const storageSteps = [1, 2, 5, 10, 20, 50, 100];
-
 function formatCpu(val: number): string {
   if (val < 1) return `${val} vCPU (Shared)`;
   return `${val} vCPU`;
@@ -232,18 +233,52 @@ function formatMemory(gb: number): string {
   return `${gb} GB`;
 }
 
-function formatStorage(gb: number): string {
-  return `${gb} GB`;
+function ComputeSliderField({
+  label,
+  value,
+  steps,
+  formatValue,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  steps: number[];
+  formatValue: (value: number) => string;
+  onCommit: (value: number) => void;
+}) {
+  const maxIndex = Math.max(steps.length - 1, 1);
+  const indexToTrack = (index: number) => (index / maxIndex) * 100;
+  const trackToIndex = (track: number) =>
+    Math.min(maxIndex, Math.max(0, Math.round((track / 100) * maxIndex)));
+  const [trackValue, setTrackValue] = useState(() => indexToTrack(value));
+
+  useEffect(() => {
+    setTrackValue(indexToTrack(value));
+  }, [value]);
+
+  const previewIndex = trackToIndex(trackValue);
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <label className="text-sm text-dash-text-body">{label}</label>
+        <span className="text-sm font-medium text-dash-text-strong">
+          {formatValue(steps[previewIndex] ?? steps[0] ?? 0)}
+        </span>
+      </div>
+      <RangeSlider
+        value={trackValue}
+        onChange={setTrackValue}
+        onCommit={(nextTrackValue) => onCommit(trackToIndex(nextTrackValue))}
+        min={0}
+        max={100}
+        step={1}
+        hideValue
+      />
+    </div>
+  );
 }
 
-const diskSizes = [
-  { id: "1", label: "1 GB ($0.25/month)" },
-  { id: "5", label: "5 GB ($1.25/month)" },
-  { id: "10", label: "10 GB ($2.50/month)" },
-  { id: "25", label: "25 GB ($6.25/month)" },
-  { id: "50", label: "50 GB ($12.50/month)" },
-  { id: "100", label: "100 GB ($25/month)" },
-];
 
 function generateMockCredential(length: number): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -319,6 +354,7 @@ function Phase1SourceType({
 }: {
   onSelect: (type: SourceType) => void;
 }) {
+  const haptics = useHaptics();
   const sourceCards: { type: SourceType; Icon: IconComponent; title: string; desc: string }[] = [
     ...gitProviders.map((p) => ({
       type: p.id as SourceType,
@@ -328,7 +364,7 @@ function Phase1SourceType({
     })),
     {
       type: SourceType.Docker,
-      Icon: Container,
+      Icon: Cube,
       title: "Deploy Docker image",
       desc: "Deploy from a public or private registry",
     },
@@ -357,7 +393,10 @@ function Phase1SourceType({
         {sourceCards.map((card) => (
           <button
             key={card.type}
-            onClick={() => onSelect(card.type)}
+            onClick={() => {
+              haptics.selection();
+              onSelect(card.type);
+            }}
             className="group flex flex-col gap-3 rounded-[4px] border-[0.5px] border-dash-border p-5 text-left transition-all hover:border-dash-text-faded hover:bg-dash-bg-elevated"
           >
             <card.Icon className="size-5 text-dash-text-body" />
@@ -1089,18 +1128,20 @@ function CredentialRow({
   onChange: (val: string) => void;
   sensitive?: boolean;
 }) {
+  const haptics = useHaptics();
   const [revealed, setRevealed] = useState(!sensitive);
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
     navigator.clipboard.writeText(value);
+    haptics.light();
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
 
   return (
     <div className="flex items-center gap-3">
-      <span className="w-[140px] shrink-0 font-family-mono text-xs text-dash-text-faded">
+      <span className="shrink-0 font-family-mono text-xs text-dash-text-faded">
         {label}
       </span>
       <input
@@ -1114,7 +1155,7 @@ function CredentialRow({
         data-lpignore="true"
         data-1p-ignore="true"
         data-form-type="other"
-        className="flex-1 truncate border-0 bg-transparent font-family-mono text-sm text-dash-text-body outline-none placeholder:text-dash-text-extra-faded"
+        className="min-w-0 flex-1 truncate border-0 bg-transparent font-family-mono text-sm text-dash-text-body outline-none placeholder:text-dash-text-extra-faded"
       />
       <div className="flex shrink-0 items-center gap-1">
         {sensitive && (
@@ -1169,16 +1210,36 @@ function Phase3DatabaseConfigure({
     const exactIndex = typeof recommendedMemory === "number" ? memorySteps.indexOf(recommendedMemory) : -1;
     return exactIndex >= 0 ? exactIndex : 1;
   });
-  const [storIdx, setStorIdx] = useState(() => {
+  const [dbDiskSize, setDbDiskSize] = useState(() => {
     const recommendedStorage = engine.recommendations?.[0]?.compute?.storage;
-    const exactIndex = typeof recommendedStorage === "number" ? storageSteps.indexOf(recommendedStorage) : -1;
-    return exactIndex >= 0 ? exactIndex : 2;
+    if (typeof recommendedStorage === "number") {
+      const match = diskSizes.find((d) => Number(d.id) === recommendedStorage);
+      if (match) return match.id;
+      const closest = diskSizes.reduce((prev, curr) =>
+        Math.abs(Number(curr.id) - recommendedStorage) < Math.abs(Number(prev.id) - recommendedStorage) ? curr : prev,
+      );
+      return closest.id;
+    }
+    return "10";
   });
   const [publicAccess, setPublicAccess] = useState(false);
   const [whitelistIps, setWhitelistIps] = useState<{ id: number; value: string }[]>([]);
   const [envDrafts, setEnvDrafts] = useState<DatabaseEnvDraft[]>([]);
 
   const recommendation = engine.recommendations?.[0]?.compute;
+
+  const { planKey } = usePlanGate();
+  const pricing = usePricing();
+
+  const costBreakdown = useMemo(
+    () =>
+      estimateComputeCost(
+        { cpu: cpuSteps[cpuIdx], memory: memorySteps[memIdx], storage: Number(dbDiskSize) },
+        planKey,
+        pricing.metered,
+      ),
+    [cpuIdx, memIdx, dbDiskSize, planKey, pricing.metered],
+  );
 
   useEffect(() => {
     if (!region && regionOptions[0]?.id) {
@@ -1291,8 +1352,8 @@ function Phase3DatabaseConfigure({
                 if (nextMemIdx >= 0) setMemIdx(nextMemIdx);
               }
               if (typeof recommendation.storage === "number") {
-                const nextStorIdx = storageSteps.indexOf(recommendation.storage);
-                if (nextStorIdx >= 0) setStorIdx(nextStorIdx);
+                const match = diskSizes.find((d) => Number(d.id) === recommendation.storage);
+                if (match) setDbDiskSize(match.id);
               }
             }}
           >
@@ -1309,54 +1370,25 @@ function Phase3DatabaseConfigure({
           Compute
         </h4>
         <div className="flex flex-col gap-5">
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm text-dash-text-body">CPU</label>
-              <span className="text-sm font-medium text-dash-text-strong">
-                {formatCpu(cpuSteps[cpuIdx])}
-              </span>
-            </div>
-            <RangeSlider
-              value={cpuIdx}
-              onChange={setCpuIdx}
-              min={0}
-              max={cpuSteps.length - 1}
-              step={1}
-              hideValue
-            />
-          </div>
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm text-dash-text-body">Memory</label>
-              <span className="text-sm font-medium text-dash-text-strong">
-                {formatMemory(memorySteps[memIdx])}
-              </span>
-            </div>
-            <RangeSlider
-              value={memIdx}
-              onChange={setMemIdx}
-              min={0}
-              max={memorySteps.length - 1}
-              step={1}
-              hideValue
-            />
-          </div>
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm text-dash-text-body">Storage</label>
-              <span className="text-sm font-medium text-dash-text-strong">
-                {formatStorage(storageSteps[storIdx])}
-              </span>
-            </div>
-            <RangeSlider
-              value={storIdx}
-              onChange={setStorIdx}
-              min={0}
-              max={storageSteps.length - 1}
-              step={1}
-              hideValue
-            />
-          </div>
+          <ComputeSliderField
+            label="CPU"
+            value={cpuIdx}
+            steps={cpuSteps}
+            formatValue={formatCpu}
+            onCommit={setCpuIdx}
+          />
+          <ComputeSliderField
+            label="Memory"
+            value={memIdx}
+            steps={memorySteps}
+            formatValue={formatMemory}
+            onCommit={setMemIdx}
+          />
+          <DiskSizeSelect
+            label="Storage"
+            value={dbDiskSize}
+            onChange={setDbDiskSize}
+          />
         </div>
       </div>
 
@@ -1445,6 +1477,42 @@ function Phase3DatabaseConfigure({
         </AnimatePresence>
       </div>
 
+      <hr className="my-6 border-dash-border-soft" />
+
+      {/* Estimated Billing */}
+      <div>
+        <h4 className="text-sm font-medium text-dash-text-strong">
+          Estimated Billing
+        </h4>
+        <p className="mt-0.5 text-xs text-dash-text-faded">
+          Monthly cost based on your current plan
+        </p>
+
+        <div className="mt-3 flex flex-col">
+          {costBreakdown.cpu.excess > 0 && (
+            <div className="flex items-center justify-between py-1.5 text-xs text-dash-text-body">
+              <span>CPU ({costBreakdown.cpu.excess} vCPU &times; {formatUsdMonthly(costBreakdown.cpu.rate)})</span>
+              <span>{formatUsdMonthly(costBreakdown.cpu.cost)}</span>
+            </div>
+          )}
+          {costBreakdown.memory.excess > 0 && (
+            <div className="flex items-center justify-between py-1.5 text-xs text-dash-text-body">
+              <span>Memory ({costBreakdown.memory.excess} GB &times; {formatUsdMonthly(costBreakdown.memory.rate)})</span>
+              <span>{formatUsdMonthly(costBreakdown.memory.cost)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between py-1.5 text-xs text-dash-text-body">
+            <span>Storage ({costBreakdown.storage.amount} GB &times; {formatUsdMonthly(costBreakdown.storage.rate)})</span>
+            <span>{formatUsdMonthly(costBreakdown.storage.cost)}</span>
+          </div>
+          <hr className="my-1.5 border-dash-border-soft" />
+          <div className="flex items-center justify-between py-1.5 text-sm font-medium text-dash-text-strong">
+            <span>Estimated total</span>
+            <span>{formatUsdMonthly(costBreakdown.total)}/mo</span>
+          </div>
+        </div>
+      </div>
+
       {/* Provision button */}
       <div className="mt-8">
         <GlossyButton
@@ -1473,7 +1541,7 @@ function Phase3DatabaseConfigure({
               regionId: region,
               cpu: cpuSteps[cpuIdx],
               memory: memorySteps[memIdx],
-              storage: storageSteps[storIdx],
+              storage: Number(dbDiskSize),
               whitelistedIps: publicAccess
                 ? ["0.0.0.0/0"]
                 : whitelistIps.map((ip) => ip.value.trim()).filter(Boolean),
@@ -1963,16 +2031,10 @@ function Phase3Configure({
             >
               <div className="mt-4 flex flex-col gap-4">
                 <div className="grid grid-cols-1 gap-3 px-px pb-px sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1.5 block text-xs text-dash-text-faded">
-                      Disk size
-                    </label>
-                    <Dropdown
-                      value={diskSize}
-                      options={diskSizes}
-                      onChange={setDiskSize}
-                    />
-                  </div>
+                  <DiskSizeSelect
+                    value={diskSize}
+                    onChange={setDiskSize}
+                  />
                   <div>
                     <label className="mb-1.5 block text-xs text-dash-text-faded">
                       Mount path
@@ -2793,7 +2855,7 @@ function NewProjectPage() {
                   return <Icon className="size-3" />;
                 }
                 if (sourceType === SourceType.Database) return <Database className="size-3" />;
-                return <Container className="size-3" />;
+                return <Cube className="size-3" />;
               })()}
               label={(() => {
                 const provider = getGitProvider(sourceType);

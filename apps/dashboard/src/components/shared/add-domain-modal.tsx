@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Search, SlidersHorizontal, Plus, ArrowRightLeft, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Link, getRouteApi, useRouterState } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import {
   Modal,
   ModalHeader,
@@ -43,6 +43,8 @@ interface AddDomainModalProps {
   onValidate?: (domainUrl: string) => DomainValidationError | null;
   /** Called when user clicks "Register" for a domain that doesn't exist. */
   onRegisterDomain?: (domainUrl: string) => void;
+  /** Open the modal directly on a specific step. */
+  initialStep?: DomainStep;
 }
 
 function formatCardType(cardType?: string): string {
@@ -121,9 +123,10 @@ export function AddDomainModal({
   onCreateProject,
   onValidate,
   onRegisterDomain,
+  initialStep,
 }: AddDomainModalProps) {
   const { paymentMethods: initialPaymentMethods } =
-    rootRoute.useLoaderData() as {
+    (rootRoute.useLoaderData() ?? {}) as {
       paymentMethods?: PaymentMethod[] | null;
     };
   const { data: paymentMethods = [] } = usePaymentMethods(
@@ -140,7 +143,7 @@ export function AddDomainModal({
   );
   const availablePaymentCards =
     livePaymentCards.length > 0 ? livePaymentCards : paymentCards;
-  const [step, setStep] = useState<DomainStep>("select-project");
+  const [step, setStep] = useState<DomainStep>(initialStep ?? DomainStep.SelectProject);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [domainUrl, setDomainUrl] = useState("");
@@ -165,6 +168,12 @@ export function AddDomainModal({
     registrantEmailAccess: false,
     acknowledgeTransferTime: false,
   });
+
+  useEffect(() => {
+    if (open && initialStep) {
+      setStep(initialStep);
+    }
+  }, [open, initialStep]);
 
   useEffect(() => {
     const preferredCardId = getPreferredCardId(availablePaymentCards);

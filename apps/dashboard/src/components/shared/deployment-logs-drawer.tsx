@@ -4,13 +4,14 @@ import {
   Clock,
   ChevronRight,
   ChevronsDownUp,
-  ArrowDownToLine,
+  ChevronsDown,
   X,
   CheckCircle2,
   XCircle,
 } from "lucide-react";
 import { DownloadSimple } from "@phosphor-icons/react";
 import { motion } from "motion/react";
+import { useHaptics } from "@/hooks/use-haptics";
 import type { DeploymentDrawerLogEntry } from "@/utils/deployment-logs";
 
 interface DeploymentLogsDrawerProps {
@@ -118,6 +119,7 @@ export function DeploymentLogsDrawer({
   loading = false,
   emptyMessage = "No logs available for this deployment yet.",
 }: DeploymentLogsDrawerProps) {
+  const haptics = useHaptics();
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(
     new Set(),
   );
@@ -190,6 +192,7 @@ export function DeploymentLogsDrawer({
   function copyLogLine(log: DeploymentDrawerLogEntry, index: number) {
     const text = `[${log.timestamp}] ${log.message}`;
     navigator.clipboard.writeText(text);
+    haptics.light();
     setCopiedRowIndex(index);
     window.setTimeout(() => {
       setCopiedRowIndex((prev) => (prev === index ? null : prev));
@@ -280,7 +283,7 @@ export function DeploymentLogsDrawer({
                     onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })}
                     className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                   >
-                    <ArrowDownToLine className="size-4" />
+                    <ChevronsDown className="size-4" />
                     <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">
                       Bottom
                     </span>

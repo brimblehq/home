@@ -16,9 +16,10 @@ import {
   Settings,
 } from "lucide-react";
 import { ImageSquare } from "@phosphor-icons/react";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { Dropdown } from "../../components/shared/dropdown";
+import { Route as RootRoute } from "@/routes/__root";
 import config from "@/config";
 import {
   createWorkspaceServerFn,
@@ -44,7 +45,6 @@ import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { usePricing } from "@/contexts/pricing-context";
 import { useProfileDrawer } from "@/contexts/profile-drawer-context";
 import { ProfileTab } from "@/types/enums";
-import { calculateTeamBilling } from "@/utils/team-billing";
 
 export const Route = createFileRoute("/workspace/new")({
   component: NewWorkspacePage,
@@ -597,6 +597,7 @@ function Phase3Invite({
   onSubmit,
   costPerMember,
   costPerBuild,
+  currentUserEmail,
 }: {
   workspaceName: string;
   teamSize: number;
@@ -607,6 +608,7 @@ function Phase3Invite({
   onSubmit: (rows: WorkspaceInviteRow[]) => Promise<void> | void;
   costPerMember: number;
   costPerBuild: number;
+  currentUserEmail?: string | null;
 }) {
   return (
     <motion.div
@@ -627,6 +629,18 @@ function Phase3Invite({
         validationSchema={workspaceInviteStepSchema}
         enableReinitialize
         onSubmit={async (values) => {
+          const normalizedCurrentUserEmail = currentUserEmail?.trim().toLowerCase() ?? "";
+          const hasSelfInvite = values.invites.some((row) => {
+            const normalizedEmail = row.email.trim().toLowerCase();
+            return Boolean(
+              normalizedEmail &&
+                normalizedCurrentUserEmail &&
+                normalizedEmail === normalizedCurrentUserEmail,
+            );
+          });
+          if (hasSelfInvite) {
+            return;
+          }
           await onSubmit(values.invites);
         }}
       >
@@ -634,6 +648,19 @@ function Phase3Invite({
           const rows = values.invites;
           const filled = rows.filter((r) => r.email.trim().length > 0).length;
           const busy = creating || isSubmitting || disabled;
+          const normalizedCurrentUserEmail = currentUserEmail?.trim().toLowerCase() ?? "";
+          const selfInviteRowIds = new Set(
+            rows
+              .filter((row) => {
+                const normalizedEmail = row.email.trim().toLowerCase();
+                return Boolean(
+                  normalizedEmail &&
+                    normalizedCurrentUserEmail &&
+                    normalizedEmail === normalizedCurrentUserEmail,
+                );
+              })
+              .map((row) => row.id),
+          );
 
           function addRow() {
             setFieldValue("invites", [
@@ -673,7 +700,11 @@ function Phase3Invite({
                         placeholder="colleague@company.com"
                         value={row.email}
                         onChange={(e) => updateRow(row.id, "email", e.target.value)}
-                        className={`flex-1 ${inputClass}`}
+                        className={
+                          selfInviteRowIds.has(row.id)
+                            ? "flex-1 rounded-[6px] px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af] shadow-[0px_0px_0px_1px_#e1291d,0px_0px_0px_3px_rgba(225,41,29,0.15)] outline-none"
+                            : `flex-1 ${inputClass}`
+                        }
                       />
                       <MiniRoleDropdown
                         value={row.role}
@@ -690,6 +721,10 @@ function Phase3Invite({
                     {Array.isArray((errors as any).invites) && (errors as any).invites[index]?.email ? (
                       <p className="mt-1.5 text-xs text-[#ef2f1f]">
                         {(errors as any).invites[index].email}
+                      </p>
+                    ) : selfInviteRowIds.has(row.id) ? (
+                      <p className="mt-1.5 text-xs text-[#ef2f1f]">
+                        You can&apos;t invite yourself to this workspace.
                       </p>
                     ) : null}
                   </div>
@@ -763,6 +798,7 @@ function Phase3Invite({
 function NewWorkspacePage() {
   const pricing = usePricing();
   const profileDrawer = useProfileDrawer();
+  const { settingsSnapshot } = RootRoute.useLoaderData() ?? ({} as any);
   const navigate = useNavigate({ from: "/workspace/new" });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const createWorkspace = useServerFn(createWorkspaceServerFn as any) as (args: {
@@ -782,6 +818,7 @@ function NewWorkspacePage() {
   ]);
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
   const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
+  const currentUserEmail = settingsSnapshot?.profile?.email ?? null;
 
   async function fetchLatestPaymentMethods() {
     const methods = await getPaymentMethodsServerFn();
@@ -790,7 +827,6 @@ function NewWorkspacePage() {
 
   useEffect(() => {
     fetchLatestPaymentMethods().then((methods: any[]) => {
-      const defaultPm = methods.find((m: any) => m.is_default) ?? methods[0];
       setHasPaymentMethod(Array.isArray(methods) && methods.length > 0);
     }).catch(() => {
       setHasPaymentMethod(false);
@@ -977,6 +1013,7 @@ function NewWorkspacePage() {
                 setInviteRows(rows);
                 await submitWorkspaceCreate(rows);
               }}
+              currentUserEmail={currentUserEmail}
             />
           </AnimatePresence>
         )}

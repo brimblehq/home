@@ -10,7 +10,8 @@ import {
   Warning,
   Database,
 } from "@phosphor-icons/react";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import { Formik } from "formik";
 import { GlossyButton } from "../../../components/shared/glossy-button";
 import { TabHeader } from "../../../components/shared/tab-header";
@@ -23,6 +24,7 @@ import { RootDirectoryTrigger } from "../../../components/shared/root-directory-
 import {
   updateDatabaseProjectConfigServerFn,
   saveProjectGeneralConfigServerFn,
+  deleteProjectServerFn,
 } from "@/server/projects/actions";
 import { listScalingGroupsServerFn } from "@/server/scaling/actions";
 import { listRegionsServerFn } from "@/server/regions/actions";
@@ -934,13 +936,22 @@ function DangerSection({
   maintenanceMode,
   setMaintenanceMode,
   projectName,
+  projectId,
+  workspace,
 }: {
   maintenanceMode: boolean;
   setMaintenanceMode: (v: boolean) => void;
   projectName: string;
+  projectId: string;
+  workspace?: string;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
+  const deleteProject = useServerFn(deleteProjectServerFn as any) as (args: {
+    data: { projectId: string; workspace?: string };
+  }) => Promise<{ success: boolean }>;
 
   return (
     <>
@@ -1001,9 +1012,25 @@ function DangerSection({
         description="This action cannot be undone. All deployments, domains, and environment variables associated with this project will be permanently deleted."
         confirmLabel="Delete project"
         cancelLabel="Cancel"
-        confirmDisabled={confirmText !== projectName}
-        onConfirm={() => {
-          console.log("Delete project:", projectName);
+        confirmDisabled={confirmText !== projectName || deleting}
+        onConfirm={async () => {
+          setDeleting(true);
+          try {
+            await deleteProject({
+              data: { projectId, workspace },
+            });
+            toast.success("Project deleted successfully");
+            await navigate({
+              to: "/projects",
+              search: workspace ? { workspace } : {},
+            });
+          } catch (error) {
+            toast.error(
+              error instanceof Error ? error.message : "Failed to delete project",
+            );
+          } finally {
+            setDeleting(false);
+          }
         }}
       >
         <div className="flex flex-col gap-2 text-left">
@@ -1014,6 +1041,7 @@ function DangerSection({
             type="text"
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
+            onPaste={(e) => e.preventDefault()}
             placeholder={projectName}
             className={inputClass}
             autoFocus
@@ -1058,6 +1086,7 @@ function ConfigurationPage() {
     };
   }) => Promise<{ message?: string }>;
   const [activeSection, setActiveSection] = useState<ConfigSection>(ConfigSection.General);
+  const haptics = useHaptics();
 
   // Build settings (read-only section, not Formik-managed)
   const [installCmd, setInstallCmd] = useState(project?.installCommand || "");
@@ -1357,7 +1386,10 @@ function ConfigurationPage() {
           {sections.map((s) => (
             <button
               key={s.id}
-              onClick={() => setActiveSection(s.id)}
+              onClick={() => {
+                haptics.selection();
+                setActiveSection(s.id);
+              }}
               className={`shrink-0 whitespace-nowrap lg:w-full flex items-center gap-2.5 rounded-[4px] px-3 py-2 text-left text-sm transition-colors ${
                 s.id === activeSection
                   ? "bg-dash-bg-elevated font-medium text-dash-text-strong"
@@ -1449,6 +1481,8 @@ function ConfigurationPage() {
                   maintenanceMode={maintenanceMode}
                   setMaintenanceMode={setMaintenanceMode}
                   projectName={project?.name || ""}
+                  projectId={project?.id || params.projectId}
+                  workspace={workspace}
                 />
               )}
             </motion.div>

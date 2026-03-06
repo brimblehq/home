@@ -7,6 +7,7 @@ import type {
 } from "@/backend/domains";
 import type { PaginatedProjectsResponse } from "@/backend/projects";
 import { withTokenRefresh } from "@/server/shared/backend";
+import { domainsLogger, domainsDnsLogger } from "@/server/shared/logger";
 
 async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
   const workspaceSlug = workspace?.trim().toLowerCase();
@@ -308,7 +309,7 @@ export const renewDomainSaleServerFn = createServerFn({
       teamId,
     };
 
-    console.log("[domains.renew] request payload:", requestPayload);
+    domainsLogger.debug("renew request payload:", requestPayload);
 
     return api.domains.renewSale(requestPayload);
   });
@@ -372,9 +373,7 @@ export const createDomainDnsRecordServerFn = createServerFn({
       },
     };
 
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[domains.dns] create", requestPayload);
-    }
+    domainsDnsLogger.debug("create", requestPayload);
 
     return api.domains.createDnsRecord(requestPayload);
   });
@@ -423,9 +422,7 @@ export const updateDomainDnsRecordServerFn = createServerFn({
       },
     };
 
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[domains.dns] update", requestPayload);
-    }
+    domainsDnsLogger.debug("update", requestPayload);
 
     return api.domains.updateDnsRecord(requestPayload);
   });
@@ -453,13 +450,11 @@ export const deleteDomainDnsRecordServerFn = createServerFn({
 
   return withTokenRefresh(async (api) => {
     const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[domains.dns] delete", {
-        domain: domainName,
-        recordId,
-        teamId,
-      });
-    }
+    domainsDnsLogger.debug("delete", {
+      domain: domainName,
+      recordId,
+      teamId,
+    });
     await api.domains.deleteDnsRecord({
       domain: domainName,
       recordId,

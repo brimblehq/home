@@ -71,11 +71,12 @@ export const Route = createRootRoute({
   },
   loader: async ({ location }) => {
     const isAuthRoute = /^\/(login|signup)$/.test(location.pathname);
-    const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
+    const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace|teams)?(\/|$)/;
     const isCatchAll = location.pathname !== "/" && !knownPrefixes.test(location.pathname);
 
     if (isAuthRoute || isCatchAll) {
       return {
+        workspace: null as string | null,
         settingsSnapshot: null as SettingsSidebarSnapshot | null,
         workspaces: { items: [] } as ApiListResponse<Workspace>,
         projectSwitcherProjects: null as ApiListResponse<Project> | null,
@@ -88,131 +89,149 @@ export const Route = createRootRoute({
       };
     }
 
-    const searchParams = new URLSearchParams(location.searchStr || "");
-    const rawWorkspace = searchParams.get("workspace");
-    let workspace: string | undefined;
-    if (rawWorkspace && rawWorkspace.trim()) {
-      workspace = rawWorkspace.trim();
-    }
+    try {
+      const searchParams = new URLSearchParams(location.searchStr || "");
+      const rawWorkspace = searchParams.get("workspace");
+      let workspace: string | undefined;
+      if (rawWorkspace && rawWorkspace.trim()) {
+        workspace = rawWorkspace.trim();
+      }
 
-    const isProjectDetailsRoute =
-      /^\/projects\/[^/]+(?:\/|$)/.test(location.pathname) &&
-      !/^\/projects\/new(?:\/|$)/.test(location.pathname);
+      const isProjectDetailsRoute =
+        /^\/projects\/[^/]+(?:\/|$)/.test(location.pathname) &&
+        !/^\/projects\/new(?:\/|$)/.test(location.pathname);
 
-    const shouldPreloadWorkspaceTeamMembers = typeof window === "undefined";
+      const shouldPreloadWorkspaceTeamMembers = typeof window === "undefined";
 
-    const [settingsSnapshot, workspaces, projectSwitcherProjects, onboardingProjects, workspaceTeamMembers, tooltipMessages, tags, paymentMethods, invoices, pricingResult] =
-      await Promise.allSettled([
-      (getSettingsSidebarSnapshotServerFn as unknown as (input: {
-        data?: { workspace?: string };
-      }) => Promise<SettingsSidebarSnapshot>)({
-        data: { workspace },
-      }),
-      (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)(),
-      isProjectDetailsRoute
-        ? (listHomeProjectsServerFn as unknown as (input: {
-            data: { workspace?: string };
-          }) => Promise<ApiListResponse<Project>>)({
-            data: { workspace },
-          })
-        : Promise.resolve(null as ApiListResponse<Project> | null),
-      (listHomeProjectsServerFn as unknown as (input: {
-        data: { workspace?: string };
-      }) => Promise<ApiListResponse<Project>>)({
-        data: { workspace },
-      }),
-      shouldPreloadWorkspaceTeamMembers && workspace
-        ? (getWorkspaceTeamMembersServerFn as unknown as (input: {
-            data: { workspace: string };
-          }) => Promise<TeamDetails>)({ data: { workspace } })
-        : Promise.resolve(null as TeamDetails | null),
-      (listTooltipMessagesServerFn as unknown as (input: {
-        data?: { workspace?: string };
-      }) => Promise<AppTooltipMessage[] | null>)({
-        data: { workspace },
-      }).catch(() => null as AppTooltipMessage[] | null),
-      (listTagsServerFn as unknown as (input: {
-        data: { workspace?: string };
-      }) => Promise<BackendTag[]>)({
-        data: { workspace },
-      }),
-      (getPaymentMethodsServerFn as unknown as () => Promise<PaymentMethod[]>)(),
-      (getPaymentInvoicesServerFn as unknown as (input: { data?: { cursor?: string | null; per_page?: number } }) => Promise<any>)({
-        data: { cursor: null, per_page: 10 },
-      }),
-      (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
-    ]);
+      const [settingsSnapshot, workspaces, projectSwitcherProjects, onboardingProjects, workspaceTeamMembers, tooltipMessages, tags, paymentMethods, invoices, pricingResult] =
+        await Promise.allSettled([
+        (getSettingsSidebarSnapshotServerFn as unknown as (input: {
+          data?: { workspace?: string };
+        }) => Promise<SettingsSidebarSnapshot>)({
+          data: { workspace },
+        }),
+        (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)(),
+        isProjectDetailsRoute
+          ? (listHomeProjectsServerFn as unknown as (input: {
+              data: { workspace?: string };
+            }) => Promise<ApiListResponse<Project>>)({
+              data: { workspace },
+            })
+          : Promise.resolve(null as ApiListResponse<Project> | null),
+        (listHomeProjectsServerFn as unknown as (input: {
+          data: { workspace?: string };
+        }) => Promise<ApiListResponse<Project>>)({
+          data: { workspace },
+        }),
+        shouldPreloadWorkspaceTeamMembers && workspace
+          ? (getWorkspaceTeamMembersServerFn as unknown as (input: {
+              data: { workspace: string };
+            }) => Promise<TeamDetails>)({ data: { workspace } })
+          : Promise.resolve(null as TeamDetails | null),
+        (listTooltipMessagesServerFn as unknown as (input: {
+          data?: { workspace?: string };
+        }) => Promise<AppTooltipMessage[] | null>)({
+          data: { workspace },
+        }).catch(() => null as AppTooltipMessage[] | null),
+        (listTagsServerFn as unknown as (input: {
+          data: { workspace?: string };
+        }) => Promise<BackendTag[]>)({
+          data: { workspace },
+        }),
+        (getPaymentMethodsServerFn as unknown as () => Promise<PaymentMethod[]>)(),
+        (getPaymentInvoicesServerFn as unknown as (input: { data?: { cursor?: string | null; per_page?: number } }) => Promise<any>)({
+          data: { cursor: null, per_page: 10 },
+        }),
+        (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
+      ]);
 
-    if (settingsSnapshot.status === "rejected") {
-      console.error("[root loader] settings snapshot failed:", settingsSnapshot.reason);
-    }
-    if (workspaces.status === "rejected") {
-      console.error("[root loader] workspaces failed:", workspaces.reason);
-    }
-    if (projectSwitcherProjects.status === "rejected") {
-      console.error("[root loader] project switcher failed:", projectSwitcherProjects.reason);
-    }
-    if (onboardingProjects.status === "rejected") {
-      console.error("[root loader] onboarding projects failed:", onboardingProjects.reason);
-    }
-    if (workspaceTeamMembers.status === "rejected") {
-      console.error("[root loader] workspace team members failed:", workspaceTeamMembers.reason);
-    }
-    if (tooltipMessages.status === "rejected") {
-      console.error("[root loader] tooltip messages failed:", tooltipMessages.reason);
-    }
-    if (tags.status === "rejected") {
-      console.error("[root loader] tags failed:", tags.reason);
-    }
-    if (invoices.status === "rejected") {
-      console.error("[root loader] invoices failed:", invoices.reason);
-    }
-    if (pricingResult.status === "rejected") {
-      console.error("[root loader] pricing specs failed:", pricingResult.reason);
-    }
+      if (settingsSnapshot.status === "rejected") {
+        console.error("[root loader] settings snapshot failed:", settingsSnapshot.reason);
+      }
+      if (workspaces.status === "rejected") {
+        console.error("[root loader] workspaces failed:", workspaces.reason);
+      }
+      if (projectSwitcherProjects.status === "rejected") {
+        console.error("[root loader] project switcher failed:", projectSwitcherProjects.reason);
+      }
+      if (onboardingProjects.status === "rejected") {
+        console.error("[root loader] onboarding projects failed:", onboardingProjects.reason);
+      }
+      if (workspaceTeamMembers.status === "rejected") {
+        console.error("[root loader] workspace team members failed:", workspaceTeamMembers.reason);
+      }
+      if (tooltipMessages.status === "rejected") {
+        console.error("[root loader] tooltip messages failed:", tooltipMessages.reason);
+      }
+      if (tags.status === "rejected") {
+        console.error("[root loader] tags failed:", tags.reason);
+      }
+      if (invoices.status === "rejected") {
+        console.error("[root loader] invoices failed:", invoices.reason);
+      }
+      if (pricingResult.status === "rejected") {
+        console.error("[root loader] pricing specs failed:", pricingResult.reason);
+      }
 
-    return {
-      settingsSnapshot:
-        settingsSnapshot.status === "fulfilled"
-          ? settingsSnapshot.value
-          : null as SettingsSidebarSnapshot | null,
-      workspaces:
-        workspaces.status === "fulfilled"
-          ? workspaces.value
-          : { items: [] } as ApiListResponse<Workspace>,
-      projectSwitcherProjects:
-        projectSwitcherProjects.status === "fulfilled"
-          ? projectSwitcherProjects.value
-          : null as ApiListResponse<Project> | null,
-      onboardingProjects:
-        onboardingProjects.status === "fulfilled"
-          ? onboardingProjects.value
-          : null as ApiListResponse<Project> | null,
-      workspaceTeamMembers:
-        workspaceTeamMembers.status === "fulfilled"
-          ? workspaceTeamMembers.value
-          : null as TeamDetails | null,
-      tooltipMessages:
-        tooltipMessages.status === "fulfilled"
-          ? tooltipMessages.value
-          : null as AppTooltipMessage[] | null,
-      tags:
-        tags.status === "fulfilled"
-          ? tags.value
-          : null as BackendTag[] | null,
-      paymentMethods:
-        paymentMethods.status === "fulfilled"
-          ? paymentMethods.value
-          : null as PaymentMethod[] | null,
-      invoices:
-        invoices.status === "fulfilled"
-          ? invoices.value
-          : null as any,
-      pricing:
-        pricingResult.status === "fulfilled"
-          ? pricingResult.value
-          : DEFAULT_PRICING as Pricing,
-    };
+      return {
+        workspace: workspace ?? null,
+        settingsSnapshot:
+          settingsSnapshot.status === "fulfilled"
+            ? settingsSnapshot.value
+            : null as SettingsSidebarSnapshot | null,
+        workspaces:
+          workspaces.status === "fulfilled"
+            ? workspaces.value
+            : { items: [] } as ApiListResponse<Workspace>,
+        projectSwitcherProjects:
+          projectSwitcherProjects.status === "fulfilled"
+            ? projectSwitcherProjects.value
+            : null as ApiListResponse<Project> | null,
+        onboardingProjects:
+          onboardingProjects.status === "fulfilled"
+            ? onboardingProjects.value
+            : null as ApiListResponse<Project> | null,
+        workspaceTeamMembers:
+          workspaceTeamMembers.status === "fulfilled"
+            ? workspaceTeamMembers.value
+            : null as TeamDetails | null,
+        tooltipMessages:
+          tooltipMessages.status === "fulfilled"
+            ? tooltipMessages.value
+            : null as AppTooltipMessage[] | null,
+        tags:
+          tags.status === "fulfilled"
+            ? tags.value
+            : null as BackendTag[] | null,
+        paymentMethods:
+          paymentMethods.status === "fulfilled"
+            ? paymentMethods.value
+            : null as PaymentMethod[] | null,
+        invoices:
+          invoices.status === "fulfilled"
+            ? invoices.value
+            : null as any,
+        pricing:
+          pricingResult.status === "fulfilled"
+            ? pricingResult.value
+            : DEFAULT_PRICING as Pricing,
+      };
+    } catch (err) {
+      console.error("[root loader] unexpected error:", err);
+      return {
+        workspace: null as string | null,
+        settingsSnapshot: null as SettingsSidebarSnapshot | null,
+        workspaces: { items: [] } as ApiListResponse<Workspace>,
+        projectSwitcherProjects: null as ApiListResponse<Project> | null,
+        onboardingProjects: null as ApiListResponse<Project> | null,
+        workspaceTeamMembers: null as TeamDetails | null,
+        tooltipMessages: null as AppTooltipMessage[] | null,
+        tags: null as BackendTag[] | null,
+        paymentMethods: null as PaymentMethod[] | null,
+        invoices: null as any,
+        pricing: DEFAULT_PRICING as Pricing,
+      };
+    }
   },
   component: RootComponent,
   shellComponent: RootDocument,
@@ -239,8 +258,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  const { settingsSnapshot, workspaces, projectSwitcherProjects, onboardingProjects, workspaceTeamMembers, tooltipMessages, tags, paymentMethods, invoices, pricing } =
-    Route.useLoaderData();
+  const { workspace: loaderWorkspace, settingsSnapshot, workspaces, projectSwitcherProjects, onboardingProjects, workspaceTeamMembers, tooltipMessages, tags, paymentMethods, invoices, pricing } =
+    Route.useLoaderData() ?? ({} as any);
 
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const workspace = (() => {
@@ -275,6 +294,7 @@ function RootComponent() {
 
   return (
     <DashboardLayout
+      initialWorkspaceSlug={loaderWorkspace}
       initialSettingsSnapshot={settingsSnapshot}
       initialWorkspaces={workspaces}
       initialProjectSwitcherProjects={projectSwitcherProjects}

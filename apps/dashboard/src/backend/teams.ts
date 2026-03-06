@@ -35,10 +35,24 @@ export interface TeamDetails {
   buildDisabledBy?: string | null;
   spendingLimit?: number | null;
   seatCount?: number;
+  totalMembers?: number;
   concurrentBuilds?: number;
   isCreator?: boolean;
   subscriptionId?: string;
   members: TeamMember[];
+}
+
+export interface TeamInvitation {
+  id: string;
+  invitedBy?: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    avatar?: string;
+    username?: string;
+  };
+  team: { id: string; name: string; avatar?: string; description?: string };
 }
 
 export interface TeamsApi {
@@ -54,6 +68,9 @@ export interface TeamsApi {
     resend?: boolean;
   }): Promise<{ ok: true }>;
   removeMember(teamId: string, memberId: string): Promise<{ ok: true }>;
+  checkInvitation(teamName: string): Promise<TeamInvitation>;
+  acceptInvite(teamId: string): Promise<{ ok: true }>;
+  denyInvite(teamId: string): Promise<{ ok: true }>;
 }
 
 function mapTeamMember(item: unknown): TeamMember | null {
@@ -136,7 +153,8 @@ export function createTeamsApi(client: ApiClient): TeamsApi {
           root.spending_limit === null || root.spending_limit === undefined
             ? null
             : Number(root.spending_limit),
-        seatCount: pickNumber(subscriptionSpecs, "members", "member_count", "seats"),
+        seatCount: pickNumber(root, "size") ?? pickNumber(subscriptionSpecs, "members", "member_count", "seats"),
+        totalMembers: pickNumber(root, "totalMembers", "total_members"),
         concurrentBuilds: pickNumber(
           subscriptionSpecs,
           "concurrent_builds",
@@ -191,6 +209,55 @@ export function createTeamsApi(client: ApiClient): TeamsApi {
           method: "POST",
           body: {},
         },
+      );
+
+      return { ok: true } as const;
+    },
+
+    async checkInvitation(teamName) {
+      const response = await client.request<any>(
+        `/core/v1/teams/${encodeURIComponent(teamName)}/invitation`,
+        { method: "GET" },
+      );
+
+      const root = asRecord(extractTeamRoot(response)) ?? {};
+      const invitedByRow = asRecord(root.invitedBy);
+      const teamRow = asRecord(root.team) ?? {};
+
+      return {
+        id: String(asStringOrNumber(root.id) ?? asStringOrNumber(root._id) ?? ""),
+        invitedBy: invitedByRow
+          ? {
+              id: pickString(invitedByRow, "id", "_id"),
+              firstName: pickString(invitedByRow, "firstName"),
+              lastName: pickString(invitedByRow, "lastName"),
+              email: pickString(invitedByRow, "email"),
+              avatar: pickString(invitedByRow, "avatar", "avatarUrl"),
+              username: pickString(invitedByRow, "username"),
+            }
+          : undefined,
+        team: {
+          id: String(asStringOrNumber(teamRow.id) ?? asStringOrNumber(teamRow._id) ?? ""),
+          name: pickString(teamRow, "name") ?? teamName,
+          avatar: pickString(teamRow, "avatar", "avatarUrl"),
+          description: pickString(teamRow, "description"),
+        },
+      } satisfies TeamInvitation;
+    },
+
+    async acceptInvite(teamId) {
+      await client.request<any>(
+        `/core/v1/teams/${encodeURIComponent(teamId)}/accept`,
+        { method: "POST", body: {} },
+      );
+
+      return { ok: true } as const;
+    },
+
+    async denyInvite(teamId) {
+      await client.request<any>(
+        `/core/v1/teams/${encodeURIComponent(teamId)}/deny`,
+        { method: "POST", body: {} },
       );
 
       return { ok: true } as const;

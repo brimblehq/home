@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useTags } from "@/contexts/tags-context";
+import { useHaptics } from "@/hooks/use-haptics";
 import { TagManagementModal } from "./tag-management-modal";
 
 interface TagFilterBarProps {
@@ -12,13 +13,14 @@ interface TagFilterBarProps {
 export function TagFilterBar({ activeTagId, onFilterChange, projects }: TagFilterBarProps) {
   const { tags, getProjectCountForTag } = useTags();
   const [managementOpen, setManagementOpen] = useState(false);
+  const haptics = useHaptics();
 
   return (
     <>
       <div className="mb-6 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {/* All pill */}
         <button
-          onClick={() => onFilterChange(null)}
+          onClick={() => { haptics.selection(); onFilterChange(null); }}
           className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
             activeTagId === null
               ? "border-dash-text-strong bg-dash-text-strong text-dash-bg"
@@ -35,7 +37,7 @@ export function TagFilterBar({ activeTagId, onFilterChange, projects }: TagFilte
           return (
             <button
               key={tag.id}
-              onClick={() => onFilterChange(isActive ? null : tag.id)}
+              onClick={() => { haptics.selection(); onFilterChange(isActive ? null : tag.id); }}
               className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 isActive
                   ? ""

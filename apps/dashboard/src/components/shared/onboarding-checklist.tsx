@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useHaptics } from "@/hooks/use-haptics";
 import { SUBSCRIPTION_PLAN_TYPE } from "@brimble/models/dist/enum";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { useProfileDrawer } from "@/contexts/profile-drawer-context";
@@ -90,6 +91,7 @@ export function OnboardingChecklist({
   teamDetails?: TeamDetails | null;
 }) {
   const profileDrawer = useProfileDrawer();
+  const haptics = useHaptics();
   const [expanded, setExpanded] = useState(false);
   const [hasFollowed, setHasFollowed] = useState(() => {
     if (typeof window === "undefined") {
@@ -274,6 +276,7 @@ export function OnboardingChecklist({
 
   const handleTaskClick = useCallback(
     (task: OnboardingTask) => {
+      haptics.selection();
       if (task.onClick) {
         task.onClick();
         return;
@@ -295,7 +298,7 @@ export function OnboardingChecklist({
         });
       }
     },
-    [navigate, searchStr],
+    [navigate, searchStr, haptics],
   );
 
   // Avoid flash-then-disappear while workspace-specific checks are still resolving.
@@ -316,7 +319,10 @@ export function OnboardingChecklist({
       {!expanded && (
         <motion.button
           key="pill"
-          onClick={() => setExpanded(true)}
+          onClick={() => {
+            haptics.soft();
+            setExpanded(true);
+          }}
           className="ml-auto flex items-center gap-2 rounded-full border-[0.5px] border-dash-border bg-dash-bg px-4 py-2.5 text-sm font-medium text-dash-text-strong shadow-[0px_2px_3px_rgba(0,0,0,0.06),inset_0px_-3px_2px_rgba(245,245,245,0.3)] transition-colors hover:bg-dash-bg-elevated dark:shadow-[0px_2px_3px_rgba(0,0,0,0.2)]"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -389,7 +395,10 @@ export function OnboardingChecklist({
                 </p>
               </div>
               <button
-                onClick={() => setExpanded(false)}
+                onClick={() => {
+                  haptics.selection();
+                  setExpanded(false);
+                }}
                 className="flex h-7 w-7 items-center justify-center rounded-md text-dash-text-faded transition-colors hover:bg-dash-bg hover:text-dash-text-strong"
               >
                 <motion.svg

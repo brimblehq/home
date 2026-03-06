@@ -3,7 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Copy, Plus, AlertCircle, ChevronDown, Pencil, RefreshCw, ArrowUpRight } from "lucide-react";
 import { CheckCircle, FolderOpen, ShieldCheck, Warning } from "@phosphor-icons/react";
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
 import { FolderTrashIcon } from "./folder-trash-icon";
@@ -68,9 +69,11 @@ export interface DomainInfo {
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
+  const haptics = useHaptics();
 
   function handleCopy() {
     navigator.clipboard.writeText(text);
+    haptics.light();
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }

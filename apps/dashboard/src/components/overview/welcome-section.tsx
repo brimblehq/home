@@ -1,7 +1,7 @@
 import { Route as RootRoute } from "@/routes/__root";
 
 export function WelcomeSection() {
-  const { settingsSnapshot } = RootRoute.useLoaderData();
+  const { settingsSnapshot } = RootRoute.useLoaderData() ?? ({} as any);
   const firstName = settingsSnapshot?.profile?.firstName?.trim() || "there";
 
   return (

@@ -35,9 +35,16 @@ export interface PlanSpecs {
   supportLevel: string;
 }
 
+export interface MeteredRates {
+  cpuPerGbMonth: number;
+  memoryPerGbMonth: number;
+  storagePerGbMonth: number;
+}
+
 export interface Pricing {
   plans: PlanPrice[];
   team: TeamSpecs;
   overage: OverageRates;
+  metered: MeteredRates;
   specs: Record<string, PlanSpecs>;
 }

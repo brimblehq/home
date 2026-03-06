@@ -1,5 +1,6 @@
 import { cn } from "@brimble/ui";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useHaptics } from "@/hooks/use-haptics";
 
 interface DashButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "outline" | "primary";
@@ -29,10 +30,16 @@ export function DashButton({
   children,
   ...props
 }: DashButtonProps) {
+  const haptics = useHaptics();
+
   return (
     <button
       className={cn(base, variants[variant], sizes[size], className)}
       {...props}
+      onClick={(e) => {
+        if (!props.disabled) haptics.selection();
+        props.onClick?.(e);
+      }}
     >
       {children}
     </button>

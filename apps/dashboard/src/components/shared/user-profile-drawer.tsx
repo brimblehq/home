@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import axios from "axios";
 import { Drawer } from "vaul";
 import { cn } from "@brimble/ui";
@@ -18,7 +18,8 @@ import {
   RefreshCw,
   Send,
 } from "lucide-react";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import { invalidateSessionCache } from "@/lib/auth-guards";
 import { InviteMembersModal } from "../settings/invite-members-modal";
 import { WarningModal } from "./warning-modal";
@@ -40,7 +41,9 @@ import {
 } from "@/server/settings/actions";
 import { BillingForm } from "../settings/billing-form";
 import { Avatar } from "./avatar";
+import { SimpleTooltip } from "./tooltip";
 import { usePlanGate } from "@/hooks/use-plan-gate";
+import { isPushEnabled, setPushEnabled } from "@/hooks/use-push-notification";
 import type { PaymentMethod } from "@/backend/payments";
 import {
   getWorkspaceTeamMembersServerFn,
@@ -92,13 +95,15 @@ const aboutNav = [
 ];
 
 const navItemBase =
-  "flex items-center gap-2 whitespace-nowrap rounded-[4px] px-3.5 py-1.5 text-sm tracking-[-0.0224px] transition-colors w-full";
+  "flex items-center gap-2 whitespace-nowrap rounded-[4px] px-3.5 py-1.5 text-sm tracking-[-0.0224px] transition-colors w-full cursor-pointer";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
+  const haptics = useHaptics();
 
   function handleCopy() {
     navigator.clipboard.writeText(text);
+    haptics.light();
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -836,11 +841,13 @@ function ApiKeySection({
 
 function WorkspaceProfileForm({
   team,
+  canEdit = true,
   onSave,
   onBuildsChange,
   isSaving,
 }: {
   team: TeamDetails;
+  canEdit?: boolean;
   onSave?: (data: {
     name: string;
     description?: string;
@@ -953,7 +960,7 @@ function WorkspaceProfileForm({
         <div className="flex flex-col gap-2">
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={isUploadingAvatar || Boolean(isSaving)}
+            disabled={!canEdit || isUploadingAvatar || Boolean(isSaving)}
             className="flex h-[34px] w-fit items-center rounded-[4px] border border-dash-border bg-dash-bg px-3.5 text-sm font-medium text-dash-text-strong shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-50"
           >
             {isUploadingAvatar ? "Uploading..." : "Upload photo"}
@@ -975,7 +982,8 @@ function WorkspaceProfileForm({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className={inputClass}
+            disabled={!canEdit}
+            className={cn(inputClass, !canEdit && "opacity-60 cursor-not-allowed")}
           />
         </div>
 
@@ -987,20 +995,23 @@ function WorkspaceProfileForm({
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className={inputClass}
+            disabled={!canEdit}
+            className={cn(inputClass, !canEdit && "opacity-60 cursor-not-allowed")}
           />
         </div>
       </div>
 
-      <GlossyButton
-        variant="blue"
-        onClick={handleSave}
-        disabled={!isDirty || isUploadingAvatar || !name.trim()}
-        loading={Boolean(isSaving)}
-        loadingLabel="Saving..."
-      >
-        Save changes
-      </GlossyButton>
+      {canEdit && (
+        <GlossyButton
+          variant="blue"
+          onClick={handleSave}
+          disabled={!isDirty || isUploadingAvatar || !name.trim()}
+          loading={Boolean(isSaving)}
+          loadingLabel="Saving..."
+        >
+          Save changes
+        </GlossyButton>
+      )}
 
       <hr className="border-dash-border-soft" />
 
@@ -1027,17 +1038,29 @@ function WorkspaceProfileForm({
             Enable or disable builds for this workspace.
           </span>
         </div>
-        <Toggle
-          checked={buildsEnabled}
-          onChange={async (next) => {
-            setBuildsEnabled(next);
-            try {
-              await onBuildsChange?.(next);
-            } catch {
-              setBuildsEnabled(!next);
-            }
-          }}
-        />
+        {canEdit ? (
+          <Toggle
+            checked={buildsEnabled}
+            onChange={async (next) => {
+              setBuildsEnabled(next);
+              try {
+                await onBuildsChange?.(next);
+              } catch {
+                setBuildsEnabled(!next);
+              }
+            }}
+          />
+        ) : (
+          <SimpleTooltip
+            content="Only Creators and Administrators can change this setting"
+            side="left"
+            delayDuration={100}
+          >
+            <span>
+              <Toggle checked={buildsEnabled} onChange={() => {}} disabled />
+            </span>
+          </SimpleTooltip>
+        )}
       </div>
     </div>
   );
@@ -1050,6 +1073,7 @@ function ProfileNavSidebar({
   onSignOut,
   isSigningOut,
   showMembersTab,
+  showBillingTab = true,
 }: {
   activeTab: ProfileTab;
   onTabChange: (tab: ProfileTab) => void;
@@ -1057,101 +1081,307 @@ function ProfileNavSidebar({
   onSignOut?: () => void | Promise<void>;
   isSigningOut?: boolean;
   showMembersTab: boolean;
+  showBillingTab?: boolean;
 }) {
-  const accountNavItems = showMembersTab
-    ? accountNav
-    : accountNav.filter((item) => item.key !== ProfileTab.Members);
+  const haptics = useHaptics();
+  const hiddenTabs = new Set<ProfileTab>();
+  if (!showMembersTab) hiddenTabs.add(ProfileTab.Members);
+  if (!showBillingTab) hiddenTabs.add(ProfileTab.Billing);
+  const accountNavItems = accountNav.filter((item) => !hiddenTabs.has(item.key));
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSections, setMobileSections] = useState({
+    account: true,
+    reachUs: false,
+    about: false,
+  });
+
+  function toggleMobileSection(section: keyof typeof mobileSections) {
+    setMobileSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  }
+
+  function renderNavSections() {
+    return (
+      <>
+        <div className="flex flex-col gap-5 md:gap-9">
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => toggleMobileSection("account")}
+              className="flex items-center justify-between rounded-[8px] px-3.5 py-2 text-left md:hidden"
+              aria-expanded={mobileSections.account}
+            >
+              <span className="text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">
+                Account
+              </span>
+              <ChevronDown
+                className={cn(
+                  "size-4 text-dash-text-faded transition-transform md:hidden",
+                  mobileSections.account && "rotate-180",
+                )}
+              />
+            </button>
+            <div className="md:hidden">
+              <AnimatePresence initial={false}>
+                {mobileSections.account && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex flex-col gap-2">
+                      {accountNavItems.map((item) => (
+                        <button
+                          key={item.key}
+                          onClick={() => {
+                            haptics.selection();
+                            onTabChange(item.key);
+                            setMobileMenuOpen(false);
+                          }}
+                          className={cn(
+                            navItemBase,
+                            activeTab === item.key
+                              ? "bg-dash-bg-elevated text-dash-text-strong"
+                              : "text-dash-text-body hover:bg-dash-bg-elevated",
+                          )}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <span className="hidden px-3.5 text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded md:block">
+              Account
+            </span>
+            <div className="hidden md:flex md:flex-col md:gap-2">
+              {accountNavItems.map((item) => (
+                <button
+                  key={`desktop-${item.key}`}
+                  onClick={() => {
+                    haptics.selection();
+                    onTabChange(item.key);
+                  }}
+                  className={cn(
+                    navItemBase,
+                    activeTab === item.key
+                      ? "bg-dash-bg-elevated text-dash-text-strong"
+                      : "text-dash-text-body hover:bg-dash-bg-elevated",
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => toggleMobileSection("reachUs")}
+              className="flex items-center justify-between rounded-[8px] px-3.5 py-2 text-left md:hidden"
+              aria-expanded={mobileSections.reachUs}
+            >
+              <span className="text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">
+                Reach Us
+              </span>
+              <ChevronDown
+                className={cn(
+                  "size-4 text-dash-text-faded transition-transform md:hidden",
+                  mobileSections.reachUs && "rotate-180",
+                )}
+              />
+            </button>
+            <div className="md:hidden">
+              <AnimatePresence initial={false}>
+                {mobileSections.reachUs && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex flex-col gap-2">
+                      {reachUsNav.map((item) => (
+                        <a
+                          key={item.label}
+                          href={item.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn(
+                            navItemBase,
+                            "text-dash-text-body hover:bg-dash-bg-elevated",
+                          )}
+                        >
+                          <span className="text-sm">{item.emoji}</span>
+                          {item.label}
+                        </a>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <span className="hidden px-3.5 text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded md:block">
+              Reach Us
+            </span>
+            <div className="hidden md:flex md:flex-col md:gap-2">
+              {reachUsNav.map((item) => (
+                <a
+                  key={`desktop-${item.label}`}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    navItemBase,
+                    "text-dash-text-body hover:bg-dash-bg-elevated",
+                  )}
+                >
+                  <span className="text-sm">{item.emoji}</span>
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => toggleMobileSection("about")}
+              className="flex items-center justify-between rounded-[8px] px-3.5 py-2 text-left md:hidden"
+              aria-expanded={mobileSections.about}
+            >
+              <span className="text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">
+                About
+              </span>
+              <ChevronDown
+                className={cn(
+                  "size-4 text-dash-text-faded transition-transform md:hidden",
+                  mobileSections.about && "rotate-180",
+                )}
+              />
+            </button>
+            <div className="md:hidden">
+              <AnimatePresence initial={false}>
+                {mobileSections.about && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex flex-col gap-2">
+                      {aboutNav.map((item) => (
+                        <button
+                          key={item.label}
+                          className={cn(
+                            navItemBase,
+                            "text-dash-text-body hover:bg-dash-bg-elevated",
+                          )}
+                        >
+                          <span className="text-sm">{item.emoji}</span>
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <span className="hidden px-3.5 text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded md:block">
+              About
+            </span>
+            <div className="hidden md:flex md:flex-col md:gap-2">
+              {aboutNav.map((item) => (
+                <button
+                  key={`desktop-${item.label}`}
+                  className={cn(
+                    navItemBase,
+                    "text-dash-text-body hover:bg-dash-bg-elevated",
+                  )}
+                >
+                  <span className="text-sm">{item.emoji}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-3 md:pt-4">
+          <button
+            onClick={() => {
+              void onSignOut?.();
+            }}
+            disabled={isSigningOut}
+            className={cn(
+              navItemBase,
+              "shrink-0 text-dash-text-body hover:bg-dash-bg-elevated",
+            )}
+          >
+            <span className="text-sm">⛳️</span>
+            {isSigningOut ? "Signing out..." : "Sign out"}
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
-    <div className="flex h-full w-[380px] shrink-0 flex-col border-l border-dash-border bg-dash-bg pb-6 pt-5">
+    <div className="flex w-full shrink-0 flex-col border-b border-dash-border bg-dash-bg pb-4 pt-3 md:h-full md:w-[380px] md:border-b-0 md:border-l md:pb-6 md:pt-5">
       {/* Back button */}
       <button
         onClick={onClose}
-        className="mb-4 flex items-center gap-2 pl-5 text-sm text-dash-text-faded transition-colors hover:text-dash-text-strong"
+        className="mb-3 flex items-center gap-2 px-4 text-sm text-dash-text-faded transition-colors hover:text-dash-text-strong md:mb-4 md:pl-5 md:pr-0"
       >
         <ArrowLeft className="size-4" />
       </button>
 
-      <div className="scrollbar-hidden flex flex-1 flex-col gap-9 overflow-y-auto pl-[120px] pr-3">
-        {/* Account section */}
-        <div className="flex flex-col gap-2">
-          <span className="px-3.5 text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">
-            Account
-          </span>
-          {accountNavItems.map((item) => (
-            <button
-              key={item.key}
-              onClick={() => onTabChange(item.key)}
-              className={cn(
-                navItemBase,
-                activeTab === item.key
-                  ? "bg-dash-bg-elevated text-dash-text-strong"
-                  : "text-dash-text-body hover:bg-dash-bg-elevated",
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Reach Us section */}
-        <div className="flex flex-col gap-2">
-          <span className="px-3.5 text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">
-            Reach Us
-          </span>
-          {reachUsNav.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                navItemBase,
-                "text-dash-text-body hover:bg-dash-bg-elevated",
-              )}
-            >
-              <span className="text-sm">{item.emoji}</span>
-              {item.label}
-            </a>
-          ))}
-        </div>
-
-        {/* About section */}
-        <div className="flex flex-col gap-2">
-          <span className="px-3.5 text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">
-            About
-          </span>
-          {aboutNav.map((item) => (
-            <button
-              key={item.label}
-              className={cn(
-                navItemBase,
-                "text-dash-text-body hover:bg-dash-bg-elevated",
-              )}
-            >
-              <span className="text-sm">{item.emoji}</span>
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Sign out */}
-      <div className="pl-[120px] pr-3 pt-4">
-        <button
-          onClick={() => {
-            void onSignOut?.();
-          }}
-          disabled={isSigningOut}
+      <button
+        type="button"
+        onClick={() => setMobileMenuOpen((prev) => !prev)}
+        className="mx-4 flex items-center justify-between rounded-[10px] bg-dash-bg-elevated px-3.5 py-2.5 text-sm text-dash-text-body md:hidden"
+        aria-expanded={mobileMenuOpen}
+      >
+        <span>Menu</span>
+        <ChevronDown
           className={cn(
-            navItemBase,
-            "shrink-0 text-dash-text-body hover:bg-dash-bg-elevated",
+            "size-4 text-dash-text-faded transition-transform",
+            mobileMenuOpen && "rotate-180",
           )}
-        >
-          <span className="text-sm">⛳️</span>
-          {isSigningOut ? "Signing out..." : "Sign out"}
-        </button>
+        />
+      </button>
+
+      <div className="hidden flex-1 flex-col px-4 md:flex md:max-h-none md:gap-0 md:px-0 md:pl-[120px] md:pr-3">
+        <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
+          {renderNavSections()}
+        </div>
       </div>
+
+      <AnimatePresence initial={false}>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden px-4 md:hidden"
+          >
+            <div className="scrollbar-hidden max-h-[42vh] overflow-y-auto pt-3">
+              {renderNavSections()}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
@@ -1174,7 +1404,7 @@ export function UserProfileDrawer({
   requestedTab?: ProfileTab;
 }) {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
-  const logout = useServerFn(logoutServerFn);
+
   const getSettingsSnapshot = useServerFn(
     getSettingsSidebarSnapshotServerFn as any,
   ) as (args?: {
@@ -1258,6 +1488,7 @@ export function UserProfileDrawer({
     const normalized = workspace?.trim();
     return normalized ? normalized : null;
   })();
+  const settingsScopeKey = activeWorkspaceSlug ?? "__personal__";
   const hasActiveWorkspace = Boolean(activeWorkspaceSlug);
   const workspaceTeam = activeWorkspaceSlug
     ? (workspaceTeamMembersCache[activeWorkspaceSlug] ?? null)
@@ -1265,11 +1496,32 @@ export function UserProfileDrawer({
 
   const profile = mapSettingsSnapshotToDrawerProfile(snapshot);
 
+  const currentWorkspaceRole = (() => {
+    if (!hasActiveWorkspace || !workspaceTeam) return null;
+    const me = workspaceTeam.members.find((m) => {
+      const mUid = m.userId?.trim();
+      const pUid = profile?.uniqueId?.trim();
+      if (mUid && pUid && mUid === pUid) return true;
+      const mEmail = m.email.trim().toLowerCase();
+      const pEmail = profile?.email?.trim().toLowerCase();
+      return Boolean(pEmail && mEmail === pEmail);
+    });
+    return me ? normalizeMemberRole(me) : null;
+  })();
+  const canEditWorkspace =
+    !hasActiveWorkspace || currentWorkspaceRole === "Creator" || currentWorkspaceRole === "Administrator";
+  const canSeeBilling =
+    !hasActiveWorkspace ? true : currentWorkspaceRole === "Creator" || currentWorkspaceRole === "Administrator";
+
   useEffect(() => {
-    if (initialSnapshot) {
-      setSnapshot(initialSnapshot);
-    }
+    setSnapshot(initialSnapshot ?? null);
   }, [initialSnapshot]);
+
+  useEffect(() => {
+    if (!canSeeBilling && activeTab === ProfileTab.Billing) {
+      setActiveTab(ProfileTab.Profile);
+    }
+  }, [canSeeBilling, activeTab]);
 
   useEffect(() => {
     if (!activeWorkspaceSlug || !initialWorkspaceTeamMembers) {
@@ -1288,7 +1540,7 @@ export function UserProfileDrawer({
     });
   }, [activeWorkspaceSlug, initialWorkspaceTeamMembers]);
 
-  const refreshSettings = async () => {
+  const refreshSettings = useCallback(async () => {
     setIsLoadingSettings(true);
     setSettingsError(null);
 
@@ -1304,7 +1556,7 @@ export function UserProfileDrawer({
     } finally {
       setIsLoadingSettings(false);
     }
-  };
+  }, [activeWorkspaceSlug, getSettingsSnapshot]);
 
   useEffect(() => {
     if (!open) {
@@ -1316,7 +1568,7 @@ export function UserProfileDrawer({
     }
 
     void refreshSettings();
-  }, [open, snapshot]);
+  }, [open, refreshSettings, snapshot]);
 
   useEffect(() => {
     if (!open || isGithubConnected !== null) {
@@ -1385,22 +1637,19 @@ export function UserProfileDrawer({
     };
   }, [activeWorkspaceSlug, getWorkspaceTeamMembers, workspaceTeamMembersCache]);
 
-  async function handleSignOut() {
+  function handleSignOut() {
     if (isSigningOut) {
       return;
     }
 
     setIsSigningOut(true);
-    invalidateSessionCache();
 
-    try {
-      await logout();
-    } catch {
-      // Ignore logout failures. Cookie clearing is handled server-side.
-    } finally {
-      onOpenChange(false);
-      window.location.replace("/login");
-    }
+    logoutServerFn()
+      .catch(() => {})
+      .then(() => {
+        invalidateSessionCache();
+        window.location.href = "/login";
+      });
   }
 
   let drawerTitle: string = activeTab;
@@ -1421,7 +1670,7 @@ export function UserProfileDrawer({
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]" />
         <Drawer.Content
-          className="fixed right-0 top-0 z-50 flex h-dvh w-[85vw] outline-none"
+          className="fixed inset-y-0 right-0 z-50 flex h-dvh w-full flex-col overflow-hidden outline-none md:w-[92vw] md:max-w-[1280px] md:flex-row xl:w-[85vw]"
           aria-describedby={undefined}
         >
           {/* Navigation sidebar */}
@@ -1432,12 +1681,13 @@ export function UserProfileDrawer({
             onSignOut={handleSignOut}
             isSigningOut={isSigningOut}
             showMembersTab={hasActiveWorkspace}
+            showBillingTab={canSeeBilling}
           />
 
           {/* Content area */}
-          <div className="scrollbar-hidden flex min-w-0 flex-1 flex-col overflow-y-auto border-l border-dash-border bg-dash-bg">
+          <div className="scrollbar-hidden flex min-w-0 flex-1 flex-col overflow-y-auto border-t border-dash-border bg-dash-bg md:border-l md:border-t-0">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-dash-border px-8 py-5">
+            <div className="flex items-center justify-between border-b border-dash-border px-4 py-4 md:px-8 md:py-5">
               <Drawer.Title className="text-base font-medium leading-[25px] tracking-[-0.0256px] text-dash-text-strong capitalize">
                 {drawerTitle}
               </Drawer.Title>
@@ -1447,13 +1697,16 @@ export function UserProfileDrawer({
             </div>
 
             {/* Form */}
-            <div className="flex-1 px-8 py-8">
+            <div className="flex-1 px-4 py-5 md:px-8 md:py-8">
               {settingsError && activeTab !== "members" && (
                 <div className="mb-4 rounded-[6px] border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-500">
                   {settingsError}
                 </div>
               )}
-              {isLoadingSettings && !snapshot && activeTab !== "members" ? (
+              {isLoadingSettings &&
+              !snapshot &&
+              activeTab !== ProfileTab.Members &&
+              !(activeTab === ProfileTab.Profile && hasActiveWorkspace) ? (
                 <div className="text-sm text-dash-text-faded">
                   Loading settings…
                 </div>
@@ -1463,6 +1716,7 @@ export function UserProfileDrawer({
                 workspaceTeam && (
                 <WorkspaceProfileForm
                   team={workspaceTeam}
+                  canEdit={canEditWorkspace}
                   isSaving={isSavingProfile}
                   onSave={async (data) => {
                     if (!activeWorkspaceSlug) {
@@ -1759,11 +2013,15 @@ export function UserProfileDrawer({
                       ? { uniqueId: profile.uniqueId, email: profile.email }
                       : null
                   }
+                  showBillingInfo={canSeeBilling}
                 />
               )}
               {activeTab === ProfileTab.Notifications && profile && (
                 <NotificationsForm
+                  key={`notifications-${settingsScopeKey}`}
                   profile={profile}
+                  canEdit={canEditWorkspace}
+                  workspace={activeWorkspaceSlug}
                   webhooks={snapshot?.webhooks}
                   onTestWebhook={async (url, type) => {
                     try {
@@ -1838,6 +2096,7 @@ export function UserProfileDrawer({
               )}
               {activeTab === ProfileTab.Billing && profile && (!hasActiveWorkspace || workspaceTeam) && (
                 <BillingForm
+                  key={`billing-${settingsScopeKey}`}
                   profile={profile}
                   initialPaymentMethods={initialPaymentMethods}
                   initialInvoices={hasActiveWorkspace ? undefined : initialInvoices}
@@ -1884,18 +2143,22 @@ export function UserProfileDrawer({
 function Toggle({
   checked,
   onChange,
+  disabled,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       role="switch"
       aria-checked={checked}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
         "relative h-5 w-9 shrink-0 rounded-full transition-colors",
         checked ? "bg-[#006fff]" : "bg-[#f2f4f7] dark:bg-[#3a3a3c]",
+        disabled && "cursor-not-allowed opacity-50",
       )}
     >
       <span
@@ -2090,17 +2353,22 @@ const eventGroups: EventGroup[] = [
 function Checkbox({
   checked,
   onChange,
+  disabled,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       role="checkbox"
       aria-checked={checked}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] transition-colors ${
+        disabled ? "cursor-not-allowed opacity-50" : ""
+      } ${
         checked
           ? "border-[#4879f8] bg-[#4879f8]"
           : "border-transparent bg-dash-bg dark:border-white/20 dark:bg-transparent"
@@ -2133,12 +2401,14 @@ function EventGroupCard({
   onGroupToggle,
   eventStates,
   onEventToggle,
+  disabled,
 }: {
   group: EventGroup;
   groupEnabled: boolean;
   onGroupToggle: (v: boolean) => void;
   eventStates: Record<string, boolean>;
   onEventToggle: (key: string, v: boolean) => void;
+  disabled?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const checkedCount = group.events.filter(
@@ -2182,9 +2452,9 @@ function EventGroupCard({
           <span
             onClick={(e) => {
               e.stopPropagation();
-              onGroupToggle(!groupEnabled);
+              if (!disabled) onGroupToggle(!groupEnabled);
             }}
-            className="text-xs text-[#4879f8] hover:underline"
+            className={cn("text-xs text-[#4879f8] hover:underline", disabled && "pointer-events-none opacity-50")}
           >
             {groupEnabled ? "Deselect all" : "Select all"}
           </span>
@@ -2209,11 +2479,12 @@ function EventGroupCard({
                 <label
                   key={event.key}
                   title={event.description}
-                  className="flex cursor-pointer items-center gap-2"
+                  className={cn("flex items-center gap-2", disabled ? "cursor-not-allowed" : "cursor-pointer")}
                 >
                   <Checkbox
                     checked={groupEnabled && (eventStates[event.key] ?? false)}
                     onChange={(v) => onEventToggle(event.key, v)}
+                    disabled={disabled}
                   />
                   <span className="text-sm font-light text-dash-text-body">
                     {event.title}
@@ -2230,11 +2501,15 @@ function EventGroupCard({
 
 function NotificationsForm({
   profile,
+  canEdit = true,
+  workspace,
   webhooks,
   onTestWebhook,
   onSave,
 }: {
   profile: UserProfile;
+  canEdit?: boolean;
+  workspace?: string | null;
   webhooks?: {
     webhookUrl: string;
     discordUrl: string;
@@ -2257,12 +2532,40 @@ function NotificationsForm({
   const [emailNotifs, setEmailNotifs] = useState(
     profile.notifications?.email ?? false,
   );
+  const [pushNotifs, setPushNotifs] = useState(() => isPushEnabled());
+  const isMuted = profile.notifications?.mute ?? false;
   const [discordUrl, setDiscordUrl] = useState(webhooks?.discordUrl ?? "");
   const [slackUrl, setSlackUrl] = useState(webhooks?.slackUrl ?? "");
   const [webhookUrl, setWebhookUrl] = useState(webhooks?.webhookUrl ?? "");
   const [allEvents, setAllEvents] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
+
+  async function handlePushToggle(enabled: boolean) {
+    if (!enabled) {
+      setPushNotifs(false);
+      setPushEnabled(false, workspace);
+      return;
+    }
+
+    if (typeof window === "undefined" || !window.Notification) {
+      toast.error("Your browser doesn't support push notifications.");
+      return;
+    }
+
+    const permission = await window.Notification.requestPermission();
+
+    if (permission === "granted") {
+      setPushNotifs(true);
+      setPushEnabled(true, workspace);
+    } else {
+      setPushNotifs(false);
+      setPushEnabled(false, workspace);
+      toast.error(
+        "Notifications blocked by your browser. Enable them in your browser's site settings.",
+      );
+    }
+  }
 
   async function handleTestWebhook(
     url: string,
@@ -2377,10 +2680,34 @@ function NotificationsForm({
   const inputClass =
     "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
-  const { webhookEnabled } = usePlanGate();
+  const { webhookEnabled } = usePlanGate(profile.subscriptionPlanType ?? "");
 
   return (
     <div className="flex flex-col gap-[30px]">
+      {/* Push notifications */}
+      <div className="flex max-w-[488px] items-center justify-between">
+        <div className="flex items-center gap-[18px]">
+          <div className="flex shrink-0 items-center justify-center">
+            <img src="/icons/bell.svg" alt="" className="size-12" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
+              Push notifications
+            </span>
+            <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+              {isMuted
+                ? "Unmute notifications to enable browser alerts"
+                : "Get browser alerts when your deployments finish"}
+            </span>
+          </div>
+        </div>
+        <Toggle
+          checked={pushNotifs && !isMuted}
+          onChange={handlePushToggle}
+          disabled={isMuted}
+        />
+      </div>
+
       {/* Email notifications */}
       <div className="flex max-w-[488px] items-center justify-between">
         <div className="flex items-center gap-[18px]">
@@ -2424,11 +2751,12 @@ function NotificationsForm({
                   value={discordUrl}
                   onChange={(e) => setDiscordUrl(e.target.value)}
                   placeholder="https://discord.com/api/webhooks/..."
-                  className={cn(inputClass, "flex-1")}
+                  disabled={!canEdit}
+                  className={cn(inputClass, "flex-1", !canEdit && "opacity-60 cursor-not-allowed")}
                 />
                 <button
                   onClick={() => handleTestWebhook(discordUrl, "discord")}
-                  disabled={!discordUrl.trim() || testingWebhook === "discord"}
+                  disabled={!canEdit || !discordUrl.trim() || testingWebhook === "discord"}
                   className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
                 >
                   <Send className="size-3.5" />
@@ -2446,11 +2774,12 @@ function NotificationsForm({
                   value={slackUrl}
                   onChange={(e) => setSlackUrl(e.target.value)}
                   placeholder="https://hooks.slack.com/services/..."
-                  className={cn(inputClass, "flex-1")}
+                  disabled={!canEdit}
+                  className={cn(inputClass, "flex-1", !canEdit && "opacity-60 cursor-not-allowed")}
                 />
                 <button
                   onClick={() => handleTestWebhook(slackUrl, "slack")}
-                  disabled={!slackUrl.trim() || testingWebhook === "slack"}
+                  disabled={!canEdit || !slackUrl.trim() || testingWebhook === "slack"}
                   className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
                 >
                   <Send className="size-3.5" />
@@ -2468,11 +2797,12 @@ function NotificationsForm({
                   value={webhookUrl}
                   onChange={(e) => setWebhookUrl(e.target.value)}
                   placeholder="https://your-server.com/webhook"
-                  className={cn(inputClass, "flex-1")}
+                  disabled={!canEdit}
+                  className={cn(inputClass, "flex-1", !canEdit && "opacity-60 cursor-not-allowed")}
                 />
                 <button
                   onClick={() => handleTestWebhook(webhookUrl, "custom")}
-                  disabled={!webhookUrl.trim() || testingWebhook === "custom"}
+                  disabled={!canEdit || !webhookUrl.trim() || testingWebhook === "custom"}
                   className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
                 >
                   <Send className="size-3.5" />
@@ -2501,7 +2831,7 @@ function NotificationsForm({
             {/* All Events */}
             <div className="flex items-center py-2">
               <div className="flex items-center gap-2.5">
-                <Checkbox checked={allEvents} onChange={handleAllEventsToggle} />
+                <Checkbox checked={allEvents} onChange={handleAllEventsToggle} disabled={!canEdit} />
                 <div className="flex flex-col">
                   <span className="text-sm font-medium leading-5 text-dash-text-strong">
                     All Events
@@ -2525,6 +2855,7 @@ function NotificationsForm({
                     onGroupToggle={(v) => handleGroupToggle(group.key, v)}
                     eventStates={eventToggles}
                     onEventToggle={handleEventToggle}
+                    disabled={!canEdit}
                   />
                   {i < groupsForUi.length - 1 && (
                     <hr className="border-dash-border-soft" />
@@ -2540,7 +2871,7 @@ function NotificationsForm({
       <div className="flex max-w-[488px] justify-end pt-4">
         <GlossyButton
           className="px-6"
-          disabled={isSaving}
+          disabled={!canEdit || isSaving}
           loading={isSaving}
           loadingLabel="Saving..."
           onClick={async () => {
@@ -2747,10 +3078,12 @@ function MembersForm({
   workspace,
   initialTeam = null,
   currentUser = null,
+  showBillingInfo = true,
 }: {
   workspace: string;
   initialTeam?: TeamDetails | null;
   currentUser?: Pick<UserProfile, "uniqueId" | "email"> | null;
+  showBillingInfo?: boolean;
 }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const pricing = usePricing();
@@ -2784,7 +3117,8 @@ function MembersForm({
   const members = mapActiveMembers(team);
   const pendingInvites = mapPendingInvites(team);
   const configuredSeats = team?.seatCount ?? 0;
-  const billableSeats = Math.max(configuredSeats, members.length);
+  const memberCount = team?.totalMembers ?? members.length;
+  const billableSeats = Math.max(configuredSeats, memberCount);
   const currentUserTeamMember = team?.members.find((member) => {
     const memberUserId = member.userId?.trim();
     const currentUserId = currentUser?.uniqueId?.trim();
@@ -2881,18 +3215,12 @@ function MembersForm({
 
             return (
               <div key={member.id} className="flex items-center gap-3">
-                {member.avatarUrl ? (
-                  <img
-                    src={member.avatarUrl}
-                    alt={member.name}
-                    className="size-8 shrink-0 rounded-full border border-dash-border-soft object-cover"
-                  />
-                ) : (
-                  <div
-                    className="size-8 shrink-0 rounded-full"
-                    style={{ background: member.gradient }}
-                  />
-                )}
+                <Avatar
+                  src={member.avatarUrl}
+                  fallbackSeed={member.email || member.name || member.id}
+                  alt={member.name}
+                  className="size-8 shrink-0 rounded-full border border-dash-border-soft object-cover"
+                />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
                     {member.name}
@@ -3052,29 +3380,48 @@ function MembersForm({
       <hr className="-ml-8 border-dash-border-soft" />
 
       {/* Seat cost summary */}
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-[2px]">
-          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-            Seat usage
-          </span>
-          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            {billableSeats} seats &times;{" "}
-            {formatUsdMonthly(pricing.team.costPerMember)}/seat/month
-          </span>
-          <span className="text-xs leading-4 tracking-[-0.02px] text-dash-text-extra-faded">
-            Team billing also includes concurrent builds at{" "}
-            {formatUsdMonthly(pricing.team.costPerBuild)}/build/month.
-          </span>
-        </div>
-        <span className="text-lg font-medium text-dash-text-strong">
-          {formatUsdMonthly(billableSeats * pricing.team.costPerMember)}/mo
-        </span>
-      </div>
+      {(() => {
+        const extraSeats = Math.max(0, memberCount - configuredSeats);
+        const extraCost = extraSeats * pricing.team.costPerMember;
+        const baseCost = configuredSeats * pricing.team.costPerMember;
+        return (
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-[2px]">
+              <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
+                Seat usage
+              </span>
+              <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+                {memberCount} of {configuredSeats} included seats used
+              </span>
+              {showBillingInfo && extraSeats > 0 ? (
+                <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+                  {extraSeats} extra {extraSeats === 1 ? "seat" : "seats"} &times;{" "}
+                  {formatUsdMonthly(pricing.team.costPerMember)}/seat/month
+                </span>
+              ) : null}
+              {showBillingInfo && (
+                <span className="text-xs leading-4 tracking-[-0.02px] text-dash-text-extra-faded">
+                  Team billing also includes concurrent builds at{" "}
+                  {formatUsdMonthly(pricing.team.costPerBuild)}/build/month.
+                </span>
+              )}
+            </div>
+            {showBillingInfo && (
+              <span className="text-lg font-medium text-dash-text-strong">
+                {extraSeats > 0
+                  ? `+${formatUsdMonthly(extraCost)}/mo`
+                  : `${formatUsdMonthly(baseCost)}/mo`}
+              </span>
+            )}
+          </div>
+        );
+      })()}
 
       <InviteMembersModal
         open={inviteOpen}
         onOpenChange={setInviteOpen}
-        currentSeats={billableSeats}
+        currentMembers={memberCount}
+        includedSeats={configuredSeats}
         currentUserEmail={currentUser?.email ?? null}
         onInvite={async (emails) => {
           await inviteTeamMembers({ data: { workspace, members: emails } });

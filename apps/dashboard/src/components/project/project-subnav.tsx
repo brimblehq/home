@@ -3,7 +3,8 @@ import { cn } from "@brimble/ui";
 import { Link, getRouteApi, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Star, Share2, Check, Rocket, Plug, Bolt, ArrowUp } from "lucide-react";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import { Spinner } from "../shared/spinner";
 import {
   GlobeSimple,
@@ -90,6 +91,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
       workspace?: string;
     };
   }) => Promise<{ message?: string }>;
+  const haptics = useHaptics();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [confirmName, setConfirmName] = useState("");
@@ -252,6 +254,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                 key={tab.label}
                 to={withWorkspaceQuery({ pathname: tabPath, searchStr }) as any}
                 preload="render"
+                onClick={() => haptics.selection()}
                 className={cn(
                   "flex h-14 items-center gap-2 px-2 text-sm tracking-[-0.09px] transition-colors",
                   isActive
@@ -335,6 +338,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
             <button
               onClick={() => {
                 navigator.clipboard.writeText(window.location.href);
+                haptics.light();
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}

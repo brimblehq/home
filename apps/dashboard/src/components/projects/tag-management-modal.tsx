@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Pencil } from "lucide-react";
 import { HexColorPicker, HexColorInput } from "react-colorful";
 import { motion, AnimatePresence } from "motion/react";
@@ -6,6 +6,7 @@ import { Modal, ModalHeader, ModalFooter, ModalCancelButton } from "../shared/mo
 import { GlossyButton } from "../shared/glossy-button";
 import { FolderTrashIcon } from "../shared/folder-trash-icon";
 import { Spinner } from "../shared/spinner";
+import { useHaptics } from "@/hooks/use-haptics";
 import { useTags } from "@/contexts/tags-context";
 import { TAG_PRESET_COLORS, normalizeTagName, randomTagColor } from "@/types/tags";
 
@@ -16,6 +17,18 @@ interface TagManagementModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+function useThrottledHaptic() {
+  const haptics = useHaptics();
+  const lastRef = useRef(0);
+  return useCallback(() => {
+    const now = Date.now();
+    if (now - lastRef.current > 60) {
+      lastRef.current = now;
+      haptics.selection();
+    }
+  }, [haptics]);
+}
+
 function InlineColorPicker({
   color,
   onChange,
@@ -23,6 +36,16 @@ function InlineColorPicker({
   color: string;
   onChange: (color: string) => void;
 }) {
+  const fireHaptic = useThrottledHaptic();
+
+  const handleChange = useCallback(
+    (c: string) => {
+      onChange(c);
+      fireHaptic();
+    },
+    [onChange, fireHaptic],
+  );
+
   return (
     <motion.div
       initial={{ height: 0, opacity: 0 }}
@@ -34,7 +57,7 @@ function InlineColorPicker({
       <div className="flex flex-col gap-3 px-2 pt-2 pb-3">
         <HexColorPicker
           color={color}
-          onChange={onChange}
+          onChange={handleChange}
           style={{ width: "100%", height: 140 }}
         />
 
@@ -53,7 +76,10 @@ function InlineColorPicker({
             <button
               key={preset}
               type="button"
-              onClick={() => onChange(preset)}
+              onClick={() => {
+                onChange(preset);
+                fireHaptic();
+              }}
               className="size-5 rounded-full border transition-transform hover:scale-110"
               style={{
                 backgroundColor: preset,
@@ -73,6 +99,7 @@ function InlineColorPicker({
 export function TagManagementModal({ open, onOpenChange }: TagManagementModalProps) {
   const { tags, createTag, deleteTag, renameTag, updateTagColor } =
     useTags();
+  const fireHaptic = useThrottledHaptic();
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(() => randomTagColor());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -253,7 +280,10 @@ export function TagManagementModal({ open, onOpenChange }: TagManagementModalPro
                 <div className="flex flex-col gap-3 px-4 pb-3">
                   <HexColorPicker
                     color={newColor}
-                    onChange={setNewColor}
+                    onChange={(c) => {
+                      setNewColor(c);
+                      fireHaptic();
+                    }}
                     style={{ width: "100%", height: 140 }}
                   />
 
@@ -272,7 +302,10 @@ export function TagManagementModal({ open, onOpenChange }: TagManagementModalPro
                       <button
                         key={preset}
                         type="button"
-                        onClick={() => setNewColor(preset)}
+                        onClick={() => {
+                          setNewColor(preset);
+                          fireHaptic();
+                        }}
                         className="size-5 rounded-full border transition-transform hover:scale-110"
                         style={{
                           backgroundColor: preset,

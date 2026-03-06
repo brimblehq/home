@@ -24,6 +24,8 @@ export interface DiscoverAddon extends Addon {
 export interface DiscoverAddonDetail {
   id: string;
   mcpId: string;
+  qualifiedName?: string;
+  deployTemplateToken?: string;
   name: string;
   description: string;
   longDescription: string;
@@ -90,6 +92,14 @@ function getMcpTemplateLookupId(template: McpServerTemplate) {
   return template.qualifiedName || template.id;
 }
 
+function getMcpTemplateDeployToken(template: McpServerTemplate) {
+  if (!template.qualifiedName) {
+    return undefined;
+  }
+
+  return encodeDiscoverAddonId(template.qualifiedName);
+}
+
 export function encodeDiscoverAddonId(value: string): string {
   if (typeof Buffer !== "undefined") {
     return Buffer.from(value, "utf8").toString("base64");
@@ -132,6 +142,8 @@ export function mapMcpTemplateToAddonDetail(template: McpServerTemplate): Discov
   return {
     id: addon.id,
     mcpId: template.id,
+    qualifiedName: template.qualifiedName,
+    deployTemplateToken: getMcpTemplateDeployToken(template),
     name: template.name,
     description: template.description || "MCP server for AI and workflow integrations.",
     longDescription:

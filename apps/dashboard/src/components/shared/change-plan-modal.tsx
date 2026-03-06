@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { Modal, ModalHeader, ModalFooter, ModalCancelButton, ModalContinueButton } from "./modal";
 import { Dropdown } from "./dropdown";
 import { usePricing } from "@/contexts/pricing-context";

@@ -31,6 +31,7 @@
     "ably": "^2.18.0",
     "axios": "^1.13.5",
     "cmdk": "^1.1.1",
+    "consola": "^3.4.2",
     "date-fns": "^4.1.0",
     "formik": "^2.4.9",
     "lucide-react": "^0.545.0",
@@ -45,6 +46,7 @@
     "sonner": "^2.0.7",
     "tailwindcss": "^4.1.18",
     "vaul": "^1.1.2",
+    "web-haptics": "^0.0.6",
     "yup": "^1.7.1",
     "zustand": "^5.0.11"
   },

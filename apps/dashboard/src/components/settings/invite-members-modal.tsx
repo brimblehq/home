@@ -71,7 +71,8 @@ function RoleDropdown({
 interface InviteMembersModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentSeats?: number;
+  currentMembers?: number;
+  includedSeats?: number;
   currentUserEmail?: string | null;
   onInvite?: (emails: string[]) => Promise<void> | void;
 }
@@ -79,7 +80,8 @@ interface InviteMembersModalProps {
 export function InviteMembersModal({
   open,
   onOpenChange,
-  currentSeats = 3,
+  currentMembers = 1,
+  includedSeats = 3,
   currentUserEmail,
   onInvite,
 }: InviteMembersModalProps) {
@@ -88,8 +90,10 @@ export function InviteMembersModal({
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const maxRows = 4;
+
   function addRow() {
-    setRows((prev) => [...prev, { id: nextId++, email: "", role: "Member" }]);
+    setRows((prev) => prev.length >= maxRows ? prev : [...prev, { id: nextId++, email: "", role: "Member" }]);
   }
 
   function removeRow(id: number) {
@@ -115,8 +119,10 @@ export function InviteMembersModal({
       .map((row) => row.id),
   );
   const newSeats = filledRows.length;
-  const addedCost = newSeats * seatPrice;
-  const newTotal = (currentSeats + newSeats) * seatPrice;
+  const remainingFreeSeats = Math.max(0, includedSeats - currentMembers);
+  const paidSeats = Math.max(0, newSeats - remainingFreeSeats);
+  const extraCost = paidSeats * seatPrice;
+  const totalMembers = currentMembers + newSeats;
 
   useEffect(() => {
     if (!open) {
@@ -169,6 +175,12 @@ export function InviteMembersModal({
                   placeholder="colleague@company.com"
                   value={row.email}
                   onChange={(e) => updateRow(row.id, "email", e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addRow();
+                    }
+                  }}
                   className={
                     selfInviteRowIds.has(row.id)
                       ? "flex-1 rounded-[6px] px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af] shadow-[0px_0px_0px_1px_#e1291d,0px_0px_0px_3px_rgba(225,41,29,0.15)] outline-none"
@@ -196,13 +208,13 @@ export function InviteMembersModal({
         </div>
 
         {/* Add another */}
-        <button
+        {rows.length < maxRows && <button
           onClick={addRow}
           className="flex items-center gap-1.5 self-start text-sm text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
         >
           <Plus className="size-3.5" />
           Add another
-        </button>
+        </button>}
 
         {/* Cost preview */}
         <AnimatePresence initial={false}>
@@ -216,20 +228,45 @@ export function InviteMembersModal({
               className="overflow-hidden"
             >
               <div className="px-1 py-1">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4">
-                  <span className="text-sm text-dash-text-faded">
-                    {newSeats} new {newSeats === 1 ? "seat" : "seats"} &times; {formatUsdMonthly(seatPrice)}/seat
-                  </span>
-                  <span className="text-sm font-medium text-dash-text-strong">
-                    +{formatUsdMonthly(addedCost)}/month
-                  </span>
-                </div>
+                {remainingFreeSeats > 0 && newSeats <= remainingFreeSeats ? (
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4">
+                    <span className="text-sm text-dash-text-faded">
+                      {newSeats} new {newSeats === 1 ? "seat" : "seats"} (included in plan)
+                    </span>
+                    <span className="text-sm font-medium text-dash-text-strong">
+                      No extra cost
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    {remainingFreeSeats > 0 && (
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4">
+                        <span className="text-sm text-dash-text-faded">
+                          {remainingFreeSeats} {remainingFreeSeats === 1 ? "seat" : "seats"} (included in plan)
+                        </span>
+                        <span className="text-sm font-medium text-dash-text-strong">
+                          Free
+                        </span>
+                      </div>
+                    )}
+                    <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 ${remainingFreeSeats > 0 ? "mt-1" : ""}`}>
+                      <span className="text-sm text-dash-text-faded">
+                        {paidSeats} extra {paidSeats === 1 ? "seat" : "seats"} &times; {formatUsdMonthly(seatPrice)}/seat
+                      </span>
+                      <span className="text-sm font-medium text-dash-text-strong">
+                        +{formatUsdMonthly(extraCost)}/month
+                      </span>
+                    </div>
+                  </>
+                )}
                 <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 border-t border-dash-border-soft pt-2">
                   <span className="text-xs text-dash-text-faded">
-                    New seat subtotal ({currentSeats + newSeats} seats)
+                    Total seats ({totalMembers} of {Math.max(includedSeats, totalMembers)})
                   </span>
                   <span className="text-xs font-medium text-dash-text-strong">
-                    {formatUsdMonthly(newTotal)}/month
+                    {extraCost > 0
+                      ? `+${formatUsdMonthly(extraCost)}/month`
+                      : "Included"}
                   </span>
                 </div>
               </div>

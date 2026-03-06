@@ -3,6 +3,7 @@ import { createBackendApi } from "@/backend";
 import type { McpServerListResult, McpServerTemplate } from "@/backend/mcp";
 import config from "@/config";
 import { withTokenRefresh } from "@/server/shared/backend";
+import { mcpLogger } from "@/server/shared/logger";
 
 function getPublicBackendApi() {
   return createBackendApi({
@@ -38,12 +39,10 @@ export const listMcpTemplatesServerFn = createServerFn({
       (api) => api.mcp.listTemplates(request) as Promise<McpServerListResult>,
     );
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn(
-        "[listMcpTemplatesServerFn] auth-backed request failed, retrying without auth",
-        error,
-      );
-    }
+    mcpLogger.debug(
+      "listMcpTemplates: auth-backed request failed, retrying without auth",
+      error,
+    );
 
     return getPublicBackendApi().mcp.listTemplates(request) as Promise<McpServerListResult>;
   }
@@ -59,9 +58,13 @@ export const getMcpTemplateServerFn = createServerFn({
     throw new Error("MCP template id is required");
   }
 
-  return withTokenRefresh(
+  const result = await withTokenRefresh(
     (api) => api.mcp.getTemplate(id) as Promise<McpServerTemplate | null>,
   );
+
+  mcpLogger.debug("getMcpTemplate result:", JSON.stringify(result, null, 2));
+
+  return result;
 });
 
 export const deployMcpTemplateServerFn = createServerFn({
@@ -73,6 +76,7 @@ export const deployMcpTemplateServerFn = createServerFn({
         template: string;
         templateName: string;
         installationId: number | string;
+        authEnabled?: boolean;
       }
     | undefined;
 
@@ -110,7 +114,7 @@ export const deployMcpTemplateServerFn = createServerFn({
       }
     }
 
-    return api.projects.create({
+    const body = {
       git: "github",
       type: "clone",
       clone: {
@@ -120,7 +124,12 @@ export const deployMcpTemplateServerFn = createServerFn({
       installationId,
       template,
       serviceType: "mcp",
+      authEnabled: payload?.authEnabled !== false,
       ...(teamId ? { teamId } : {}),
-    } as any);
+    };
+
+    mcpLogger.debug("deployMcpTemplate request body:", body);
+
+    return api.projects.create(body as any);
   });
 });

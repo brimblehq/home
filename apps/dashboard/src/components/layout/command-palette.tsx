@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   getRouteApi,
   useNavigate,
@@ -12,6 +12,7 @@ import { ArrowLeft, Moon, Sun, ArrowsClockwise } from "@phosphor-icons/react";
 import { PaletteView } from "../../types/enums";
 import { useScoutBar } from "../../contexts/scoutbar-context";
 import { useTheme } from "../../hooks/use-theme";
+import { useHaptics } from "@/hooks/use-haptics";
 import {
   getWorkspaceFromSearch,
   withWorkspaceQuery,
@@ -42,11 +43,12 @@ export function CommandPalette() {
   const { theme, setTheme, toggleTheme } = useTheme();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const { onboardingProjects, workspaces, settingsSnapshot } =
-    rootRoute.useLoaderData() as {
+    (rootRoute.useLoaderData() ?? {}) as {
       onboardingProjects: { items: Project[] } | null;
       workspaces: { items: Workspace[] };
       settingsSnapshot: SettingsSidebarSnapshot | null;
     };
+  const haptics = useHaptics();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<PaletteView>(PaletteView.Root);
   const [pastViews, setPastViews] = useState<PaletteView[]>([]);
@@ -112,6 +114,12 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, setIsOpen]);
 
+  const prevIsOpen = useRef(false);
+  useEffect(() => {
+    if (isOpen && !prevIsOpen.current) haptics.soft();
+    prevIsOpen.current = isOpen;
+  }, [isOpen, haptics]);
+
   useEffect(() => {
     if (!isOpen) {
       setQuery("");
@@ -167,10 +175,11 @@ export function CommandPalette() {
     };
   }, [domainsLoadedForKey, isOpen, query, view, workspace]);
 
-  const runAction = (fn: () => void) => {
+  const runAction = useCallback((fn: () => void) => {
+    haptics.selection();
     setIsOpen(false);
     fn();
-  };
+  }, [haptics, setIsOpen]);
 
   const openNewProject = () => {
     runAction(() => go("/projects/new"));
@@ -193,6 +202,7 @@ export function CommandPalette() {
   };
 
   const openProjectSearch = () => {
+    haptics.selection();
     setPastViews((prev) => [...prev, view]);
     setFutureViews([]);
     setView(PaletteView.ProjectSearch);
@@ -200,6 +210,7 @@ export function CommandPalette() {
   };
 
   const openDomainSearch = () => {
+    haptics.selection();
     setPastViews((prev) => [...prev, view]);
     setFutureViews([]);
     setView(PaletteView.DomainSearch);
@@ -207,6 +218,7 @@ export function CommandPalette() {
   };
 
   const openWorkspaceSearch = () => {
+    haptics.selection();
     setPastViews((prev) => [...prev, view]);
     setFutureViews([]);
     setView(PaletteView.WorkspaceSearch);
@@ -703,7 +715,7 @@ export function CommandPalette() {
                                     height="16"
                                     alt=""
                                   />
-                                  <span>{t.name}</span>
+                                  <span className="capitalize">{t.name}</span>
                                 </Command.Item>
                               ))}
                             {view === PaletteView.DomainSearch && domainsLoading ? (

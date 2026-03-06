@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Modal } from "./modal";
 import { GlossyButton } from "./glossy-button";
 import { TriangleAlert } from "lucide-react";
+import { useHaptics } from "@/hooks/use-haptics";
 
 interface WarningModalProps {
   open: boolean;
@@ -36,6 +37,7 @@ export function WarningModal({
   children,
 }: WarningModalProps) {
   const [submitting, setSubmitting] = useState(false);
+  const haptics = useHaptics();
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} width={420}>
@@ -65,11 +67,13 @@ export function WarningModal({
         <GlossyButton
           variant="red"
           fullWidth
+          disableHaptic
           disabled={confirmDisabled || submitting}
           loading={submitting}
           loadingLabel={confirmLoadingLabel || `${confirmLabel}...`}
           onClick={async () => {
             try {
+              haptics.heavy();
               setSubmitting(true);
               await onConfirm();
               if (closeOnConfirm) {

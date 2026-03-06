@@ -2,6 +2,7 @@ import { cn } from "@brimble/ui";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../../hooks/use-theme";
+import { useHaptics } from "@/hooks/use-haptics";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 
 export const mainNav = [
@@ -28,6 +29,7 @@ export function Sidebar({
   onProfileOpenChange: (open: boolean) => void;
 }) {
   const { theme, toggleTheme } = useTheme();
+  const haptics = useHaptics();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
@@ -61,11 +63,12 @@ export function Sidebar({
               return (
                 <button
                   key={item.label}
-                  onClick={() =>
+                  onClick={() => {
+                    haptics.selection();
                     void navigate({
                       to: withWorkspaceQuery({ pathname: item.href, searchStr }) as any,
-                    })
-                  }
+                    });
+                  }}
                   className={cn(
                     navItemBase,
                     "w-full",
@@ -96,6 +99,7 @@ export function Sidebar({
                       href={item.href}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => haptics.selection()}
                       className={cn(navItemBase, "hover:bg-dash-bg-elevated")}
                     >
                       <img src={item.icon} alt="" className="size-4 shrink-0 dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80" />
@@ -107,11 +111,12 @@ export function Sidebar({
                 return (
                   <button
                     key={item.label}
-                    onClick={() =>
+                    onClick={() => {
+                      haptics.selection();
                       void navigate({
                         to: withWorkspaceQuery({ pathname: item.href, searchStr }) as any,
-                      })
-                    }
+                      });
+                    }}
                     className={cn(
                       navItemBase,
                       "w-full",
@@ -132,7 +137,10 @@ export function Sidebar({
         <div className="flex shrink-0 flex-col gap-1 px-3 pb-4">
           <hr className="mb-4 border-dash-border-soft" />
           <button
-            onClick={() => onProfileOpenChange(true)}
+            onClick={() => {
+              haptics.selection();
+              onProfileOpenChange(true);
+            }}
             className={cn(navItemBase, "w-full hover:bg-dash-bg-elevated")}
           >
             <img
@@ -143,7 +151,10 @@ export function Sidebar({
             Settings
           </button>
           <button
-            onClick={toggleTheme}
+            onClick={() => {
+              haptics.selection();
+              toggleTheme();
+            }}
             className={cn(navItemBase, "hover:bg-dash-bg-elevated")}
           >
             {theme === "dark" ? (

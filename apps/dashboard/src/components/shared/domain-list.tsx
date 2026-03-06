@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { FilterDropdown, type FilterOption } from "./filter-dropdown";
 import { SearchFilterBar } from "./search-filter-bar";
 import { Spinner } from "./spinner";
@@ -668,6 +668,17 @@ export function DomainList({
           </button>
         )}
       </div>
+
+      {/* Empty state */}
+      {filtered.length === 0 && (
+        <div className="flex h-32 items-center justify-center rounded-[4px] border-[0.5px] border-dash-border">
+          <span className="text-sm text-dash-text-faded">
+            {domains.length === 0
+              ? "No domains yet"
+              : "No domains found"}
+          </span>
+        </div>
+      )}
 
       {/* Failed domains (each in its own card) */}
       {failedDomains.map((domain, i) => {

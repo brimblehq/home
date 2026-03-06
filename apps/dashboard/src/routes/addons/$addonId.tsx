@@ -2,8 +2,10 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
-import { ArrowLeft, Copy, Check, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowLeft, Copy, Check, ExternalLink, ShieldCheck } from "lucide-react";
+import { ToggleSwitch } from "../../components/shared/toggle-switch";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import { AddonCard } from "../../components/shared/addon-card";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { startOauthPopup } from "@/lib/auth/oauth-popup";
@@ -12,7 +14,10 @@ import type { GithubAccount } from "@/backend/repositories";
 import { finalizeOauthSessionServerFn } from "@/server/auth/actions";
 import { deployMcpTemplateServerFn, getMcpTemplateServerFn, listMcpTemplatesServerFn } from "@/server/mcp/actions";
 import { listGithubAccountsServerFn } from "@/server/repositories/actions";
-import { mapMcpTemplateToAddon, mapMcpTemplateToAddonDetail } from "@/utils/discover-mcp";
+import {
+  mapMcpTemplateToAddon,
+  mapMcpTemplateToAddonDetail,
+} from "@/utils/discover-mcp";
 
 export const Route = createFileRoute("/addons/$addonId")({
   staleTime: 30_000,
@@ -77,9 +82,11 @@ function buildToolLines(detail: NonNullable<ReturnType<typeof Route.useLoaderDat
 
 function CopyableRow({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
+  const haptics = useHaptics();
 
   function handleCopy() {
     navigator.clipboard.writeText(`${label}: ${value}`);
+    haptics.light();
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -120,6 +127,7 @@ function AddonDetailPage() {
   const search = Route.useSearch() as { workspace?: string };
   const { detail, relatedAddons } = Route.useLoaderData();
   const [deploying, setDeploying] = useState(false);
+  const [authEnabled, setAuthEnabled] = useState(true);
   const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<GithubAccount[]>;
   const finalizeOauthSession = useServerFn(finalizeOauthSessionServerFn as any) as (args: {
     data: {
@@ -134,6 +142,7 @@ function AddonDetailPage() {
       template: string;
       templateName: string;
       installationId: string | number;
+      authEnabled?: boolean;
     };
   }) => Promise<{ name?: string; slug?: string }>;
 
@@ -203,12 +212,17 @@ function AddonDetailPage() {
         throw new Error("No GitHub installation found. Connect a GitHub account or organization.");
       }
 
+      if (!detail.deployTemplateToken) {
+        throw new Error("This MCP server is missing a qualified name and cannot be deployed.");
+      }
+
       const project = await deployMcpTemplate({
         data: {
           workspace: search.workspace,
-          template: detail.id,
+          template: detail.deployTemplateToken,
           templateName: detail.name,
           installationId: selectedAccount.installationId,
+          authEnabled,
         },
       });
 
@@ -304,7 +318,21 @@ function AddonDetailPage() {
               </div>
             ) : null}
           </div>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-[4px] border border-dash-border px-3.5 py-3">
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="size-4 text-dash-text-faded" />
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium text-dash-text-strong">
+                  Enable Authentication
+                </span>
+                <span className="text-xs text-dash-text-faded">
+                  Require an API key in the <code className="rounded bg-dash-bg px-1 font-mono text-[10px]">x-brimble-key</code> header to access this MCP server.
+                </span>
+              </div>
+            </div>
+            <ToggleSwitch checked={authEnabled} onChange={setAuthEnabled} />
+          </div>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <GlossyButton
               className="min-w-[160px]"
               loading={deploying}

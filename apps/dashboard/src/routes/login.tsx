@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Github, ArrowLeft, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { invalidateSessionCache } from "../lib/auth-guards";
-import { toast } from "sonner";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import {
   AuthDivider,
   AuthField,
@@ -203,7 +204,22 @@ function OtpStep({
 
 /* ─── Page ─── */
 
+function getNextUrl(): string {
+  if (typeof window === "undefined") return "/";
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (!next) return "/";
+  // Only allow relative paths to prevent open-redirect
+  try {
+    const url = new URL(next, window.location.origin);
+    if (url.origin !== window.location.origin) return "/";
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return next.startsWith("/") ? next : "/";
+  }
+}
+
 function LoginPage() {
+  const haptics = useHaptics();
   const requestLoginOtp = useServerFn(requestLoginOtpServerFn);
   const resendAuthCode = useServerFn(resendAuthCodeServerFn);
   const verifyEmailCode = useServerFn(verifyEmailCodeServerFn);
@@ -218,6 +234,7 @@ function LoginPage() {
     if (oauthLoadingProvider) {
       return;
     }
+    haptics.selection();
 
     setOauthLoadingProvider(provider);
 
@@ -243,7 +260,7 @@ function LoginPage() {
         `Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
       );
       invalidateSessionCache();
-      window.location.replace("/");
+      window.location.replace(getNextUrl());
       return;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "OAuth sign in failed");
@@ -253,6 +270,7 @@ function LoginPage() {
   }
 
   async function handleSendOtp() {
+    haptics.selection();
     if (!email.trim()) return;
     setLoading(true);
     try {
@@ -267,6 +285,7 @@ function LoginPage() {
   }
 
   async function handleVerify() {
+    haptics.selection();
     if (otp.length < 6) return;
     setLoading(true);
     try {
@@ -275,7 +294,7 @@ function LoginPage() {
         `Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
       );
       invalidateSessionCache();
-      window.location.replace("/");
+      window.location.replace(getNextUrl());
       return;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Verification failed");
@@ -285,6 +304,7 @@ function LoginPage() {
   }
 
   async function handleResend() {
+    haptics.selection();
     setOtp("");
     if (!email.trim()) return;
     setLoading(true);
@@ -347,6 +367,7 @@ function LoginPage() {
             onOtpChange={setOtp}
             onVerify={handleVerify}
             onBack={() => {
+              haptics.selection();
               setStep("email");
               setOtp("");
             }}
