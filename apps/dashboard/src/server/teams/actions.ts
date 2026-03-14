@@ -124,6 +124,33 @@ export const resendWorkspaceTeamInviteServerFn = createServerFn({
   });
 });
 
+export const updateMemberRoleServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as
+    | {
+        workspace?: string;
+        memberId?: string;
+        role?: string;
+      }
+    | undefined;
+
+  const memberId = payload?.memberId?.trim();
+  if (!memberId) {
+    throw new Error("Member ID is required");
+  }
+
+  const role = payload?.role?.trim();
+  if (!role) {
+    throw new Error("Role is required");
+  }
+
+  return withTokenRefresh(async (api) => {
+    const { teamId } = await resolveWorkspaceTeam(api, payload?.workspace);
+    return api.teams.updateMemberRole(teamId, memberId, role);
+  });
+});
+
 export const updateMemberEnvironmentsServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
@@ -131,7 +158,6 @@ export const updateMemberEnvironmentsServerFn = createServerFn({
     | {
         workspace?: string;
         memberId?: string;
-        permissions?: Array<{ id: string; enabled: boolean }>;
         project_environments?: string[];
       }
     | undefined;
@@ -141,15 +167,13 @@ export const updateMemberEnvironmentsServerFn = createServerFn({
     throw new Error("Member ID is required");
   }
 
-  const permissions = Array.isArray(payload?.permissions) ? payload.permissions : [];
   const projectEnvironments = Array.isArray(payload?.project_environments)
     ? payload.project_environments
     : undefined;
 
   return withTokenRefresh(async (api) => {
     const { teamId } = await resolveWorkspaceTeam(api, payload?.workspace);
-    return api.teams.updateMemberPermissions(teamId, memberId, {
-      permissions,
+    return api.teams.updateMemberEnvironments(teamId, memberId, {
       project_environments: projectEnvironments,
     });
   });

@@ -12,6 +12,7 @@ import {
   HelpCircle,
   MoreHorizontal,
   Shield,
+  TriangleAlert,
   UserMinus,
   Eye,
   EyeOff,
@@ -25,8 +26,13 @@ import { InviteMembersModal } from "../settings/invite-members-modal";
 import { WarningModal } from "./warning-modal";
 import { GlossyButton } from "./glossy-button";
 import { OtpInput } from "../auth/auth-split-layout";
-import { CheckCircle, XCircle } from "@phosphor-icons/react";
-import { logoutServerFn } from "@/server/auth/actions";
+import { Turnstile } from "@marsidev/react-turnstile";
+import { CheckCircle, XCircle, TreeStructure } from "@phosphor-icons/react";
+import {
+  confirmDeleteAccountServerFn,
+  logoutServerFn,
+  requestDeleteAccountOtpServerFn,
+} from "@/server/auth/actions";
 import { listActivityLogsServerFn } from "@/server/activity-logs/actions";
 import { listProjectEnvironmentsServerFn } from "@/server/environments/actions";
 import type { ProjectEnvironment } from "@/backend/environments";
@@ -57,6 +63,7 @@ import {
   resendWorkspaceTeamInviteServerFn,
   updateWorkspaceTeamProfileServerFn,
   updateMemberEnvironmentsServerFn,
+  updateMemberRoleServerFn,
 } from "@/server/teams/actions";
 import { listGithubAccountsServerFn } from "@/server/repositories/actions";
 import type {
@@ -357,7 +364,7 @@ function ProfileForm({
   isGithubConnected: boolean;
   onDisconnectGithub?: () => Promise<void> | void;
   onConnectGithub?: () => void;
-  onRequestDeleteAccountOtp?: () => Promise<void> | void;
+  onRequestDeleteAccountOtp?: (turnstileToken?: string) => Promise<void> | void;
   onVerifyDeleteAccountOtp?: (code: string) => Promise<void> | void;
   onDeleteAccount?: () => Promise<void> | void;
   isSaving?: boolean;
@@ -723,6 +730,8 @@ function ProfileForm({
         isGithubConnected={isGithubConnected}
         onDisconnectGithub={onDisconnectGithub}
         onConnectGithub={onConnectGithub}
+        onRequestDeleteAccountOtp={onRequestDeleteAccountOtp}
+        onVerifyDeleteAccountOtp={onVerifyDeleteAccountOtp}
         onDeleteAccount={onDeleteAccount}
       />
     </div>
@@ -733,18 +742,22 @@ function DangerZone({
   isGithubConnected,
   onDisconnectGithub,
   onConnectGithub,
+  onRequestDeleteAccountOtp,
+  onVerifyDeleteAccountOtp,
   onDeleteAccount,
 }: {
   isGithubConnected: boolean;
   onDisconnectGithub?: () => Promise<void> | void;
   onConnectGithub?: () => void;
+  onRequestDeleteAccountOtp?: () => Promise<void> | void;
+  onVerifyDeleteAccountOtp?: (code: string) => Promise<void> | void;
   onDeleteAccount?: () => Promise<void> | void;
 }) {
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteStep, setDeleteStep] = useState<"confirm" | "otp">("confirm");
   const [disconnectConfirm, setDisconnectConfirm] = useState("");
-  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [deleteOtp, setDeleteOtp] = useState("");
   const [deleteOtpError, setDeleteOtpError] = useState<string | null>(null);
 
@@ -834,7 +847,7 @@ function DangerZone({
         onOpenChange={(open) => {
           setDeleteOpen(open);
           if (!open) {
-            setDeleteConfirm("");
+            setTurnstileToken(null);
             setDeleteStep("confirm");
             setDeleteOtp("");
             setDeleteOtpError(null);
@@ -860,7 +873,7 @@ function DangerZone({
         }
         confirmDisabled={
           deleteStep === "confirm"
-            ? deleteConfirm !== "DELETE"
+            ? !turnstileToken
             : deleteOtp.length < 6
         }
         closeOnConfirm={deleteStep === "otp"}
@@ -870,7 +883,7 @@ function DangerZone({
             setDeleteStep("otp");
             if (onRequestDeleteAccountOtp) {
               try {
-                await onRequestDeleteAccountOtp();
+                await onRequestDeleteAccountOtp(turnstileToken ?? undefined);
               } catch (error) {
                 setDeleteStep("confirm");
                 throw error;
@@ -886,28 +899,57 @@ function DangerZone({
 
           setDeleteOtpError(null);
           if (onVerifyDeleteAccountOtp) {
-            await onVerifyDeleteAccountOtp(deleteOtp);
+            try {
+              await onVerifyDeleteAccountOtp(deleteOtp);
+            } catch (error) {
+              setDeleteOtpError(
+                error instanceof Error
+                  ? error.message
+                  : "Invalid verification code",
+              );
+              throw error;
+            }
           }
           await onDeleteAccount?.();
         }}
       >
         <div className="flex flex-col gap-2 text-left">
+          <div className="flex items-start gap-2.5 rounded-[8px] bg-dash-bg-elevated px-3 py-2.5">
+            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-[#ef2f1f]/10">
+              <TriangleAlert className="size-2.5 text-[#ef2f1f]" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold leading-5 text-dash-text-strong">
+                This action is permanent.
+              </p>
+              <p className="text-xs leading-5 text-dash-text-faded">
+                Deleted accounts cannot be recovered.
+              </p>
+            </div>
+          </div>
           {deleteStep === "confirm" ? (
             <>
               <label className="text-sm leading-5 text-dash-text-faded">
-                Type{" "}
-                <span className="font-medium text-dash-text-strong">
-                  DELETE
-                </span>{" "}
-                to confirm
+                Complete the verification to continue
               </label>
-              <input
-                type="text"
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder="DELETE"
-                className="w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]"
-              />
+              <div className="rounded-[10px] bg-dash-bg-elevated/70 p-2.5">
+                <div className="mx-auto w-full max-w-[360px]">
+                  <Turnstile
+                    siteKey={config.turnstileSiteKey}
+                    className="w-full"
+                    options={{
+                      theme: "light",
+                      size: "flexible",
+                    }}
+                    onSuccess={(token) => setTurnstileToken(token)}
+                    onExpire={() => setTurnstileToken(null)}
+                    onError={() => setTurnstileToken(null)}
+                  />
+                </div>
+                <p className="mt-2 text-[11px] leading-4 text-dash-text-extra-faded">
+                  Security check powered by Cloudflare.
+                </p>
+              </div>
             </>
           ) : (
             <>
@@ -1748,6 +1790,12 @@ export function UserProfileDrawer({
   ) as (args: {
     data: { url: string; type: "discord" | "slack" | "custom" };
   }) => Promise<{ ok: true }>;
+  const requestDeleteAccountOtp = useServerFn(
+    requestDeleteAccountOtpServerFn as any,
+  ) as (args: { data: { turnstileToken?: string } }) => Promise<{ ok: true }>;
+  const confirmDeleteAccount = useServerFn(
+    confirmDeleteAccountServerFn as any,
+  ) as (args: { data: { accessCode: string } }) => Promise<{ ok: true }>;
   const [activeTab, setActiveTab] = useState<ProfileTab>(ProfileTab.Profile);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -2261,16 +2309,40 @@ export function UserProfileDrawer({
                       }
                     }, 90_000);
                   }}
-                  onRequestDeleteAccountOtp={async () => {
-                    toast.success("Verification code sent to your email");
+                  onRequestDeleteAccountOtp={async (turnstileToken) => {
+                    try {
+                      await requestDeleteAccountOtp({ data: { turnstileToken } });
+                      toast.success("Verification code sent to your email");
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to send verification code",
+                      );
+                      throw error;
+                    }
                   }}
                   onVerifyDeleteAccountOtp={async (code) => {
-                    if (code.trim().length !== 6) {
+                    const accessCode = code.trim();
+                    if (!/^\d{6}$/.test(accessCode)) {
                       throw new Error("Enter a valid 6-digit code");
+                    }
+                    try {
+                      await confirmDeleteAccount({
+                        data: { accessCode },
+                      });
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to delete account",
+                      );
+                      throw error;
                     }
                   }}
                   onDeleteAccount={async () => {
-                    toast.success("Account deletion requested");
+                    invalidateSessionCache();
+                    window.location.href = "/";
                   }}
                 />
               )}
@@ -3204,7 +3276,7 @@ interface Member {
   id: string;
   name: string;
   email: string;
-  role: "Creator" | "Administrator" | "Member";
+  role: "Creator" | "Administrator" | "Member" | "Viewer";
   gradient?: string;
   avatarUrl?: string;
   userId?: string;
@@ -3221,6 +3293,7 @@ const roleBadgeStyles: Record<string, string> = {
   Creator: "bg-[#4879f8]/10 text-[#4879f8]",
   Administrator: "bg-[#f5a623]/10 text-[#f5a623]",
   Member: "bg-dash-bg-elevated text-dash-text-faded",
+  Viewer: "bg-[#8b5cf6]/10 text-[#8b5cf6]",
 };
 
 function normalizeMemberRole(member: TeamMember): Member["role"] {
@@ -3229,6 +3302,7 @@ function normalizeMemberRole(member: TeamMember): Member["role"] {
   const role = (member.role ?? "").toLowerCase();
   if (role.includes("admin")) return "Administrator";
   if (role.includes("creator") || role.includes("owner")) return "Creator";
+  if (role.includes("viewer")) return "Viewer";
   return "Member";
 }
 
@@ -3303,30 +3377,55 @@ function mapPendingInvites(team?: TeamDetails | null): PendingInvite[] {
     }));
 }
 
+const ASSIGNABLE_ROLES: Array<{ value: string; label: string; description: string }> = [
+  { value: "ADMINISTRATOR", label: "Administrator", description: "Can manage members, environments, and settings" },
+  { value: "MEMBER", label: "Member", description: "Can access assigned environments and deploy" },
+  { value: "VIEWER", label: "Viewer", description: "Read-only access to assigned environments" },
+];
+
 function MemberActionMenu({
   member,
   onRemove,
+  onChangeRole,
+  onToggleEnv,
   removing,
+  changingRole,
+  environments,
+  memberEnvIds,
+  envBusyId,
   canChangeRole = false,
   canRemove = false,
 }: {
   member: Member;
   onRemove?: (member: Member) => void | Promise<void>;
+  onChangeRole?: (member: Member, role: string) => Promise<boolean> | boolean;
+  onToggleEnv?: (memberId: string, envId: string) => void;
   removing?: boolean;
+  changingRole?: boolean;
+  environments?: ProjectEnvironment[];
+  memberEnvIds?: Set<string>;
+  envBusyId?: string | null;
   canChangeRole?: boolean;
   canRemove?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [subMenu, setSubMenu] = useState<"role" | "env" | null>(null);
+  const [pendingRole, setPendingRole] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const roleChangeInFlight = changingRole || pendingRole !== null;
+  const hasEnvironments = (environments?.length ?? 0) > 0;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node))
+      if (roleChangeInFlight) return;
+      if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
+        setSubMenu(null);
+      }
     }
     if (open) document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
+  }, [open, roleChangeInFlight]);
 
   if (!canChangeRole && !canRemove) {
     return null;
@@ -3335,35 +3434,157 @@ function MemberActionMenu({
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          setOpen(!open);
+          setSubMenu(null);
+        }}
         className="shrink-0 text-dash-text-faded transition-colors hover:text-dash-text-strong"
       >
         <MoreHorizontal className="size-4" />
       </button>
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-[160px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
+
+      {/* Main menu */}
+      {open && !subMenu && (
+        <div className="absolute right-0 top-full z-50 mt-1 w-[190px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
           {canChangeRole && (
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => setSubMenu("role")}
+              disabled={roleChangeInFlight}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
             >
               <Shield className="size-3.5" />
               Change role
             </button>
           )}
-          {canRemove && (
+          {canChangeRole && hasEnvironments && (
             <button
-              onClick={() => {
-                setOpen(false);
-                void onRemove?.(member);
-              }}
-              disabled={removing}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-500 transition-colors hover:bg-dash-bg-elevated"
+              onClick={() => setSubMenu("env")}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
             >
-              <UserMinus className="size-3.5" />
-              {removing ? "Removing..." : "Remove"}
+              <TreeStructure className="size-3.5" weight="bold" />
+              Environments
             </button>
           )}
+          {canRemove && (
+            <>
+              {(canChangeRole || hasEnvironments) && (
+                <hr className="my-1 border-dash-border-soft" />
+              )}
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  void onRemove?.(member);
+                }}
+                disabled={removing}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-500 transition-colors hover:bg-dash-bg-elevated"
+              >
+                <UserMinus className="size-3.5" />
+                {removing ? "Removing..." : "Remove"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Role picker */}
+      {open && subMenu === "role" && (
+        <div className="absolute right-0 top-full z-50 mt-1 w-[220px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
+          <div className="flex items-center gap-2 px-3 py-1.5">
+            <button
+              onClick={() => setSubMenu(null)}
+              className="text-dash-text-faded transition-colors hover:text-dash-text-strong"
+            >
+              <ArrowLeft className="size-3.5" />
+            </button>
+            <span className="text-xs font-medium text-dash-text-faded">Select role</span>
+          </div>
+          <hr className="my-1 border-dash-border-soft" />
+          {ASSIGNABLE_ROLES.map((role) => {
+            const isCurrentRole = member.role === role.label;
+            const isUpdatingRole = pendingRole === role.value && roleChangeInFlight;
+            return (
+              <button
+                key={role.value}
+                disabled={isCurrentRole || roleChangeInFlight}
+                onClick={async () => {
+                  if (isCurrentRole || roleChangeInFlight) return;
+                  setPendingRole(role.value);
+                  try {
+                    const didUpdateRole = await onChangeRole?.(member, role.value);
+                    if (didUpdateRole !== false) {
+                      setOpen(false);
+                      setSubMenu(null);
+                    }
+                  } finally {
+                    setPendingRole(null);
+                  }
+                }}
+                className={`flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors hover:bg-dash-bg-elevated disabled:opacity-50 ${
+                  isCurrentRole ? "bg-dash-bg-elevated" : ""
+                }`}
+              >
+                <span className="flex items-center gap-2 text-sm text-dash-text-body">
+                  {role.label}
+                  {isUpdatingRole && (
+                    <span className="size-3 animate-spin rounded-full border border-current border-t-transparent" />
+                  )}
+                  {isCurrentRole && (
+                    <span className="text-[10px] text-dash-text-extra-faded">Current</span>
+                  )}
+                </span>
+                <span className="text-[11px] leading-tight text-dash-text-extra-faded">
+                  {isUpdatingRole ? "Updating role..." : role.description}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Environment picker */}
+      {open && subMenu === "env" && environments && (
+        <div className="absolute right-0 top-full z-50 mt-1 w-[220px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
+          <div className="flex items-center gap-2 px-3 py-1.5">
+            <button
+              onClick={() => setSubMenu(null)}
+              className="text-dash-text-faded transition-colors hover:text-dash-text-strong"
+            >
+              <ArrowLeft className="size-3.5" />
+            </button>
+            <span className="text-xs font-medium text-dash-text-faded">Environment access</span>
+          </div>
+          <hr className="my-1 border-dash-border-soft" />
+          {environments.map((env) => {
+            const checked = memberEnvIds?.has(env._id) ?? false;
+            const isBusy = envBusyId === env._id;
+            return (
+              <button
+                key={env._id}
+                disabled={!!envBusyId}
+                onClick={() => onToggleEnv?.(member.id, env._id)}
+                className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated disabled:opacity-50"
+              >
+                <span
+                  className={`flex size-4 shrink-0 items-center justify-center rounded-[3px] border transition-colors ${
+                    isBusy
+                      ? "border-dash-border-soft bg-transparent"
+                      : checked
+                        ? "border-[#4879f8] bg-[#4879f8]"
+                        : "border-dash-border-soft bg-transparent"
+                  }`}
+                >
+                  {isBusy ? (
+                    <span className="size-2.5 animate-spin rounded-full border-[1.5px] border-dash-text-faded border-t-transparent" />
+                  ) : checked ? (
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : null}
+                </span>
+                {env.name}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -3403,13 +3624,18 @@ function MembersForm({
   ) as (args: {
     data: { workspace: string; memberId: string };
   }) => Promise<{ ok: true }>;
+  const changeMemberRole = useServerFn(
+    updateMemberRoleServerFn as any,
+  ) as (args: {
+    data: { workspace: string; memberId: string; role: string };
+  }) => Promise<{ ok: true }>;
 
   const [team, setTeam] = useState<TeamDetails | null>(initialTeam);
   const [isLoadingMembers, setIsLoadingMembers] = useState(!initialTeam);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
   const [busyMemberAction, setBusyMemberAction] = useState<
-    "resend" | "revoke" | "remove" | null
+    "resend" | "revoke" | "remove" | "role" | null
   >(null);
   const [environments, setEnvironments] = useState<ProjectEnvironment[]>(initialEnvironments ?? []);
   const [envAccess, setEnvAccess] = useState<Record<string, Set<string>>>({});
@@ -3421,7 +3647,6 @@ function MembersForm({
     data: {
       workspace: string;
       memberId: string;
-      permissions: Array<{ id: string; enabled: boolean }>;
       project_environments: string[];
     };
   }) => Promise<{ ok: true }>;
@@ -3466,16 +3691,10 @@ function MembersForm({
     setEnvBusyKey(`${memberId}:${envId}`);
 
     try {
-      const member = team?.members.find((m) => m.id === memberId);
-      const permissions = (member?.permissions ?? []).map((p) => ({
-        id: p.id,
-        enabled: p.enabled,
-      }));
       await updateMemberEnvs({
         data: {
           workspace,
           memberId,
-          permissions,
           project_environments: nextIds,
         },
       });
@@ -3577,7 +3796,18 @@ function MembersForm({
         </div>
       ) : null}
       {isLoadingMembers ? (
-        <div className="text-sm text-dash-text-faded">Loading members…</div>
+        <div className="flex flex-col gap-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="size-8 shrink-0 animate-pulse rounded-full bg-dash-bg-elevated" />
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <div className="h-3.5 w-28 animate-pulse rounded bg-dash-bg-elevated" style={{ animationDelay: `${i * 100}ms` }} />
+                <div className="h-3 w-40 animate-pulse rounded bg-dash-bg-elevated" style={{ animationDelay: `${i * 100 + 50}ms` }} />
+              </div>
+              <div className="h-5 w-16 animate-pulse rounded-full bg-dash-bg-elevated" style={{ animationDelay: `${i * 100 + 100}ms` }} />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="flex flex-col gap-4">
           {members.map((member) => {
@@ -3594,8 +3824,7 @@ function MembersForm({
             const memberEnvs = envAccess[member.id] ?? new Set<string>();
 
             return (
-              <div key={member.id} className="flex flex-col gap-2">
-                <div className="flex items-center gap-3">
+              <div key={member.id} className="flex items-center gap-3">
                   <Avatar
                     src={member.avatarUrl}
                     fallbackSeed={member.email || member.name || member.id}
@@ -3619,9 +3848,40 @@ function MembersForm({
                   </span>
                   <MemberActionMenu
                     member={member}
-                    removing={busyMemberId === member.id}
+                    removing={busyMemberId === member.id && busyMemberAction === "remove"}
+                    changingRole={busyMemberId === member.id && busyMemberAction === "role"}
                     canChangeRole={canManageTarget}
                     canRemove={canManageTarget}
+                    environments={canManageTarget ? environments : undefined}
+                    memberEnvIds={memberEnvs}
+                    envBusyId={
+                      envBusyKey?.startsWith(`${member.id}:`)
+                        ? envBusyKey.split(":")[1]
+                        : null
+                    }
+                    onToggleEnv={toggleEnvAccess}
+                    onChangeRole={async (target, role) => {
+                      try {
+                        setBusyMemberId(target.id);
+                        setBusyMemberAction("role");
+                        await changeMemberRole({
+                          data: { workspace, memberId: target.id, role },
+                        });
+                        toast.success("Role updated");
+                        await refreshMembers();
+                        return true;
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to update role",
+                        );
+                        return false;
+                      } finally {
+                        setBusyMemberId(null);
+                        setBusyMemberAction(null);
+                      }
+                    }}
                     onRemove={async (target) => {
                       try {
                         setBusyMemberId(target.id);
@@ -3643,42 +3903,6 @@ function MembersForm({
                       }
                     }}
                   />
-                </div>
-                {environments.length > 0 && canManageMembers && member.role !== "Creator" && (
-                  <div className="flex flex-wrap items-center gap-1.5 pl-11">
-                    <SimpleTooltip
-                      content="Control which environments this member can access. Click to toggle."
-                      side="top"
-                      delayDuration={200}
-                    >
-                      <span className="mr-0.5 cursor-default text-[11px] text-dash-text-extra-faded">
-                        Environments:
-                      </span>
-                    </SimpleTooltip>
-                    {environments.map((env) => {
-                      const active = memberEnvs.has(env._id);
-                      const thisBusy = envBusyKey === `${member.id}:${env._id}`;
-                      const anyBusy = envBusyKey?.startsWith(`${member.id}:`) ?? false;
-                      return (
-                        <button
-                          key={env._id}
-                          disabled={anyBusy}
-                          onClick={() => toggleEnvAccess(member.id, env._id)}
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-all duration-200 disabled:opacity-50 ${
-                            active
-                              ? "bg-[#4879f8]/10 text-[#4879f8] hover:bg-[#4879f8]/20 hover:shadow-[0_0_0_1px_rgba(72,121,248,0.25)]"
-                              : "bg-dash-bg-elevated text-dash-text-extra-faded line-through hover:bg-dash-bg-elevated/80 hover:text-dash-text-faded hover:no-underline"
-                          }`}
-                        >
-                          {thisBusy && (
-                            <span className="size-2.5 animate-spin rounded-full border border-current border-t-transparent" />
-                          )}
-                          {env.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             );
           })}

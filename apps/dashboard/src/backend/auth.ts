@@ -2,16 +2,13 @@ import type { ApiClient } from "./types";
 import type {
   AuthApi,
   AuthSession,
-  LoginInput,
-  SignupInput,
-  UserLookupInput,
-  UserLookupResult,
-  VerifyEmailCodeInput,
+  ConfirmDeleteAccountInput,
 } from "./auth/types";
 export type {
   AuthApi,
   AuthSession,
   AuthUser,
+  ConfirmDeleteAccountInput,
   LoginInput,
   SignupInput,
   UserLookupInput,
@@ -28,6 +25,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
     logoutAuth: "/auth/beta/logout",
     me: "/auth/user/me",
     lookup: "/auth/beta/lookup",
+    deleteAccount: "/auth/user/delete-account",
   } as const;
 
   const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -87,6 +85,21 @@ export function createAuthApi(client: ApiClient): AuthApi {
       await client.request(endpoints.login, {
         method: "POST",
         body: { email: normalizeEmail(email) },
+      });
+    },
+    async requestDeleteAccountCode(turnstileToken?: string) {
+      await client.request(endpoints.deleteAccount, {
+        method: "POST",
+        body: { turnstile_token: turnstileToken },
+      });
+    },
+    async confirmDeleteAccount(input: ConfirmDeleteAccountInput) {
+      const normalizedCode = String(input.accessCode ?? "").trim();
+      await client.request(endpoints.deleteAccount, {
+        method: "DELETE",
+        body: {
+          access_code: Number(normalizedCode),
+        },
       });
     },
     async lookup(input) {

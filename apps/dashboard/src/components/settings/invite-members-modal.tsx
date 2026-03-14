@@ -17,7 +17,11 @@ interface InviteRow {
   role: string;
 }
 
-const roles = ["Member", "Administrator"];
+const roles: Array<{ value: string; label: string; description: string }> = [
+  { value: "Member", label: "Member", description: "Can access assigned environments and deploy" },
+  { value: "Administrator", label: "Administrator", description: "Can manage members, environments, and settings" },
+  { value: "Viewer", label: "Viewer", description: "Read-only access to assigned environments" },
+];
 let nextId = 1;
 
 function RoleDropdown({
@@ -48,18 +52,23 @@ function RoleDropdown({
         <ChevronDown className={`size-3.5 text-dash-text-faded transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-[140px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1 w-[220px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
           {roles.map((role) => (
             <button
-              key={role}
-              onClick={() => { onChange(role); setOpen(false); }}
-              className={`flex w-full px-3 py-1.5 text-left text-sm transition-colors ${
-                role === value
-                  ? "font-medium text-[#4879f8]"
-                  : "text-dash-text-body hover:bg-dash-bg-elevated"
+              key={role.value}
+              onClick={() => { onChange(role.label); setOpen(false); }}
+              className={`flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors ${
+                role.label === value
+                  ? "bg-dash-bg-elevated"
+                  : "hover:bg-dash-bg-elevated"
               }`}
             >
-              {role}
+              <span className={`text-sm ${role.label === value ? "font-medium text-[#4879f8]" : "text-dash-text-body"}`}>
+                {role.label}
+              </span>
+              <span className="text-[11px] leading-tight text-dash-text-extra-faded">
+                {role.description}
+              </span>
             </button>
           ))}
         </div>
@@ -152,7 +161,7 @@ export function InviteMembersModal({
   }
 
   return (
-    <Modal open={open} onOpenChange={onOpenChange} width={520}>
+    <Modal open={open} onOpenChange={onOpenChange} width={520} className="overflow-visible">
       <ModalHeader
         title="Invite team members"
         description="They'll receive an email invitation to join this workspace."

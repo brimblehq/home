@@ -15,6 +15,10 @@ export interface VerifyEmailCodeInput {
   code: string;
 }
 
+export interface ConfirmDeleteAccountInput {
+  accessCode: string | number;
+}
+
 export interface UserLookupInput {
   email?: string;
   username?: string;
@@ -47,9 +51,10 @@ export interface AuthApi {
   signup(input: SignupInput): Promise<void>;
   verifyEmailCode(input: VerifyEmailCodeInput): Promise<AuthSession>;
   resendCode(email: string): Promise<void>;
+  requestDeleteAccountCode(turnstileToken?: string): Promise<void>;
+  confirmDeleteAccount(input: ConfirmDeleteAccountInput): Promise<void>;
   lookup(input: UserLookupInput): Promise<UserLookupResult>;
   refreshTokens(refreshToken: string): Promise<AuthSession>;
   logout(refreshToken?: string): Promise<void>;
   getCurrentSession(): Promise<AuthSession | null>;
 }
-

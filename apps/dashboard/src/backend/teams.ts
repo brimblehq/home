@@ -87,13 +87,15 @@ export interface TeamsApi {
     resend?: boolean;
   }): Promise<{ ok: true }>;
   removeMember(teamId: string, memberId: string): Promise<{ ok: true }>;
-  updateMemberPermissions(
+  updateMemberEnvironments(
     teamId: string,
     memberId: string,
-    input: {
-      permissions: Array<{ id: string; enabled: boolean }>;
-      project_environments?: string[];
-    },
+    input: { project_environments?: string[] },
+  ): Promise<{ ok: true }>;
+  updateMemberRole(
+    teamId: string,
+    memberId: string,
+    role: string,
   ): Promise<{ ok: true }>;
   checkInvitation(teamName: string): Promise<TeamInvitation>;
   acceptInvite(teamId: string): Promise<{ ok: true }>;
@@ -275,13 +277,24 @@ export function createTeamsApi(client: ApiClient): TeamsApi {
       return { ok: true } as const;
     },
 
-    async updateMemberPermissions(teamId, memberId, input) {
+    async updateMemberRole(teamId, memberId, role) {
       await client.request<any>(
-        `/core/v1/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(memberId)}/permissions/update`,
+        `/core/v1/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(memberId)}/role`,
+        {
+          method: "PUT",
+          body: { role },
+        },
+      );
+
+      return { ok: true } as const;
+    },
+
+    async updateMemberEnvironments(teamId, memberId, input) {
+      await client.request<any>(
+        `/core/v1/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(memberId)}/environments`,
         {
           method: "PUT",
           body: {
-            permissions: input.permissions,
             ...(input.project_environments
               ? { project_environments: input.project_environments }
               : {}),

@@ -64,6 +64,9 @@ export const config = {
 
   accessTokenTtl: Number(readEnv("VITE_ACCESS_TOKEN_TTL") ?? String(60 * 30)),
   refreshTokenTtl: Number(readEnv("VITE_REFRESH_TOKEN_TTL") ?? String(60 * 60 * 24 * 14)),
+
+  turnstileSiteKey:
+    readEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY") ?? readEnv("VITE_TURNSTILE_SITE_KEY") ?? "",
 } as const;
 
 export default config;

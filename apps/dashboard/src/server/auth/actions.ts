@@ -14,7 +14,11 @@ import {
   getServerRefreshToken,
   setServerAuthCookies,
 } from "./cookies";
-import { getServerBackendApi, refreshServerSession } from "@/server/shared/backend";
+import {
+  getServerBackendApi,
+  refreshServerSession,
+  withTokenRefresh,
+} from "@/server/shared/backend";
 import { authLogger } from "@/server/shared/logger";
 
 function getErrorMeta(error: any) {
@@ -93,6 +97,34 @@ export const logoutServerFn = createServerFn({ method: "POST" }).handler(async (
   clearServerAuthCookies();
   authLogger.info("logout complete");
   return { ok: true } as const;
+});
+
+export const requestDeleteAccountOtpServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as { turnstileToken?: string } | undefined;
+  return withTokenRefresh(async (api) => {
+    await api.auth.requestDeleteAccountCode(payload?.turnstileToken);
+    return { ok: true } as const;
+  });
+});
+
+export const confirmDeleteAccountServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as { accessCode?: string | number } | undefined;
+  const accessCode = String(payload?.accessCode ?? "").trim();
+
+  if (!/^\d{6}$/.test(accessCode)) {
+    throw new Error("Enter a valid 6-digit verification code");
+  }
+
+  return withTokenRefresh(async (api) => {
+    await api.auth.confirmDeleteAccount({ accessCode });
+    clearServerAuthCookies();
+    authLogger.info("confirmDeleteAccount success");
+    return { ok: true } as const;
+  });
 });
 
 export const getAccessTokenServerFn = createServerFn({ method: "GET" }).handler(
