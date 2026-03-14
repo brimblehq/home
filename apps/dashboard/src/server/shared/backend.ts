@@ -3,6 +3,7 @@ import config from "@/config";
 import {
   getServerAccessToken,
   getServerRefreshToken,
+  getServerUserAgent,
   setServerAuthCookies,
   clearServerAuthCookies,
   tokenFingerprint,
@@ -75,10 +76,20 @@ function doRefresh(refreshToken: string): Promise<AuthSession> {
   return refreshPromise;
 }
 
+function getClientHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const ua = getServerUserAgent();
+  if (ua) {
+    headers["X-Client-User-Agent"] = ua;
+  }
+  return headers;
+}
+
 export function getServerBackendApi() {
   return createBackendApi({
     baseUrl: config.apiUrl,
     getAccessToken: getServerAccessToken,
+    defaultHeaders: getClientHeaders(),
   });
 }
 
@@ -180,6 +191,7 @@ export async function withTokenRefresh<T>(
       const freshApi = createBackendApi({
         baseUrl: config.apiUrl,
         getAccessToken: () => session.accessToken ?? null,
+        defaultHeaders: getClientHeaders(),
       });
 
       return await fn(freshApi);
@@ -231,6 +243,7 @@ export async function withTokenRefresh<T>(
       const freshApi = createBackendApi({
         baseUrl: config.apiUrl,
         getAccessToken: () => session.accessToken ?? null,
+        defaultHeaders: getClientHeaders(),
       });
       return await fn(freshApi);
     } catch (refreshError: any) {

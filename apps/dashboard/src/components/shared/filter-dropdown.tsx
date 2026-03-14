@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { SlidersHorizontal, Check } from "lucide-react";
+import { Check } from "lucide-react";
+import { Funnel } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "motion/react";
 import { Spinner } from "./spinner";
 import { useHaptics } from "@/hooks/use-haptics";
@@ -76,7 +77,7 @@ export function FilterDropdown({
             style={{ backgroundColor: activeDot }}
           />
         ) : (
-          icon ?? <SlidersHorizontal className="size-4" />
+          icon ?? <Funnel className="size-4" />
         )}
         {displayLabel}
         {loading ? <Spinner size="size-3.5" className="text-dash-text-faded" /> : null}

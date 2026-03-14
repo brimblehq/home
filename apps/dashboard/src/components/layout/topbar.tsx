@@ -14,12 +14,13 @@ import {
   ArrowRightLeft,
 } from "lucide-react";
 import { House, ShoppingBag } from "@phosphor-icons/react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../../hooks/use-theme";
 import { useHaptics } from "../../hooks/use-haptics";
 import { DashButton } from "../shared/dash-button";
+import { Spinner } from "../shared/spinner";
 import { Avatar } from "../shared/avatar";
 import { useScoutBar } from "../../contexts/scoutbar-context";
 import config from "@/config";
@@ -32,6 +33,8 @@ import {
   listProjectEnvironmentsServerFn,
   createProjectEnvironmentServerFn,
   deleteProjectEnvironmentServerFn,
+  getActiveEnvironmentPreferenceServerFn,
+  setActiveEnvironmentPreferenceServerFn,
 } from "@/server/environments/actions";
 import type { ProjectEnvironment } from "@/backend/environments";
 import { WarningModal } from "../shared/warning-modal";
@@ -438,6 +441,7 @@ function EnvironmentDropdown({ workspace }: { workspace?: string }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [creatingSubmitting, setCreatingSubmitting] = useState(false);
   const [newEnvName, setNewEnvName] = useState("");
   const [newEnvNameError, setNewEnvNameError] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProjectEnvironment | null>(null);
@@ -445,6 +449,7 @@ function EnvironmentDropdown({ workspace }: { workspace?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
 
@@ -457,10 +462,22 @@ function EnvironmentDropdown({ workspace }: { workspace?: string }) {
   const deleteEnvironment = useServerFn(deleteProjectEnvironmentServerFn as any) as (args: {
     data: { environmentId: string; moveTo: string; workspace?: string };
   }) => Promise<{ success: boolean }>;
+  const getActiveEnvironmentPreference = useServerFn(
+    getActiveEnvironmentPreferenceServerFn as any,
+  ) as (args: {
+    data: { workspace?: string };
+  }) => Promise<string | null>;
+  const setActiveEnvironmentPreference = useServerFn(
+    setActiveEnvironmentPreferenceServerFn as any,
+  ) as (args: {
+    data: { workspace?: string; environmentId?: string };
+  }) => Promise<{ success: boolean }>;
 
   const listEnvironmentsRef = useRef(listEnvironments);
   const createEnvironmentRef = useRef(createEnvironment);
   const deleteEnvironmentRef = useRef(deleteEnvironment);
+  const getActiveEnvironmentPreferenceRef = useRef(getActiveEnvironmentPreference);
+  const setActiveEnvironmentPreferenceRef = useRef(setActiveEnvironmentPreference);
 
   useEffect(() => {
     listEnvironmentsRef.current = listEnvironments;
@@ -471,22 +488,41 @@ function EnvironmentDropdown({ workspace }: { workspace?: string }) {
   useEffect(() => {
     deleteEnvironmentRef.current = deleteEnvironment;
   }, [deleteEnvironment]);
+  useEffect(() => {
+    getActiveEnvironmentPreferenceRef.current = getActiveEnvironmentPreference;
+  }, [getActiveEnvironmentPreference]);
+  useEffect(() => {
+    setActiveEnvironmentPreferenceRef.current = setActiveEnvironmentPreference;
+  }, [setActiveEnvironmentPreference]);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const envs = await listEnvironmentsRef.current({
-          data: { workspace },
-        });
+        const [envs, preferredEnvironmentId] = await Promise.all([
+          listEnvironmentsRef.current({
+            data: { workspace },
+          }),
+          getActiveEnvironmentPreferenceRef.current({
+            data: { workspace },
+          }).catch(() => null),
+        ]);
         if (!cancelled && Array.isArray(envs) && envs.length > 0) {
           setEnvironments(envs);
-          // Auto-select the default environment, or first
+
           const defaultEnv = envs.find((e) => e.isDefault) ?? envs[0];
+          const preferredExists =
+            typeof preferredEnvironmentId === "string" &&
+            envs.some((env) => env._id === preferredEnvironmentId);
+          const resolvedId = preferredExists
+            ? preferredEnvironmentId!
+            : defaultEnv._id;
+
           setSelectedId((prev) => {
             if (prev && envs.some((e) => e._id === prev)) return prev;
-            return defaultEnv._id;
+            return resolvedId;
           });
+
         }
       } catch {
         if (!cancelled) {
@@ -520,23 +556,38 @@ function EnvironmentDropdown({ workspace }: { workspace?: string }) {
   const selectedEnv = environments.find((e) => e._id === selectedId);
   const defaultEnv = environments.find((e) => e.isDefault);
 
-  function selectEnvironment(envId: string) {
+  async function selectEnvironment(envId: string) {
     setSelectedId(envId);
-    const params = new URLSearchParams(searchStr || "");
     const isDefault = environments.find((e) => e._id === envId)?.isDefault;
-    if (isDefault) {
-      params.delete("environmentId");
-    } else {
-      params.set("environmentId", envId);
+    const persistedEnvironmentId = isDefault ? null : envId;
+
+    try {
+      await setActiveEnvironmentPreferenceRef.current({
+        data: persistedEnvironmentId
+          ? { workspace, environmentId: persistedEnvironmentId }
+          : { workspace },
+      });
+    } catch {
+      // silently fail; in-memory selection still updates
     }
+
+    const params = new URLSearchParams(searchStr || "");
+    params.delete("environmentId");
     const search = Object.fromEntries(params.entries());
-    navigate({
+
+    await navigate({
       to: pathname as any,
-      search: Object.keys(search).length > 0 ? search as any : undefined,
+      search: Object.keys(search).length > 0 ? (search as any) : undefined,
+      replace: true,
     });
+    await router.invalidate();
   }
 
   async function handleCreateSubmit() {
+    if (creatingSubmitting) {
+      return;
+    }
+
     const name = newEnvName.trim();
     if (!name || name.length < 3 || !/^[a-zA-Z][a-zA-Z _-]*$/.test(name)) {
       setNewEnvNameError(true);
@@ -548,20 +599,24 @@ function EnvironmentDropdown({ workspace }: { workspace?: string }) {
       (e) => e.name.toLowerCase() === name.toLowerCase(),
     );
     if (existing) {
-      selectEnvironment(existing._id);
+      void selectEnvironment(existing._id);
       setCreating(false);
       setNewEnvName("");
       setOpen(false);
       return;
     }
+
+    setCreatingSubmitting(true);
     try {
       const created = await createEnvironmentRef.current({
         data: { name, workspace },
       });
       setEnvironments((prev) => [...prev, created]);
-      selectEnvironment(created._id);
+      void selectEnvironment(created._id);
     } catch {
       // silently fail
+    } finally {
+      setCreatingSubmitting(false);
     }
     setCreating(false);
     setNewEnvName("");
@@ -580,7 +635,7 @@ function EnvironmentDropdown({ workspace }: { workspace?: string }) {
       });
       setEnvironments((prev) => prev.filter((e) => e._id !== deleteTarget._id));
       if (selectedId === deleteTarget._id) {
-        selectEnvironment(migrateTarget);
+        void selectEnvironment(migrateTarget);
       }
     } catch {
       // silently fail
@@ -626,11 +681,18 @@ function EnvironmentDropdown({ workspace }: { workspace?: string }) {
                     <button
                       className="min-w-0 flex-1 text-left text-sm"
                       onClick={() => {
-                        selectEnvironment(env._id);
+                        void selectEnvironment(env._id);
                         setOpen(false);
                       }}
                     >
-                      {env.name}
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate">{env.name}</span>
+                        {env.isDefault ? (
+                          <span className="rounded-[3px] border border-dash-border-soft px-1 py-0 text-[10px] font-medium uppercase tracking-[0.02em] text-dash-text-extra-faded">
+                            default
+                          </span>
+                        ) : null}
+                      </span>
                     </button>
                     {isDeletable && (
                       <button
@@ -655,33 +717,39 @@ function EnvironmentDropdown({ workspace }: { workspace?: string }) {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    handleCreateSubmit();
+                    void handleCreateSubmit();
                   }}
                 >
-                  <input
-                    ref={createInputRef}
-                    type="text"
-                    value={newEnvName}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setNewEnvName(v);
-                      if (newEnvNameError) {
-                        const t = v.trim();
-                        if (t.length >= 3 && /^[a-zA-Z][a-zA-Z _-]*$/.test(t)) {
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={createInputRef}
+                      type="text"
+                      value={newEnvName}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setNewEnvName(v);
+                        if (newEnvNameError) {
+                          const t = v.trim();
+                          if (t.length >= 3 && /^[a-zA-Z][a-zA-Z _-]*$/.test(t)) {
+                            setNewEnvNameError(false);
+                          }
+                        }
+                      }}
+                      placeholder="Environment name"
+                      className={`w-full bg-transparent text-sm text-dash-text-body placeholder:text-dash-text-extra-faded outline-none ${newEnvNameError ? "text-[#f05252]" : ""}`}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape" && !creatingSubmitting) {
+                          setCreating(false);
+                          setNewEnvName("");
                           setNewEnvNameError(false);
                         }
-                      }
-                    }}
-                    placeholder="Environment name"
-                    className={`w-full bg-transparent text-sm text-dash-text-body placeholder:text-dash-text-extra-faded outline-none ${newEnvNameError ? "text-[#f05252]" : ""}`}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        setCreating(false);
-                        setNewEnvName("");
-                        setNewEnvNameError(false);
-                      }
-                    }}
-                  />
+                      }}
+                      disabled={creatingSubmitting}
+                    />
+                    {creatingSubmitting ? (
+                      <Spinner size="size-3.5" className="shrink-0 text-dash-text-faded" />
+                    ) : null}
+                  </div>
                 </form>
               </div>
             ) : (

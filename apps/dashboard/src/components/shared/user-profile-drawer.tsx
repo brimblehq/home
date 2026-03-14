@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import axios from "axios";
 import { Drawer } from "vaul";
 import { cn } from "@brimble/ui";
@@ -25,7 +25,12 @@ import { InviteMembersModal } from "../settings/invite-members-modal";
 import { WarningModal } from "./warning-modal";
 import { GlossyButton } from "./glossy-button";
 import { OtpInput } from "../auth/auth-split-layout";
+import { CheckCircle, XCircle } from "@phosphor-icons/react";
 import { logoutServerFn } from "@/server/auth/actions";
+import { listActivityLogsServerFn } from "@/server/activity-logs/actions";
+import { listProjectEnvironmentsServerFn } from "@/server/environments/actions";
+import type { ProjectEnvironment } from "@/backend/environments";
+import type { ActivityLogsResponse, ActivityLogGroup } from "@/backend/activity-logs";
 import {
   createSettingsApiKeyServerFn,
   decryptSettingsApiKeyServerFn,
@@ -51,6 +56,7 @@ import {
   removeWorkspaceTeamMemberServerFn,
   resendWorkspaceTeamInviteServerFn,
   updateWorkspaceTeamProfileServerFn,
+  updateMemberEnvironmentsServerFn,
 } from "@/server/teams/actions";
 import { listGithubAccountsServerFn } from "@/server/repositories/actions";
 import type {
@@ -98,76 +104,6 @@ const aboutNav = [
 const navItemBase =
   "flex items-center gap-2 whitespace-nowrap rounded-[4px] px-3.5 py-1.5 text-sm tracking-[-0.0224px] transition-colors w-full cursor-pointer";
 
-type ActivityStatus = "success" | "failed" | "warning";
-
-interface ActivitySessionItem {
-  id: string;
-  action: string;
-  category: "Authentication" | "Projects" | "Domains" | "Workspace" | "Security";
-  at: string;
-  status: ActivityStatus;
-  device?: string;
-  location?: string;
-  ipAddress?: string;
-}
-
-function buildActivitySessionItems(profile?: UserProfile | null, workspace?: string | null): ActivitySessionItem[] {
-  const now = Date.now();
-  const actor = profile?.username || profile?.email || "User";
-  const workspaceLabel = workspace?.trim() || "personal workspace";
-
-  return [
-    {
-      id: "auth-login",
-      action: `${actor} logged in`,
-      category: "Authentication",
-      at: new Date(now - 12 * 60 * 1000).toISOString(),
-      status: "success",
-      device: "Chrome on macOS",
-      location: "Lagos, NG",
-      ipAddress: "102.89.41.23",
-    },
-    {
-      id: "project-register",
-      action: `Registered project "frontend-portal" in ${workspaceLabel}`,
-      category: "Projects",
-      at: new Date(now - 46 * 60 * 1000).toISOString(),
-      status: "success",
-      device: "Chrome on macOS",
-    },
-    {
-      id: "domain-purchase",
-      action: `Purchased domain "brimblelabs.dev"`,
-      category: "Domains",
-      at: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
-      status: "success",
-      device: "Safari on iPhone",
-      location: "Abuja, NG",
-      ipAddress: "105.112.78.41",
-    },
-    {
-      id: "logout",
-      action: `${actor} logged out`,
-      category: "Authentication",
-      at: new Date(now - 4 * 60 * 60 * 1000).toISOString(),
-      status: "success",
-      device: "Chrome on Windows",
-      location: "London, UK",
-      ipAddress: "51.142.33.80",
-    },
-    {
-      id: "security-attempt",
-      action: "Blocked sign-in attempt due to invalid OTP",
-      category: "Security",
-      at: new Date(now - 9 * 60 * 60 * 1000).toISOString(),
-      status: "warning",
-      device: "Firefox on Linux",
-      location: "Frankfurt, DE",
-      ipAddress: "18.193.14.40",
-    },
-  ];
-}
-
 function formatActivityTime(value: string): string {
   const timestamp = new Date(value).getTime();
 
@@ -199,62 +135,67 @@ function formatActivityTime(value: string): string {
   }).format(new Date(timestamp));
 }
 
-function groupActivityByDate(items: ActivitySessionItem[]): { label: string; items: ActivitySessionItem[] }[] {
-  const groups = new Map<string, ActivitySessionItem[]>();
-
-  for (const item of items) {
-    const date = new Date(item.at);
-    const now = new Date();
-    const isToday =
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth() &&
-      date.getDate() === now.getDate();
-
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const isYesterday =
-      date.getFullYear() === yesterday.getFullYear() &&
-      date.getMonth() === yesterday.getMonth() &&
-      date.getDate() === yesterday.getDate();
-
-    const label = isToday
-      ? "Today"
-      : isYesterday
-        ? "Yesterday"
-        : new Intl.DateTimeFormat("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          }).format(date);
-
-    const group = groups.get(label);
-    if (group) {
-      group.push(item);
-    } else {
-      groups.set(label, [item]);
-    }
-  }
-
-  return Array.from(groups, ([label, items]) => ({ label, items }));
-}
-
 function ActivitySessionForm({
-  items,
+  workspace,
+  initialData,
+  enabled = true,
 }: {
-  items: ActivitySessionItem[];
+  workspace?: string | null;
+  initialData?: ActivityLogsResponse | null;
+  enabled?: boolean;
 }) {
-  if (!items.length) {
-    return (
-      <div className="py-6 text-sm text-dash-text-faded">
-        No activity captured yet.
-      </div>
-    );
-  }
+  const getActivityLogs = useServerFn(listActivityLogsServerFn as any) as (args: {
+    data: { workspace?: string; page?: number; limit?: number };
+  }) => Promise<ActivityLogsResponse>;
 
-  const groups = groupActivityByDate(items);
+  const [groups, setGroups] = useState<ActivityLogGroup[]>(initialData?.logs ?? []);
+  const [isLoading, setIsLoading] = useState(!initialData && enabled);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(initialData?.pagination.totalPages ?? 0);
+
+  const getActivityLogsRef = useRef(getActivityLogs);
+  getActivityLogsRef.current = getActivityLogs;
+
+  const fetchLogs = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await getActivityLogsRef.current({
+        data: {
+          workspace: workspace ?? undefined,
+          page,
+          limit: 20,
+        },
+      });
+      setGroups(result.logs);
+      setTotalPages(result.pagination.totalPages);
+    } catch {
+      setError("Failed to load activity logs.");
+      setGroups([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [workspace, page]);
+
+  // Skip the initial fetch if we already have SSR data for page 1
+  const skipInitialFetch = useRef(Boolean(initialData));
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
+    }
+    fetchLogs();
+  }, [enabled, fetchLogs]);
+
+  const hasItems = groups.some((g) => g.items.length > 0);
 
   return (
-    <div className="flex max-w-[760px] flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div>
         <p className="text-sm font-medium text-dash-text-strong">User activity sessions</p>
         <p className="text-xs text-dash-text-faded">
@@ -262,33 +203,83 @@ function ActivitySessionForm({
         </p>
       </div>
 
-      {groups.map((group) => (
-        <div key={group.label} className="flex flex-col">
-          <p className="mb-2 text-xs font-medium text-dash-text-faded">{group.label}</p>
-          <div className="flex flex-col">
-            {group.items.map((item, index) => (
-              <div
-                key={item.id}
-                className={cn(
-                  "grid gap-2 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center",
-                  index !== 0 && "border-t border-dash-border-soft",
-                )}
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium leading-5 text-dash-text-strong">{item.action}</p>
-                  <p className="mt-1 text-xs text-dash-text-faded">
-                    {item.category}
-                    {item.device ? ` • ${item.device}` : ""}
-                    {item.location ? ` • ${item.location}` : ""}
-                    {item.ipAddress ? ` • IP ${item.ipAddress}` : ""}
-                  </p>
-                </div>
-                <span className="text-xs text-dash-text-extra-faded justify-self-start md:justify-self-end">{formatActivityTime(item.at)}</span>
-              </div>
-            ))}
-          </div>
+      {isLoading && (
+        <div className="py-6 text-sm text-dash-text-faded">Loading activity...</div>
+      )}
+
+      {error && (
+        <div className="py-6 text-sm text-red-500">{error}</div>
+      )}
+
+      {!isLoading && !error && !hasItems && (
+        <div className="py-6 text-sm text-dash-text-faded">
+          No activity captured yet.
         </div>
-      ))}
+      )}
+
+      {!isLoading && !error && hasItems && (
+        <>
+          {groups.map((group) =>
+            group.items.length === 0 ? null : (
+              <div key={group.label} className="flex flex-col">
+                <p className="mb-2 text-xs font-medium text-dash-text-faded">{group.label}</p>
+                <div className="flex flex-col">
+                  {group.items.map((item, index) => (
+                    <div
+                      key={item._id}
+                      className={cn(
+                        "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-3",
+                        index !== 0 && "border-t border-dash-border-soft",
+                      )}
+                    >
+                      {item.status === "success" ? (
+                        <CheckCircle weight="fill" className="size-5 shrink-0 text-green-500" />
+                      ) : (
+                        <XCircle weight="fill" className="size-5 shrink-0 text-red-500" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium leading-5 text-dash-text-strong">
+                          {item.description}
+                        </p>
+                        <p className="mt-1 text-xs text-dash-text-faded">
+                          {item.context}
+                          {item.user_agent ? ` \u2022 ${item.user_agent}` : ""}
+                          {item.ip_address ? ` \u2022 IP ${item.ip_address}` : ""}
+                        </p>
+                      </div>
+                      <span className="text-xs text-dash-text-extra-faded">
+                        {formatActivityTime(item.created_at)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ),
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="rounded px-3 py-1 text-xs font-medium text-dash-text-faded transition-colors hover:text-dash-text-body disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="text-xs text-dash-text-faded">
+                {page} / {totalPages}
+              </span>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="rounded px-3 py-1 text-xs font-medium text-dash-text-faded transition-colors hover:text-dash-text-body disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -1673,6 +1664,9 @@ export function UserProfileDrawer({
   initialWorkspaceTeamMembers = null,
   initialPaymentMethods = null,
   initialInvoices = null,
+  initialActivityLogs = null,
+  initialSubscriptionStats = null,
+  initialProjectEnvironments = null,
   requestedTab,
 }: {
   open: boolean;
@@ -1681,6 +1675,9 @@ export function UserProfileDrawer({
   initialWorkspaceTeamMembers?: TeamDetails | null;
   initialPaymentMethods?: PaymentMethod[] | null;
   initialInvoices?: any;
+  initialActivityLogs?: ActivityLogsResponse | null;
+  initialSubscriptionStats?: import("@/backend/payments").SubscriptionStats | null;
+  initialProjectEnvironments?: ProjectEnvironment[] | null;
   requestedTab?: ProfileTab;
 }) {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
@@ -1775,10 +1772,6 @@ export function UserProfileDrawer({
     : null;
 
   const profile = mapSettingsSnapshotToDrawerProfile(snapshot);
-  const activityItems = useMemo(
-    () => buildActivitySessionItems(profile, activeWorkspaceSlug),
-    [profile, activeWorkspaceSlug],
-  );
 
   const currentWorkspaceRole = (() => {
     if (!hasActiveWorkspace || !workspaceTeam) return null;
@@ -2289,8 +2282,19 @@ export function UserProfileDrawer({
                   Profile settings are unavailable right now.
                 </div>
               )}
-              {activeTab === ProfileTab.ActivitySession && (
-                <ActivitySessionForm items={activityItems} />
+              {open && (
+                <div
+                  className={cn(
+                    activeTab === ProfileTab.ActivitySession ? "block" : "hidden",
+                  )}
+                  aria-hidden={activeTab !== ProfileTab.ActivitySession}
+                >
+                  <ActivitySessionForm
+                    workspace={activeWorkspaceSlug}
+                    initialData={initialActivityLogs}
+                    enabled={open}
+                  />
+                </div>
               )}
               {activeTab === ProfileTab.Members && activeWorkspaceSlug && (
                 <MembersForm
@@ -2304,6 +2308,7 @@ export function UserProfileDrawer({
                       : null
                   }
                   showBillingInfo={canSeeBilling}
+                  initialEnvironments={initialProjectEnvironments}
                 />
               )}
               {activeTab === ProfileTab.Notifications && profile && (
@@ -2391,6 +2396,7 @@ export function UserProfileDrawer({
                   initialPaymentMethods={initialPaymentMethods}
                   initialInvoices={hasActiveWorkspace ? undefined : initialInvoices}
                   initialSpendingStats={snapshot?.billing.spending}
+                  initialSubscriptionStats={initialSubscriptionStats}
                   hidePaymentMethods={hasActiveWorkspace}
                   hideCurrentPlan={hasActiveWorkspace}
                   teamId={hasActiveWorkspace ? workspaceTeam?.id : undefined}
@@ -3369,11 +3375,13 @@ function MembersForm({
   initialTeam = null,
   currentUser = null,
   showBillingInfo = true,
+  initialEnvironments = null,
 }: {
   workspace: string;
   initialTeam?: TeamDetails | null;
   currentUser?: Pick<UserProfile, "uniqueId" | "email"> | null;
   showBillingInfo?: boolean;
+  initialEnvironments?: ProjectEnvironment[] | null;
 }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const pricing = usePricing();
@@ -3403,6 +3411,86 @@ function MembersForm({
   const [busyMemberAction, setBusyMemberAction] = useState<
     "resend" | "revoke" | "remove" | null
   >(null);
+  const [environments, setEnvironments] = useState<ProjectEnvironment[]>(initialEnvironments ?? []);
+  const [envAccess, setEnvAccess] = useState<Record<string, Set<string>>>({});
+  const [envBusyKey, setEnvBusyKey] = useState<string | null>(null);
+
+  const updateMemberEnvs = useServerFn(
+    updateMemberEnvironmentsServerFn as any,
+  ) as (args: {
+    data: {
+      workspace: string;
+      memberId: string;
+      permissions: Array<{ id: string; enabled: boolean }>;
+      project_environments: string[];
+    };
+  }) => Promise<{ ok: true }>;
+
+  const getEnvironments = useServerFn(
+    listProjectEnvironmentsServerFn as any,
+  ) as (args: { data: { workspace?: string } }) => Promise<ProjectEnvironment[]>;
+
+  useEffect(() => {
+    if (initialEnvironments?.length) {
+      setEnvironments(initialEnvironments);
+    } else {
+      void getEnvironments({ data: { workspace } })
+        .then(setEnvironments)
+        .catch(() => {});
+    }
+  }, [initialEnvironments, workspace]);
+
+  useEffect(() => {
+    if (!team?.members?.length) return;
+    setEnvAccess((prev) => {
+      const next = { ...prev };
+      for (const m of team.members) {
+        const memberId = String(m.id);
+        if (m.project_environments?.length) {
+          next[memberId] = new Set(m.project_environments.map((e) => e._id));
+        } else if (!next[memberId]) {
+          next[memberId] = new Set(environments.map((e) => e._id));
+        }
+      }
+      return next;
+    });
+  }, [team, environments]);
+
+  const toggleEnvAccess = async (memberId: string, envId: string) => {
+    const current = new Set(envAccess[memberId] ?? []);
+    if (current.has(envId)) current.delete(envId);
+    else current.add(envId);
+    const nextIds = Array.from(current);
+
+    setEnvAccess((prev) => ({ ...prev, [memberId]: current }));
+    setEnvBusyKey(`${memberId}:${envId}`);
+
+    try {
+      const member = team?.members.find((m) => m.id === memberId);
+      const permissions = (member?.permissions ?? []).map((p) => ({
+        id: p.id,
+        enabled: p.enabled,
+      }));
+      await updateMemberEnvs({
+        data: {
+          workspace,
+          memberId,
+          permissions,
+          project_environments: nextIds,
+        },
+      });
+    } catch (error) {
+      const reverted = new Set(current);
+      if (reverted.has(envId)) reverted.delete(envId);
+      else reverted.add(envId);
+      setEnvAccess((prev) => ({ ...prev, [memberId]: reverted }));
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update environment access",
+      );
+    } finally {
+      setEnvBusyKey(null);
+    }
+  };
 
   const members = mapActiveMembers(team);
   const pendingInvites = mapPendingInvites(team);
@@ -3503,55 +3591,94 @@ function MembersForm({
             const canManageTarget =
               canManageMembers && !isSelf && member.role !== "Creator";
 
+            const memberEnvs = envAccess[member.id] ?? new Set<string>();
+
             return (
-              <div key={member.id} className="flex items-center gap-3">
-                <Avatar
-                  src={member.avatarUrl}
-                  fallbackSeed={member.email || member.name || member.id}
-                  alt={member.name}
-                  className="size-8 shrink-0 rounded-full border border-dash-border-soft object-cover"
-                />
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                    {member.name}
+              <div key={member.id} className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <Avatar
+                    src={member.avatarUrl}
+                    fallbackSeed={member.email || member.name || member.id}
+                    alt={member.name}
+                    className="size-8 shrink-0 rounded-full border border-dash-border-soft object-cover"
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
+                      {member.name}
+                    </span>
+                    <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+                      {member.email}
+                    </span>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                      roleBadgeStyles[member.role] ?? roleBadgeStyles.Member
+                    }`}
+                  >
+                    {member.role}
                   </span>
-                  <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                    {member.email}
-                  </span>
+                  <MemberActionMenu
+                    member={member}
+                    removing={busyMemberId === member.id}
+                    canChangeRole={canManageTarget}
+                    canRemove={canManageTarget}
+                    onRemove={async (target) => {
+                      try {
+                        setBusyMemberId(target.id);
+                        setBusyMemberAction("remove");
+                        await removeTeamMember({
+                          data: { workspace, memberId: target.id },
+                        });
+                        toast.success("Member removed");
+                        await refreshMembers();
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to remove member",
+                        );
+                      } finally {
+                        setBusyMemberId(null);
+                        setBusyMemberAction(null);
+                      }
+                    }}
+                  />
                 </div>
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                    roleBadgeStyles[member.role] ?? roleBadgeStyles.Member
-                  }`}
-                >
-                  {member.role}
-                </span>
-                <MemberActionMenu
-                  member={member}
-                  removing={busyMemberId === member.id}
-                  canChangeRole={canManageTarget}
-                  canRemove={canManageTarget}
-                  onRemove={async (target) => {
-                    try {
-                      setBusyMemberId(target.id);
-                      setBusyMemberAction("remove");
-                      await removeTeamMember({
-                        data: { workspace, memberId: target.id },
-                      });
-                      toast.success("Member removed");
-                      await refreshMembers();
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to remove member",
+                {environments.length > 0 && canManageMembers && member.role !== "Creator" && (
+                  <div className="flex flex-wrap items-center gap-1.5 pl-11">
+                    <SimpleTooltip
+                      content="Control which environments this member can access. Click to toggle."
+                      side="top"
+                      delayDuration={200}
+                    >
+                      <span className="mr-0.5 cursor-default text-[11px] text-dash-text-extra-faded">
+                        Environments:
+                      </span>
+                    </SimpleTooltip>
+                    {environments.map((env) => {
+                      const active = memberEnvs.has(env._id);
+                      const thisBusy = envBusyKey === `${member.id}:${env._id}`;
+                      const anyBusy = envBusyKey?.startsWith(`${member.id}:`) ?? false;
+                      return (
+                        <button
+                          key={env._id}
+                          disabled={anyBusy}
+                          onClick={() => toggleEnvAccess(member.id, env._id)}
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-all duration-200 disabled:opacity-50 ${
+                            active
+                              ? "bg-[#4879f8]/10 text-[#4879f8] hover:bg-[#4879f8]/20 hover:shadow-[0_0_0_1px_rgba(72,121,248,0.25)]"
+                              : "bg-dash-bg-elevated text-dash-text-extra-faded line-through hover:bg-dash-bg-elevated/80 hover:text-dash-text-faded hover:no-underline"
+                          }`}
+                        >
+                          {thisBusy && (
+                            <span className="size-2.5 animate-spin rounded-full border border-current border-t-transparent" />
+                          )}
+                          {env.name}
+                        </button>
                       );
-                    } finally {
-                      setBusyMemberId(null);
-                      setBusyMemberAction(null);
-                    }
-                  }}
-                />
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}

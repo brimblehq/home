@@ -6,6 +6,7 @@ import appConfig from "@/config";
 export interface BackendClientConfig {
   baseUrl: string;
   getAccessToken?: () => string | null | Promise<string | null>;
+  defaultHeaders?: Record<string, string>;
 }
 
 export interface BackendClient extends ApiClient {
@@ -163,6 +164,7 @@ export function createBackendClient(config: BackendClientConfig): BackendClient 
       const headers: Record<string, string> = {
         Accept: "application/json",
         "Content-Type": "application/json",
+        ...(config.defaultHeaders ?? {}),
         ...(options?.headers ?? {}),
       };
 

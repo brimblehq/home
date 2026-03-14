@@ -23,6 +23,8 @@ import type { Workspace } from "@/backend/workspaces";
 import type { Project } from "@/backend/projects";
 import type { TeamDetails } from "@/backend/teams";
 import type { AppTooltipMessage } from "@/backend/messages";
+import type { ActivityLogsResponse } from "@/backend/activity-logs";
+import type { SubscriptionStats } from "@/backend/payments";
 import type { PaymentMethod } from "@/backend/payments";
 import type { Pricing } from "@/types/pricing";
 import { PricingProvider } from "@/contexts/pricing-context";
@@ -519,6 +521,9 @@ export function DashboardLayout({
   initialPaymentMethods,
   initialInvoices,
   initialPricing,
+  initialActivityLogs,
+  initialSubscriptionStats,
+  initialProjectEnvironments,
 }: {
   children: ReactNode;
   initialWorkspaceSlug?: string | null;
@@ -531,6 +536,9 @@ export function DashboardLayout({
   initialPaymentMethods?: PaymentMethod[] | null;
   initialInvoices?: any;
   initialPricing?: Pricing;
+  initialActivityLogs?: ActivityLogsResponse | null;
+  initialSubscriptionStats?: SubscriptionStats | null;
+  initialProjectEnvironments?: import("@/backend/environments").ProjectEnvironment[] | null;
 }) {
   const pathname = useRouterState({
     select: (s) => s.location.pathname,
@@ -1036,6 +1044,9 @@ export function DashboardLayout({
           initialSnapshot={activeSettingsSnapshot}
           initialPaymentMethods={initialPaymentMethods ?? null}
           initialInvoices={initialInvoices ?? null}
+          initialActivityLogs={initialActivityLogs ?? null}
+          initialSubscriptionStats={initialSubscriptionStats ?? null}
+          initialProjectEnvironments={initialProjectEnvironments ?? null}
         />
       </div>
     </ProfileDrawerProvider>

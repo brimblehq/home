@@ -9,6 +9,24 @@ import {
   pickString,
 } from "./normalize";
 
+export interface MemberPermission {
+  id: string;
+  permissionId?: string;
+  enabled: boolean;
+  permission?: {
+    title?: string;
+    type?: string;
+    role?: string;
+  };
+}
+
+export interface TeamMemberEnvironment {
+  _id: string;
+  name: string;
+  slug: string;
+  isDefault: boolean;
+}
+
 export interface TeamMember {
   id: string;
   userId?: string;
@@ -20,7 +38,8 @@ export interface TeamMember {
   accepted?: boolean;
   avatarUrl?: string;
   isCreator?: boolean;
-  permissions?: unknown[];
+  permissions?: MemberPermission[];
+  project_environments?: TeamMemberEnvironment[];
   invitedAt?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -68,6 +87,14 @@ export interface TeamsApi {
     resend?: boolean;
   }): Promise<{ ok: true }>;
   removeMember(teamId: string, memberId: string): Promise<{ ok: true }>;
+  updateMemberPermissions(
+    teamId: string,
+    memberId: string,
+    input: {
+      permissions: Array<{ id: string; enabled: boolean }>;
+      project_environments?: string[];
+    },
+  ): Promise<{ ok: true }>;
   checkInvitation(teamName: string): Promise<TeamInvitation>;
   acceptInvite(teamId: string): Promise<{ ok: true }>;
   denyInvite(teamId: string): Promise<{ ok: true }>;
@@ -116,7 +143,41 @@ function mapTeamMember(item: unknown): TeamMember | null {
     isCreator:
       pickBoolean(row, "isCreator") ??
       asBoolean(row.creator),
-    permissions: Array.isArray(row.permissions) ? row.permissions : undefined,
+    permissions: Array.isArray(row.permissions)
+      ? (row.permissions
+          .map((p: unknown): MemberPermission | null => {
+            const pr = asRecord(p);
+            if (!pr) return null;
+            const permRow = asRecord(pr.permission);
+            return {
+              id: String(asStringOrNumber(pr.id) ?? asStringOrNumber(pr._id) ?? ""),
+              permissionId: pickString(pr, "permissionId"),
+              enabled: pickBoolean(pr, "enabled") ?? true,
+              permission: permRow
+                ? {
+                    title: pickString(permRow, "title"),
+                    type: pickString(permRow, "type"),
+                    role: pickString(permRow, "role"),
+                  }
+                : undefined,
+            };
+          })
+          .filter((p): p is MemberPermission => p !== null))
+      : undefined,
+    project_environments: Array.isArray(row.project_environments)
+      ? (row.project_environments
+          .map((e: unknown): TeamMemberEnvironment | null => {
+            const er = asRecord(e);
+            if (!er) return null;
+            return {
+              _id: String(asStringOrNumber(er._id) ?? asStringOrNumber(er.id) ?? ""),
+              name: pickString(er, "name") ?? "",
+              slug: pickString(er, "slug") ?? "",
+              isDefault: pickBoolean(er, "isDefault") ?? false,
+            };
+          })
+          .filter((e): e is TeamMemberEnvironment => e !== null))
+      : undefined,
     invitedAt: pickString(row, "invitedAt"),
     createdAt: pickString(row, "createdAt"),
     updatedAt: pickString(row, "updatedAt"),
@@ -208,6 +269,23 @@ export function createTeamsApi(client: ApiClient): TeamsApi {
         {
           method: "POST",
           body: {},
+        },
+      );
+
+      return { ok: true } as const;
+    },
+
+    async updateMemberPermissions(teamId, memberId, input) {
+      await client.request<any>(
+        `/core/v1/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(memberId)}/permissions/update`,
+        {
+          method: "PUT",
+          body: {
+            permissions: input.permissions,
+            ...(input.project_environments
+              ? { project_environments: input.project_environments }
+              : {}),
+          },
         },
       );
 

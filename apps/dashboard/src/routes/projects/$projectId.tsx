@@ -2,17 +2,26 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createFileRoute,
   Outlet,
+  redirect,
   useRouterState,
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ProjectSubnav } from "../../components/project/project-subnav";
 import { DeploymentLogsDrawer } from "../../components/shared/deployment-logs-drawer";
 import { getProjectDetailsServerFn, listHomeProjectsServerFn } from "@/server/projects/actions";
+import {
+  getActiveEnvironmentPreferenceServerFn,
+  listProjectEnvironmentsServerFn,
+} from "@/server/environments/actions";
 import { listDeploymentRunLogsServerFn } from "@/server/deployments/actions";
 import type { Project as BackendProject } from "@/backend/projects";
 import type { ApiListResponse } from "@/backend";
 import type { DeploymentLog } from "@/backend/deployments";
 import type { DeploymentDrawerLogEntry } from "@/utils/deployment-logs";
+import {
+  hasExplicitEnvironmentSelection,
+  resolveEnvironmentId,
+} from "@/utils/environment-selection";
 import {
   ProjectDeploymentLogsDrawerContext,
   type ProjectDeploymentLogsDrawerContextValue,
@@ -28,8 +37,12 @@ const FAILURE_LOG_PATTERN = /deployment failed|build failed|failed to deploy/i;
 const PROJECT_CACHE_MS = 60_000;
 const projectCache = new Map<string, { project: BackendProject; timestamp: number }>();
 
-async function fetchProjectCached(projectId: string, workspace?: string) {
-  const key = `${projectId}:${workspace ?? ""}`;
+async function fetchProjectCached(
+  projectId: string,
+  workspace?: string,
+  environmentId?: string,
+) {
+  const key = `${projectId}:${workspace ?? ""}:${environmentId ?? ""}`;
   const cached = projectCache.get(key);
 
   if (cached && Date.now() - cached.timestamp < PROJECT_CACHE_MS) {
@@ -37,9 +50,9 @@ async function fetchProjectCached(projectId: string, workspace?: string) {
   }
 
   const project = await (getProjectDetailsServerFn as unknown as (input: {
-    data: { projectId: string; workspace?: string };
+    data: { projectId: string; workspace?: string; environmentId?: string };
   }) => Promise<BackendProject>)({
-    data: { projectId, workspace },
+    data: { projectId, workspace, environmentId },
   });
 
   projectCache.set(key, { project, timestamp: Date.now() });
@@ -64,14 +77,56 @@ export const Route = createFileRoute("/projects/$projectId")({
   beforeLoad: async ({ params, location }) => {
     const searchParams = new URLSearchParams(location.searchStr || "");
     const workspace = searchParams.get("workspace") || undefined;
-    const [project, projectSwitcherProjects] = await Promise.all([
-      fetchProjectCached(params.projectId, workspace),
-      (listHomeProjectsServerFn as unknown as (input: {
+    const searchEnvironmentId = searchParams.get("environmentId")?.trim() || undefined;
+    const hasExplicitEnvironment = hasExplicitEnvironmentSelection(searchEnvironmentId);
+    const [environments, persistedEnvironmentId] = await Promise.all([
+      (listProjectEnvironmentsServerFn as unknown as (input: {
         data: { workspace?: string };
-      }) => Promise<ApiListResponse<BackendProject>>)({
+      }) => Promise<Array<{ _id: string; isDefault?: boolean }>>)({
         data: { workspace },
-      }),
+      }).catch(() => []),
+      (getActiveEnvironmentPreferenceServerFn as unknown as (input: {
+        data?: { workspace?: string };
+      }) => Promise<string | null>)({
+        data: { workspace },
+      }).catch(() => null),
     ]);
+    const environmentId = resolveEnvironmentId({
+      requestedEnvironmentId: searchEnvironmentId,
+      preferredEnvironmentId: persistedEnvironmentId,
+      environments,
+    });
+    const projectSwitcherProjects = await (listHomeProjectsServerFn as unknown as (input: {
+      data: { workspace?: string; environmentId?: string };
+    }) => Promise<ApiListResponse<BackendProject>>)({
+      data: { workspace, environmentId },
+    });
+
+    const requestedProjectId = params.projectId.trim().toLowerCase();
+    const projectVisibleInActiveEnvironment = projectSwitcherProjects.items.some((item) => {
+      const candidates = [item.slug, item.id, item.name]
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim().toLowerCase());
+      return candidates.includes(requestedProjectId);
+    });
+
+    if (!projectVisibleInActiveEnvironment) {
+      throw redirect({
+        to: "/projects",
+        search: {
+          ...(workspace ? { workspace } : {}),
+          ...(hasExplicitEnvironment && environmentId
+            ? { environmentId }
+            : {}),
+        } as any,
+      });
+    }
+
+    const project = await fetchProjectCached(
+      params.projectId,
+      workspace,
+      environmentId,
+    );
 
     return { project, workspace, projectSwitcherProjects };
   },

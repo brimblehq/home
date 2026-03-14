@@ -68,11 +68,13 @@ function buildTasks({
     external: true,
   });
 
-  tasks.push({
-    label: "Add a payment card",
-    done: hasPaymentCard,
-    onClick: onAddPaymentCard,
-  });
+  if (!isTeamWorkspace) {
+    tasks.push({
+      label: "Add a payment card",
+      done: hasPaymentCard,
+      onClick: onAddPaymentCard,
+    });
+  }
 
   // Only show "Invite a team member" on team workspaces
   if (isTeamWorkspace && showInviteTeamMemberTask) {

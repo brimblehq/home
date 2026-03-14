@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getCookie } from "@tanstack/react-start/server";
 import type { BackendApi } from "@/backend";
 import type {
   DomainDetailsRecord,
@@ -6,8 +7,10 @@ import type {
   PaginatedDomainsResponse,
 } from "@/backend/domains";
 import type { PaginatedProjectsResponse } from "@/backend/projects";
+import config from "@/config";
 import { withTokenRefresh } from "@/server/shared/backend";
 import { domainsLogger, domainsDnsLogger } from "@/server/shared/logger";
+import { resolveEnvironmentId } from "@/utils/environment-selection";
 
 async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
   const workspaceSlug = workspace?.trim().toLowerCase();
@@ -24,6 +27,40 @@ async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
   return undefined;
 }
 
+function buildEnvironmentPreferenceCookieName(workspace?: string) {
+  const scope = (workspace?.trim().toLowerCase() || "__personal__").replace(
+    /[^a-z0-9_-]/g,
+    "_",
+  );
+  return `${config.environmentPreferenceCookiePrefix}${scope}`;
+}
+
+async function resolveDomainsEnvironmentId(
+  api: BackendApi,
+  input: {
+    workspace?: string;
+    teamId?: string;
+    requestedEnvironmentId?: string;
+  },
+) {
+  const requestedEnvironmentId = input.requestedEnvironmentId?.trim() || undefined;
+  if (requestedEnvironmentId === "all") {
+    return undefined;
+  }
+
+  const preferredEnvironmentId =
+    getCookie(buildEnvironmentPreferenceCookieName(input.workspace))?.trim() || null;
+  const environments = await api.environments
+    .listEnvironments({ teamId: input.teamId })
+    .catch(() => []);
+
+  return resolveEnvironmentId({
+    requestedEnvironmentId,
+    preferredEnvironmentId,
+    environments,
+  });
+}
+
 export const listDomainsPageServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
@@ -33,17 +70,25 @@ export const listDomainsPageServerFn = createServerFn({
         page?: number;
         q?: string;
         projectName?: string;
+        environmentId?: string;
       }
     | undefined;
 
   return withTokenRefresh(async (api) => {
     const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    const environmentId = await resolveDomainsEnvironmentId(api, {
+      workspace: payload?.workspace,
+      teamId,
+      requestedEnvironmentId: payload?.environmentId,
+    });
 
     return api.domains.list({
       page: payload?.page,
       q: payload?.q,
       projectName: payload?.projectName,
       teamId,
+      environmentId,
+      useEnvironmentHeader: Boolean(environmentId),
     });
   });
 });
@@ -55,6 +100,7 @@ export const refreshDomainStatusServerFn = createServerFn({
     | {
         workspace?: string;
         domainName: string;
+        environmentId?: string;
       }
     | undefined;
 
@@ -65,7 +111,16 @@ export const refreshDomainStatusServerFn = createServerFn({
 
   return withTokenRefresh(async (api) => {
     const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
-    return api.domains.getStatus(domainName, { teamId });
+    const environmentId = await resolveDomainsEnvironmentId(api, {
+      workspace: payload?.workspace,
+      teamId,
+      requestedEnvironmentId: payload?.environmentId,
+    });
+    return api.domains.getStatus(domainName, {
+      teamId,
+      environmentId,
+      useEnvironmentHeader: Boolean(environmentId),
+    });
   });
 });
 
@@ -76,6 +131,7 @@ export const getDomainDetailsServerFn = createServerFn({
     | {
         workspace?: string;
         domainName: string;
+        environmentId?: string;
       }
     | undefined;
 
@@ -86,8 +142,17 @@ export const getDomainDetailsServerFn = createServerFn({
 
   return withTokenRefresh(async (api) => {
     const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    const environmentId = await resolveDomainsEnvironmentId(api, {
+      workspace: payload?.workspace,
+      teamId,
+      requestedEnvironmentId: payload?.environmentId,
+    });
 
-    let domain = await api.domains.getByName(domainName, { teamId });
+    let domain = await api.domains.getByName(domainName, {
+      teamId,
+      environmentId,
+      useEnvironmentHeader: Boolean(environmentId),
+    });
 
     if (!domain && teamId) {
       domain = await api.domains.getByName(domainName, {});

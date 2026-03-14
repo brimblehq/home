@@ -7,6 +7,7 @@ import type {
   SetupIntentResult,
   AddPaymentMethodInput,
   Subscription,
+  SubscriptionStats,
   CreateSubscriptionInput,
   SwapPlanInput,
   BillEstimate,
@@ -35,6 +36,7 @@ export type {
   PurchaseResult,
   VerifyTransactionResult,
   UpdateSpendingLimitInput,
+  SubscriptionStats,
   UpdateTeamSpendingLimitInput,
   UpdateTeamSubscriptionInput,
 } from "./payments/types";
@@ -287,6 +289,18 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
           ...(input.concurrent_builds !== undefined ? { concurrent_builds: input.concurrent_builds } : {}),
         },
       });
+    },
+
+    async getSubscriptionStats(teamId?: string): Promise<SubscriptionStats> {
+      const res = await client.request<any>(`${base}/subscription/stats`, {
+        method: "GET",
+        query: teamId ? { team_id: teamId } : undefined,
+      });
+      const data = unwrapData<any>(res);
+      return {
+        total: typeof data?.total === "string" ? data.total : "$0.00",
+        next_payment_date: data?.next_payment_date ?? null,
+      };
     },
 
     async getSubscriptionSpecs(): Promise<any> {

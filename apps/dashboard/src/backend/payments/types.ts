@@ -63,6 +63,13 @@ export interface BillEstimate {
   next_billing_date: string;
 }
 
+/* ── Subscription stats (forecasted bill) ── */
+
+export interface SubscriptionStats {
+  total: string;
+  next_payment_date: string | null;
+}
+
 /* ── Setup intent ── */
 
 export interface SetupIntentResult {
@@ -158,5 +165,6 @@ export interface PaymentsApi {
   updateSpendingLimit(input: UpdateSpendingLimitInput): Promise<void>;
   updateTeamSpendingLimit(input: UpdateTeamSpendingLimitInput): Promise<void>;
   updateTeamSubscription(input: UpdateTeamSubscriptionInput): Promise<void>;
+  getSubscriptionStats(teamId?: string): Promise<SubscriptionStats>;
   getSubscriptionSpecs(): Promise<any>;
 }

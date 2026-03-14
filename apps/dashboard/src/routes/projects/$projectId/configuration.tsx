@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { IpWhitelist } from "@/components/shared/ip-whitelist";
-import { createFileRoute, getRouteApi, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  getRouteApi,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -8,7 +13,7 @@ import {
   Hammer,
   Cpu,
   Warning,
-  Database,
+  DatabaseIcon,
 } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
@@ -81,15 +86,21 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
     let frameworks: FrameworkOption[] = [];
     let scalingGroups: ScalingGroup[] = [];
     let regions: Region[] = [];
+    let environments: ProjectEnvironment[] = [];
     const repoName = project?.repo?.fullName || project?.repo?.name;
     const installationId = project?.repo?.installationId;
 
     const tasks: Promise<void>[] = [];
 
     tasks.push(
-      (listFrameworksServerFn as unknown as (input: {
-        data?: undefined;
-      }) => Promise<FrameworkOption[] | { result?: FrameworkOption[]; data?: FrameworkOption[] }>)({
+      (
+        listFrameworksServerFn as unknown as (input: {
+          data?: undefined;
+        }) => Promise<
+          | FrameworkOption[]
+          | { result?: FrameworkOption[]; data?: FrameworkOption[] }
+        >
+      )({
         data: undefined,
       })
         .then((items) => {
@@ -117,15 +128,17 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
     );
 
     tasks.push(
-      (listScalingGroupsServerFn as unknown as (input: {
-        data?: { workspace?: string };
-      }) => Promise<
-        | { items: ScalingGroup[]; message?: string }
-        | {
-            result?: { items?: ScalingGroup[]; message?: string };
-            data?: { items?: ScalingGroup[]; message?: string };
-          }
-      >)({
+      (
+        listScalingGroupsServerFn as unknown as (input: {
+          data?: { workspace?: string };
+        }) => Promise<
+          | { items: ScalingGroup[]; message?: string }
+          | {
+              result?: { items?: ScalingGroup[]; message?: string };
+              data?: { items?: ScalingGroup[]; message?: string };
+            }
+        >
+      )({
         data: { workspace },
       })
         .then((result) => {
@@ -154,9 +167,11 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
     );
 
     tasks.push(
-      (listRegionsServerFn as unknown as (input: {
-        data?: { type?: string; enabled?: boolean; teamId?: string };
-      }) => Promise<Region[]>)({
+      (
+        listRegionsServerFn as unknown as (input: {
+          data?: { type?: string; enabled?: boolean; teamId?: string };
+        }) => Promise<Region[]>
+      )({
         data: { type: "web", enabled: true },
       })
         .then((items) => {
@@ -167,11 +182,29 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
         }),
     );
 
+    tasks.push(
+      (
+        listProjectEnvironmentsServerFn as unknown as (input: {
+          data?: { workspace?: string };
+        }) => Promise<ProjectEnvironment[]>
+      )({
+        data: { workspace },
+      })
+        .then((items) => {
+          environments = Array.isArray(items) ? items : [];
+        })
+        .catch(() => {
+          environments = [];
+        }),
+    );
+
     if (repoName) {
       tasks.push(
-        (getGithubRepoServerFn as unknown as (input: {
-          data: { repoName: string; installationId?: number | string };
-        }) => Promise<RepositoryMetadata>)({
+        (
+          getGithubRepoServerFn as unknown as (input: {
+            data: { repoName: string; installationId?: number | string };
+          }) => Promise<RepositoryMetadata>
+        )({
           data: { repoName, installationId },
         })
           .then((result) => {
@@ -185,7 +218,14 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
 
     await Promise.all(tasks);
 
-    return { repo, frameworks, scalingGroups, regions, workspace };
+    return {
+      repo,
+      frameworks,
+      scalingGroups,
+      regions,
+      environments,
+      workspace,
+    };
   },
   component: ConfigurationPage,
 });
@@ -214,10 +254,26 @@ const diskSizes = Array.from({ length: 15 }, (_, index) => {
 
 import { ConfigSection } from "../../../types/enums";
 
-const allSections: { id: ConfigSection; label: string; icon: React.ReactNode }[] = [
-  { id: ConfigSection.General, label: "General", icon: <GearSix size={16} weight="duotone" /> },
-  { id: ConfigSection.Build, label: "Build & Deploy", icon: <Hammer size={16} weight="duotone" /> },
-  { id: ConfigSection.Resources, label: "Resources", icon: <Cpu size={16} weight="duotone" /> },
+const allSections: {
+  id: ConfigSection;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    id: ConfigSection.General,
+    label: "General",
+    icon: <GearSix size={16} weight="duotone" />,
+  },
+  {
+    id: ConfigSection.Build,
+    label: "Build & Deploy",
+    icon: <Hammer size={16} weight="duotone" />,
+  },
+  {
+    id: ConfigSection.Resources,
+    label: "Resources",
+    icon: <Cpu size={16} weight="duotone" />,
+  },
   {
     id: ConfigSection.Danger,
     label: "Danger zone",
@@ -233,22 +289,51 @@ function EnvironmentSection({
   projectId,
   currentEnvironmentId,
   workspace,
+  initialEnvironments = [],
 }: {
   projectId: string;
   currentEnvironmentId?: string | null;
   workspace?: string;
+  initialEnvironments?: ProjectEnvironment[];
 }) {
-  const [environments, setEnvironments] = useState<ProjectEnvironment[]>([]);
-  const [selectedId, setSelectedId] = useState(currentEnvironmentId ?? "");
+  const router = useRouter();
+  const [environments, setEnvironments] =
+    useState<ProjectEnvironment[]>(initialEnvironments);
+  const [selectedId, setSelectedId] = useState(() => {
+    if (
+      currentEnvironmentId &&
+      initialEnvironments.some((env) => env._id === currentEnvironmentId)
+    ) {
+      return currentEnvironmentId;
+    }
+
+    const defaultEnvironment =
+      initialEnvironments.find((env) => env.isDefault) ??
+      initialEnvironments[0];
+    return defaultEnvironment?._id ?? "";
+  });
   const [inheritEnvVars, setInheritEnvVars] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const listEnvironments = useServerFn(listProjectEnvironmentsServerFn as any) as (args: {
+  const listEnvironments = useServerFn(
+    listProjectEnvironmentsServerFn as any,
+  ) as (args: {
     data: { workspace?: string };
   }) => Promise<ProjectEnvironment[]>;
-  const moveProject = useServerFn(moveProjectEnvironmentServerFn as any) as (args: {
-    data: { projectId: string; environmentId: string; inheritEnvVars?: boolean; workspace?: string };
+  const moveProject = useServerFn(
+    moveProjectEnvironmentServerFn as any,
+  ) as (args: {
+    data: {
+      projectId: string;
+      environmentId: string;
+      inheritEnvVars?: boolean;
+      workspace?: string;
+    };
   }) => Promise<{ id: string; environmentId: string; inheritEnvVars: boolean }>;
+
+  useEffect(() => {
+    setEnvironments(initialEnvironments);
+  }, [initialEnvironments]);
 
   useEffect(() => {
     let cancelled = false;
@@ -257,30 +342,41 @@ function EnvironmentSection({
         const envs = await listEnvironments({ data: { workspace } });
         if (!cancelled && Array.isArray(envs)) {
           setEnvironments(envs);
-          if (!selectedId && envs.length > 0) {
+          if (
+            !selectedId ||
+            !envs.some((environment) => environment._id === selectedId)
+          ) {
             const defaultEnv = envs.find((e) => e.isDefault);
-            setSelectedId(defaultEnv?._id ?? envs[0]._id);
+            setSelectedId(defaultEnv?._id ?? envs[0]?._id ?? "");
           }
         }
       } catch {
         // keep empty
       }
     })();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspace]);
 
   useEffect(() => {
-    if (currentEnvironmentId) {
+    if (
+      currentEnvironmentId &&
+      environments.some(
+        (environment) => environment._id === currentEnvironmentId,
+      )
+    ) {
       setSelectedId(currentEnvironmentId);
     }
-  }, [currentEnvironmentId]);
+  }, [currentEnvironmentId, environments]);
 
   useEffect(() => {
     setInheritEnvVars(true);
   }, [selectedId]);
 
-  const isDirty = selectedId !== (currentEnvironmentId ?? "");
+  const isDirty =
+    environments.length > 0 && selectedId !== (currentEnvironmentId ?? "");
   const options = environments.map((e) => ({ id: e._id, label: e.name }));
 
   return (
@@ -317,20 +413,29 @@ function EnvironmentSection({
             onClick={async () => {
               setSaving(true);
               try {
-                await moveProject({
-                  data: { projectId, environmentId: selectedId, inheritEnvVars, workspace },
+                const result = await moveProject({
+                  data: {
+                    projectId,
+                    environmentId: selectedId,
+                    inheritEnvVars,
+                    workspace,
+                  },
                 });
-                toast.success("Project environment updated");
+                setSelectedId(result.environmentId);
+                toast.success("Environment updated successfully");
+                await router.invalidate();
               } catch (error) {
                 toast.error(
-                  error instanceof Error ? error.message : "Failed to update environment",
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to update environment",
                 );
               } finally {
                 setSaving(false);
               }
             }}
           >
-            Save
+            Move
           </GlossyButton>
         </div>
       )}
@@ -374,7 +479,17 @@ function GeneralSection({
       }}
       enableReinitialize
     >
-      {({ values, errors, touched, dirty, isSubmitting, handleSubmit, handleChange, handleBlur, setFieldValue }) => (
+      {({
+        values,
+        errors,
+        touched,
+        dirty,
+        isSubmitting,
+        handleSubmit,
+        handleChange,
+        handleBlur,
+        setFieldValue,
+      }) => (
         <form
           className="rounded-[4px] border-[0.5px] border-dash-border"
           onSubmit={handleSubmit}
@@ -386,26 +501,31 @@ function GeneralSection({
             </label>
             <div
               className="input-base input-focus-within flex items-stretch overflow-hidden"
-              style={touched.name && errors.name ? { boxShadow: "0px 1px 2px rgba(239,47,31,0.3), 0px 0px 0px 1px #ef2f1f" } : undefined}
+              style={
+                touched.name && errors.name
+                  ? {
+                      boxShadow:
+                        "0px 1px 2px rgba(239,47,31,0.3), 0px 0px 0px 1px #ef2f1f",
+                    }
+                  : undefined
+              }
             >
-                <div className="flex items-center border-r border-dash-border px-3">
-                  <span className="whitespace-nowrap text-sm leading-6 text-dash-text-faded">
-                    brimble.io/
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  name="name"
-                  value={values.name}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  className="w-full bg-transparent px-3 py-2.5 text-sm leading-6 text-dash-text-strong outline-none"
-                />
+              <div className="flex items-center border-r border-dash-border px-3">
+                <span className="whitespace-nowrap text-sm leading-6 text-dash-text-faded">
+                  brimble.io/
+                </span>
               </div>
+              <input
+                type="text"
+                name="name"
+                value={values.name}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className="w-full bg-transparent px-3 py-2.5 text-sm leading-6 text-dash-text-strong outline-none"
+              />
+            </div>
             {touched.name && errors.name && (
-              <span className="text-xs text-[#ef2f1f]">
-                {errors.name}
-              </span>
+              <span className="text-xs text-[#ef2f1f]">{errors.name}</span>
             )}
           </div>
 
@@ -433,10 +553,7 @@ function GeneralSection({
                 <label className="text-sm font-medium text-dash-text-strong">
                   Root directory
                 </label>
-                <RootDirectoryTrigger
-                  value={rootDir}
-                  onClick={onOpenDrawer}
-                />
+                <RootDirectoryTrigger value={rootDir} onClick={onOpenDrawer} />
               </div>
 
               <hr className="border-dash-border" />
@@ -462,11 +579,16 @@ function GeneralSection({
                 <label className="text-sm font-medium text-dash-text-strong">
                   Source image
                 </label>
-                <div className={`${inputClass} flex items-center font-family-mono text-[13px]`}>
-                  <span className="truncate">{dockerSourceImage || "Docker source project"}</span>
+                <div
+                  className={`${inputClass} flex items-center font-family-mono text-[13px]`}
+                >
+                  <span className="truncate">
+                    {dockerSourceImage || "Docker source project"}
+                  </span>
                 </div>
                 <p className="text-xs text-dash-text-faded">
-                  This project is configured from a Docker image source, so branch, root directory and framework presets are not used.
+                  This project is configured from a Docker image source, so
+                  branch, root directory and framework presets are not used.
                 </p>
               </div>
               <hr className="border-dash-border" />
@@ -504,7 +626,10 @@ function GeneralSection({
                         Reuse the previous build cache to speed up redeploys.
                       </span>
                     </div>
-                    <ToggleSwitch checked={values.buildCacheEnabled} onChange={(v) => setFieldValue("buildCacheEnabled", v)} />
+                    <ToggleSwitch
+                      checked={values.buildCacheEnabled}
+                      onChange={(v) => setFieldValue("buildCacheEnabled", v)}
+                    />
                   </div>
                 )}
                 {showMcpAuthControl && (
@@ -517,7 +642,10 @@ function GeneralSection({
                         Require API key authentication for your MCP server.
                       </span>
                     </div>
-                    <ToggleSwitch checked={values.authEnabled} onChange={(v) => setFieldValue("authEnabled", v)} />
+                    <ToggleSwitch
+                      checked={values.authEnabled}
+                      onChange={(v) => setFieldValue("authEnabled", v)}
+                    />
                   </div>
                 )}
               </div>
@@ -570,7 +698,14 @@ function BuildSection({
 
   useEffect(() => {
     setValues(initialValues);
-  }, [initialValues.installCommand, initialValues.buildCommand, initialValues.startCommand, initialValues.healthCheckPath, initialValues.preStartCommand, initialValues.dockerImage]);
+  }, [
+    initialValues.installCommand,
+    initialValues.buildCommand,
+    initialValues.startCommand,
+    initialValues.healthCheckPath,
+    initialValues.preStartCommand,
+    initialValues.dockerImage,
+  ]);
 
   const dirty =
     values.installCommand !== initialValues.installCommand ||
@@ -601,7 +736,9 @@ function BuildSection({
             <input
               type="text"
               value={values.preStartCommand}
-              onChange={(e) => setValues((v) => ({ ...v, preStartCommand: e.target.value }))}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, preStartCommand: e.target.value }))
+              }
               placeholder="apk add curl"
               className={inputClass}
             />
@@ -617,7 +754,9 @@ function BuildSection({
             <input
               type="text"
               value={values.dockerImage}
-              onChange={(e) => setValues((v) => ({ ...v, dockerImage: e.target.value }))}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, dockerImage: e.target.value }))
+              }
               placeholder="docker.io/library/nginx:latest"
               className={`${inputClass} font-family-mono text-[13px]`}
             />
@@ -636,7 +775,9 @@ function BuildSection({
             <input
               type="text"
               value={values.installCommand}
-              onChange={(e) => setValues((v) => ({ ...v, installCommand: e.target.value }))}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, installCommand: e.target.value }))
+              }
               placeholder="npm install"
               className={inputClass}
             />
@@ -652,7 +793,9 @@ function BuildSection({
             <input
               type="text"
               value={values.buildCommand}
-              onChange={(e) => setValues((v) => ({ ...v, buildCommand: e.target.value }))}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, buildCommand: e.target.value }))
+              }
               placeholder="npm run build"
               className={inputClass}
             />
@@ -668,7 +811,9 @@ function BuildSection({
             <input
               type="text"
               value={values.startCommand}
-              onChange={(e) => setValues((v) => ({ ...v, startCommand: e.target.value }))}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, startCommand: e.target.value }))
+              }
               placeholder="npm start"
               className={inputClass}
             />
@@ -685,7 +830,9 @@ function BuildSection({
           <input
             type="text"
             value={values.healthCheckPath}
-            onChange={(e) => setValues((v) => ({ ...v, healthCheckPath: e.target.value }))}
+            onChange={(e) =>
+              setValues((v) => ({ ...v, healthCheckPath: e.target.value }))
+            }
             placeholder="/api/health"
             className={inputClass}
           />
@@ -749,7 +896,9 @@ function ResourcesSection({
         <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
           {/* Row 1: CPU */}
           <div className="flex flex-col gap-2 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">CPU</label>
+            <label className="text-sm font-medium text-dash-text-strong">
+              CPU
+            </label>
             <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
               CPU resources allocated to each container
             </p>
@@ -816,79 +965,85 @@ function ResourcesSection({
 
           {showPersistentStorage && (
             <div className="px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Database size={16} weight="duotone" className="text-dash-text-faded" />
-                <span className="text-sm font-medium text-dash-text-strong">
-                  Persistent Storage
-                </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <DatabaseIcon
+                    size={16}
+                    weight="duotone"
+                    className="text-dash-text-faded"
+                  />
+                  <span className="text-sm font-medium text-dash-text-strong">
+                    Persistent Storage
+                  </span>
+                </div>
+                <ToggleSwitch
+                  checked={values.diskEnabled}
+                  onChange={(v) => setFieldValue("diskEnabled", v)}
+                  size="sm"
+                />
               </div>
-              <ToggleSwitch
-                checked={values.diskEnabled}
-                onChange={(v) => setFieldValue("diskEnabled", v)}
-                size="sm"
-              />
+              <p className="mt-1 ml-6 text-sm font-light leading-[1.3] text-dash-text-faded">
+                Attach a volume that persists across restarts and deployments.
+              </p>
+
+              <AnimatePresence>
+                {values.diskEnabled && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, overflow: "hidden" }}
+                    animate={{
+                      opacity: 1,
+                      height: "auto",
+                      transitionEnd: { overflow: "visible" },
+                    }}
+                    exit={{ overflow: "hidden", opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2, ease }}
+                  >
+                    <div className="mt-4 flex flex-col gap-4">
+                      <div className="grid grid-cols-1 gap-3 px-px pb-px sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1.5 block text-xs text-dash-text-faded">
+                            Disk size
+                          </label>
+                          <Dropdown
+                            value={values.diskSize}
+                            options={diskSizes}
+                            onChange={(v) => setFieldValue("diskSize", v)}
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-xs text-dash-text-faded">
+                            Mount path
+                          </label>
+                          <input
+                            type="text"
+                            value={values.mountPath}
+                            onChange={(e) =>
+                              setFieldValue("mountPath", e.target.value)
+                            }
+                            placeholder="/mnt/data"
+                            className={`${inputClass} font-family-mono text-[13px]`}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="rounded-[4px] bg-[#4879f8]/[0.04] px-3 py-2.5 dark:bg-[#4879f8]/[0.08]">
+                        <p className="text-xs leading-relaxed text-dash-text-body">
+                          <span className="font-medium text-[#4879f8]">
+                            ${PERSISTENT_STORAGE_PRICE_PER_GB}/GB per month.
+                          </span>{" "}
+                          Data persists across container restarts and
+                          deployments. The volume mounts at{" "}
+                          <code className="rounded bg-dash-bg-elevated px-1 py-0.5 font-family-mono text-[11px] text-dash-text-strong">
+                            {values.mountPath || "/mnt/data"}
+                          </code>{" "}
+                          inside your container.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <p className="mt-1 ml-6 text-sm font-light leading-[1.3] text-dash-text-faded">
-              Attach a volume that persists across restarts and deployments.
-            </p>
-
-            <AnimatePresence>
-              {values.diskEnabled && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0, overflow: "hidden" }}
-                  animate={{
-                    opacity: 1,
-                    height: "auto",
-                    transitionEnd: { overflow: "visible" },
-                  }}
-                  exit={{ overflow: "hidden", opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2, ease }}
-                >
-                  <div className="mt-4 flex flex-col gap-4">
-                    <div className="grid grid-cols-1 gap-3 px-px pb-px sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1.5 block text-xs text-dash-text-faded">
-                          Disk size
-                        </label>
-                        <Dropdown
-                          value={values.diskSize}
-                          options={diskSizes}
-                          onChange={(v) => setFieldValue("diskSize", v)}
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-xs text-dash-text-faded">
-                          Mount path
-                        </label>
-                        <input
-                          type="text"
-                          value={values.mountPath}
-                          onChange={(e) => setFieldValue("mountPath", e.target.value)}
-                          placeholder="/mnt/data"
-                          className={`${inputClass} font-family-mono text-[13px]`}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="rounded-[4px] bg-[#4879f8]/[0.04] px-3 py-2.5 dark:bg-[#4879f8]/[0.08]">
-                      <p className="text-xs leading-relaxed text-dash-text-body">
-                        <span className="font-medium text-[#4879f8]">
-                          ${PERSISTENT_STORAGE_PRICE_PER_GB}/GB per month.
-                        </span>{" "}
-                        Data persists across container restarts and deployments. The
-                        volume mounts at{" "}
-                        <code className="rounded bg-dash-bg-elevated px-1 py-0.5 font-family-mono text-[11px] text-dash-text-strong">
-                          {values.mountPath || "/mnt/data"}
-                        </code>{" "}
-                        inside your container.
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
           )}
 
           {/* Footer */}
@@ -915,13 +1070,11 @@ function DatabaseConfigurationPanel({
   onSubmit,
   region,
   dbImageName,
-  isPublicAccessEnabled,
 }: {
   initialValues: DatabaseConfigValues;
   onSubmit: (values: DatabaseConfigValues) => Promise<void>;
   region?: string;
   dbImageName?: string;
-  isPublicAccessEnabled: boolean;
 }) {
   return (
     <Formik
@@ -938,15 +1091,29 @@ function DatabaseConfigurationPanel({
       }}
       enableReinitialize
     >
-      {({ values, errors, touched, isSubmitting, handleSubmit, handleChange, handleBlur, setFieldValue }) => {
+      {({
+        values,
+        errors,
+        touched,
+        isSubmitting,
+        handleSubmit,
+        handleChange,
+        handleBlur,
+        setFieldValue,
+      }) => {
         const hasPassword = values.password.trim().length > 0;
         const passwordError = touched.confirmPassword && errors.confirmPassword;
         const canSave = (hasPassword ? !passwordError : true) && !isSubmitting;
+        const isPublicAccess = (values.whitelistIps ?? []).some(
+          (ip) => ip.value === "0.0.0.0/0",
+        );
 
         return (
           <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
             <div className="flex flex-col gap-1.5 px-4 py-4">
-              <label className="text-sm font-medium text-dash-text-strong">Project name</label>
+              <label className="text-sm font-medium text-dash-text-strong">
+                Project name
+              </label>
               <input
                 type="text"
                 name="name"
@@ -963,48 +1130,90 @@ function DatabaseConfigurationPanel({
             <hr className="border-dash-border" />
             <div className="grid grid-cols-1 gap-4 px-4 py-4 md:grid-cols-2">
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-dash-text-strong">Database engine</span>
-                <span className="text-sm font-light text-dash-text-faded">{dbImageName || "Unknown"}</span>
+                <span className="text-sm font-medium text-dash-text-strong">
+                  Database engine
+                </span>
+                <span className="text-sm font-light text-dash-text-faded">
+                  {dbImageName || "Unknown"}
+                </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-dash-text-strong">Region</span>
-                <span className="text-sm font-light text-dash-text-faded">{region || "Unknown"}</span>
+                <span className="text-sm font-medium text-dash-text-strong">
+                  Region
+                </span>
+                <span className="text-sm font-light text-dash-text-faded">
+                  {region || "Unknown"}
+                </span>
               </div>
             </div>
             <hr className="border-dash-border" />
             <div className="flex flex-col gap-3 px-4 py-4">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-dash-text-strong">Public connection</span>
+                  <span className="text-sm font-medium text-dash-text-strong">
+                    Public connection
+                  </span>
                   <span className="text-xs text-dash-text-faded">
-                    Control whether your database can be accessed from any IP address.
+                    Control whether your database can be accessed from any IP
+                    address.
                   </span>
                 </div>
-                <span className="text-sm font-light text-dash-text-body">
-                  {isPublicAccessEnabled ? "Enabled" : "Disabled"}
-                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isPublicAccess}
+                  onClick={() => {
+                    if (isPublicAccess) {
+                      setFieldValue("whitelistIps", []);
+                    } else {
+                      setFieldValue("whitelistIps", [
+                        { id: 0, value: "0.0.0.0/0" },
+                      ]);
+                    }
+                  }}
+                  className={`${isPublicAccess ? "bg-[#3b82f6]" : "bg-[#6b7280]"} relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors`}
+                >
+                  <span
+                    className={`${isPublicAccess ? "translate-x-6" : "translate-x-1"} inline-block size-4 rounded-full bg-white transition-transform`}
+                  />
+                </button>
               </div>
-              <IpWhitelist
-                ips={values.whitelistIps ?? []}
-                onAdd={() => {
-                  const current = values.whitelistIps ?? [];
-                  const nextId = current.length > 0 ? Math.max(...current.map((ip) => ip.id)) + 1 : 0;
-                  setFieldValue("whitelistIps", [...current, { id: nextId, value: "" }]);
-                }}
-                onRemove={(id) => {
-                  setFieldValue(
-                    "whitelistIps",
-                    (values.whitelistIps ?? []).filter((ip) => ip.id !== id),
-                  );
-                }}
-                onUpdate={(id, value) => {
-                  setFieldValue(
-                    "whitelistIps",
-                    (values.whitelistIps ?? []).map((ip) => (ip.id === id ? { ...ip, value } : ip)),
-                  );
-                }}
-                inputClassName={`${inputClass} flex-1 font-family-mono text-[13px]`}
-              />
+              {isPublicAccess ? (
+                <p className="text-xs text-[#f59e0b]">
+                  Your database is accessible from any IP address. Only enable
+                  this if you understand the security implications.
+                </p>
+              ) : (
+                <IpWhitelist
+                  ips={values.whitelistIps ?? []}
+                  onAdd={() => {
+                    const current = values.whitelistIps ?? [];
+                    const nextId =
+                      current.length > 0
+                        ? Math.max(...current.map((ip) => ip.id)) + 1
+                        : 0;
+                    setFieldValue("whitelistIps", [
+                      ...current,
+                      { id: nextId, value: "" },
+                    ]);
+                  }}
+                  onRemove={(id) => {
+                    setFieldValue(
+                      "whitelistIps",
+                      (values.whitelistIps ?? []).filter((ip) => ip.id !== id),
+                    );
+                  }}
+                  onUpdate={(id, value) => {
+                    setFieldValue(
+                      "whitelistIps",
+                      (values.whitelistIps ?? []).map((ip) =>
+                        ip.id === id ? { ...ip, value } : ip,
+                      ),
+                    );
+                  }}
+                  inputClassName={`${inputClass} flex-1 font-family-mono text-[13px]`}
+                />
+              )}
             </div>
             <hr className="border-dash-border" />
             <div className="grid grid-cols-1 gap-4 px-4 py-4 md:grid-cols-2">
@@ -1160,7 +1369,9 @@ function DangerSection({
             });
           } catch (error) {
             toast.error(
-              error instanceof Error ? error.message : "Failed to delete project",
+              error instanceof Error
+                ? error.message
+                : "Failed to delete project",
             );
           } finally {
             setDeleting(false);
@@ -1169,7 +1380,11 @@ function DangerSection({
       >
         <div className="flex flex-col gap-2 text-left">
           <label className="text-sm leading-5 text-dash-text-faded">
-            Type <span className="font-medium text-dash-text-strong">{projectName}</span> to confirm
+            Type{" "}
+            <span className="font-medium text-dash-text-strong">
+              {projectName}
+            </span>{" "}
+            to confirm
           </label>
           <input
             type="text"
@@ -1190,10 +1405,18 @@ function DangerSection({
 
 function ConfigurationPage() {
   const { project, workspace } = parentRoute.useLoaderData() as any;
-  const { repo, frameworks, scalingGroups, regions } = Route.useLoaderData();
+  const {
+    repo,
+    frameworks,
+    scalingGroups,
+    regions,
+    environments: preloadedEnvironments,
+  } = Route.useLoaderData();
   const params = Route.useParams();
   const navigate = useNavigate();
-  const saveGeneralConfig = useServerFn(saveProjectGeneralConfigServerFn as any) as (args: {
+  const saveGeneralConfig = useServerFn(
+    saveProjectGeneralConfigServerFn as any,
+  ) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -1209,7 +1432,9 @@ function ConfigurationPage() {
       buildCacheEnabled?: boolean;
     };
   }) => Promise<{ id?: string; message?: string }>;
-  const saveDatabaseConfig = useServerFn(updateDatabaseProjectConfigServerFn as any) as (args: {
+  const saveDatabaseConfig = useServerFn(
+    updateDatabaseProjectConfigServerFn as any,
+  ) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -1219,7 +1444,9 @@ function ConfigurationPage() {
       whitelistedIps?: string[];
     };
   }) => Promise<{ message?: string }>;
-  const saveBuildConfig = useServerFn(saveProjectBuildConfigServerFn as any) as (args: {
+  const saveBuildConfig = useServerFn(
+    saveProjectBuildConfigServerFn as any,
+  ) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -1230,7 +1457,9 @@ function ConfigurationPage() {
       preStartCommand?: string;
     };
   }) => Promise<{ message?: string }>;
-  const [activeSection, setActiveSection] = useState<ConfigSection>(ConfigSection.General);
+  const [activeSection, setActiveSection] = useState<ConfigSection>(
+    ConfigSection.General,
+  );
   const haptics = useHaptics();
 
   // Root directory (managed outside Formik — set by drawer)
@@ -1238,8 +1467,12 @@ function ConfigurationPage() {
   const [rootDir, setRootDir] = useState(project?.rootDirectory || "./");
 
   // Maintenance mode
-  const [maintenanceMode, setMaintenanceMode] = useState(Boolean(project?.maintenance));
-  const [repoMetadata, setRepoMetadata] = useState<RepositoryMetadata | null>(repo ?? null);
+  const [maintenanceMode, setMaintenanceMode] = useState(
+    Boolean(project?.maintenance),
+  );
+  const [repoMetadata, setRepoMetadata] = useState<RepositoryMetadata | null>(
+    repo ?? null,
+  );
 
   // Sync when project data changes
   useEffect(() => {
@@ -1252,7 +1485,8 @@ function ConfigurationPage() {
   }, [repo]);
 
   // General section initial values
-  const currentRegionId = project?.specs?.region?.id ?? project?.specs?.region?._id ?? "";
+  const currentRegionId =
+    project?.specs?.region?.id ?? project?.specs?.region?._id ?? "";
 
   const generalInitialValues: GeneralConfigValues = {
     name: project?.name || "",
@@ -1276,7 +1510,10 @@ function ConfigurationPage() {
 
   // Database section initial values
   const initialWhitelistIps = Array.isArray(project?.whiteListedIps)
-    ? project.whiteListedIps.map((ip: string, i: number) => ({ id: i, value: ip }))
+    ? project.whiteListedIps.map((ip: string, i: number) => ({
+        id: i,
+        value: ip,
+      }))
     : [];
 
   const databaseInitialValues: DatabaseConfigValues = {
@@ -1308,7 +1545,9 @@ function ConfigurationPage() {
       return mapped;
     }
 
-    const exists = mapped.some((item) => item.id === generalInitialValues.framework);
+    const exists = mapped.some(
+      (item) => item.id === generalInitialValues.framework,
+    );
     if (exists) {
       return mapped;
     }
@@ -1324,9 +1563,9 @@ function ConfigurationPage() {
 
   const regionOptions = (() => {
     const mapped = (regions || []).map((r) => ({
-        id: r.id,
-        label: r.country ? `${r.name} (${r.country})` : r.name,
-      }));
+      id: r.id,
+      label: r.country ? `${r.name} (${r.country})` : r.name,
+    }));
 
     if (!currentRegionId) {
       return mapped;
@@ -1338,16 +1577,19 @@ function ConfigurationPage() {
     }
 
     // Fallback: show current region even if not in the list
-    const currentRegionName = project?.specs?.region?.name || project?.region || currentRegionId;
-    return [
-      ...mapped,
-      { id: currentRegionId, label: currentRegionName },
-    ];
+    const currentRegionName =
+      project?.specs?.region?.name || project?.region || currentRegionId;
+    return [...mapped, { id: currentRegionId, label: currentRegionName }];
   })();
 
   const scalingGroupOptions = (() => {
     const mapped = (scalingGroups || [])
-      .filter((group) => group && typeof group.id === "string" && typeof group.name === "string")
+      .filter(
+        (group) =>
+          group &&
+          typeof group.id === "string" &&
+          typeof group.name === "string",
+      )
       .map((group) => ({
         id: group.id,
         label: group.name,
@@ -1447,7 +1689,9 @@ function ConfigurationPage() {
 
       toast.success("Configuration saved. Redeploy started.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save configuration");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save configuration",
+      );
     }
   }
 
@@ -1466,7 +1710,11 @@ function ConfigurationPage() {
       });
       toast.success("Build configuration saved. Redeploy started.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save build configuration");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to save build configuration",
+      );
     }
   }
 
@@ -1479,8 +1727,12 @@ function ConfigurationPage() {
         workspace,
         name: values.name.trim(),
         password,
-        configurations: project?.specs ? ({ ...project.specs } as Record<string, unknown>) : null,
-        whitelistedIps: (values.whitelistIps ?? []).map((ip) => ip.value).filter(Boolean),
+        configurations: project?.specs
+          ? ({ ...project.specs } as Record<string, unknown>)
+          : null,
+        whitelistedIps: (values.whitelistIps ?? [])
+          .map((ip) => ip.value)
+          .filter(Boolean),
       },
     });
 
@@ -1506,7 +1758,9 @@ function ConfigurationPage() {
       memory: values.memoryValue,
       storage: project?.specs?.storage,
       diskSize: values.diskEnabled ? Number(values.diskSize || 0) : 0,
-      volumeMount: values.diskEnabled ? (values.mountPath || "/mnt/data").trim() : "",
+      volumeMount: values.diskEnabled
+        ? (values.mountPath || "/mnt/data").trim()
+        : "",
     };
 
     // Re-read current whitelist IPs from project data
@@ -1582,38 +1836,37 @@ function ConfigurationPage() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15, ease }}
             >
-              {activeSection === ConfigSection.General && (
-                databaseProject ? (
+              {activeSection === ConfigSection.General &&
+                (databaseProject ? (
                   <DatabaseConfigurationPanel
                     initialValues={databaseInitialValues}
                     onSubmit={handleSubmitDatabase}
                     region={project?.region}
                     dbImageName={project?.dbImage?.name}
-                    isPublicAccessEnabled={Boolean(project?.isPublicAccess)}
                   />
                 ) : (
                   <>
-                  <EnvironmentSection
-                    projectId={project?.id || params.projectId}
-                    currentEnvironmentId={project?.projectEnvironmentId}
-                    workspace={workspace}
-                  />
-                  <GeneralSection
-                    initialValues={generalInitialValues}
-                    onSubmit={handleSubmitGeneral}
-                    branchOptions={branchOptions}
-                    rootDir={rootDir}
-                    onOpenDrawer={() => setDrawerOpen(true)}
-                    frameworkOptions={frameworkOptions}
-                    regionOptions={regionOptions}
-                    showSourceFields={sourceFieldsVisible}
-                    dockerSourceImage={buildInitialValues.dockerImage}
-                    showMcpAuthControl={mcpAuthToggleVisible}
-                    showBuildCacheControl={buildCacheToggleVisible}
-                  />
+                    <EnvironmentSection
+                      projectId={project?.id || params.projectId}
+                      currentEnvironmentId={project?.projectEnvironmentId}
+                      workspace={workspace}
+                      initialEnvironments={preloadedEnvironments}
+                    />
+                    <GeneralSection
+                      initialValues={generalInitialValues}
+                      onSubmit={handleSubmitGeneral}
+                      branchOptions={branchOptions}
+                      rootDir={rootDir}
+                      onOpenDrawer={() => setDrawerOpen(true)}
+                      frameworkOptions={frameworkOptions}
+                      regionOptions={regionOptions}
+                      showSourceFields={sourceFieldsVisible}
+                      dockerSourceImage={buildInitialValues.dockerImage}
+                      showMcpAuthControl={mcpAuthToggleVisible}
+                      showBuildCacheControl={buildCacheToggleVisible}
+                    />
                   </>
-                )
-              )}
+                ))}
               {activeSection === ConfigSection.Build && (
                 <BuildSection
                   initialValues={buildInitialValues}

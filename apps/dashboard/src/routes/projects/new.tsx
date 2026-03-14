@@ -1569,6 +1569,22 @@ interface EnvVar {
 
 let envNextId = 1;
 
+type Phase3DeployInput = {
+  name: string;
+  regionId: string;
+  branch?: string;
+  rootDirectory: string;
+  framework: string;
+  preStartCommand: string;
+  buildCommand: string;
+  outputDirectory: string;
+  installCommand: string;
+  envVars: Array<{ key: string; value: string }>;
+  diskEnabled: boolean;
+  diskSizeGb?: number;
+  mountPath?: string;
+};
+
 function Phase3Configure({
   sourceType,
   sourceName,
@@ -1576,8 +1592,10 @@ function Phase3Configure({
   frameworkOptions,
   regionOptions,
   branchOptions,
-  submitting = false,
+  deploying = false,
+  saving = false,
   onDeploy,
+  onSaveForLater,
   repoBrowser,
 }: {
   sourceType: SourceType;
@@ -1586,28 +1604,18 @@ function Phase3Configure({
   frameworkOptions: Array<{
     id: string;
     name: string;
+    icon?: string;
+    iconClassName?: string;
     buildCmd?: string;
     output?: string;
     install?: string;
   }>;
   regionOptions: RegionOption[];
   branchOptions?: string[];
-  submitting?: boolean;
-  onDeploy: (input: {
-    name: string;
-    regionId: string;
-    branch?: string;
-    rootDirectory: string;
-    framework: string;
-    preStartCommand: string;
-    buildCommand: string;
-    outputDirectory: string;
-    installCommand: string;
-    envVars: Array<{ key: string; value: string }>;
-    diskEnabled: boolean;
-    diskSizeGb?: number;
-    mountPath?: string;
-  }) => void | Promise<void>;
+  deploying?: boolean;
+  saving?: boolean;
+  onDeploy: (input: Phase3DeployInput) => boolean | Promise<boolean>;
+  onSaveForLater: (input: Phase3DeployInput) => boolean | Promise<boolean>;
   repoBrowser?: {
     repoName?: string;
     installationId?: number | string;
@@ -1764,6 +1772,34 @@ function Phase3Configure({
     );
   }
 
+  function buildDeployInput(): Phase3DeployInput | null {
+    const cleanedEnvVars = envVars
+      .map((v) => ({ key: v.key.trim(), value: v.value }))
+      .filter((v) => v.key || v.value);
+
+    const invalidEnv = cleanedEnvVars.find((v) => !v.key || !v.value);
+    if (invalidEnv) {
+      toast.error("Each environment variable must include both key and value.");
+      return null;
+    }
+
+    return {
+      name: projectName.trim(),
+      regionId: region,
+      branch: isGit ? branch : undefined,
+      rootDirectory: isGit ? rootDir : "./",
+      framework,
+      preStartCommand: preStartCmd.trim(),
+      buildCommand: buildCmd.trim(),
+      outputDirectory: outputDir.trim(),
+      installCommand: installCmd.trim(),
+      envVars: cleanedEnvVars,
+      diskEnabled,
+      diskSizeGb: diskEnabled ? Number(diskSize) : undefined,
+      mountPath: diskEnabled ? mountPath.trim() : undefined,
+    };
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -1857,6 +1893,7 @@ function Phase3Configure({
                   id: f.id,
                   label: f.name,
                   icon: f.icon,
+                  iconClassName: f.iconClassName,
                 }))}
                 onChange={handleFrameworkChange}
               />
@@ -2065,44 +2102,45 @@ function Phase3Configure({
         </AnimatePresence>
       </div>
 
-      {/* Deploy button */}
+      {/* Save / Deploy actions */}
       <div className="mt-8">
-        <GlossyButton
-          variant="blue"
-          fullWidth
-          loading={submitting}
-          loadingLabel="Deploying..."
-          disabled={submitting || !projectName.trim() || !region}
-          onClick={() => {
-            const cleanedEnvVars = envVars
-              .map((v) => ({ key: v.key.trim(), value: v.value }))
-              .filter((v) => v.key || v.value);
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <GlossyButton
+            variant="white"
+            className="sm:min-w-[190px]"
+            loading={saving}
+            loadingLabel="Saving..."
+            disabled={deploying || saving || !projectName.trim() || !region}
+            onClick={() => {
+              const deployInput = buildDeployInput();
+              if (!deployInput) {
+                return;
+              }
 
-            const invalidEnv = cleanedEnvVars.find((v) => !v.key || !v.value);
-            if (invalidEnv) {
-              toast.error("Each environment variable must include both key and value.");
-              return;
-            }
+              void onSaveForLater(deployInput);
+            }}
+          >
+            Save For Later
+          </GlossyButton>
 
-            void onDeploy({
-              name: projectName.trim(),
-              regionId: region,
-              branch: isGit ? branch : undefined,
-              rootDirectory: isGit ? rootDir : "./",
-              framework,
-              preStartCommand: preStartCmd.trim(),
-              buildCommand: buildCmd.trim(),
-              outputDirectory: outputDir.trim(),
-              installCommand: installCmd.trim(),
-              envVars: cleanedEnvVars,
-              diskEnabled,
-              diskSizeGb: diskEnabled ? Number(diskSize) : undefined,
-              mountPath: diskEnabled ? mountPath.trim() : undefined,
-            });
-          }}
-        >
-          Deploy Project
-        </GlossyButton>
+          <GlossyButton
+            variant="blue"
+            fullWidth
+            loading={deploying}
+            loadingLabel="Deploying..."
+            disabled={deploying || saving || !projectName.trim() || !region}
+            onClick={() => {
+              const deployInput = buildDeployInput();
+              if (!deployInput) {
+                return;
+              }
+
+              void onDeploy(deployInput);
+            }}
+          >
+            Deploy Project
+          </GlossyButton>
+        </div>
       </div>
 
       {isGit && (
@@ -2200,12 +2238,13 @@ function NewProjectPage() {
     new Set(),
   );
   const [frameworkOptions, setFrameworkOptions] = useState<
-    Array<{ id: string; name: string; icon?: string; buildCmd?: string; output?: string; install?: string }>
+    Array<{ id: string; name: string; icon?: string; iconClassName?: string; buildCmd?: string; output?: string; install?: string }>
   >(() =>
     frameworks.map((f) => ({
       id: f.id,
       name: f.name,
       icon: undefined,
+      iconClassName: undefined,
       buildCmd: f.buildCmd,
       output: f.output,
       install: f.install,
@@ -2253,6 +2292,7 @@ function NewProjectPage() {
   const [validatingDockerImage, setValidatingDockerImage] = useState(false);
   const [dockerImageValidationError, setDockerImageValidationError] = useState<string | null>(null);
   const [deployingProject, setDeployingProject] = useState(false);
+  const [savingProject, setSavingProject] = useState(false);
   const [provisioningDatabase, setProvisioningDatabase] = useState(false);
   const githubReposRequestIdRef = useRef(0);
   const githubPollingIntervalRef = useRef<number | null>(null);
@@ -2270,6 +2310,7 @@ function NewProjectPage() {
             id: item.slug,
             name: item.name,
             icon: dropdownOptions[index]?.icon,
+            iconClassName: dropdownOptions[index]?.iconClassName,
             buildCmd: item.buildCommand || "",
             output: item.outputDirectory || "",
             install: item.installCommand || "",
@@ -2589,25 +2630,15 @@ function NewProjectPage() {
     }
   }
 
-  async function handleDeployProject(input: {
-    name: string;
-    regionId: string;
-    branch?: string;
-    rootDirectory: string;
-    framework: string;
-    preStartCommand: string;
-    buildCommand: string;
-    outputDirectory: string;
-    installCommand: string;
-    envVars: Array<{ key: string; value: string }>;
-    diskEnabled: boolean;
-    diskSizeGb?: number;
-    mountPath?: string;
-  }) {
+  async function handleCreateProject(
+    input: Phase3DeployInput,
+    options: { deploy: boolean },
+  ): Promise<boolean> {
+    const { deploy } = options;
     const normalizedName = slugifyProjectName(input.name) || input.name.trim();
     if (!normalizedName) {
       toast.error("Project name is required.");
-      return;
+      return false;
     }
 
     const normalizedRootDirectory = (() => {
@@ -2621,7 +2652,7 @@ function NewProjectPage() {
     if (sourceType === SourceType.Github) {
       if (!selectedGithubRepo?.repo || !selectedGithubRepo?.metadata) {
         toast.error("Please select a repository first.");
-        return;
+        return false;
       }
 
       const branch =
@@ -2671,13 +2702,13 @@ function NewProjectPage() {
     } else if (sourceType === SourceType.Docker) {
       if (!selectedDockerSource?.imageUri) {
         toast.error("Please validate a Docker image first.");
-        return;
+        return false;
       }
 
       const parsedImage = parseDockerImageRef(selectedDockerSource.imageUri);
       if (!parsedImage) {
         toast.error("Invalid Docker image reference.");
-        return;
+        return false;
       }
 
       payload = {
@@ -2725,7 +2756,7 @@ function NewProjectPage() {
       };
     } else {
       toast.message("This deploy source is not wired yet.");
-      return;
+      return false;
     }
 
     if (input.diskEnabled && input.mountPath && input.diskSizeGb) {
@@ -2735,9 +2766,14 @@ function NewProjectPage() {
       payload.volumeMount = "";
       payload.diskSize = 10;
     }
+    payload.deploy = deploy;
 
     try {
-      setDeployingProject(true);
+      if (deploy) {
+        setDeployingProject(true);
+      } else {
+        setSavingProject(true);
+      }
       console.log(
         "[projects/new] createProject payload",
         debugMaskDeployPayload(payload),
@@ -2746,7 +2782,7 @@ function NewProjectPage() {
       const targetProjectId = created.slug || created.name || normalizedName;
       const createdLogId = typeof created.logId === "string" ? created.logId : undefined;
 
-      if (typeof window !== "undefined") {
+      if (deploy && typeof window !== "undefined") {
         try {
           window.sessionStorage.setItem(
             "brimble:open-deployment-drawer",
@@ -2762,18 +2798,44 @@ function NewProjectPage() {
         }
       }
 
-      toast.success("Project deployment started");
+      if (deploy) {
+        toast.success("Deployment started. Taking you to deployment history.");
+      } else {
+        toast.success("Project saved. You can continue configuring it anytime.");
+      }
       navigate({
         to: withWorkspaceQuery({
-          pathname: `/projects/${encodeURIComponent(targetProjectId)}/deployment-history`,
+          pathname: deploy
+            ? `/projects/${encodeURIComponent(targetProjectId)}/deployment-history`
+            : `/projects/${encodeURIComponent(targetProjectId)}/configuration`,
           searchStr,
         }) as any,
       });
+      return true;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to deploy project");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : deploy
+            ? "Failed to deploy project"
+            : "Failed to save project",
+      );
+      return false;
     } finally {
-      setDeployingProject(false);
+      if (deploy) {
+        setDeployingProject(false);
+      } else {
+        setSavingProject(false);
+      }
     }
+  }
+
+  async function handleDeployProject(input: Phase3DeployInput): Promise<boolean> {
+    return handleCreateProject(input, { deploy: true });
+  }
+
+  async function handleSaveProjectForLater(input: Phase3DeployInput): Promise<boolean> {
+    return handleCreateProject(input, { deploy: false });
   }
 
   async function handleProvisionDatabase(input: {
@@ -3034,8 +3096,10 @@ function NewProjectPage() {
                         : ["main"])
                     : undefined
                 }
-                submitting={deployingProject}
+                deploying={deployingProject}
+                saving={savingProject}
                 onDeploy={handleDeployProject}
+                onSaveForLater={handleSaveProjectForLater}
               />
             )}
           </AnimatePresence>

@@ -1,5 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
+import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
+import config from "@/config";
 import { withTokenRefresh } from "@/server/shared/backend";
+
+const isProduction = process.env.NODE_ENV === "production";
+const environmentPreferenceCookieBaseOptions = {
+  httpOnly: false,
+  sameSite: "strict" as const,
+  secure: isProduction,
+  path: "/",
+};
+const environmentPreferenceCookieMaxAge = 60 * 60 * 24 * 30;
+
+function buildEnvironmentPreferenceCookieName(workspace?: string) {
+  const scope = (workspace?.trim().toLowerCase() || "__personal__").replace(
+    /[^a-z0-9_-]/g,
+    "_",
+  );
+  return `${config.environmentPreferenceCookiePrefix}${scope}`;
+}
 
 async function resolveWorkspaceTeamId(
   api: any,
@@ -23,6 +42,34 @@ export const listProjectEnvironmentsServerFn = createServerFn({
     const teamId = await resolveWorkspaceTeamId(api, payload?.workspace);
     return api.environments.listEnvironments({ teamId });
   });
+});
+
+export const getActiveEnvironmentPreferenceServerFn = createServerFn({
+  method: "GET",
+}).handler(async ({ data }) => {
+  const payload = data as { workspace?: string } | undefined;
+  const cookieName = buildEnvironmentPreferenceCookieName(payload?.workspace);
+  const environmentId = getCookie(cookieName)?.trim();
+  return environmentId || null;
+});
+
+export const setActiveEnvironmentPreferenceServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as { workspace?: string; environmentId?: string } | undefined;
+  const cookieName = buildEnvironmentPreferenceCookieName(payload?.workspace);
+  const environmentId = payload?.environmentId?.trim();
+
+  if (environmentId) {
+    setCookie(cookieName, environmentId, {
+      ...environmentPreferenceCookieBaseOptions,
+      maxAge: environmentPreferenceCookieMaxAge,
+    });
+  } else {
+    deleteCookie(cookieName, environmentPreferenceCookieBaseOptions);
+  }
+
+  return { success: true };
 });
 
 export const getProjectEnvironmentDetailsServerFn = createServerFn({

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { BackendApi } from "@/backend";
 import { withTokenRefresh } from "@/server/shared/backend";
+import { teamsLogger } from "@/server/shared/logger";
 
 async function resolveWorkspaceTeam(api: BackendApi, workspace?: string) {
   const workspaceSlug = workspace?.trim().toLowerCase();
@@ -29,9 +30,17 @@ export const getWorkspaceTeamMembersServerFn = createServerFn({
     const { teamId, teamName } = await resolveWorkspaceTeam(api, payload?.workspace);
 
     try {
-      return await api.teams.getByName(teamName);
+      const team = await api.teams.getByName(teamName);
+      teamsLogger.info(
+        `getWorkspaceTeamMembersServerFn response (workspace=${payload?.workspace ?? "unknown"}, lookup=slug:${teamName}):\n${JSON.stringify(team, null, 2)}`,
+      );
+      return team;
     } catch {
-      return api.teams.getByName(teamId);
+      const team = await api.teams.getByName(teamId);
+      teamsLogger.info(
+        `getWorkspaceTeamMembersServerFn response (workspace=${payload?.workspace ?? "unknown"}, lookup=id:${teamId}):\n${JSON.stringify(team, null, 2)}`,
+      );
+      return team;
     }
   });
 });
@@ -111,6 +120,37 @@ export const resendWorkspaceTeamInviteServerFn = createServerFn({
       teamId,
       members: [email],
       resend: true,
+    });
+  });
+});
+
+export const updateMemberEnvironmentsServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as
+    | {
+        workspace?: string;
+        memberId?: string;
+        permissions?: Array<{ id: string; enabled: boolean }>;
+        project_environments?: string[];
+      }
+    | undefined;
+
+  const memberId = payload?.memberId?.trim();
+  if (!memberId) {
+    throw new Error("Member ID is required");
+  }
+
+  const permissions = Array.isArray(payload?.permissions) ? payload.permissions : [];
+  const projectEnvironments = Array.isArray(payload?.project_environments)
+    ? payload.project_environments
+    : undefined;
+
+  return withTokenRefresh(async (api) => {
+    const { teamId } = await resolveWorkspaceTeam(api, payload?.workspace);
+    return api.teams.updateMemberPermissions(teamId, memberId, {
+      permissions,
+      project_environments: projectEnvironments,
     });
   });
 });

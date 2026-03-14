@@ -33,6 +33,7 @@ export const config = {
     "https://api.cloudinary.com/v1_1/dgqfojhx4/image/upload",
   accessTokenCookie: "brimble_access_token",
   refreshTokenCookie: "brimble_refresh_token",
+  environmentPreferenceCookiePrefix: "brimble_env_pref_",
   authToken: readEnv("NEXT_PUBLIC_AUTH_TOKEN") ?? readEnv("VITE_AUTH_TOKEN") ?? "",
   hmacSecretKey:
     readEnv("NEXT_PUBLIC_HMAC_SECRET_KEY") ?? readEnv("VITE_HMAC_SECRET_KEY") ?? "",

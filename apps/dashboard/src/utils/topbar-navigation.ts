@@ -32,14 +32,10 @@ export function buildWorkspaceSwitchUrl(input: {
 export function getWorkspaceSearch(input: { searchStr?: string }): string {
   const params = new URLSearchParams(input.searchStr || "");
   const workspace = params.get("workspace")?.trim();
-  const environmentId = params.get("environmentId")?.trim();
 
   const nextParams = new URLSearchParams();
   if (workspace) {
     nextParams.set("workspace", workspace);
-  }
-  if (environmentId) {
-    nextParams.set("environmentId", environmentId);
   }
 
   const query = nextParams.toString();

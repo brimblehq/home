@@ -20,6 +20,7 @@ import { listProjectsPageServerFn } from "@/server/projects/actions";
 import {
   createProjectEnvironmentServerFn,
   deleteProjectEnvironmentServerFn,
+  getActiveEnvironmentPreferenceServerFn,
   getProjectEnvironmentDetailsServerFn,
   listProjectEnvironmentsServerFn,
   updateProjectEnvironmentServerFn,
@@ -27,6 +28,7 @@ import {
 import type { ProjectEnvironment } from "@/backend/environments";
 import type { Project as BackendProject, PaginatedProjectsResponse } from "@/backend/projects";
 import { formatRelativeTime } from "@/utils/dashboard";
+import { resolveEnvironmentId } from "@/utils/environment-selection";
 import { parsePositivePageSearchValue, parseTextSearchValue, parseWorkspaceSearchValue, workspacePageLoaderDeps } from "@/utils/workspace-route-search";
 import { useTagsStore } from "@/hooks/use-tags-store";
 
@@ -125,35 +127,41 @@ export const Route = createFileRoute("/projects/")({
     environmentId: parseTextSearchValue(search.environmentId),
   }),
   loader: async ({ deps }) => {
-    const [result, environments] = await Promise.all([
-      (listProjectsPageServerFn as unknown as (input: {
-        data: {
-          page?: number;
-          workspace?: string;
-          q?: string;
-          serviceType?: string;
-          status?: string;
-          environmentId?: string;
-        };
-      }) => Promise<PaginatedProjectsResponse>)({
-        data: {
-          page: deps.page,
-          workspace: deps.workspace,
-          q: deps.q,
-          serviceType: deps.type && deps.type !== "all" ? deps.type : undefined,
-          status: deps.status && deps.status !== "all" ? deps.status : undefined,
-          environmentId:
-            deps.environmentId && deps.environmentId !== "all"
-              ? deps.environmentId
-              : undefined,
-        },
-      }),
-      (listProjectEnvironmentsServerFn as unknown as (input: {
-        data?: { workspace?: string };
-      }) => Promise<ProjectEnvironment[]>)({
-        data: { workspace: deps.workspace },
-      }),
-    ]);
+    const environments = await (listProjectEnvironmentsServerFn as unknown as (input: {
+      data?: { workspace?: string };
+    }) => Promise<ProjectEnvironment[]>)({
+      data: { workspace: deps.workspace },
+    });
+    const persistedEnvironmentId = await (getActiveEnvironmentPreferenceServerFn as unknown as (input: {
+      data?: { workspace?: string };
+    }) => Promise<string | null>)({
+      data: { workspace: deps.workspace },
+    }).catch(() => null);
+    const resolvedEnvironmentId = resolveEnvironmentId({
+      requestedEnvironmentId: deps.environmentId,
+      preferredEnvironmentId: persistedEnvironmentId,
+      environments,
+    });
+
+    const result = await (listProjectsPageServerFn as unknown as (input: {
+      data: {
+        page?: number;
+        workspace?: string;
+        q?: string;
+        serviceType?: string;
+        status?: string;
+        environmentId?: string;
+      };
+    }) => Promise<PaginatedProjectsResponse>)({
+      data: {
+        page: deps.page,
+        workspace: deps.workspace,
+        q: deps.q,
+        serviceType: deps.type && deps.type !== "all" ? deps.type : undefined,
+        status: deps.status && deps.status !== "all" ? deps.status : undefined,
+        environmentId: resolvedEnvironmentId,
+      },
+    });
 
     return {
       projects: result.items.map(mapBackendProject),
@@ -166,6 +174,7 @@ export const Route = createFileRoute("/projects/")({
       },
       workspace: deps.workspace,
       environmentId: deps.environmentId,
+      resolvedEnvironmentId,
     };
   },
   component: ProjectsPage,
@@ -578,7 +587,12 @@ function ProjectsPage() {
   const [isStatusFilterChanging, setIsStatusFilterChanging] = useState(false);
   const activeProjectType = search.type ?? "all";
   const activeStatus = search.status ?? "all";
-  const activeEnvironmentId = search.environmentId ?? "all";
+  const activeEnvironmentId =
+    search.environmentId ?? loaderData.resolvedEnvironmentId ?? "all";
+  const effectiveEnvironmentId =
+    search.environmentId && search.environmentId !== "all"
+      ? search.environmentId
+      : loaderData.resolvedEnvironmentId;
   const requestedWorkspace = search.workspace?.trim().toLowerCase() || undefined;
   const loadedWorkspace = loaderData.workspace?.trim().toLowerCase() || undefined;
   const isWorkspaceSwitching = requestedWorkspace !== loadedWorkspace;
@@ -695,10 +709,7 @@ function ProjectsPage() {
             q: search.q,
             serviceType: search.type && search.type !== "all" ? search.type : undefined,
             status: search.status && search.status !== "all" ? search.status : undefined,
-            environmentId:
-              search.environmentId && search.environmentId !== "all"
-                ? search.environmentId
-                : undefined,
+            environmentId: effectiveEnvironmentId,
           },
         });
         setProjects(result.items.map(mapBackendProject));
@@ -715,6 +726,7 @@ function ProjectsPage() {
   }, [
     refreshSignal,
     search.environmentId,
+    effectiveEnvironmentId,
     search.page,
     search.q,
     search.status,
@@ -903,7 +915,7 @@ function ProjectsPage() {
         onOpenChange={setEnvironmentModalOpen}
         environments={environments}
         workspace={search.workspace}
-        activeEnvironmentId={search.environmentId}
+        activeEnvironmentId={effectiveEnvironmentId}
         onEnvironmentListChange={setEnvironments}
         onActiveEnvironmentChange={(environmentId) => {
           navigate({

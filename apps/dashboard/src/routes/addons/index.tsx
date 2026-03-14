@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { Search } from "lucide-react";
+import { SearchFilterBar } from "../../components/shared/search-filter-bar";
+import { FilterDropdown } from "../../components/shared/filter-dropdown";
 import { DashButton } from "../../components/shared/dash-button";
 import { AddonCard } from "../../components/shared/addon-card";
 import { NumberPagination } from "../../components/shared/pagination";
@@ -53,8 +54,6 @@ export const Route = createFileRoute("/addons/")({
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
-const inputClass =
-  "w-full input-base input-focus px-3 py-2 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 function matchesSearch(addon: DiscoverAddon, query: string) {
   const normalized = query.trim().toLowerCase();
@@ -86,14 +85,29 @@ function AddonGrid({ items, delayOffset = 0 }: { items: DiscoverAddon[]; delayOf
 function AddonsPage() {
   const navigate = useNavigate({ from: "/addons/" });
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const routeSearch = Route.useSearch();
   const { addons, total, page, totalPages } = Route.useLoaderData();
 
-  const filteredAddons = useMemo(
-    () => (search.trim() ? addons.filter((addon) => matchesSearch(addon, search)) : []),
-    [addons, search],
-  );
-  const isSearching = search.trim().length > 0;
+  const categoryOptions = useMemo(() => {
+    const cats = Array.from(new Set(addons.map((a) => a.category).filter(Boolean))).sort();
+    return [
+      { label: "All Categories", value: "all" },
+      ...cats.map((c) => ({ label: c, value: c })),
+    ];
+  }, [addons]);
+
+  const filteredAddons = useMemo(() => {
+    let result = addons;
+    if (categoryFilter !== "all") {
+      result = result.filter((a) => a.category === categoryFilter);
+    }
+    if (search.trim()) {
+      result = result.filter((addon) => matchesSearch(addon, search));
+    }
+    return result;
+  }, [addons, search, categoryFilter]);
+  const isFiltering = search.trim().length > 0 || categoryFilter !== "all";
 
   return (
     <div className="px-4 py-8 md:px-10">
@@ -125,19 +139,24 @@ function AddonsPage() {
       </motion.div>
 
       <div className="mt-6">
-        <div className="relative max-w-[320px]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dash-text-extra-faded" />
-          <input
-            type="text"
-            placeholder="Search MCP servers..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={`${inputClass} pl-9`}
-          />
-        </div>
+        <SearchFilterBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Search MCP servers..."
+          rightSlot={
+            <FilterDropdown
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              options={categoryOptions}
+              placeholder="All Categories"
+              dropdownWidth={200}
+              align="right"
+            />
+          }
+        />
       </div>
 
-      {isSearching ? (
+      {isFiltering ? (
         <div className="mt-6">
           <p className="mb-3 text-xs text-dash-text-extra-faded">
             {filteredAddons.length} result{filteredAddons.length !== 1 ? "s" : ""}
@@ -146,7 +165,7 @@ function AddonsPage() {
             <AddonGrid items={filteredAddons} />
           ) : (
             <div className="py-12 text-center text-sm text-dash-text-faded">
-              No MCP servers match your search.
+              No MCP servers match your filters.
             </div>
           )}
         </div>

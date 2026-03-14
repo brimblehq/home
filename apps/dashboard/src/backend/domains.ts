@@ -65,6 +65,8 @@ export interface ListDomainsInput {
   q?: string;
   page?: number;
   teamId?: string;
+  environmentId?: string;
+  useEnvironmentHeader?: boolean;
 }
 
 export interface AddDomainInput {
@@ -126,10 +128,13 @@ export interface RenewDomainInput {
 
 export interface DomainsApi {
   list(input?: ListDomainsInput): Promise<PaginatedDomainsResponse>;
-  getStatus(domainName: string, input?: { teamId?: string }): Promise<DomainRecord | null>;
+  getStatus(
+    domainName: string,
+    input?: { teamId?: string; environmentId?: string; useEnvironmentHeader?: boolean },
+  ): Promise<DomainRecord | null>;
   getByName(
     domainName: string,
-    input?: { teamId?: string },
+    input?: { teamId?: string; environmentId?: string; useEnvironmentHeader?: boolean },
   ): Promise<DomainDetailsRecord | null>;
   add(input: AddDomainInput): Promise<DomainRecord>;
   update(input: UpdateDomainInput): Promise<DomainRecord>;
@@ -361,13 +366,20 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
 
   return {
     async list(input) {
+      const environmentId = input?.environmentId?.trim() || undefined;
+      const headers =
+        input?.useEnvironmentHeader && environmentId
+          ? { "x-brimble-environment": environmentId }
+          : undefined;
       const response = await client.request<any>(listEndpoint, {
         method: "GET",
+        headers,
         query: {
           name: input?.projectName,
           q: input?.q,
           page: input?.page,
           teamId: input?.teamId,
+          environmentId,
         },
       });
 
@@ -397,12 +409,19 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
     },
 
     async getStatus(domainName, input) {
+      const environmentId = input?.environmentId?.trim() || undefined;
+      const headers =
+        input?.useEnvironmentHeader && environmentId
+          ? { "x-brimble-environment": environmentId }
+          : undefined;
       const response = await client.request<any>(
         `${listEndpoint}/${encodeURIComponent(domainName)}/status`,
         {
           method: "GET",
+          headers,
           query: {
             teamId: input?.teamId,
+            environmentId,
           },
         },
       );
@@ -416,12 +435,19 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
     },
 
     async getByName(domainName, input) {
+      const environmentId = input?.environmentId?.trim() || undefined;
+      const headers =
+        input?.useEnvironmentHeader && environmentId
+          ? { "x-brimble-environment": environmentId }
+          : undefined;
       const response = await client.request<any>(
         `${listEndpoint}/${encodeURIComponent(domainName)}`,
         {
           method: "GET",
+          headers,
           query: {
             teamId: input?.teamId,
+            environmentId,
           },
         },
       );

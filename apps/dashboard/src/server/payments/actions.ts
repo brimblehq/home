@@ -51,6 +51,23 @@ export const getPaymentInvoicesServerFn = createServerFn({
   });
 });
 
+export const getSubscriptionStatsServerFn = createServerFn({
+  method: "GET",
+}).handler(async ({ data }) => {
+  const payload = data as unknown as { workspace?: string } | undefined;
+
+  return withTokenRefresh(async (api) => {
+    let teamId: string | undefined;
+    const workspaceSlug = payload?.workspace?.trim().toLowerCase();
+    if (workspaceSlug) {
+      const teams = await api.workspaces.list();
+      const match = teams.items.find((item) => item.slug === workspaceSlug);
+      teamId = match?.id ?? undefined;
+    }
+    return api.payments.getSubscriptionStats(teamId);
+  });
+});
+
 /* ── Mutations ── */
 
 export const createSetupIntentServerFn = createServerFn({

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
+import { deleteCookie, getCookie, setCookie, getRequestHeader } from "@tanstack/react-start/server";
 import type { AuthSession } from "@/backend";
 import config from "@/config";
 import { authLogger } from "@/server/shared/logger";
@@ -55,6 +55,14 @@ export function setServerAuthCookies(session: AuthSession) {
     previousRefreshTokenFp: tokenFingerprint(existingRefreshToken),
     nextRefreshTokenFp: tokenFingerprint(session.refreshToken),
   });
+}
+
+export function getServerUserAgent(): string | null {
+  try {
+    return getRequestHeader("user-agent") ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function clearServerAuthCookies() {

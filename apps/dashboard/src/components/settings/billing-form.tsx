@@ -28,7 +28,7 @@ import {
   useCancelSubscription,
   useUpdateSpendingLimit,
 } from "@/hooks/use-payments";
-import type { PaymentMethod } from "@/backend/payments";
+import type { PaymentMethod, SubscriptionStats } from "@/backend/payments";
 import type { TeamDetails } from "@/backend/teams";
 import type { DrawerUserProfile } from "@/utils/dashboard";
 
@@ -43,6 +43,7 @@ export function BillingForm({
   initialPaymentMethods,
   initialInvoices,
   initialSpendingStats,
+  initialSubscriptionStats,
   hidePaymentMethods = false,
   hideCurrentPlan = false,
   teamId,
@@ -53,6 +54,7 @@ export function BillingForm({
   initialPaymentMethods?: PaymentMethod[] | null;
   initialInvoices?: any;
   initialSpendingStats?: { used: number; spendingLimit: number } | null;
+  initialSubscriptionStats?: SubscriptionStats | null;
   hidePaymentMethods?: boolean;
   hideCurrentPlan?: boolean;
   teamId?: string;
@@ -66,6 +68,7 @@ export function BillingForm({
         initialPaymentMethods={initialPaymentMethods}
         initialInvoices={initialInvoices}
         initialSpendingStats={initialSpendingStats}
+        initialSubscriptionStats={initialSubscriptionStats}
         hidePaymentMethods={hidePaymentMethods}
         hideCurrentPlan={hideCurrentPlan}
         teamId={teamId}
@@ -83,6 +86,7 @@ function BillingFormInner({
   initialPaymentMethods,
   initialInvoices,
   initialSpendingStats,
+  initialSubscriptionStats,
   hidePaymentMethods = false,
   hideCurrentPlan = false,
   teamId,
@@ -93,6 +97,7 @@ function BillingFormInner({
   initialPaymentMethods?: PaymentMethod[] | null;
   initialInvoices?: any;
   initialSpendingStats?: { used: number; spendingLimit: number } | null;
+  initialSubscriptionStats?: SubscriptionStats | null;
   hidePaymentMethods?: boolean;
   hideCurrentPlan?: boolean;
   teamId?: string;
@@ -236,6 +241,9 @@ function BillingFormInner({
           </div>
         </div>
       )}
+
+      {/* ── Forecasted bill ── */}
+      <BillForecast stats={initialSubscriptionStats} />
 
       {/* ── Usage / Bill estimate ── */}
       <UsageSection estimate={estimate} />
@@ -519,6 +527,47 @@ function PaymentFailureBanner({
             ? "Builds are disabled due to payment failure. Update your payment method to resume."
             : `Payment failed ${daysSinceFailure} day${daysSinceFailure === 1 ? "" : "s"} ago. Please update your payment method.`}
       </p>
+    </div>
+  );
+}
+
+/* ── Forecasted bill ── */
+
+function BillForecast({
+  stats,
+}: {
+  stats?: SubscriptionStats | null;
+}) {
+  if (!stats) return null;
+
+  const nextPaymentDate = stats.next_payment_date
+    ? new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date(stats.next_payment_date))
+    : null;
+
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <div className="flex flex-col gap-1">
+        <p className="text-xs font-medium uppercase tracking-wider text-dash-text-faded">
+          Forecasted bill
+        </p>
+        <p className="text-3xl font-semibold tabular-nums text-dash-text-strong">
+          {stats.total}
+        </p>
+      </div>
+      {nextPaymentDate && (
+        <div className="flex flex-col items-end gap-1">
+          <p className="text-xs font-medium uppercase tracking-wider text-dash-text-faded">
+            Next payment
+          </p>
+          <p className="text-sm font-medium text-dash-text-body">
+            {nextPaymentDate}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

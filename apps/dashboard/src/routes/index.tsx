@@ -12,6 +12,10 @@ import { getHomeOverviewServerFn } from "@/server/overview/actions";
 import { getHomeBandwidthServerFn } from "@/server/bandwidth/actions";
 import { listMcpTemplatesServerFn } from "@/server/mcp/actions";
 import { checkTeamInvitationServerFn, acceptTeamInvitationServerFn, declineTeamInvitationServerFn } from "@/server/teams/actions";
+import {
+  getActiveEnvironmentPreferenceServerFn,
+  listProjectEnvironmentsServerFn,
+} from "@/server/environments/actions";
 import type { ApiListResponse } from "@/backend";
 import type { Project as BackendProject } from "@/backend/projects";
 import type { OverviewSummary } from "@/backend/overview";
@@ -24,6 +28,7 @@ import type { Workspace } from "@/backend/workspaces";
 import type { Project as ProjectCardProject } from "../components/shared/project-card";
 import { formatRelativeTime } from "@/utils/dashboard";
 import { mapMcpTemplateToAddon } from "@/utils/discover-mcp";
+import { resolveEnvironmentId } from "@/utils/environment-selection";
 import { workspaceLoaderDeps } from "@/utils/workspace-route-search";
 import { getRouteApi } from "@tanstack/react-router";
 
@@ -43,7 +48,23 @@ export const Route = createFileRoute("/")({
   }),
   loader: async ({ deps }) => {
     const workspace = deps.workspace;
-    const environmentId = deps.environmentId && deps.environmentId !== "all" ? deps.environmentId : undefined;
+    const [environments, persistedEnvironmentId] = await Promise.all([
+      (listProjectEnvironmentsServerFn as unknown as (input: {
+        data?: { workspace?: string };
+      }) => Promise<Array<{ _id: string; isDefault?: boolean }>>)({
+        data: { workspace },
+      }).catch(() => []),
+      (getActiveEnvironmentPreferenceServerFn as unknown as (input: {
+        data?: { workspace?: string };
+      }) => Promise<string | null>)({
+        data: { workspace },
+      }).catch(() => null),
+    ]);
+    const environmentId = resolveEnvironmentId({
+      requestedEnvironmentId: deps.environmentId,
+      preferredEnvironmentId: persistedEnvironmentId,
+      environments,
+    });
 
     const [projectsResult, overviewResult, bandwidthResult, mcpTemplatesResult] = await Promise.all([
       (listHomeProjectsServerFn as unknown as (input: {

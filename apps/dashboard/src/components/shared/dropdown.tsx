@@ -10,6 +10,7 @@ export interface DropdownOption {
   id: string;
   label: string;
   icon?: string;
+  iconClassName?: string;
 }
 
 type ObjectProps = {
@@ -188,7 +189,11 @@ export function Dropdown({
           >
             <span className={`flex items-center gap-2 ${displayLabel ? "" : "text-[#9ca3af]"}`}>
               {selectedOption?.icon && (
-                <img src={selectedOption.icon} alt="" className="size-4 shrink-0 object-contain" />
+                <img
+                  src={selectedOption.icon}
+                  alt=""
+                  className={`size-4 shrink-0 object-contain ${selectedOption.iconClassName ?? ""}`}
+                />
               )}
               {displayLabel || placeholder || "Select..."}
             </span>
@@ -244,7 +249,11 @@ export function Dropdown({
                         }`}
                       >
                         {opt.icon && (
-                          <img src={opt.icon} alt="" className="size-4 shrink-0 object-contain" />
+                          <img
+                            src={opt.icon}
+                            alt=""
+                            className={`size-4 shrink-0 object-contain ${opt.iconClassName ?? ""}`}
+                          />
                         )}
                         {opt.label}
                       </button>

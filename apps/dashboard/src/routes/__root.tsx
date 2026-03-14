@@ -10,9 +10,9 @@ import { DashboardLayout } from "../components/layout/dashboard-layout";
 import { enforceRouteAuth } from "../lib/auth-guards";
 import { getSettingsSidebarSnapshotServerFn } from "@/server/settings/actions";
 import type { SettingsSidebarSnapshot } from "@/backend/settings";
-import { getPaymentMethodsServerFn, getPaymentInvoicesServerFn } from "@/server/payments/actions";
+import { getPaymentMethodsServerFn, getPaymentInvoicesServerFn, getSubscriptionStatsServerFn } from "@/server/payments/actions";
 import { getSubscriptionSpecsServerFn } from "@/server/pricing/actions";
-import type { PaymentMethod } from "@/backend/payments";
+import type { PaymentMethod, SubscriptionStats } from "@/backend/payments";
 import type { Pricing } from "@/types/pricing";
 import { DEFAULT_PRICING } from "@/utils/default-pricing";
 import { listWorkspacesServerFn } from "@/server/workspaces/actions";
@@ -21,10 +21,14 @@ import type { Workspace } from "@/backend/workspaces";
 import { listHomeProjectsServerFn } from "@/server/projects/actions";
 import { getWorkspaceTeamMembersServerFn } from "@/server/teams/actions";
 import { listTooltipMessagesServerFn } from "@/server/messages/actions";
+import { listActivityLogsServerFn } from "@/server/activity-logs/actions";
 import { listTagsServerFn } from "@/server/tags/actions";
+import { listProjectEnvironmentsServerFn } from "@/server/environments/actions";
+import type { ProjectEnvironment } from "@/backend/environments";
 import type { Project } from "@/backend/projects";
 import type { TeamDetails } from "@/backend/teams";
 import type { AppTooltipMessage } from "@/backend/messages";
+import type { ActivityLogsResponse } from "@/backend/activity-logs";
 import type { BackendTag } from "@/backend/tags";
 import { useTagsStore } from "@/hooks/use-tags-store";
 
@@ -89,6 +93,7 @@ export const Route = createRootRoute({
         tags: null as BackendTag[] | null,
         invoices: null as any,
         pricing: DEFAULT_PRICING as Pricing,
+        projectEnvironments: null as ProjectEnvironment[] | null,
       };
     }
 
@@ -105,7 +110,7 @@ export const Route = createRootRoute({
 
       const shouldPreloadWorkspaceTeamMembers = typeof window === "undefined";
 
-      const [settingsSnapshot, workspaces, projectSwitcherProjects, onboardingProjects, workspaceTeamMembers, tooltipMessages, tags, paymentMethods, invoices, pricingResult] =
+      const [settingsSnapshot, workspaces, projectSwitcherProjects, onboardingProjects, workspaceTeamMembers, tooltipMessages, tags, paymentMethods, invoices, pricingResult, activityLogs, subscriptionStats, projectEnvironments] =
         await Promise.allSettled([
         (getSettingsSidebarSnapshotServerFn as unknown as (input: {
           data?: { workspace?: string };
@@ -145,6 +150,21 @@ export const Route = createRootRoute({
           data: { cursor: null, per_page: 10 },
         }),
         (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
+        (listActivityLogsServerFn as unknown as (input: {
+          data?: { workspace?: string; page?: number; limit?: number };
+        }) => Promise<ActivityLogsResponse>)({
+          data: { workspace, page: 1, limit: 20 },
+        }),
+        (getSubscriptionStatsServerFn as unknown as (input: {
+          data?: { workspace?: string };
+        }) => Promise<SubscriptionStats>)({
+          data: { workspace },
+        }),
+        (listProjectEnvironmentsServerFn as unknown as (input: {
+          data?: { workspace?: string };
+        }) => Promise<ProjectEnvironment[]>)({
+          data: { workspace },
+        }),
       ]);
 
       if (settingsSnapshot.status === "rejected") {
@@ -173,6 +193,15 @@ export const Route = createRootRoute({
       }
       if (pricingResult.status === "rejected") {
         console.error("[root loader] pricing specs failed:", pricingResult.reason);
+      }
+      if (activityLogs.status === "rejected") {
+        console.error("[root loader] activity logs failed:", activityLogs.reason);
+      }
+      if (subscriptionStats.status === "rejected") {
+        console.error("[root loader] subscription stats failed:", subscriptionStats.reason);
+      }
+      if (projectEnvironments.status === "rejected") {
+        console.error("[root loader] project environments failed:", projectEnvironments.reason);
       }
 
       return {
@@ -217,6 +246,18 @@ export const Route = createRootRoute({
           pricingResult.status === "fulfilled"
             ? pricingResult.value
             : DEFAULT_PRICING as Pricing,
+        activityLogs:
+          activityLogs.status === "fulfilled"
+            ? activityLogs.value
+            : null as ActivityLogsResponse | null,
+        subscriptionStats:
+          subscriptionStats.status === "fulfilled"
+            ? subscriptionStats.value
+            : null as SubscriptionStats | null,
+        projectEnvironments:
+          projectEnvironments.status === "fulfilled"
+            ? projectEnvironments.value
+            : null as ProjectEnvironment[] | null,
       };
     } catch (err) {
       console.error("[root loader] unexpected error:", err);
@@ -232,6 +273,9 @@ export const Route = createRootRoute({
         paymentMethods: null as PaymentMethod[] | null,
         invoices: null as any,
         pricing: DEFAULT_PRICING as Pricing,
+        activityLogs: null as ActivityLogsResponse | null,
+        subscriptionStats: null as SubscriptionStats | null,
+        projectEnvironments: null as ProjectEnvironment[] | null,
       };
     }
   },
@@ -260,7 +304,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  const { workspace: loaderWorkspace, settingsSnapshot, workspaces, projectSwitcherProjects, onboardingProjects, workspaceTeamMembers, tooltipMessages, tags, paymentMethods, invoices, pricing } =
+  const { workspace: loaderWorkspace, settingsSnapshot, workspaces, projectSwitcherProjects, onboardingProjects, workspaceTeamMembers, tooltipMessages, tags, paymentMethods, invoices, pricing, activityLogs, subscriptionStats, projectEnvironments } =
     Route.useLoaderData() ?? ({} as any);
 
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
@@ -306,6 +350,9 @@ function RootComponent() {
       initialPaymentMethods={paymentMethods}
       initialInvoices={invoices}
       initialPricing={pricing}
+      initialActivityLogs={activityLogs}
+      initialSubscriptionStats={subscriptionStats}
+      initialProjectEnvironments={projectEnvironments}
     >
       <Outlet />
     </DashboardLayout>

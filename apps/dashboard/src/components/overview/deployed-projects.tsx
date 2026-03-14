@@ -10,7 +10,11 @@ function getCreateCardSpan(projectCount: number) {
 
   return [
     smRemaining >= 2 ? "sm:col-span-2" : "",
-    lgRemaining >= 3 ? "lg:col-span-3" : lgRemaining >= 2 ? "lg:col-span-2" : "",
+    lgRemaining >= 3
+      ? "lg:col-span-3"
+      : lgRemaining >= 2
+        ? "lg:col-span-2"
+        : "lg:col-span-1",
   ]
     .filter(Boolean)
     .join(" ");
