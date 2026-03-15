@@ -28,6 +28,7 @@ import { Route as DomainsBuyRouteImport } from './routes/domains/buy'
 import { Route as DomainsDomainNameRouteImport } from './routes/domains/$domainName'
 import { Route as AddonsAddonIdRouteImport } from './routes/addons/$addonId'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
+import { Route as TeamsTeamNameOwnershipTransferRouteImport } from './routes/teams/$teamName/ownership-transfer'
 import { Route as TeamsTeamNameInvitationRouteImport } from './routes/teams/$teamName/invitation'
 import { Route as ProjectsProjectIdObservabilityRouteImport } from './routes/projects/$projectId/observability'
 import { Route as ProjectsProjectIdLogsRouteImport } from './routes/projects/$projectId/logs'
@@ -133,6 +134,12 @@ const ProjectsProjectIdIndexRoute = ProjectsProjectIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ProjectsProjectIdRoute,
 } as any)
+const TeamsTeamNameOwnershipTransferRoute =
+  TeamsTeamNameOwnershipTransferRouteImport.update({
+    id: '/teams/$teamName/ownership-transfer',
+    path: '/teams/$teamName/ownership-transfer',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const TeamsTeamNameInvitationRoute = TeamsTeamNameInvitationRouteImport.update({
   id: '/teams/$teamName/invitation',
   path: '/teams/$teamName/invitation',
@@ -212,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/logs': typeof ProjectsProjectIdLogsRoute
   '/projects/$projectId/observability': typeof ProjectsProjectIdObservabilityRoute
   '/teams/$teamName/invitation': typeof TeamsTeamNameInvitationRoute
+  '/teams/$teamName/ownership-transfer': typeof TeamsTeamNameOwnershipTransferRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/domains/$domainName': typeof ProjectsProjectIdDomainsDomainNameRoute
   '/projects/$projectId/domains/': typeof ProjectsProjectIdDomainsIndexRoute
@@ -236,6 +244,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/logs': typeof ProjectsProjectIdLogsRoute
   '/projects/$projectId/observability': typeof ProjectsProjectIdObservabilityRoute
   '/teams/$teamName/invitation': typeof TeamsTeamNameInvitationRoute
+  '/teams/$teamName/ownership-transfer': typeof TeamsTeamNameOwnershipTransferRoute
   '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/domains/$domainName': typeof ProjectsProjectIdDomainsDomainNameRoute
   '/projects/$projectId/domains': typeof ProjectsProjectIdDomainsIndexRoute
@@ -267,6 +276,7 @@ export interface FileRoutesById {
   '/projects/$projectId/logs': typeof ProjectsProjectIdLogsRoute
   '/projects/$projectId/observability': typeof ProjectsProjectIdObservabilityRoute
   '/teams/$teamName/invitation': typeof TeamsTeamNameInvitationRoute
+  '/teams/$teamName/ownership-transfer': typeof TeamsTeamNameOwnershipTransferRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/domains/$domainName': typeof ProjectsProjectIdDomainsDomainNameRoute
   '/projects/$projectId/domains/': typeof ProjectsProjectIdDomainsIndexRoute
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/logs'
     | '/projects/$projectId/observability'
     | '/teams/$teamName/invitation'
+    | '/teams/$teamName/ownership-transfer'
     | '/projects/$projectId/'
     | '/projects/$projectId/domains/$domainName'
     | '/projects/$projectId/domains/'
@@ -323,6 +334,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/logs'
     | '/projects/$projectId/observability'
     | '/teams/$teamName/invitation'
+    | '/teams/$teamName/ownership-transfer'
     | '/projects/$projectId'
     | '/projects/$projectId/domains/$domainName'
     | '/projects/$projectId/domains'
@@ -353,6 +365,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/logs'
     | '/projects/$projectId/observability'
     | '/teams/$teamName/invitation'
+    | '/teams/$teamName/ownership-transfer'
     | '/projects/$projectId/'
     | '/projects/$projectId/domains/$domainName'
     | '/projects/$projectId/domains/'
@@ -369,6 +382,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   WorkspaceNewRoute: typeof WorkspaceNewRoute
   TeamsTeamNameInvitationRoute: typeof TeamsTeamNameInvitationRoute
+  TeamsTeamNameOwnershipTransferRoute: typeof TeamsTeamNameOwnershipTransferRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -505,6 +519,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId/'
       preLoaderRoute: typeof ProjectsProjectIdIndexRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/teams/$teamName/ownership-transfer': {
+      id: '/teams/$teamName/ownership-transfer'
+      path: '/teams/$teamName/ownership-transfer'
+      fullPath: '/teams/$teamName/ownership-transfer'
+      preLoaderRoute: typeof TeamsTeamNameOwnershipTransferRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/teams/$teamName/invitation': {
       id: '/teams/$teamName/invitation'
@@ -679,6 +700,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   WorkspaceNewRoute: WorkspaceNewRoute,
   TeamsTeamNameInvitationRoute: TeamsTeamNameInvitationRoute,
+  TeamsTeamNameOwnershipTransferRoute: TeamsTeamNameOwnershipTransferRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -59,6 +59,8 @@ export interface TeamDetails {
   concurrentBuilds?: number;
   isCreator?: boolean;
   subscriptionId?: string;
+  subscriptionType?: string;
+  subscriptionStatus?: string;
   members: TeamMember[];
 }
 
@@ -73,6 +75,17 @@ export interface TeamInvitation {
     username?: string;
   };
   team: { id: string; name: string; avatar?: string; description?: string };
+}
+
+export interface TeamOwnershipTransfer {
+  id: string;
+  teamId?: string;
+  fromUserId?: string;
+  toUserId?: string;
+  status?: string;
+  expiresAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface TeamsApi {
@@ -101,7 +114,9 @@ export interface TeamsApi {
   checkInvitation(teamName: string): Promise<TeamInvitation>;
   acceptInvite(teamId: string): Promise<{ ok: true }>;
   denyInvite(teamId: string): Promise<{ ok: true }>;
-  transferOwnership(teamId: string, newOwnerId: string): Promise<{ ok: true }>;
+  transferOwnership(teamId: string, newOwnerId: string): Promise<TeamOwnershipTransfer>;
+  acceptOwnershipTransfer(teamId: string): Promise<TeamOwnershipTransfer>;
+  denyOwnershipTransfer(teamId: string): Promise<TeamOwnershipTransfer>;
 }
 
 function mapTeamMember(item: unknown): TeamMember | null {
@@ -234,6 +249,12 @@ export function createTeamsApi(client: ApiClient): TeamsApi {
         subscriptionId:
           pickString(asRecord(root.subscription), "_id", "id") ??
           pickString(root, "subscriptionId", "subscription_id"),
+        subscriptionType:
+          pickString(subscriptionRow, "type", "plan_type", "planType") ??
+          undefined,
+        subscriptionStatus:
+          pickString(subscriptionRow, "stripe_status", "status") ??
+          undefined,
         members: rawMembers
           .map(mapTeamMember)
           .filter((member): member is TeamMember => member !== null),
@@ -361,15 +382,63 @@ export function createTeamsApi(client: ApiClient): TeamsApi {
     },
 
     async transferOwnership(teamId, newOwnerId) {
-      await client.request<any>(
+      const response = await client.request<any>(
         `/core/v1/teams/${encodeURIComponent(teamId)}/transfer-ownership`,
         {
           method: "POST",
-          body: { newOwnerId },
+          body: {
+            memberId: newOwnerId,
+          },
         },
       );
 
-      return { ok: true } as const;
+      const root = asRecord(extractTeamRoot(response)) ?? {};
+      return {
+        id: String(asStringOrNumber(root._id) ?? asStringOrNumber(root.id) ?? ""),
+        teamId: pickString(root, "team", "teamId", "team_id"),
+        fromUserId: pickString(root, "from_user", "fromUser", "from_user_id"),
+        toUserId: pickString(root, "to_user", "toUser", "to_user_id"),
+        status: pickString(root, "status"),
+        expiresAt: pickString(root, "expires_at", "expiresAt"),
+        createdAt: pickString(root, "createdAt", "created_at"),
+        updatedAt: pickString(root, "updatedAt", "updated_at"),
+      } satisfies TeamOwnershipTransfer;
+    },
+
+    async acceptOwnershipTransfer(teamId) {
+      const response = await client.request<any>(
+        `/core/v1/teams/${encodeURIComponent(teamId)}/accept-transfer`,
+        { method: "POST", body: {} },
+      );
+      const root = asRecord(extractTeamRoot(response)) ?? {};
+      return {
+        id: String(asStringOrNumber(root._id) ?? asStringOrNumber(root.id) ?? ""),
+        teamId: pickString(root, "team", "teamId", "team_id"),
+        fromUserId: pickString(root, "from_user", "fromUser", "from_user_id"),
+        toUserId: pickString(root, "to_user", "toUser", "to_user_id"),
+        status: pickString(root, "status"),
+        expiresAt: pickString(root, "expires_at", "expiresAt"),
+        createdAt: pickString(root, "createdAt", "created_at"),
+        updatedAt: pickString(root, "updatedAt", "updated_at"),
+      } satisfies TeamOwnershipTransfer;
+    },
+
+    async denyOwnershipTransfer(teamId) {
+      const response = await client.request<any>(
+        `/core/v1/teams/${encodeURIComponent(teamId)}/deny-transfer`,
+        { method: "POST", body: {} },
+      );
+      const root = asRecord(extractTeamRoot(response)) ?? {};
+      return {
+        id: String(asStringOrNumber(root._id) ?? asStringOrNumber(root.id) ?? ""),
+        teamId: pickString(root, "team", "teamId", "team_id"),
+        fromUserId: pickString(root, "from_user", "fromUser", "from_user_id"),
+        toUserId: pickString(root, "to_user", "toUser", "to_user_id"),
+        status: pickString(root, "status"),
+        expiresAt: pickString(root, "expires_at", "expiresAt"),
+        createdAt: pickString(root, "createdAt", "created_at"),
+        updatedAt: pickString(root, "updatedAt", "updated_at"),
+      } satisfies TeamOwnershipTransfer;
     },
   };
 }

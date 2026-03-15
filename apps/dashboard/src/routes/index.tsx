@@ -7,11 +7,18 @@ import { DeployedProjects } from "../components/overview/deployed-projects";
 import { ConnectedDomains } from "../components/overview/connected-domains";
 import { FeaturedIntegrations } from "../components/overview/featured-integrations";
 import { TeamInviteModal } from "../components/shared/team-invite-modal";
+import { OwnershipTransferModal } from "../components/shared/ownership-transfer-modal";
 import { listHomeProjectsServerFn } from "@/server/projects/actions";
 import { getHomeOverviewServerFn } from "@/server/overview/actions";
 import { getHomeBandwidthServerFn } from "@/server/bandwidth/actions";
 import { listMcpTemplatesServerFn } from "@/server/mcp/actions";
-import { checkTeamInvitationServerFn, acceptTeamInvitationServerFn, declineTeamInvitationServerFn } from "@/server/teams/actions";
+import {
+  checkTeamInvitationServerFn,
+  acceptTeamInvitationServerFn,
+  declineTeamInvitationServerFn,
+  acceptOwnershipTransferServerFn,
+  denyOwnershipTransferServerFn,
+} from "@/server/teams/actions";
 import {
   getActiveEnvironmentPreferenceServerFn,
   listProjectEnvironmentsServerFn,
@@ -37,14 +44,18 @@ const rootRoute = getRouteApi("__root__");
 export const Route = createFileRoute("/")({
   staleTime: 30_000,
   preloadStaleTime: 30_000,
-  validateSearch: (search: Record<string, unknown>): { workspace?: string; environmentId?: string } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { workspace?: string; environmentId?: string; transferOwnership?: "1" } => {
     const base = workspaceLoaderDeps(search);
     const environmentId = typeof search.environmentId === "string" ? search.environmentId.trim() || undefined : undefined;
-    return { ...base, environmentId };
+    const transferOwnership = search.transferOwnership === "1" ? "1" : undefined;
+    return { ...base, environmentId, transferOwnership };
   },
   loaderDeps: ({ search }) => ({
     workspace: search.workspace,
     environmentId: search.environmentId,
+    transferOwnership: search.transferOwnership,
   }),
   loader: async ({ deps }) => {
     const workspace = deps.workspace;
@@ -115,6 +126,13 @@ function DashboardHome() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteLoadingAction, setInviteLoadingAction] = useState<"accept" | "decline">();
   const [invitationData, setInvitationData] = useState<TeamInvitation | null>(null);
+  const [ownershipTransferOpen, setOwnershipTransferOpen] = useState(
+    search.transferOwnership === "1",
+  );
+  const [ownershipTransferLoading, setOwnershipTransferLoading] = useState(false);
+  const [ownershipTransferLoadingAction, setOwnershipTransferLoadingAction] = useState<
+    "accept" | "deny" | undefined
+  >(undefined);
   const planType = settingsSnapshot?.profile?.subscription?.planType;
   const workspaceSlug = search.workspace?.trim().toLowerCase();
   const loaderWorkspaceSlug = workspace?.trim().toLowerCase();
@@ -133,6 +151,10 @@ function DashboardHome() {
       .catch(() => { if (!cancelled && !isTeamWorkspace) navigate({ to: "/", search: {} }); });
     return () => { cancelled = true; };
   }, [workspaceSlug, invitationData, isTeamWorkspace]);
+
+  useEffect(() => {
+    setOwnershipTransferOpen(search.transferOwnership === "1");
+  }, [search.transferOwnership]);
 
   const visibleProjects = isWorkspaceSwitching ? [] : projects;
   const visibleOverview = isWorkspaceSwitching ? null : overview;
@@ -220,6 +242,103 @@ function DashboardHome() {
             } finally {
               setInviteLoading(false);
               setInviteLoadingAction(undefined);
+            }
+          }}
+        />
+      )}
+
+      {workspaceSlug && (
+        <OwnershipTransferModal
+          open={ownershipTransferOpen}
+          onOpenChange={(open) => {
+            setOwnershipTransferOpen(open);
+            if (!open) {
+              navigate({
+                to: "/",
+                search: {
+                  ...(workspaceSlug ? { workspace: workspaceSlug } : {}),
+                  ...(search.environmentId ? { environmentId: search.environmentId } : {}),
+                },
+              });
+            }
+          }}
+          workspaceName={workspaceTeamMembers?.name ?? workspaceSlug}
+          loading={ownershipTransferLoading}
+          loadingAction={ownershipTransferLoadingAction}
+          onAccept={async () => {
+            setOwnershipTransferLoading(true);
+            setOwnershipTransferLoadingAction("accept");
+            try {
+              await (acceptOwnershipTransferServerFn as unknown as (input: {
+                data: { workspace: string };
+              }) => Promise<unknown>)({ data: { workspace: workspaceSlug } });
+              toast.success("Ownership transfer accepted.");
+              setOwnershipTransferOpen(false);
+              await navigate({
+                to: "/",
+                search: {
+                  ...(workspaceSlug ? { workspace: workspaceSlug } : {}),
+                  ...(search.environmentId ? { environmentId: search.environmentId } : {}),
+                },
+              });
+              await router.invalidate();
+            } catch (err: any) {
+              const message =
+                err?.message || "Failed to accept ownership transfer";
+              if (/no pending ownership transfer found/i.test(message)) {
+                toast.error("This ownership transfer request is no longer actionable.");
+                setOwnershipTransferOpen(false);
+                await navigate({
+                  to: "/",
+                  search: {
+                    ...(workspaceSlug ? { workspace: workspaceSlug } : {}),
+                    ...(search.environmentId ? { environmentId: search.environmentId } : {}),
+                  },
+                });
+              } else {
+                toast.error(message);
+              }
+            } finally {
+              setOwnershipTransferLoading(false);
+              setOwnershipTransferLoadingAction(undefined);
+            }
+          }}
+          onDeny={async () => {
+            setOwnershipTransferLoading(true);
+            setOwnershipTransferLoadingAction("deny");
+            try {
+              await (denyOwnershipTransferServerFn as unknown as (input: {
+                data: { workspace: string };
+              }) => Promise<unknown>)({ data: { workspace: workspaceSlug } });
+              toast.success("Ownership transfer denied.");
+              setOwnershipTransferOpen(false);
+              await navigate({
+                to: "/",
+                search: {
+                  ...(workspaceSlug ? { workspace: workspaceSlug } : {}),
+                  ...(search.environmentId ? { environmentId: search.environmentId } : {}),
+                },
+              });
+              await router.invalidate();
+            } catch (err: any) {
+              const message =
+                err?.message || "Failed to deny ownership transfer";
+              if (/no pending ownership transfer found/i.test(message)) {
+                toast.error("This ownership transfer request is no longer actionable.");
+                setOwnershipTransferOpen(false);
+                await navigate({
+                  to: "/",
+                  search: {
+                    ...(workspaceSlug ? { workspace: workspaceSlug } : {}),
+                    ...(search.environmentId ? { environmentId: search.environmentId } : {}),
+                  },
+                });
+              } else {
+                toast.error(message);
+              }
+            } finally {
+              setOwnershipTransferLoading(false);
+              setOwnershipTransferLoadingAction(undefined);
             }
           }}
         />

@@ -23,6 +23,7 @@ import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 import { invalidateSessionCache } from "@/lib/auth-guards";
 import { InviteMembersModal } from "../settings/invite-members-modal";
+import { Dropdown } from "./dropdown";
 import { WarningModal } from "./warning-modal";
 import { GlossyButton } from "./glossy-button";
 import { OtpInput } from "../auth/auth-split-layout";
@@ -36,7 +37,10 @@ import {
 import { listActivityLogsServerFn } from "@/server/activity-logs/actions";
 import { listProjectEnvironmentsServerFn } from "@/server/environments/actions";
 import type { ProjectEnvironment } from "@/backend/environments";
-import type { ActivityLogsResponse, ActivityLogGroup } from "@/backend/activity-logs";
+import type {
+  ActivityLogsResponse,
+  ActivityLogGroup,
+} from "@/backend/activity-logs";
 import {
   createSettingsApiKeyServerFn,
   decryptSettingsApiKeyServerFn,
@@ -72,7 +76,11 @@ import type {
   SettingsSidebarSnapshot,
   SettingsWebhookGroup as ServerWebhookGroup,
 } from "@/backend/settings";
-import type { TeamDetails, TeamMember } from "@/backend/teams";
+import type {
+  TeamDetails,
+  TeamMember,
+  TeamOwnershipTransfer,
+} from "@/backend/teams";
 import { normalizeMemberRole as normalizeRole } from "@/utils/workspace-role";
 import config from "@/config";
 import {
@@ -171,15 +179,21 @@ function ActivitySessionForm({
   initialData?: ActivityLogsResponse | null;
   enabled?: boolean;
 }) {
-  const getActivityLogs = useServerFn(listActivityLogsServerFn as any) as (args: {
+  const getActivityLogs = useServerFn(
+    listActivityLogsServerFn as any,
+  ) as (args: {
     data: { workspace?: string; page?: number; limit?: number };
   }) => Promise<ActivityLogsResponse>;
 
-  const [groups, setGroups] = useState<ActivityLogGroup[]>(initialData?.logs ?? []);
+  const [groups, setGroups] = useState<ActivityLogGroup[]>(
+    initialData?.logs ?? [],
+  );
   const [isLoading, setIsLoading] = useState(!initialData && enabled);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(initialData?.pagination.totalPages ?? 0);
+  const [totalPages, setTotalPages] = useState(
+    initialData?.pagination.totalPages ?? 0,
+  );
 
   const getActivityLogsRef = useRef(getActivityLogs);
   getActivityLogsRef.current = getActivityLogs;
@@ -224,19 +238,21 @@ function ActivitySessionForm({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="text-sm font-medium text-dash-text-strong">User activity sessions</p>
+        <p className="text-sm font-medium text-dash-text-strong">
+          User activity sessions
+        </p>
         <p className="text-xs text-dash-text-faded">
           Recent account actions across authentication, projects, and domains.
         </p>
       </div>
 
       {isLoading && (
-        <div className="py-6 text-sm text-dash-text-faded">Loading activity...</div>
+        <div className="py-6 text-sm text-dash-text-faded">
+          Loading activity...
+        </div>
       )}
 
-      {error && (
-        <div className="py-6 text-sm text-red-500">{error}</div>
-      )}
+      {error && <div className="py-6 text-sm text-red-500">{error}</div>}
 
       {!isLoading && !error && !hasItems && (
         <div className="py-6 text-sm text-dash-text-faded">
@@ -249,7 +265,9 @@ function ActivitySessionForm({
           {groups.map((group) =>
             group.items.length === 0 ? null : (
               <div key={group.label} className="flex flex-col">
-                <p className="mb-2 text-xs font-medium text-dash-text-faded">{group.label}</p>
+                <p className="mb-2 text-xs font-medium text-dash-text-faded">
+                  {group.label}
+                </p>
                 <div className="flex flex-col">
                   {group.items.map((item, index) => (
                     <div
@@ -260,9 +278,15 @@ function ActivitySessionForm({
                       )}
                     >
                       {item.status === "success" ? (
-                        <CheckCircle weight="fill" className="size-5 shrink-0 text-green-500" />
+                        <CheckCircle
+                          weight="fill"
+                          className="size-5 shrink-0 text-green-500"
+                        />
                       ) : (
-                        <XCircle weight="fill" className="size-5 shrink-0 text-red-500" />
+                        <XCircle
+                          weight="fill"
+                          className="size-5 shrink-0 text-red-500"
+                        />
                       )}
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium leading-5 text-dash-text-strong">
@@ -271,7 +295,9 @@ function ActivitySessionForm({
                         <p className="mt-1 text-xs text-dash-text-faded">
                           {item.context}
                           {item.user_agent ? ` \u2022 ${item.user_agent}` : ""}
-                          {item.ip_address ? ` \u2022 IP ${item.ip_address}` : ""}
+                          {item.ip_address
+                            ? ` \u2022 IP ${item.ip_address}`
+                            : ""}
                         </p>
                       </div>
                       <span className="text-xs text-dash-text-extra-faded">
@@ -517,7 +543,8 @@ function ProfileForm({
   const hasCustomAvatar = Boolean(avatarUrl);
 
   function handleAvatarButtonClick(event: React.MouseEvent<HTMLButtonElement>) {
-    const useAlternateAction = hasCustomAvatar && (event.altKey || isAltPressed);
+    const useAlternateAction =
+      hasCustomAvatar && (event.altKey || isAltPressed);
 
     if (useAlternateAction) {
       setAvatarUrl("");
@@ -529,8 +556,7 @@ function ProfileForm({
   }
 
   const avatarSrc =
-    avatarUrl ||
-    `https://avatar.vercel.sh/${encodeURIComponent(avatarSeed)}`;
+    avatarUrl || `https://avatar.vercel.sh/${encodeURIComponent(avatarSeed)}`;
 
   return (
     <div className="flex max-w-[488px] flex-col gap-8">
@@ -749,7 +775,9 @@ function DangerZone({
 }) {
   const { theme } = useTheme();
   const normalizedProjectCount =
-    typeof projectCount === "number" && Number.isFinite(projectCount) && projectCount > 0
+    typeof projectCount === "number" &&
+    Number.isFinite(projectCount) &&
+    projectCount > 0
       ? Math.floor(projectCount)
       : 0;
   const hasRemainingProjects = normalizedProjectCount > 0;
@@ -884,8 +912,8 @@ function DangerZone({
           hasRemainingProjects
             ? true
             : deleteStep === "confirm"
-            ? !turnstileToken
-            : deleteOtp.length < 6
+              ? !turnstileToken
+              : deleteOtp.length < 6
         }
         closeOnConfirm={deleteStep === "otp"}
         onConfirm={async () => {
@@ -952,9 +980,7 @@ function DangerZone({
           </div>
           {deleteStep === "confirm" ? (
             <>
-              {hasRemainingProjects ? (
-                null
-              ) : (
+              {hasRemainingProjects ? null : (
                 <>
                   <label className="text-sm leading-5 text-dash-text-faded">
                     Complete the verification to continue
@@ -979,7 +1005,8 @@ function DangerZone({
                             isTurnstileReady ? "opacity-100" : "opacity-0",
                           )}
                           options={{
-                            theme: theme === Theme.Dark ? Theme.Dark : Theme.Light,
+                            theme:
+                              theme === Theme.Dark ? Theme.Dark : Theme.Light,
                             size: "flexible",
                           }}
                           onWidgetLoad={() => setIsTurnstileReady(true)}
@@ -1221,7 +1248,9 @@ function WorkspaceProfileForm({
   const [description, setDescription] = useState(team.description || "");
   const [avatarUrl, setAvatarUrl] = useState(team.avatarUrl || "");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [buildsEnabled, setBuildsEnabled] = useState(!(team.buildDisabled ?? false));
+  const [buildsEnabled, setBuildsEnabled] = useState(
+    !(team.buildDisabled ?? false),
+  );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const isDirty =
@@ -1242,7 +1271,9 @@ function WorkspaceProfileForm({
     setBuildsEnabled(!(team.buildDisabled ?? false));
   }, [team.buildDisabled]);
 
-  async function handleAvatarFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleAvatarFileChange(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -1292,8 +1323,7 @@ function WorkspaceProfileForm({
 
   const avatarSeed = team.name || "workspace";
   const avatarSrc =
-    avatarUrl ||
-    `https://avatar.vercel.sh/${encodeURIComponent(avatarSeed)}`;
+    avatarUrl || `https://avatar.vercel.sh/${encodeURIComponent(avatarSeed)}`;
 
   return (
     <div className="flex max-w-[488px] flex-col gap-8">
@@ -1326,9 +1356,7 @@ function WorkspaceProfileForm({
           >
             {isUploadingAvatar ? "Uploading..." : "Upload photo"}
           </button>
-          <span className="text-sm text-dash-text-faded">
-            Workspace logo
-          </span>
+          <span className="text-sm text-dash-text-faded">Workspace logo</span>
         </div>
       </div>
 
@@ -1344,7 +1372,10 @@ function WorkspaceProfileForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={!canEdit}
-            className={cn(inputClass, !canEdit && "opacity-60 cursor-not-allowed")}
+            className={cn(
+              inputClass,
+              !canEdit && "opacity-60 cursor-not-allowed",
+            )}
           />
         </div>
 
@@ -1357,7 +1388,10 @@ function WorkspaceProfileForm({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={!canEdit}
-            className={cn(inputClass, !canEdit && "opacity-60 cursor-not-allowed")}
+            className={cn(
+              inputClass,
+              !canEdit && "opacity-60 cursor-not-allowed",
+            )}
           />
         </div>
       </div>
@@ -1452,7 +1486,9 @@ function ProfileNavSidebar({
   const hiddenTabs = new Set<ProfileTab>();
   if (!showMembersTab) hiddenTabs.add(ProfileTab.Members);
   if (!showBillingTab) hiddenTabs.add(ProfileTab.Billing);
-  const accountNavItems = accountNav.filter((item) => !hiddenTabs.has(item.key));
+  const accountNavItems = accountNav.filter(
+    (item) => !hiddenTabs.has(item.key),
+  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSections, setMobileSections] = useState({
     account: true,
@@ -1746,7 +1782,6 @@ function ProfileNavSidebar({
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }
@@ -1771,7 +1806,9 @@ export function UserProfileDrawer({
   initialPaymentMethods?: PaymentMethod[] | null;
   initialInvoices?: any;
   initialActivityLogs?: ActivityLogsResponse | null;
-  initialSubscriptionStats?: import("@/backend/payments").SubscriptionStats | null;
+  initialSubscriptionStats?:
+    | import("@/backend/payments").SubscriptionStats
+    | null;
   initialProjectEnvironments?: ProjectEnvironment[] | null;
   projectCount?: number;
   requestedTab?: ProfileTab;
@@ -1825,7 +1862,9 @@ export function UserProfileDrawer({
     disconnectGitProviderServerFn as any,
   ) as (args: { data: { provider: string } }) => Promise<{ ok: true }>;
   const listGithubAccounts = useServerFn(listGithubAccountsServerFn);
-  const [isGithubConnected, setIsGithubConnected] = useState<boolean | null>(null);
+  const [isGithubConnected, setIsGithubConnected] = useState<boolean | null>(
+    null,
+  );
   const decryptApiKey = useServerFn(
     decryptSettingsApiKeyServerFn as any,
   ) as (args: { data: { encryptedApiKey: string } }) => Promise<string | null>;
@@ -1888,9 +1927,13 @@ export function UserProfileDrawer({
     return me ? normalizeMemberRole(me) : null;
   })();
   const canEditWorkspace =
-    !hasActiveWorkspace || currentWorkspaceRole === "Creator" || currentWorkspaceRole === "Administrator";
-  const canSeeBilling =
-    !hasActiveWorkspace ? true : currentWorkspaceRole === "Creator" || currentWorkspaceRole === "Administrator";
+    !hasActiveWorkspace ||
+    currentWorkspaceRole === "Creator" ||
+    currentWorkspaceRole === "Administrator";
+  const canSeeBilling = !hasActiveWorkspace
+    ? true
+    : currentWorkspaceRole === "Creator" ||
+      currentWorkspaceRole === "Administrator";
 
   useEffect(() => {
     setSnapshot(initialSnapshot ?? null);
@@ -2096,23 +2139,56 @@ export function UserProfileDrawer({
               {activeTab === ProfileTab.Profile &&
                 hasActiveWorkspace &&
                 workspaceTeam && (
-                <WorkspaceProfileForm
-                  team={workspaceTeam}
-                  canEdit={canEditWorkspace}
-                  isSaving={isSavingProfile}
-                  onSave={async (data) => {
-                    if (!activeWorkspaceSlug) {
-                      return;
-                    }
+                  <WorkspaceProfileForm
+                    team={workspaceTeam}
+                    canEdit={canEditWorkspace}
+                    isSaving={isSavingProfile}
+                    onSave={async (data) => {
+                      if (!activeWorkspaceSlug) {
+                        return;
+                      }
 
-                    setIsSavingProfile(true);
-                    try {
-                      await updateWorkspaceTeamProfile({
+                      setIsSavingProfile(true);
+                      try {
+                        await updateWorkspaceTeamProfile({
+                          data: {
+                            workspace: activeWorkspaceSlug,
+                            name: data.name,
+                            description: data.description,
+                            avatarUrl: data.avatarUrl,
+                          },
+                        });
+
+                        setWorkspaceTeamMembersCache((prev) => ({
+                          ...prev,
+                          [activeWorkspaceSlug]: {
+                            ...workspaceTeam,
+                            name: data.name,
+                            description: data.description || "",
+                            avatarUrl: data.avatarUrl,
+                          },
+                        }));
+
+                        toast.success("Workspace profile updated");
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to update workspace profile",
+                        );
+                      } finally {
+                        setIsSavingProfile(false);
+                      }
+                    }}
+                    onBuildsChange={async (enabled) => {
+                      if (!activeWorkspaceSlug) {
+                        return;
+                      }
+
+                      await updateBuilds({
                         data: {
                           workspace: activeWorkspaceSlug,
-                          name: data.name,
-                          description: data.description,
-                          avatarUrl: data.avatarUrl,
+                          buildDisabled: !enabled,
                         },
                       });
 
@@ -2120,299 +2196,286 @@ export function UserProfileDrawer({
                         ...prev,
                         [activeWorkspaceSlug]: {
                           ...workspaceTeam,
-                          name: data.name,
-                          description: data.description || "",
-                          avatarUrl: data.avatarUrl,
+                          buildDisabled: !enabled,
                         },
                       }));
-
-                      toast.success("Workspace profile updated");
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to update workspace profile",
-                      );
-                    } finally {
-                      setIsSavingProfile(false);
-                    }
-                  }}
-                  onBuildsChange={async (enabled) => {
-                    if (!activeWorkspaceSlug) {
-                      return;
-                    }
-
-                    await updateBuilds({
-                      data: {
-                        workspace: activeWorkspaceSlug,
-                        buildDisabled: !enabled,
-                      },
-                    });
-
-                    setWorkspaceTeamMembersCache((prev) => ({
-                      ...prev,
-                      [activeWorkspaceSlug]: {
-                        ...workspaceTeam,
-                        buildDisabled: !enabled,
-                      },
-                    }));
-                  }}
-                />
-              )}
+                    }}
+                  />
+                )}
               {activeTab === ProfileTab.Profile &&
                 hasActiveWorkspace &&
                 !workspaceTeam && (
-                <div className="text-sm text-dash-text-faded">
-                  Loading workspace profile…
-                </div>
-              )}
-              {activeTab === ProfileTab.Profile && !hasActiveWorkspace && profile && (
-                <ProfileForm
-                  profile={profile}
-                  projectCount={projectCount}
-                  isSaving={isSavingProfile}
-                  onSave={async (data) => {
-                    setIsSavingProfile(true);
-                    try {
-                      const updated = await updateProfile({ data });
-                      setSnapshot((prev) => {
-                        if (!prev) {
-                          return prev;
-                        }
-
-                        return {
-                          ...prev,
-                          profile: {
-                            ...prev.profile,
-                            firstName: updated.firstName,
-                            lastName: updated.lastName,
-                            username: updated.username,
-                            avatarUrl: updated.avatarUrl,
-                          },
-                        };
-                      });
-                      toast.success("Profile updated");
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to update profile",
-                      );
-                    } finally {
-                      setIsSavingProfile(false);
-                    }
-                  }}
-                  onChangeEmail={async (email) => {
-                    try {
-                      await requestEmailVerification({ data: { email } });
-                      toast.success("Verification email sent");
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to send verification email",
-                      );
-                    }
-                  }}
-                  onBuildsChange={async (enabled) => {
-                    try {
-                      await updateBuilds({ data: { buildDisabled: !enabled } });
-                      setSnapshot((prev) => {
-                        if (!prev) {
-                          return prev;
-                        }
-
-                        return {
-                          ...prev,
-                          profile: {
-                            ...prev.profile,
-                            buildDisabled: !enabled,
-                          },
-                        };
-                      });
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to update build settings",
-                      );
-                      throw error;
-                    }
-                  }}
-                  onCreateApiKey={async () => {
-                    try {
-                      const result = await createApiKey();
-                      const apiKeyValue = result.apiKey;
-
-                      if (apiKeyValue) {
-                        setSnapshot((prev) => {
-                          if (!prev) {
-                            return prev;
-                          }
-
-                          return {
-                            ...prev,
-                            profile: {
-                              ...prev.profile,
-                              apiKey: apiKeyValue,
-                            },
-                          };
-                        });
-                        toast.success("API key created");
-                      }
-
-                      return apiKeyValue;
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to create API key",
-                      );
-                      return undefined;
-                    }
-                  }}
-                  onResetApiKey={async () => {
-                    try {
-                      const result = await resetApiKey();
-                      const apiKeyValue = result.apiKey;
-
-                      if (apiKeyValue) {
-                        setSnapshot((prev) => {
-                          if (!prev) {
-                            return prev;
-                          }
-
-                          return {
-                            ...prev,
-                            profile: {
-                              ...prev.profile,
-                              apiKey: apiKeyValue,
-                            },
-                          };
-                        });
-                        toast.success("API key reset");
-                      }
-
-                      return apiKeyValue;
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to reset API key",
-                      );
-                      return undefined;
-                    }
-                  }}
-                  onDecryptApiKey={async (encryptedApiKey) => {
-                    try {
-                      return await decryptApiKey({ data: { encryptedApiKey } });
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to decrypt API key",
-                      );
-                      return null;
-                    }
-                  }}
-                  isGithubConnected={isGithubConnected ?? true}
-                  onDisconnectGithub={async () => {
-                    try {
-                      await disconnectGitProvider({ data: { provider: "github" } });
-                      setIsGithubConnected(false);
-                      window.dispatchEvent(new Event("brimble:git-connection-changed"));
-                      toast.success("GitHub disconnected successfully");
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to disconnect GitHub",
-                      );
-                    }
-                  }}
-                  onConnectGithub={() => {
-                    const popup = window.open(
-                      "https://github.com/apps/brimble-build/installations/new",
-                      "_blank",
-                      "width=900,height=760",
-                    );
-
-                    if (!popup) {
-                      toast.error("Popup blocked. Please allow popups and try again.");
-                      return;
-                    }
-
-                    toast.success("Complete the GitHub installation in the popup, then refresh.");
-                    setIsGithubConnected(null);
-                    // Poll for connection
-                    const interval = window.setInterval(async () => {
+                  <div className="text-sm text-dash-text-faded">
+                    Loading workspace profile…
+                  </div>
+                )}
+              {activeTab === ProfileTab.Profile &&
+                !hasActiveWorkspace &&
+                profile && (
+                  <ProfileForm
+                    profile={profile}
+                    projectCount={projectCount}
+                    isSaving={isSavingProfile}
+                    onSave={async (data) => {
+                      setIsSavingProfile(true);
                       try {
-                        const accounts = await listGithubAccounts();
-                        if (Array.isArray(accounts) && accounts.length > 0) {
-                          setIsGithubConnected(true);
-                          window.clearInterval(interval);
-                          window.dispatchEvent(new Event("brimble:git-connection-changed"));
-                          toast.success("GitHub connected successfully");
-                        }
-                      } catch {}
-                    }, 3000);
-                    // Stop polling after 90s
-                    window.setTimeout(() => {
-                      window.clearInterval(interval);
-                      if (isGithubConnected === null) {
-                        setIsGithubConnected(false);
+                        const updated = await updateProfile({ data });
+                        setSnapshot((prev) => {
+                          if (!prev) {
+                            return prev;
+                          }
+
+                          return {
+                            ...prev,
+                            profile: {
+                              ...prev.profile,
+                              firstName: updated.firstName,
+                              lastName: updated.lastName,
+                              username: updated.username,
+                              avatarUrl: updated.avatarUrl,
+                            },
+                          };
+                        });
+                        toast.success("Profile updated");
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to update profile",
+                        );
+                      } finally {
+                        setIsSavingProfile(false);
                       }
-                    }, 90_000);
-                  }}
-                  onRequestDeleteAccountOtp={async (turnstileToken) => {
-                    try {
-                      await requestDeleteAccountOtp({ data: { turnstileToken } });
-                      toast.success("Verification code sent to your email");
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to send verification code",
+                    }}
+                    onChangeEmail={async (email) => {
+                      try {
+                        await requestEmailVerification({ data: { email } });
+                        toast.success("Verification email sent");
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to send verification email",
+                        );
+                      }
+                    }}
+                    onBuildsChange={async (enabled) => {
+                      try {
+                        await updateBuilds({
+                          data: { buildDisabled: !enabled },
+                        });
+                        setSnapshot((prev) => {
+                          if (!prev) {
+                            return prev;
+                          }
+
+                          return {
+                            ...prev,
+                            profile: {
+                              ...prev.profile,
+                              buildDisabled: !enabled,
+                            },
+                          };
+                        });
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to update build settings",
+                        );
+                        throw error;
+                      }
+                    }}
+                    onCreateApiKey={async () => {
+                      try {
+                        const result = await createApiKey();
+                        const apiKeyValue = result.apiKey;
+
+                        if (apiKeyValue) {
+                          setSnapshot((prev) => {
+                            if (!prev) {
+                              return prev;
+                            }
+
+                            return {
+                              ...prev,
+                              profile: {
+                                ...prev.profile,
+                                apiKey: apiKeyValue,
+                              },
+                            };
+                          });
+                          toast.success("API key created");
+                        }
+
+                        return apiKeyValue;
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to create API key",
+                        );
+                        return undefined;
+                      }
+                    }}
+                    onResetApiKey={async () => {
+                      try {
+                        const result = await resetApiKey();
+                        const apiKeyValue = result.apiKey;
+
+                        if (apiKeyValue) {
+                          setSnapshot((prev) => {
+                            if (!prev) {
+                              return prev;
+                            }
+
+                            return {
+                              ...prev,
+                              profile: {
+                                ...prev.profile,
+                                apiKey: apiKeyValue,
+                              },
+                            };
+                          });
+                          toast.success("API key reset");
+                        }
+
+                        return apiKeyValue;
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to reset API key",
+                        );
+                        return undefined;
+                      }
+                    }}
+                    onDecryptApiKey={async (encryptedApiKey) => {
+                      try {
+                        return await decryptApiKey({
+                          data: { encryptedApiKey },
+                        });
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to decrypt API key",
+                        );
+                        return null;
+                      }
+                    }}
+                    isGithubConnected={isGithubConnected ?? true}
+                    onDisconnectGithub={async () => {
+                      try {
+                        await disconnectGitProvider({
+                          data: { provider: "github" },
+                        });
+                        setIsGithubConnected(false);
+                        window.dispatchEvent(
+                          new Event("brimble:git-connection-changed"),
+                        );
+                        toast.success("GitHub disconnected successfully");
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to disconnect GitHub",
+                        );
+                      }
+                    }}
+                    onConnectGithub={() => {
+                      const popup = window.open(
+                        "https://github.com/apps/brimble-build/installations/new",
+                        "_blank",
+                        "width=900,height=760",
                       );
-                      throw error;
-                    }
-                  }}
-                  onVerifyDeleteAccountOtp={async (code) => {
-                    const accessCode = code.trim();
-                    if (!/^\d{6}$/.test(accessCode)) {
-                      throw new Error("Enter a valid 6-digit code");
-                    }
-                    try {
-                      await confirmDeleteAccount({
-                        data: { accessCode },
-                      });
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to delete account",
+
+                      if (!popup) {
+                        toast.error(
+                          "Popup blocked. Please allow popups and try again.",
+                        );
+                        return;
+                      }
+
+                      toast.success(
+                        "Complete the GitHub installation in the popup, then refresh.",
                       );
-                      throw error;
-                    }
-                  }}
-                  onDeleteAccount={async () => {
-                    invalidateSessionCache();
-                    window.location.href = "/";
-                  }}
-                />
-              )}
+                      setIsGithubConnected(null);
+                      // Poll for connection
+                      const interval = window.setInterval(async () => {
+                        try {
+                          const accounts = await listGithubAccounts();
+                          if (Array.isArray(accounts) && accounts.length > 0) {
+                            setIsGithubConnected(true);
+                            window.clearInterval(interval);
+                            window.dispatchEvent(
+                              new Event("brimble:git-connection-changed"),
+                            );
+                            toast.success("GitHub connected successfully");
+                          }
+                        } catch {}
+                      }, 3000);
+                      // Stop polling after 90s
+                      window.setTimeout(() => {
+                        window.clearInterval(interval);
+                        if (isGithubConnected === null) {
+                          setIsGithubConnected(false);
+                        }
+                      }, 90_000);
+                    }}
+                    onRequestDeleteAccountOtp={async (turnstileToken) => {
+                      try {
+                        await requestDeleteAccountOtp({
+                          data: { turnstileToken },
+                        });
+                        toast.success("Verification code sent to your email");
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to send verification code",
+                        );
+                        throw error;
+                      }
+                    }}
+                    onVerifyDeleteAccountOtp={async (code) => {
+                      const accessCode = code.trim();
+                      if (!/^\d{6}$/.test(accessCode)) {
+                        throw new Error("Enter a valid 6-digit code");
+                      }
+                      try {
+                        await confirmDeleteAccount({
+                          data: { accessCode },
+                        });
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to delete account",
+                        );
+                        throw error;
+                      }
+                    }}
+                    onDeleteAccount={async () => {
+                      invalidateSessionCache();
+                      window.location.href = "/";
+                    }}
+                  />
+                )}
               {activeTab === ProfileTab.Profile &&
                 !hasActiveWorkspace &&
                 !profile &&
                 !isLoadingSettings && (
-                <div className="text-sm text-dash-text-faded">
-                  Profile settings are unavailable right now.
-                </div>
-              )}
+                  <div className="text-sm text-dash-text-faded">
+                    Profile settings are unavailable right now.
+                  </div>
+                )}
               {open && (
                 <div
                   className={cn(
-                    activeTab === ProfileTab.ActivitySession ? "block" : "hidden",
+                    activeTab === ProfileTab.ActivitySession
+                      ? "block"
+                      : "hidden",
                   )}
                   aria-hidden={activeTab !== ProfileTab.ActivitySession}
                 >
@@ -2511,50 +2574,61 @@ export function UserProfileDrawer({
                     Notification settings are unavailable right now.
                   </div>
                 )}
-              {activeTab === ProfileTab.Billing && profile && hasActiveWorkspace && !workspaceTeam && (
-                <div className="text-sm text-dash-text-faded">
-                  Loading workspace billing…
-                </div>
-              )}
-              {activeTab === ProfileTab.Billing && profile && (!hasActiveWorkspace || workspaceTeam) && (
-                <BillingForm
-                  key={`billing-${settingsScopeKey}`}
-                  profile={profile}
-                  initialPaymentMethods={initialPaymentMethods}
-                  initialInvoices={hasActiveWorkspace ? undefined : initialInvoices}
-                  initialSpendingStats={snapshot?.billing.spending}
-                  initialSubscriptionStats={initialSubscriptionStats}
-                  hidePaymentMethods={hasActiveWorkspace}
-                  hideCurrentPlan={hasActiveWorkspace}
-                  teamId={hasActiveWorkspace ? workspaceTeam?.id : undefined}
-                  workspaceTeam={hasActiveWorkspace ? workspaceTeam : undefined}
-                  onSpendingLimitSaved={async () => {
-                    await refreshSettings();
-
-                    if (!activeWorkspaceSlug) {
-                      return;
+              {activeTab === ProfileTab.Billing &&
+                profile &&
+                hasActiveWorkspace &&
+                !workspaceTeam && (
+                  <div className="text-sm text-dash-text-faded">
+                    Loading workspace billing…
+                  </div>
+                )}
+              {activeTab === ProfileTab.Billing &&
+                profile &&
+                (!hasActiveWorkspace || workspaceTeam) && (
+                  <BillingForm
+                    key={`billing-${settingsScopeKey}`}
+                    profile={profile}
+                    initialPaymentMethods={initialPaymentMethods}
+                    initialInvoices={
+                      hasActiveWorkspace ? undefined : initialInvoices
                     }
-
-                    try {
-                      const nextTeam = await getWorkspaceTeamMembers({
-                        data: { workspace: activeWorkspaceSlug },
-                      });
-
-                      setWorkspaceTeamMembersCache((prev) => ({
-                        ...prev,
-                        [activeWorkspaceSlug]: nextTeam,
-                      }));
-                    } catch {
-                      // Keep the current cached team state if refresh fails.
+                    initialSpendingStats={snapshot?.billing.spending}
+                    initialSubscriptionStats={initialSubscriptionStats}
+                    hidePaymentMethods={hasActiveWorkspace}
+                    hideCurrentPlan={hasActiveWorkspace}
+                    teamId={hasActiveWorkspace ? workspaceTeam?.id : undefined}
+                    workspaceTeam={
+                      hasActiveWorkspace ? workspaceTeam : undefined
                     }
-                  }}
-                />
-              )}
-              {activeTab === ProfileTab.Billing && !profile && !isLoadingSettings && (
-                <div className="text-sm text-dash-text-faded">
-                  Billing settings are unavailable right now.
-                </div>
-              )}
+                    onSpendingLimitSaved={async () => {
+                      await refreshSettings();
+
+                      if (!activeWorkspaceSlug) {
+                        return;
+                      }
+
+                      try {
+                        const nextTeam = await getWorkspaceTeamMembers({
+                          data: { workspace: activeWorkspaceSlug },
+                        });
+
+                        setWorkspaceTeamMembersCache((prev) => ({
+                          ...prev,
+                          [activeWorkspaceSlug]: nextTeam,
+                        }));
+                      } catch {
+                        // Keep the current cached team state if refresh fails.
+                      }
+                    }}
+                  />
+                )}
+              {activeTab === ProfileTab.Billing &&
+                !profile &&
+                !isLoadingSettings && (
+                  <div className="text-sm text-dash-text-faded">
+                    Billing settings are unavailable right now.
+                  </div>
+                )}
             </div>
           </div>
         </Drawer.Content>
@@ -2620,8 +2694,6 @@ function NotificationRow({
   );
 }
 void NotificationRow;
-
-
 
 /* ── Event notification data ── */
 
@@ -2877,7 +2949,10 @@ function EventGroupCard({
               e.stopPropagation();
               if (!disabled) onGroupToggle(!groupEnabled);
             }}
-            className={cn("text-xs text-[#4879f8] hover:underline", disabled && "pointer-events-none opacity-50")}
+            className={cn(
+              "text-xs text-[#4879f8] hover:underline",
+              disabled && "pointer-events-none opacity-50",
+            )}
           >
             {groupEnabled ? "Deselect all" : "Select all"}
           </span>
@@ -2902,7 +2977,10 @@ function EventGroupCard({
                 <label
                   key={event.key}
                   title={event.description}
-                  className={cn("flex items-center gap-2", disabled ? "cursor-not-allowed" : "cursor-pointer")}
+                  className={cn(
+                    "flex items-center gap-2",
+                    disabled ? "cursor-not-allowed" : "cursor-pointer",
+                  )}
                 >
                   <Checkbox
                     checked={groupEnabled && (eventStates[event.key] ?? false)}
@@ -3165,11 +3243,19 @@ function NotificationsForm({
                   onChange={(e) => setDiscordUrl(e.target.value)}
                   placeholder="https://discord.com/api/webhooks/..."
                   disabled={!canEdit}
-                  className={cn(inputClass, "flex-1", !canEdit && "opacity-60 cursor-not-allowed")}
+                  className={cn(
+                    inputClass,
+                    "flex-1",
+                    !canEdit && "opacity-60 cursor-not-allowed",
+                  )}
                 />
                 <button
                   onClick={() => handleTestWebhook(discordUrl, "discord")}
-                  disabled={!canEdit || !discordUrl.trim() || testingWebhook === "discord"}
+                  disabled={
+                    !canEdit ||
+                    !discordUrl.trim() ||
+                    testingWebhook === "discord"
+                  }
                   className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
                 >
                   <Send className="size-3.5" />
@@ -3188,11 +3274,17 @@ function NotificationsForm({
                   onChange={(e) => setSlackUrl(e.target.value)}
                   placeholder="https://hooks.slack.com/services/..."
                   disabled={!canEdit}
-                  className={cn(inputClass, "flex-1", !canEdit && "opacity-60 cursor-not-allowed")}
+                  className={cn(
+                    inputClass,
+                    "flex-1",
+                    !canEdit && "opacity-60 cursor-not-allowed",
+                  )}
                 />
                 <button
                   onClick={() => handleTestWebhook(slackUrl, "slack")}
-                  disabled={!canEdit || !slackUrl.trim() || testingWebhook === "slack"}
+                  disabled={
+                    !canEdit || !slackUrl.trim() || testingWebhook === "slack"
+                  }
                   className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
                 >
                   <Send className="size-3.5" />
@@ -3211,11 +3303,19 @@ function NotificationsForm({
                   onChange={(e) => setWebhookUrl(e.target.value)}
                   placeholder="https://your-server.com/webhook"
                   disabled={!canEdit}
-                  className={cn(inputClass, "flex-1", !canEdit && "opacity-60 cursor-not-allowed")}
+                  className={cn(
+                    inputClass,
+                    "flex-1",
+                    !canEdit && "opacity-60 cursor-not-allowed",
+                  )}
                 />
                 <button
                   onClick={() => handleTestWebhook(webhookUrl, "custom")}
-                  disabled={!canEdit || !webhookUrl.trim() || testingWebhook === "custom"}
+                  disabled={
+                    !canEdit ||
+                    !webhookUrl.trim() ||
+                    testingWebhook === "custom"
+                  }
                   className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
                 >
                   <Send className="size-3.5" />
@@ -3244,7 +3344,11 @@ function NotificationsForm({
             {/* All Events */}
             <div className="flex items-center py-2">
               <div className="flex items-center gap-2.5">
-                <Checkbox checked={allEvents} onChange={handleAllEventsToggle} disabled={!canEdit} />
+                <Checkbox
+                  checked={allEvents}
+                  onChange={handleAllEventsToggle}
+                  disabled={!canEdit}
+                />
                 <div className="flex flex-col">
                   <span className="text-sm font-medium leading-5 text-dash-text-strong">
                     All Events
@@ -3300,9 +3404,9 @@ function NotificationsForm({
               await onSave?.({
                 emailNotifications: emailNotifs,
                 mute: profile.notifications?.mute ?? false,
-                webhookUrl: !webhookEnabled ? null : (webhookUrl.trim() || null),
-                discordUrl: !webhookEnabled ? null : (discordUrl.trim() || null),
-                slackUrl: !webhookEnabled ? null : (slackUrl.trim() || null),
+                webhookUrl: !webhookEnabled ? null : webhookUrl.trim() || null,
+                discordUrl: !webhookEnabled ? null : discordUrl.trim() || null,
+                slackUrl: !webhookEnabled ? null : slackUrl.trim() || null,
                 events: selectedEvents,
               });
             } finally {
@@ -3416,10 +3520,26 @@ function mapPendingInvites(team?: TeamDetails | null): PendingInvite[] {
     }));
 }
 
-const ASSIGNABLE_ROLES: Array<{ value: string; label: string; description: string }> = [
-  { value: "ADMINISTRATOR", label: "Administrator", description: "Can manage members, environments, and settings" },
-  { value: "MEMBER", label: "Member", description: "Can access assigned environments and deploy" },
-  { value: "VIEWER", label: "Viewer", description: "Read-only access to assigned environments" },
+const ASSIGNABLE_ROLES: Array<{
+  value: string;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "ADMINISTRATOR",
+    label: "Administrator",
+    description: "Can manage members, environments, and settings",
+  },
+  {
+    value: "MEMBER",
+    label: "Member",
+    description: "Can access assigned environments and deploy",
+  },
+  {
+    value: "VIEWER",
+    label: "Viewer",
+    description: "Read-only access to assigned environments",
+  },
 ];
 
 function MemberActionMenu({
@@ -3535,12 +3655,15 @@ function MemberActionMenu({
             >
               <ArrowLeft className="size-3.5" />
             </button>
-            <span className="text-xs font-medium text-dash-text-faded">Select role</span>
+            <span className="text-xs font-medium text-dash-text-faded">
+              Select role
+            </span>
           </div>
           <hr className="my-1 border-dash-border-soft" />
           {ASSIGNABLE_ROLES.map((role) => {
             const isCurrentRole = member.role === role.label;
-            const isUpdatingRole = pendingRole === role.value && roleChangeInFlight;
+            const isUpdatingRole =
+              pendingRole === role.value && roleChangeInFlight;
             return (
               <button
                 key={role.value}
@@ -3549,7 +3672,10 @@ function MemberActionMenu({
                   if (isCurrentRole || roleChangeInFlight) return;
                   setPendingRole(role.value);
                   try {
-                    const didUpdateRole = await onChangeRole?.(member, role.value);
+                    const didUpdateRole = await onChangeRole?.(
+                      member,
+                      role.value,
+                    );
                     if (didUpdateRole !== false) {
                       setOpen(false);
                       setSubMenu(null);
@@ -3568,7 +3694,9 @@ function MemberActionMenu({
                     <span className="size-3 animate-spin rounded-full border border-current border-t-transparent" />
                   )}
                   {isCurrentRole && (
-                    <span className="text-[10px] text-dash-text-extra-faded">Current</span>
+                    <span className="text-[10px] text-dash-text-extra-faded">
+                      Current
+                    </span>
                   )}
                 </span>
                 <span className="text-[11px] leading-tight text-dash-text-extra-faded">
@@ -3590,7 +3718,9 @@ function MemberActionMenu({
             >
               <ArrowLeft className="size-3.5" />
             </button>
-            <span className="text-xs font-medium text-dash-text-faded">Environment access</span>
+            <span className="text-xs font-medium text-dash-text-faded">
+              Environment access
+            </span>
           </div>
           <hr className="my-1 border-dash-border-soft" />
           {environments.map((env) => {
@@ -3616,7 +3746,13 @@ function MemberActionMenu({
                     <span className="size-2.5 animate-spin rounded-full border-[1.5px] border-dash-text-faded border-t-transparent" />
                   ) : checked ? (
                     <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path
+                        d="M1 4L3.5 6.5L9 1"
+                        stroke="white"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   ) : null}
                 </span>
@@ -3672,7 +3808,7 @@ function MembersForm({
     transferOwnershipServerFn as any,
   ) as (args: {
     data: { workspace: string; memberId: string };
-  }) => Promise<{ ok: true }>;
+  }) => Promise<TeamOwnershipTransfer>;
 
   const [team, setTeam] = useState<TeamDetails | null>(initialTeam);
   const [isLoadingMembers, setIsLoadingMembers] = useState(!initialTeam);
@@ -3681,7 +3817,9 @@ function MembersForm({
   const [busyMemberAction, setBusyMemberAction] = useState<
     "resend" | "revoke" | "remove" | "role" | null
   >(null);
-  const [environments, setEnvironments] = useState<ProjectEnvironment[]>(initialEnvironments ?? []);
+  const [environments, setEnvironments] = useState<ProjectEnvironment[]>(
+    initialEnvironments ?? [],
+  );
   const [envAccess, setEnvAccess] = useState<Record<string, Set<string>>>({});
   const [envBusyKey, setEnvBusyKey] = useState<string | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -3701,7 +3839,9 @@ function MembersForm({
 
   const getEnvironments = useServerFn(
     listProjectEnvironmentsServerFn as any,
-  ) as (args: { data: { workspace?: string } }) => Promise<ProjectEnvironment[]>;
+  ) as (args: {
+    data: { workspace?: string };
+  }) => Promise<ProjectEnvironment[]>;
 
   useEffect(() => {
     if (initialEnvironments?.length) {
@@ -3752,7 +3892,9 @@ function MembersForm({
       else reverted.add(envId);
       setEnvAccess((prev) => ({ ...prev, [memberId]: reverted }));
       toast.error(
-        error instanceof Error ? error.message : "Failed to update environment access",
+        error instanceof Error
+          ? error.message
+          : "Failed to update environment access",
       );
     } finally {
       setEnvBusyKey(null);
@@ -3849,10 +3991,19 @@ function MembersForm({
             <div key={i} className="flex items-center gap-3">
               <div className="size-8 shrink-0 animate-pulse rounded-full bg-dash-bg-elevated" />
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <div className="h-3.5 w-28 animate-pulse rounded bg-dash-bg-elevated" style={{ animationDelay: `${i * 100}ms` }} />
-                <div className="h-3 w-40 animate-pulse rounded bg-dash-bg-elevated" style={{ animationDelay: `${i * 100 + 50}ms` }} />
+                <div
+                  className="h-3.5 w-28 animate-pulse rounded bg-dash-bg-elevated"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                />
+                <div
+                  className="h-3 w-40 animate-pulse rounded bg-dash-bg-elevated"
+                  style={{ animationDelay: `${i * 100 + 50}ms` }}
+                />
               </div>
-              <div className="h-5 w-16 animate-pulse rounded-full bg-dash-bg-elevated" style={{ animationDelay: `${i * 100 + 100}ms` }} />
+              <div
+                className="h-5 w-16 animate-pulse rounded-full bg-dash-bg-elevated"
+                style={{ animationDelay: `${i * 100 + 100}ms` }}
+              />
             </div>
           ))}
         </div>
@@ -3873,84 +4024,88 @@ function MembersForm({
 
             return (
               <div key={member.id} className="flex items-center gap-3">
-                  <Avatar
-                    src={member.avatarUrl}
-                    fallbackSeed={member.email || member.name || member.id}
-                    alt={member.name}
-                    className="size-8 shrink-0 rounded-full border border-dash-border-soft object-cover"
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                      {member.name}
-                    </span>
-                    <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                      {member.email}
-                    </span>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                      roleBadgeStyles[member.role] ?? roleBadgeStyles.Member
-                    }`}
-                  >
-                    {member.role}
+                <Avatar
+                  src={member.avatarUrl}
+                  fallbackSeed={member.email || member.name || member.id}
+                  alt={member.name}
+                  className="size-8 shrink-0 rounded-full border border-dash-border-soft object-cover"
+                />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
+                    {member.name}
                   </span>
-                  <MemberActionMenu
-                    member={member}
-                    removing={busyMemberId === member.id && busyMemberAction === "remove"}
-                    changingRole={busyMemberId === member.id && busyMemberAction === "role"}
-                    canChangeRole={canManageTarget}
-                    canRemove={canManageTarget}
-                    environments={canManageTarget ? environments : undefined}
-                    memberEnvIds={memberEnvs}
-                    envBusyId={
-                      envBusyKey?.startsWith(`${member.id}:`)
-                        ? envBusyKey.split(":")[1]
-                        : null
+                  <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
+                    {member.email}
+                  </span>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                    roleBadgeStyles[member.role] ?? roleBadgeStyles.Member
+                  }`}
+                >
+                  {member.role}
+                </span>
+                <MemberActionMenu
+                  member={member}
+                  removing={
+                    busyMemberId === member.id && busyMemberAction === "remove"
+                  }
+                  changingRole={
+                    busyMemberId === member.id && busyMemberAction === "role"
+                  }
+                  canChangeRole={canManageTarget}
+                  canRemove={canManageTarget}
+                  environments={canManageTarget ? environments : undefined}
+                  memberEnvIds={memberEnvs}
+                  envBusyId={
+                    envBusyKey?.startsWith(`${member.id}:`)
+                      ? envBusyKey.split(":")[1]
+                      : null
+                  }
+                  onToggleEnv={toggleEnvAccess}
+                  onChangeRole={async (target, role) => {
+                    try {
+                      setBusyMemberId(target.id);
+                      setBusyMemberAction("role");
+                      await changeMemberRole({
+                        data: { workspace, memberId: target.id, role },
+                      });
+                      toast.success("Role updated");
+                      await refreshMembers();
+                      return true;
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to update role",
+                      );
+                      return false;
+                    } finally {
+                      setBusyMemberId(null);
+                      setBusyMemberAction(null);
                     }
-                    onToggleEnv={toggleEnvAccess}
-                    onChangeRole={async (target, role) => {
-                      try {
-                        setBusyMemberId(target.id);
-                        setBusyMemberAction("role");
-                        await changeMemberRole({
-                          data: { workspace, memberId: target.id, role },
-                        });
-                        toast.success("Role updated");
-                        await refreshMembers();
-                        return true;
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to update role",
-                        );
-                        return false;
-                      } finally {
-                        setBusyMemberId(null);
-                        setBusyMemberAction(null);
-                      }
-                    }}
-                    onRemove={async (target) => {
-                      try {
-                        setBusyMemberId(target.id);
-                        setBusyMemberAction("remove");
-                        await removeTeamMember({
-                          data: { workspace, memberId: target.id },
-                        });
-                        toast.success("Member removed");
-                        await refreshMembers();
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to remove member",
-                        );
-                      } finally {
-                        setBusyMemberId(null);
-                        setBusyMemberAction(null);
-                      }
-                    }}
-                  />
+                  }}
+                  onRemove={async (target) => {
+                    try {
+                      setBusyMemberId(target.id);
+                      setBusyMemberAction("remove");
+                      await removeTeamMember({
+                        data: { workspace, memberId: target.id },
+                      });
+                      toast.success("Member removed");
+                      await refreshMembers();
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to remove member",
+                      );
+                    } finally {
+                      setBusyMemberId(null);
+                      setBusyMemberAction(null);
+                    }
+                  }}
+                />
               </div>
             );
           })}
@@ -4084,8 +4239,9 @@ function MembersForm({
               </span>
               {showBillingInfo && extraSeats > 0 ? (
                 <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                  {extraSeats} extra {extraSeats === 1 ? "seat" : "seats"} &times;{" "}
-                  {formatUsdMonthly(pricing.team.costPerMember)}/seat/month
+                  {extraSeats} extra {extraSeats === 1 ? "seat" : "seats"}{" "}
+                  &times; {formatUsdMonthly(pricing.team.costPerMember)}
+                  /seat/month
                 </span>
               ) : null}
               {showBillingInfo && (
@@ -4117,7 +4273,8 @@ function MembersForm({
                   Transfer ownership
                 </h4>
                 <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                  Transfer Creator role to another workspace member. You will become an Administrator.
+                  Transfer Creator role to another workspace member. You will
+                  become an Administrator.
                 </p>
               </div>
               <button
@@ -4138,16 +4295,18 @@ function MembersForm({
                 setTransferConfirmText("");
               }
             }}
-            title="Transfer ownership?"
+            title="Send ownership transfer request?"
             description={
               transferTarget
-                ? `This will make ${transferTarget.name} the Creator of this workspace. You will be downgraded to Administrator. This action cannot be undone.`
-                : "Select a member to transfer ownership to. You will be downgraded to Administrator. This action cannot be undone."
+                ? `Send Creator role transfer request to ${transferTarget.name}. If accepted, you'll become an Administrator. Expires in 7 days.`
+                : "Select a member to send a transfer request. If accepted, you'll become an Administrator. Expires in 7 days."
             }
-            confirmLabel="Transfer ownership"
-            confirmLoadingLabel="Transferring..."
+            confirmLabel="Transfer"
+            confirmLoadingLabel="Sending..."
             confirmDisabled={
-              !transferTarget || transferConfirmText !== team?.name || transferring
+              !transferTarget ||
+              transferConfirmText !== team?.name ||
+              transferring
             }
             closeOnConfirm={false}
             onConfirm={async () => {
@@ -4157,74 +4316,40 @@ function MembersForm({
                 await transferOwnership({
                   data: { workspace, memberId: transferTarget.id },
                 });
-                toast.success(`Ownership transferred to ${transferTarget.name}`);
+                toast.success("Transfer request sent. Expires in 7 days.");
                 setTransferOpen(false);
                 setTransferTarget(null);
                 setTransferConfirmText("");
                 await refreshMembers();
               } catch (error) {
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : "Failed to transfer ownership",
-                );
+                const message =
+                  error instanceof Error ? error.message : "Failed to transfer ownership";
+                if (/already a pending/i.test(message)) {
+                  toast.error("There is already a pending transfer for this team. Cancel it first.");
+                } else if (/already the team owner/i.test(message)) {
+                  toast.error("This person is already the team owner.");
+                } else {
+                  toast.error(message);
+                }
               } finally {
                 setTransferring(false);
               }
             }}
           >
             {/* Member picker */}
-            <div className="flex max-h-64 flex-col gap-1.5 overflow-y-auto">
-              {members
+            <Dropdown
+              value={transferTarget?.id ?? ""}
+              options={members
                 .filter((m) => m.role !== "Creator")
-                .map((member) => (
-                  <button
-                    key={member.id}
-                    type="button"
-                    onClick={() => setTransferTarget(member)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-[6px] px-3 py-2 text-left transition-colors",
-                      transferTarget?.id === member.id
-                        ? "bg-[#4879f8]/10 ring-1 ring-[#4879f8]/30"
-                        : "hover:bg-dash-bg-elevated",
-                    )}
-                  >
-                    <Avatar
-                      src={member.avatarUrl}
-                      fallbackSeed={member.email || member.name || member.id}
-                      alt={member.name}
-                      className="size-7 shrink-0 rounded-full border border-dash-border-soft object-cover"
-                    />
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm leading-5 text-dash-text-strong">
-                        {member.name}
-                      </span>
-                      <span className="truncate text-xs leading-4 text-dash-text-faded">
-                        {member.email}
-                      </span>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                        roleBadgeStyles[member.role] ?? roleBadgeStyles.Member
-                      }`}
-                    >
-                      {member.role}
-                    </span>
-                    <div
-                      className={cn(
-                        "flex size-4 shrink-0 items-center justify-center rounded-full border",
-                        transferTarget?.id === member.id
-                          ? "border-[#4879f8] bg-[#4879f8]"
-                          : "border-dash-border",
-                      )}
-                    >
-                      {transferTarget?.id === member.id && (
-                        <div className="size-1.5 rounded-full bg-white" />
-                      )}
-                    </div>
-                  </button>
-                ))}
-            </div>
+                .map((m) => ({ id: m.id, label: `${m.name} (${m.role})` }))}
+              onChange={(id) => {
+                const match = members.find((m) => m.id === id);
+                setTransferTarget(match ?? null);
+              }}
+              placeholder="Select a member..."
+              searchable={members.length > 4}
+              searchPlaceholder="Search members..."
+            />
 
             {/* Type-to-confirm */}
             {transferTarget && (

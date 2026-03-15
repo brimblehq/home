@@ -100,8 +100,7 @@ export const siteConfig = {
       "Deploy your WebApps, APIs and A.I workloads. Supports all your favorite stacks and frameworks including Next.js, Node.js, Remix, Hono, Docker, Go, Laravel, and more.",
   },
   integrations: {
-    heading:
-      "Supports all your favorite stacks and frameworks.",
+    heading: "Supports all your favorite stacks and frameworks.",
     description:
       "Deploy your WebApps, APIs and A.I workloads. Next.js, Node.js, Remix, Hono, Docker, MongoDB, Go, PostgreSQL, Laravel — Brimble works with the tools you already love.",
   },
@@ -168,7 +167,7 @@ export const siteConfig = {
       {
         name: "Hacker",
         description: "Perfect for indie devs and side projects.",
-        price: 7,
+        price: 5,
         cta: "Get started",
         features: [
           "All Free plan features",
@@ -184,7 +183,7 @@ export const siteConfig = {
       {
         name: "Pro",
         description: "Built for production ready applications.",
-        price: 19,
+        price: 15,
         cta: "Get started",
         popular: true,
         features: [
@@ -202,8 +201,9 @@ export const siteConfig = {
     ],
     teamPlan: {
       name: "Team",
-      description: "Made for growing teams and scaling. Priced per member and build container.",
-      pricingLabel: "From $12.50/mo",
+      description:
+        "Made for growing teams and scaling. Priced per member and build container.",
+      pricingLabel: "From $30/mo",
       pricePerMember: 5,
       pricePerBuild: 7.5,
       cta: "Create a team",

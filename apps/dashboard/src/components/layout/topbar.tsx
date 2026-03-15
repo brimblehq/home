@@ -582,9 +582,9 @@ function EnvironmentDropdown({
     );
   });
   const normalizedRole = (currentTeamMember?.role ?? "").trim().toLowerCase();
-  const { canWrite: workspaceCanWrite } = useWorkspaceRole();
+  const { isViewer } = useWorkspaceRole();
   const canManageEnvironments =
-    workspaceCanWrite &&
+    !isViewer &&
     (!workspace ||
     (Boolean(teamDetails?.isCreator) ||
       Boolean(currentTeamMember?.isCreator) ||

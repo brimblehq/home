@@ -196,16 +196,33 @@ const mockRepos = [
 ];
 
 const frameworks = [
-  { id: "nextjs", name: "Next.js", buildCmd: "npm run build", output: ".next", install: "npm install" },
-  { id: "vite", name: "Vite", buildCmd: "npm run build", output: "dist", install: "npm install" },
-  { id: "remix", name: "Remix", buildCmd: "npm run build", output: "build", install: "npm install" },
-  { id: "astro", name: "Astro", buildCmd: "npm run build", output: "dist", install: "npm install" },
-  { id: "static", name: "Static", buildCmd: "", output: "public", install: "" },
-  { id: "custom", name: "Custom", buildCmd: "", output: "", install: "" },
+  { id: "nextjs", name: "Next.js", buildCmd: "npm run build", output: ".next", install: "npm install", start: "npm run start" },
+  { id: "vite", name: "Vite", buildCmd: "npm run build", output: "dist", install: "npm install", start: "npm run preview" },
+  { id: "remix", name: "Remix", buildCmd: "npm run build", output: "build", install: "npm install", start: "npm run start" },
+  { id: "astro", name: "Astro", buildCmd: "npm run build", output: "dist", install: "npm install", start: "npm run preview" },
+  { id: "static", name: "Static", buildCmd: "", output: "public", install: "", start: "" },
+  { id: "custom", name: "Custom", buildCmd: "", output: "", install: "", start: "" },
 ];
 
 const regions = ["US East", "EU West", "Asia Pacific"];
 const branches = ["main", "develop", "staging"];
+
+function getGithubAccountsSignature(accounts: GithubAccount[]) {
+  return [...accounts]
+    .map((account) => ({
+      installationId: String(account.installationId ?? ""),
+      username: String(account.username ?? ""),
+      name: String(account.name ?? ""),
+      type: String(account.type ?? ""),
+    }))
+    .sort((a, b) =>
+      `${a.installationId}:${a.username}:${a.name}:${a.type}`.localeCompare(
+        `${b.installationId}:${b.username}:${b.name}:${b.type}`,
+      ),
+    )
+    .map((item) => `${item.installationId}:${item.username}:${item.name}:${item.type}`)
+    .join("|");
+}
 
 /* ─── Database Config ─── */
 
@@ -507,6 +524,7 @@ function Phase2GitRepoSelect({
   reposLoading,
   importingRepoFullName,
   onRefreshAccounts,
+  onConnectAccount,
   onLoadRepos,
   onSelect,
 }: {
@@ -517,6 +535,7 @@ function Phase2GitRepoSelect({
   reposLoading?: boolean;
   importingRepoFullName?: string | null;
   onRefreshAccounts?: () => void;
+  onConnectAccount?: () => void;
   onLoadRepos?: (input: { installationId?: number | string; q?: string }) => void;
   onSelect: (repo: GithubRepoListItem) => void;
 }) {
@@ -683,6 +702,18 @@ function Phase2GitRepoSelect({
                       </button>
                       );
                     })}
+                    <div className="mx-2 my-1 h-px bg-dash-border-soft" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOrgOpen(false);
+                        onConnectAccount?.();
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-body"
+                    >
+                      <Plus className="size-3.5" />
+                      Add account
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1579,6 +1610,7 @@ type Phase3DeployInput = {
   framework: string;
   preStartCommand: string;
   buildCommand: string;
+  startCommand: string;
   outputDirectory: string;
   installCommand: string;
   envVars: Array<{ key: string; value: string }>;
@@ -1609,6 +1641,7 @@ function Phase3Configure({
     icon?: string;
     iconClassName?: string;
     buildCmd?: string;
+    start?: string;
     output?: string;
     install?: string;
   }>;
@@ -1648,10 +1681,12 @@ function Phase3Configure({
     id: "custom",
     name: "Custom",
     buildCmd: "",
+    start: "",
     output: "",
     install: "",
   };
   const [buildCmd, setBuildCmd] = useState(fw.buildCmd ?? "");
+  const [startCmd, setStartCmd] = useState(fw.start ?? "");
   const [outputDir, setOutputDir] = useState(fw.output ?? "");
   const [installCmd, setInstallCmd] = useState(fw.install ?? "");
   const [preStartCmd, setPreStartCmd] = useState("");
@@ -1732,6 +1767,12 @@ function Phase3Configure({
       fallbackFramework?.buildCmd ??
       "",
     );
+    setStartCmd(
+      detectedFramework?.startCommand ??
+      matchedFramework?.start ??
+      fallbackFramework?.start ??
+      "",
+    );
     setOutputDir(
       detectedFramework?.outputDirectory ??
       matchedFramework?.output ??
@@ -1752,6 +1793,7 @@ function Phase3Configure({
     setFramework(id);
     const newFw = frameworkOptions.find((f) => f.id === id);
     setBuildCmd(newFw?.buildCmd ?? "");
+    setStartCmd(newFw?.start ?? "");
     setOutputDir(newFw?.output ?? "");
     setInstallCmd(newFw?.install ?? "");
   }
@@ -1793,6 +1835,7 @@ function Phase3Configure({
       framework,
       preStartCommand: preStartCmd.trim(),
       buildCommand: buildCmd.trim(),
+      startCommand: startCmd.trim(),
       outputDirectory: outputDir.trim(),
       installCommand: installCmd.trim(),
       envVars: cleanedEnvVars,
@@ -1910,6 +1953,19 @@ function Phase3Configure({
                 value={buildCmd}
                 onChange={(e) => setBuildCmd(e.target.value)}
                 placeholder="npm run build"
+                className={`${inputClass} font-family-mono text-[13px]`}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm text-dash-text-body">
+                Start command
+              </label>
+              <input
+                type="text"
+                value={startCmd}
+                onChange={(e) => setStartCmd(e.target.value)}
+                placeholder="npm run start"
                 className={`${inputClass} font-family-mono text-[13px]`}
               />
             </div>
@@ -2165,6 +2221,11 @@ function Phase3Configure({
                   matched.buildCmd ??
                   "",
                 );
+                setStartCmd(
+                  detectedFrameworkFromPath.startCommand ??
+                  matched.start ??
+                  "",
+                );
                 setOutputDir(
                   detectedFrameworkFromPath.outputDirectory ??
                   matched.output ??
@@ -2241,7 +2302,7 @@ function NewProjectPage() {
     new Set(),
   );
   const [frameworkOptions, setFrameworkOptions] = useState<
-    Array<{ id: string; name: string; icon?: string; iconClassName?: string; buildCmd?: string; output?: string; install?: string }>
+    Array<{ id: string; name: string; icon?: string; iconClassName?: string; buildCmd?: string; start?: string; output?: string; install?: string }>
   >(() =>
     frameworks.map((f) => ({
       id: f.id,
@@ -2249,6 +2310,7 @@ function NewProjectPage() {
       icon: undefined,
       iconClassName: undefined,
       buildCmd: f.buildCmd,
+      start: f.start,
       output: f.output,
       install: f.install,
     })),
@@ -2300,6 +2362,11 @@ function NewProjectPage() {
   const githubReposRequestIdRef = useRef(0);
   const githubPollingIntervalRef = useRef<number | null>(null);
   const githubPollingTimeoutRef = useRef<number | null>(null);
+  const githubPollingBaselineSignatureRef = useRef("");
+  const githubAccountsSignature = useMemo(
+    () => getGithubAccountsSignature(githubAccounts),
+    [githubAccounts],
+  );
 
   useEffect(() => {
     let active = true;
@@ -2315,6 +2382,7 @@ function NewProjectPage() {
             icon: dropdownOptions[index]?.icon,
             iconClassName: dropdownOptions[index]?.iconClassName,
             buildCmd: item.buildCommand || "",
+            start: item.startCommand || "",
             output: item.outputDirectory || "",
             install: item.installCommand || "",
           })),
@@ -2496,6 +2564,7 @@ function NewProjectPage() {
         throw new Error("Popup blocked. Please allow popups and try again.");
       }
 
+      githubPollingBaselineSignatureRef.current = githubAccountsSignature;
       setGithubConnectPolling(true);
       void refreshGithubAccounts({ silent: true });
 
@@ -2522,11 +2591,15 @@ function NewProjectPage() {
   }
 
   useEffect(() => {
-    if (githubConnectPolling && githubAccounts.length > 0) {
+    if (
+      githubConnectPolling &&
+      githubAccountsSignature.length > 0 &&
+      githubAccountsSignature !== githubPollingBaselineSignatureRef.current
+    ) {
       stopGithubPolling();
       toast.success("GitHub connected. Select a repository to continue.");
     }
-  }, [githubAccounts.length, githubConnectPolling]);
+  }, [githubAccountsSignature, githubConnectPolling]);
 
   function handleSourceTypeSelect(type: SourceType) {
     setSourceType(type);
@@ -2678,7 +2751,7 @@ function NewProjectPage() {
         rootDirectory: normalizedRootDirectory,
         installCommand: input.installCommand,
         buildCommand: input.buildCommand,
-        startCommand: selectedGithubRepo.metadata.framework?.startCommand ?? "",
+        startCommand: input.startCommand,
         outputDirectory: input.outputDirectory,
         serviceType: getLegacyServiceType(sourceType, input.framework),
         repo: {
@@ -3012,6 +3085,7 @@ function NewProjectPage() {
                       reposLoading={provider.id === "github" ? githubReposLoading : false}
                       importingRepoFullName={provider.id === "github" ? importingRepoFullName : null}
                       onRefreshAccounts={provider.id === "github" ? () => void refreshGithubAccounts() : undefined}
+                      onConnectAccount={provider.id === "github" ? handleGithubConnect : undefined}
                       onLoadRepos={provider.id === "github" ? loadGithubRepos : undefined}
                       onSelect={provider.id === "github" ? handleGithubRepoSelect : () => {
                         toast.message(`${provider.name} repo import is not available yet.`);

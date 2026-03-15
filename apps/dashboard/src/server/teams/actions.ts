@@ -215,9 +215,43 @@ export const transferOwnershipServerFn = createServerFn({
     throw new Error("Member ID is required");
   }
 
+  teamsLogger.info(
+    `transferOwnershipServerFn payload:\n${JSON.stringify(payload, null, 2)}`,
+  );
+
   return withTokenRefresh(async (api) => {
     const { teamId } = await resolveWorkspaceTeam(api, payload?.workspace);
     return api.teams.transferOwnership(teamId, memberId);
+  });
+});
+
+export const acceptOwnershipTransferServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as { workspace?: string } | undefined;
+  const workspace = payload?.workspace?.trim().toLowerCase();
+  if (!workspace) {
+    throw new Error("Workspace is required");
+  }
+
+  return withTokenRefresh(async (api) => {
+    const { teamId } = await resolveWorkspaceTeam(api, workspace);
+    return api.teams.acceptOwnershipTransfer(teamId);
+  });
+});
+
+export const denyOwnershipTransferServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as { workspace?: string } | undefined;
+  const workspace = payload?.workspace?.trim().toLowerCase();
+  if (!workspace) {
+    throw new Error("Workspace is required");
+  }
+
+  return withTokenRefresh(async (api) => {
+    const { teamId } = await resolveWorkspaceTeam(api, workspace);
+    return api.teams.denyOwnershipTransfer(teamId);
   });
 });
 

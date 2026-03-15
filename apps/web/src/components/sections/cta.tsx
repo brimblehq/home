@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { Link } from "@tanstack/react-router";
 import { motion, useInView } from "motion/react";
 import { siteConfig } from "@/config/site";
 import { Button } from "@brimble/ui";
@@ -28,6 +29,7 @@ export function Cta() {
             {siteConfig.cta.buttons.primary}
             <img src={arrowRight} alt="" className="size-3 brightness-0 invert dark:invert-0" />
           </Button>
+          <Link to="/legal">
           <Button
             variant="pill-light"
             size="sm"
@@ -35,6 +37,7 @@ export function Cta() {
           >
             {siteConfig.cta.buttons.secondary}
           </Button>
+          </Link>
           <Button
             variant="pill-light"
             size="sm"

@@ -905,20 +905,16 @@ export function DashboardLayout({
         )
       : null;
     const isViewer = role === "Viewer";
-    const roleKnown = !inWorkspace || role !== null;
     return {
       role,
       isViewer,
-      canWrite: roleKnown ? !isViewer : false,
-      canManageMembers: roleKnown
-        ? (!inWorkspace || role === "Creator" || role === "Administrator")
-        : false,
-      canEditWorkspace: roleKnown
-        ? (!inWorkspace || role === "Creator" || role === "Administrator")
-        : false,
-      canSeeBilling: roleKnown
-        ? (!inWorkspace || role === "Creator" || role === "Administrator")
-        : false,
+      canWrite: !isViewer,
+      canManageMembers:
+        !inWorkspace || role === "Creator" || role === "Administrator",
+      canEditWorkspace:
+        !inWorkspace || role === "Creator" || role === "Administrator",
+      canSeeBilling:
+        !inWorkspace || role === "Creator" || role === "Administrator",
     };
   }, [currentWorkspace, isKnownWorkspace, activeWorkspaceTeamMembers, userProfile?.id, userProfile?.email]);
 

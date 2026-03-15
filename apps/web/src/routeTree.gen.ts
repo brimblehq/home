@@ -14,6 +14,8 @@ import { Route as FaqRouteImport } from './routes/faq'
 import { Route as DomainsRouteImport } from './routes/domains'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LegalIndexRouteImport } from './routes/legal/index'
+import { Route as LegalSlugRouteImport } from './routes/legal/$slug'
 
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
@@ -40,6 +42,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LegalIndexRoute = LegalIndexRouteImport.update({
+  id: '/legal/',
+  path: '/legal/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalSlugRoute = LegalSlugRouteImport.update({
+  id: '/legal/$slug',
+  path: '/legal/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +59,8 @@ export interface FileRoutesByFullPath {
   '/domains': typeof DomainsRoute
   '/faq': typeof FaqRoute
   '/pricing': typeof PricingRoute
+  '/legal/$slug': typeof LegalSlugRoute
+  '/legal/': typeof LegalIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +68,8 @@ export interface FileRoutesByTo {
   '/domains': typeof DomainsRoute
   '/faq': typeof FaqRoute
   '/pricing': typeof PricingRoute
+  '/legal/$slug': typeof LegalSlugRoute
+  '/legal': typeof LegalIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +78,30 @@ export interface FileRoutesById {
   '/domains': typeof DomainsRoute
   '/faq': typeof FaqRoute
   '/pricing': typeof PricingRoute
+  '/legal/$slug': typeof LegalSlugRoute
+  '/legal/': typeof LegalIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$' | '/domains' | '/faq' | '/pricing'
+  fullPaths:
+    | '/'
+    | '/$'
+    | '/domains'
+    | '/faq'
+    | '/pricing'
+    | '/legal/$slug'
+    | '/legal/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$' | '/domains' | '/faq' | '/pricing'
-  id: '__root__' | '/' | '/$' | '/domains' | '/faq' | '/pricing'
+  to: '/' | '/$' | '/domains' | '/faq' | '/pricing' | '/legal/$slug' | '/legal'
+  id:
+    | '__root__'
+    | '/'
+    | '/$'
+    | '/domains'
+    | '/faq'
+    | '/pricing'
+    | '/legal/$slug'
+    | '/legal/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +110,8 @@ export interface RootRouteChildren {
   DomainsRoute: typeof DomainsRoute
   FaqRoute: typeof FaqRoute
   PricingRoute: typeof PricingRoute
+  LegalSlugRoute: typeof LegalSlugRoute
+  LegalIndexRoute: typeof LegalIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +151,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/legal/': {
+      id: '/legal/'
+      path: '/legal'
+      fullPath: '/legal/'
+      preLoaderRoute: typeof LegalIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/$slug': {
+      id: '/legal/$slug'
+      path: '/legal/$slug'
+      fullPath: '/legal/$slug'
+      preLoaderRoute: typeof LegalSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +174,8 @@ const rootRouteChildren: RootRouteChildren = {
   DomainsRoute: DomainsRoute,
   FaqRoute: FaqRoute,
   PricingRoute: PricingRoute,
+  LegalSlugRoute: LegalSlugRoute,
+  LegalIndexRoute: LegalIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

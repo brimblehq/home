@@ -139,9 +139,25 @@ function BillingFormInner({
   const pricing = usePricing();
   const activePlanPrice = pricing.plans.find((p) => p.name === currentPlan)?.amount ?? 0;
   const canChangePlan = !isTeamMode && currentPlan !== "Team";
-  const hasActivePaidSubscription =
-    currentPlan !== "Free" &&
-    (isTeamMode || subscription?.status !== "canceled");
+  const normalizedSubscriptionStatus = String(subscription?.status ?? "")
+    .trim()
+    .toLowerCase();
+  const normalizedTeamSubscriptionType = String(workspaceTeam?.subscriptionType ?? "")
+    .trim()
+    .toLowerCase();
+  const normalizedTeamSubscriptionStatus = String(workspaceTeam?.subscriptionStatus ?? "")
+    .trim()
+    .toLowerCase();
+  const hasActivePaidSubscription = isTeamMode
+    ? Boolean(teamId) &&
+      normalizedTeamSubscriptionType.length > 0 &&
+      normalizedTeamSubscriptionType !== "default" &&
+      normalizedTeamSubscriptionStatus !== "canceled" &&
+      normalizedTeamSubscriptionStatus !== "cancelled" &&
+      normalizedTeamSubscriptionStatus !== "incomplete_expired"
+    : currentPlan !== "Free" &&
+      normalizedSubscriptionStatus !== "canceled" &&
+      normalizedSubscriptionStatus !== "cancelled";
   const canEditSpendingLimit = isTeamMode
     ? Boolean(teamId) && workspaceTeam?.isCreator !== false
     : true;

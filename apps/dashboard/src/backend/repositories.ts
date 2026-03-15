@@ -101,34 +101,73 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
       });
 
       const root = response?.data?.data ?? response?.data ?? response ?? [];
-      const items = Array.isArray(root) ? root : [];
+      const rootRecord = asRecord(root);
+      const items = Array.isArray(root)
+        ? root
+        : Array.isArray(rootRecord?.accounts)
+          ? rootRecord.accounts
+          : Array.isArray(rootRecord?.items)
+            ? rootRecord.items
+            : Array.isArray(rootRecord?.installations)
+              ? rootRecord.installations
+              : [];
 
-      return items
+      const mapped = items
         .map((item: unknown) => {
           const row = asRecord(item);
           if (!row) return null;
-          const accountRow = asRecord(row.account) ?? asRecord(row.owner);
-          const installationRow = asRecord(row.installation);
+          const accountRow =
+            asRecord(row.account) ??
+            asRecord(row.owner) ??
+            asRecord(row.organization);
+          const installationRow =
+            asRecord(row.installation) ??
+            asRecord(row.installationInfo);
+          const installationId =
+            asStringOrNumber(row.installationId) ??
+            asStringOrNumber(row.installation_id) ??
+            asStringOrNumber(row.id) ??
+            asStringOrNumber(row._id) ??
+            asStringOrNumber(installationRow?.id) ??
+            asStringOrNumber(installationRow?._id);
+          const username =
+            pickString(row, "username", "login", "slug") ??
+            pickString(accountRow, "username", "login", "slug");
 
           return {
             id:
               pickString(row, "id", "_id") ??
-              pickString(accountRow, "id", "_id"),
-            name: pickString(row, "name") ?? pickString(accountRow, "name"),
-            username:
-              pickString(row, "username", "login") ??
-              pickString(accountRow, "username", "login"),
+              pickString(accountRow, "id", "_id") ??
+              asString(installationId),
+            name:
+              pickString(row, "name") ??
+              pickString(accountRow, "name") ??
+              username,
+            username,
             avatar:
               pickString(row, "avatar", "avatarUrl", "avatar_url") ??
               pickString(accountRow, "avatar", "avatarUrl", "avatar_url"),
-            installationId:
-              asStringOrNumber(row.installationId) ??
-              asStringOrNumber(row.installation_id) ??
-              asStringOrNumber(installationRow?.id),
-            type: pickString(row, "type") ?? pickString(accountRow, "type"),
+            installationId,
+            type:
+              pickString(row, "type", "target_type", "targetType") ??
+              pickString(accountRow, "type"),
           } satisfies GithubAccount;
         })
-        .filter((item): item is GithubAccount => item !== null);
+        .filter((item): item is GithubAccount => item !== null)
+        .filter((item) => Boolean(item.installationId || item.username || item.name));
+
+      const deduped = new Map<string, GithubAccount>();
+      for (const account of mapped) {
+        const key =
+          String(account.installationId ?? "") ||
+          `${account.type ?? ""}:${account.id ?? account.username ?? account.name ?? ""}`;
+        if (!key) continue;
+        if (!deduped.has(key)) {
+          deduped.set(key, account);
+        }
+      }
+
+      return [...deduped.values()];
     },
     async listGithubRepos(input) {
       const response = await client.request<any>("/core/v1/repos/github", {
