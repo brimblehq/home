@@ -1816,6 +1816,31 @@ function Phase3Configure({
     );
   }
 
+  function handleEnvPaste(id: number, e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData("text");
+    const lines = text.split(/\r?\n/).filter((l) => l.trim() && !l.trim().startsWith("#"));
+    if (lines.length < 2 && !text.includes("=")) return;
+    e.preventDefault();
+    const parsed: Array<{ key: string; value: string }> = [];
+    for (const line of lines) {
+      const eqIdx = line.indexOf("=");
+      if (eqIdx === -1) continue;
+      const key = line.slice(0, eqIdx).trim();
+      let value = line.slice(eqIdx + 1).trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      if (key) parsed.push({ key, value });
+    }
+    if (!parsed.length) return;
+    setEnvVars((prev) => {
+      const withoutCurrent = prev.filter((v) => v.id !== id || v.key || v.value);
+      const newVars = parsed.map((p) => ({ id: envNextId++, ...p }));
+      return [...withoutCurrent, ...newVars];
+    });
+    setEnvExpanded(true);
+  }
+
   function buildDeployInput(): Phase3DeployInput | null {
     const cleanedEnvVars = envVars
       .map((v) => ({ key: v.key.trim(), value: v.value }))
@@ -1880,7 +1905,10 @@ function Phase3Configure({
               onChange={setRegion}
             />
           </div>
-          {isGit && (
+        </div>
+
+        {isGit && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm text-dash-text-body">
                 Branch
@@ -1891,25 +1919,22 @@ function Phase3Configure({
                 onChange={setBranch}
               />
             </div>
-          )}
-        </div>
-
-        {isGit && (
-          <div>
-            <label className="mb-1.5 block text-sm text-dash-text-body">
-              Root directory
-            </label>
-            <RootDirectoryTrigger
-              value={rootDir || "./"}
-              disabled={!canBrowseRootDir}
-              onClick={() => {
-                if (!canBrowseRootDir) return;
-                setRootDirDrawerOpen(true);
-              }}
-            />
-            <p className="mt-2 text-xs text-dash-text-extra-faded">
-              Select the folder in your repository to deploy.
-            </p>
+            <div>
+              <label className="mb-1.5 block text-sm text-dash-text-body">
+                Root directory
+              </label>
+              <RootDirectoryTrigger
+                value={rootDir || "./"}
+                disabled={!canBrowseRootDir}
+                onClick={() => {
+                  if (!canBrowseRootDir) return;
+                  setRootDirDrawerOpen(true);
+                }}
+              />
+              <p className="mt-2 text-xs text-dash-text-extra-faded">
+                Select the folder in your repository to deploy.
+              </p>
+            </div>
           </div>
         )}
       </div>
@@ -2067,6 +2092,7 @@ function Phase3Configure({
                       placeholder="KEY"
                       value={v.key}
                       onChange={(e) => updateEnvVar(v.id, "key", e.target.value)}
+                      onPaste={(e) => handleEnvPaste(v.id, e)}
                       className={`${inputClass} flex-1 font-family-mono text-[13px] uppercase`}
                     />
                     <input
@@ -2076,6 +2102,7 @@ function Phase3Configure({
                       onChange={(e) =>
                         updateEnvVar(v.id, "value", e.target.value)
                       }
+                      onPaste={(e) => handleEnvPaste(v.id, e)}
                       className={`${inputClass} flex-1 font-family-mono text-[13px]`}
                     />
                     <button
@@ -2875,7 +2902,7 @@ function NewProjectPage() {
       }
 
       if (deploy) {
-        toast.success("Deployment started. Taking you to deployment history.");
+        toast.success("Your project is deploying!");
       } else {
         toast.success("Project saved. You can continue configuring it anytime.");
       }

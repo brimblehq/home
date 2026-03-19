@@ -252,7 +252,7 @@ export function OtpInput({
   }
 
   return (
-    <div className="flex gap-2.5">
+    <div className="flex w-full gap-2.5">
       {Array.from({ length }).map((_, i) => (
         <input
           key={i}
@@ -264,7 +264,7 @@ export function OtpInput({
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
-          className="size-12 rounded-[10px] border border-dash-border bg-dash-bg text-center text-lg font-semibold text-dash-text-strong outline-none transition-shadow placeholder:text-dash-text-extra-faded focus:border-[#006fff] focus:shadow-[0_0_0_3px_rgba(0,111,255,0.1)] dark:bg-dash-bg-elevated dark:focus:border-[#4879f8] dark:focus:shadow-[0_0_0_3px_rgba(72,121,248,0.15)]"
+          className="h-12 min-w-0 flex-1 rounded-[10px] border border-dash-border bg-dash-bg text-center text-lg font-semibold text-dash-text-strong outline-none transition-shadow placeholder:text-dash-text-extra-faded focus:border-[#006fff] focus:shadow-[0_0_0_3px_rgba(0,111,255,0.1)] dark:bg-dash-bg-elevated dark:focus:border-[#4879f8] dark:focus:shadow-[0_0_0_3px_rgba(72,121,248,0.15)]"
           aria-label={`Digit ${i + 1}`}
         />
       ))}

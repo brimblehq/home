@@ -545,8 +545,8 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
             ...(input?.payload || {}),
             logId: input?.logId,
             startOnly: input?.startOnly,
-            teamId: input?.teamId,
           },
+          query: { teamId: input?.teamId },
         },
       );
 

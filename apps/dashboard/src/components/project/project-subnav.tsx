@@ -63,7 +63,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     };
   };
   const pathname = useRouterState({
-    select: (s) => s.resolvedLocation?.pathname ?? s.location.pathname,
+    select: (s) => s.location.pathname,
   });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const navigate = useNavigate();
@@ -253,7 +253,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
               <Link
                 key={tab.label}
                 to={withWorkspaceQuery({ pathname: tabPath, searchStr }) as any}
-                preload="render"
+                preload="intent"
                 onClick={() => haptics.selection()}
                 className={cn(
                   "flex h-14 items-center gap-2 px-2 text-sm tracking-[-0.09px] transition-colors",

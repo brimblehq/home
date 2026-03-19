@@ -36,6 +36,16 @@ const FAILURE_LOG_PATTERN = /deployment failed|build failed|failed to deploy/i;
 
 const PROJECT_CACHE_MS = 60_000;
 const projectCache = new Map<string, { project: BackendProject; timestamp: number }>();
+const PROJECT_ROUTE_BEFORELOAD_CACHE_MS = 20_000;
+type ProjectRouteBeforeLoadData = {
+  project: BackendProject;
+  workspace?: string;
+  projectSwitcherProjects: ApiListResponse<BackendProject>;
+};
+const projectRouteBeforeLoadCache = new Map<
+  string,
+  { data: ProjectRouteBeforeLoadData; timestamp: number }
+>();
 
 async function fetchProjectCached(
   projectId: string,
@@ -61,13 +71,22 @@ async function fetchProjectCached(
 
 export function invalidateProjectCache(projectId?: string) {
   if (projectId) {
+    const normalizedProjectId = projectId.trim().toLowerCase();
+
     for (const key of projectCache.keys()) {
-      if (key.startsWith(`${projectId}:`)) {
+      if (key.toLowerCase().startsWith(`${normalizedProjectId}:`)) {
         projectCache.delete(key);
+      }
+    }
+
+    for (const key of projectRouteBeforeLoadCache.keys()) {
+      if (key.toLowerCase().startsWith(`${normalizedProjectId}:`)) {
+        projectRouteBeforeLoadCache.delete(key);
       }
     }
   } else {
     projectCache.clear();
+    projectRouteBeforeLoadCache.clear();
   }
 }
 
@@ -75,6 +94,17 @@ export const Route = createFileRoute("/projects/$projectId")({
   staleTime: 300_000,
   preloadStaleTime: 300_000,
   beforeLoad: async ({ params, location }) => {
+    const requestedProjectId = params.projectId.trim().toLowerCase();
+    const beforeLoadCacheKey = `${requestedProjectId}:${location.searchStr ?? ""}`;
+    const cachedBeforeLoad = projectRouteBeforeLoadCache.get(beforeLoadCacheKey);
+
+    if (
+      cachedBeforeLoad &&
+      Date.now() - cachedBeforeLoad.timestamp < PROJECT_ROUTE_BEFORELOAD_CACHE_MS
+    ) {
+      return cachedBeforeLoad.data;
+    }
+
     const searchParams = new URLSearchParams(location.searchStr || "");
     const workspace = searchParams.get("workspace") || undefined;
     const searchEnvironmentId = searchParams.get("environmentId")?.trim() || undefined;
@@ -102,7 +132,6 @@ export const Route = createFileRoute("/projects/$projectId")({
       data: { workspace, environmentId },
     });
 
-    const requestedProjectId = params.projectId.trim().toLowerCase();
     const projectVisibleInActiveEnvironment = projectSwitcherProjects.items.some((item) => {
       const candidates = [item.slug, item.id, item.name]
         .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
@@ -128,7 +157,13 @@ export const Route = createFileRoute("/projects/$projectId")({
       environmentId,
     );
 
-    return { project, workspace, projectSwitcherProjects };
+    const nextData = { project, workspace, projectSwitcherProjects };
+    projectRouteBeforeLoadCache.set(beforeLoadCacheKey, {
+      data: nextData,
+      timestamp: Date.now(),
+    });
+
+    return nextData;
   },
   loader: ({ context }) => {
     return {
