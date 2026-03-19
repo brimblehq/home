@@ -34,9 +34,9 @@ import config from "@/config";
 const SUCCESS_LOG_PATTERN = /site (is )?(live|running)\b/i;
 const FAILURE_LOG_PATTERN = /deployment failed|build failed|failed to deploy/i;
 
-const PROJECT_CACHE_MS = 60_000;
+const PROJECT_CACHE_MS = 300_000;
 const projectCache = new Map<string, { project: BackendProject; timestamp: number }>();
-const PROJECT_ROUTE_BEFORELOAD_CACHE_MS = 20_000;
+const PROJECT_ROUTE_BEFORELOAD_CACHE_MS = 300_000;
 type ProjectRouteBeforeLoadData = {
   project: BackendProject;
   workspace?: string;

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@brimble/ui";
-import { Link, getRouteApi, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, getRouteApi, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Star, Share2, Check, Plug, Bolt, ArrowUp, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -70,6 +70,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     select: (s) => s.location.pathname,
   });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const router = useRouter();
   const navigate = useNavigate();
   const redeployProject = useServerFn(redeployProjectServerFn as any) as (args: {
     data: {
@@ -183,6 +184,8 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
         id: "redeploy",
         description: `${projectName} is being redeployed to production.`,
       });
+
+      router.invalidate();
     } catch (error: any) {
       toast.error("Failed to redeploy project", {
         id: "redeploy",

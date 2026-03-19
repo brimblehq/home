@@ -21,8 +21,8 @@ import {
 } from "@/utils/discover-mcp";
 
 export const Route = createFileRoute("/addons/$addonId")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 300_000,
+  preloadStaleTime: 300_000,
   loader: async ({ params }) => {
     const [template, relatedResult] = await Promise.all([
       (getMcpTemplateServerFn as unknown as (input: {

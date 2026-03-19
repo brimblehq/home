@@ -16,8 +16,8 @@ import {
 const parentRoute = getRouteApi("/projects/$projectId");
 
 export const Route = createFileRoute("/projects/$projectId/")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 300_000,
+  preloadStaleTime: 300_000,
   loader: async ({ context }) => {
     const project = (context as any).project;
 

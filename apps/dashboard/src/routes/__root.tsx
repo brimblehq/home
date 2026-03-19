@@ -10,25 +10,15 @@ import { DashboardLayout } from "../components/layout/dashboard-layout";
 import { enforceRouteAuth } from "../lib/auth-guards";
 import { getSettingsSidebarSnapshotServerFn } from "@/server/settings/actions";
 import type { SettingsSidebarSnapshot } from "@/backend/settings";
-import { getPaymentMethodsServerFn, getPaymentInvoicesServerFn, getSubscriptionStatsServerFn } from "@/server/payments/actions";
 import { getSubscriptionSpecsServerFn } from "@/server/pricing/actions";
-import type { PaymentMethod, SubscriptionStats } from "@/backend/payments";
 import type { Pricing } from "@/types/pricing";
 import { DEFAULT_PRICING } from "@/utils/default-pricing";
 import { listWorkspacesServerFn } from "@/server/workspaces/actions";
 import type { ApiListResponse } from "@/backend";
 import type { Workspace } from "@/backend/workspaces";
 import { listHomeProjectsServerFn } from "@/server/projects/actions";
-import { getWorkspaceTeamMembersServerFn } from "@/server/teams/actions";
-import { listTooltipMessagesServerFn } from "@/server/messages/actions";
-import { listActivityLogsServerFn } from "@/server/activity-logs/actions";
 import { listTagsServerFn } from "@/server/tags/actions";
-import { listProjectEnvironmentsServerFn } from "@/server/environments/actions";
-import type { ProjectEnvironment } from "@/backend/environments";
 import type { Project } from "@/backend/projects";
-import type { TeamDetails } from "@/backend/teams";
-import type { AppTooltipMessage } from "@/backend/messages";
-import type { ActivityLogsResponse } from "@/backend/activity-logs";
 import type { BackendTag } from "@/backend/tags";
 import { useTagsStore } from "@/hooks/use-tags-store";
 
@@ -57,9 +47,52 @@ const chatwootBootstrapScript = `(function(d,t){
   } catch (e) {}
 })(document,"script");`;
 
+type RootLoaderData = {
+  workspace: string | null;
+  settingsSnapshot: SettingsSidebarSnapshot | null;
+  workspaces: ApiListResponse<Workspace>;
+  projectSwitcherProjects: ApiListResponse<Project> | null;
+  onboardingProjects: ApiListResponse<Project> | null;
+  workspaceTeamMembers: null;
+  tooltipMessages: null;
+  tags: BackendTag[] | null;
+  paymentMethods: null;
+  invoices: null;
+  pricing: Pricing;
+  activityLogs: null;
+  subscriptionStats: null;
+  projectEnvironments: null;
+};
+
+const EMPTY_ROOT_LOADER_DATA: RootLoaderData = {
+  workspace: null,
+  settingsSnapshot: null,
+  workspaces: { items: [] },
+  projectSwitcherProjects: null,
+  onboardingProjects: null,
+  workspaceTeamMembers: null,
+  tooltipMessages: null,
+  tags: null,
+  paymentMethods: null,
+  invoices: null,
+  pricing: DEFAULT_PRICING,
+  activityLogs: null,
+  subscriptionStats: null,
+  projectEnvironments: null,
+};
+
+function createRootLoaderData(
+  overrides: Partial<RootLoaderData> = {},
+): RootLoaderData {
+  return {
+    ...EMPTY_ROOT_LOADER_DATA,
+    ...overrides,
+  };
+}
+
 export const Route = createRootRoute({
-  staleTime: 60_000,
-  preloadStaleTime: 60_000,
+  staleTime: 300_000,
+  preloadStaleTime: 300_000,
   loaderDeps: ({ search }) => ({
     workspace: (search as Record<string, unknown>).workspace ?? undefined,
   }),
@@ -76,25 +109,13 @@ export const Route = createRootRoute({
   beforeLoad: async ({ location }) => {
     await enforceRouteAuth(location.pathname, location.searchStr);
   },
-  loader: async ({ location, deps }) => {
+  loader: (async ({ location, deps }: any) => {
     const isAuthRoute = /^\/(login|signup)$/.test(location.pathname);
     const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace|teams)?(\/|$)/;
     const isCatchAll = location.pathname !== "/" && !knownPrefixes.test(location.pathname);
 
     if (isAuthRoute || isCatchAll) {
-      return {
-        workspace: null as string | null,
-        settingsSnapshot: null as SettingsSidebarSnapshot | null,
-        workspaces: { items: [] } as ApiListResponse<Workspace>,
-        projectSwitcherProjects: null as ApiListResponse<Project> | null,
-        onboardingProjects: null as ApiListResponse<Project> | null,
-        workspaceTeamMembers: null as TeamDetails | null,
-        tooltipMessages: null as AppTooltipMessage[] | null,
-        tags: null as BackendTag[] | null,
-        invoices: null as any,
-        pricing: DEFAULT_PRICING as Pricing,
-        projectEnvironments: null as ProjectEnvironment[] | null,
-      };
+      return createRootLoaderData();
     }
 
     try {
@@ -104,13 +125,7 @@ export const Route = createRootRoute({
         workspace = rawWorkspace.trim();
       }
 
-      const isProjectDetailsRoute =
-        /^\/projects\/[^/]+(?:\/|$)/.test(location.pathname) &&
-        !/^\/projects\/new(?:\/|$)/.test(location.pathname);
-
-      const shouldPreloadWorkspaceTeamMembers = typeof window === "undefined";
-
-      const [settingsSnapshot, workspaces, projectSwitcherProjects, onboardingProjects, workspaceTeamMembers, tooltipMessages, tags, paymentMethods, invoices, pricingResult, activityLogs, subscriptionStats, projectEnvironments] =
+      const [settingsSnapshot, workspaces, onboardingProjects, pricingResult, tags] =
         await Promise.allSettled([
         (getSettingsSidebarSnapshotServerFn as unknown as (input: {
           data?: { workspace?: string };
@@ -118,51 +133,15 @@ export const Route = createRootRoute({
           data: { workspace },
         }),
         (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)(),
-        isProjectDetailsRoute
-          ? (listHomeProjectsServerFn as unknown as (input: {
-              data: { workspace?: string };
-            }) => Promise<ApiListResponse<Project>>)({
-              data: { workspace },
-            })
-          : Promise.resolve(null as ApiListResponse<Project> | null),
         (listHomeProjectsServerFn as unknown as (input: {
           data: { workspace?: string };
         }) => Promise<ApiListResponse<Project>>)({
           data: { workspace },
         }),
-        shouldPreloadWorkspaceTeamMembers && workspace
-          ? (getWorkspaceTeamMembersServerFn as unknown as (input: {
-              data: { workspace: string };
-            }) => Promise<TeamDetails>)({ data: { workspace } })
-          : Promise.resolve(null as TeamDetails | null),
-        (listTooltipMessagesServerFn as unknown as (input: {
-          data?: { workspace?: string };
-        }) => Promise<AppTooltipMessage[] | null>)({
-          data: { workspace },
-        }).catch(() => null as AppTooltipMessage[] | null),
+        (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
         (listTagsServerFn as unknown as (input: {
           data: { workspace?: string };
         }) => Promise<BackendTag[]>)({
-          data: { workspace },
-        }),
-        (getPaymentMethodsServerFn as unknown as () => Promise<PaymentMethod[]>)(),
-        (getPaymentInvoicesServerFn as unknown as (input: { data?: { cursor?: string | null; per_page?: number } }) => Promise<any>)({
-          data: { cursor: null, per_page: 10 },
-        }),
-        (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
-        (listActivityLogsServerFn as unknown as (input: {
-          data?: { workspace?: string; page?: number; limit?: number };
-        }) => Promise<ActivityLogsResponse>)({
-          data: { workspace, page: 1, limit: 20 },
-        }),
-        (getSubscriptionStatsServerFn as unknown as (input: {
-          data?: { workspace?: string };
-        }) => Promise<SubscriptionStats>)({
-          data: { workspace },
-        }),
-        (listProjectEnvironmentsServerFn as unknown as (input: {
-          data?: { workspace?: string };
-        }) => Promise<ProjectEnvironment[]>)({
           data: { workspace },
         }),
       ]);
@@ -173,112 +152,39 @@ export const Route = createRootRoute({
       if (workspaces.status === "rejected") {
         console.error("[root loader] workspaces failed:", workspaces.reason);
       }
-      if (projectSwitcherProjects.status === "rejected") {
-        console.error("[root loader] project switcher failed:", projectSwitcherProjects.reason);
-      }
       if (onboardingProjects.status === "rejected") {
         console.error("[root loader] onboarding projects failed:", onboardingProjects.reason);
-      }
-      if (workspaceTeamMembers.status === "rejected") {
-        console.error("[root loader] workspace team members failed:", workspaceTeamMembers.reason);
-      }
-      if (tooltipMessages.status === "rejected") {
-        console.error("[root loader] tooltip messages failed:", tooltipMessages.reason);
       }
       if (tags.status === "rejected") {
         console.error("[root loader] tags failed:", tags.reason);
       }
-      if (invoices.status === "rejected") {
-        console.error("[root loader] invoices failed:", invoices.reason);
-      }
       if (pricingResult.status === "rejected") {
         console.error("[root loader] pricing specs failed:", pricingResult.reason);
       }
-      if (activityLogs.status === "rejected") {
-        console.error("[root loader] activity logs failed:", activityLogs.reason);
-      }
-      if (subscriptionStats.status === "rejected") {
-        console.error("[root loader] subscription stats failed:", subscriptionStats.reason);
-      }
-      if (projectEnvironments.status === "rejected") {
-        console.error("[root loader] project environments failed:", projectEnvironments.reason);
-      }
 
-      return {
+      return createRootLoaderData({
         workspace: workspace ?? null,
         settingsSnapshot:
-          settingsSnapshot.status === "fulfilled"
-            ? settingsSnapshot.value
-            : null as SettingsSidebarSnapshot | null,
+          settingsSnapshot.status === "fulfilled" ? settingsSnapshot.value : null,
         workspaces:
-          workspaces.status === "fulfilled"
-            ? workspaces.value
-            : { items: [] } as ApiListResponse<Workspace>,
+          workspaces.status === "fulfilled" ? workspaces.value : EMPTY_ROOT_LOADER_DATA.workspaces,
         projectSwitcherProjects:
-          projectSwitcherProjects.status === "fulfilled"
-            ? projectSwitcherProjects.value
-            : null as ApiListResponse<Project> | null,
-        onboardingProjects:
           onboardingProjects.status === "fulfilled"
-            ? onboardingProjects.value
-            : null as ApiListResponse<Project> | null,
-        workspaceTeamMembers:
-          workspaceTeamMembers.status === "fulfilled"
-            ? workspaceTeamMembers.value
-            : null as TeamDetails | null,
-        tooltipMessages:
-          tooltipMessages.status === "fulfilled"
-            ? tooltipMessages.value
-            : null as AppTooltipMessage[] | null,
-        tags:
-          tags.status === "fulfilled"
-            ? tags.value
-            : null as BackendTag[] | null,
-        paymentMethods:
-          paymentMethods.status === "fulfilled"
-            ? paymentMethods.value
-            : null as PaymentMethod[] | null,
-        invoices:
-          invoices.status === "fulfilled"
-            ? invoices.value
-            : null as any,
+            ? (onboardingProjects.value as any)
+            : null,
+        onboardingProjects:
+          onboardingProjects.status === "fulfilled" ? onboardingProjects.value : null,
+        tags: tags.status === "fulfilled" ? tags.value : null,
         pricing:
           pricingResult.status === "fulfilled"
             ? pricingResult.value
-            : DEFAULT_PRICING as Pricing,
-        activityLogs:
-          activityLogs.status === "fulfilled"
-            ? activityLogs.value
-            : null as ActivityLogsResponse | null,
-        subscriptionStats:
-          subscriptionStats.status === "fulfilled"
-            ? subscriptionStats.value
-            : null as SubscriptionStats | null,
-        projectEnvironments:
-          projectEnvironments.status === "fulfilled"
-            ? projectEnvironments.value
-            : null as ProjectEnvironment[] | null,
-      };
+            : DEFAULT_PRICING,
+      });
     } catch (err) {
       console.error("[root loader] unexpected error:", err);
-      return {
-        workspace: null as string | null,
-        settingsSnapshot: null as SettingsSidebarSnapshot | null,
-        workspaces: { items: [] } as ApiListResponse<Workspace>,
-        projectSwitcherProjects: null as ApiListResponse<Project> | null,
-        onboardingProjects: null as ApiListResponse<Project> | null,
-        workspaceTeamMembers: null as TeamDetails | null,
-        tooltipMessages: null as AppTooltipMessage[] | null,
-        tags: null as BackendTag[] | null,
-        paymentMethods: null as PaymentMethod[] | null,
-        invoices: null as any,
-        pricing: DEFAULT_PRICING as Pricing,
-        activityLogs: null as ActivityLogsResponse | null,
-        subscriptionStats: null as SubscriptionStats | null,
-        projectEnvironments: null as ProjectEnvironment[] | null,
-      };
+      return createRootLoaderData();
     }
-  },
+  }) as any,
   component: RootComponent,
   shellComponent: RootDocument,
 });
@@ -323,7 +229,7 @@ function RootComponent() {
     if (!hydrated) {
       if (tags) {
         hydrate(
-          tags.map((t) => ({ id: t.id, name: t.name, color: t.color })),
+          tags.map((t: BackendTag) => ({ id: t.id, name: t.name, color: t.color })),
           workspace,
         );
       } else {

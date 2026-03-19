@@ -82,8 +82,8 @@ const PROJECT_STATUS_FILTER_OPTIONS: FilterOption[] = [
 ];
 
 export const Route = createFileRoute("/projects/")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 300_000,
+  preloadStaleTime: 300_000,
   validateSearch: (search: Record<string, unknown>) => {
     const next: {
       page?: number;
@@ -128,16 +128,18 @@ export const Route = createFileRoute("/projects/")({
     environmentId: parseTextSearchValue(search.environmentId),
   }),
   loader: async ({ deps }) => {
-    const environments = await (listProjectEnvironmentsServerFn as unknown as (input: {
-      data?: { workspace?: string };
-    }) => Promise<ProjectEnvironment[]>)({
-      data: { workspace: deps.workspace },
-    });
-    const persistedEnvironmentId = await (getActiveEnvironmentPreferenceServerFn as unknown as (input: {
-      data?: { workspace?: string };
-    }) => Promise<string | null>)({
-      data: { workspace: deps.workspace },
-    }).catch(() => null);
+    const [environments, persistedEnvironmentId] = await Promise.all([
+      (listProjectEnvironmentsServerFn as unknown as (input: {
+        data?: { workspace?: string };
+      }) => Promise<ProjectEnvironment[]>)({
+        data: { workspace: deps.workspace },
+      }),
+      (getActiveEnvironmentPreferenceServerFn as unknown as (input: {
+        data?: { workspace?: string };
+      }) => Promise<string | null>)({
+        data: { workspace: deps.workspace },
+      }).catch(() => null),
+    ]);
     const resolvedEnvironmentId = resolveEnvironmentId({
       requestedEnvironmentId: deps.environmentId,
       preferredEnvironmentId: persistedEnvironmentId,

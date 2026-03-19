@@ -33,8 +33,8 @@ import {
 } from "@/utils/workspace-route-search";
 
 export const Route = createFileRoute("/domains/")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 300_000,
+  preloadStaleTime: 300_000,
   validateSearch: (search: Record<string, unknown>) => {
     const next: { page?: number; workspace?: string; q?: string } = {};
     const page = parsePositivePageSearchValue(search.page);

@@ -15,8 +15,8 @@ import { parsePositivePageSearchValue } from "@/utils/workspace-route-search";
 const ADDONS_PAGE_SIZE = 18;
 
 export const Route = createFileRoute("/addons/")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 300_000,
+  preloadStaleTime: 300_000,
   validateSearch: (search: Record<string, unknown>) => {
     const next: { page?: number } = {};
     const page = parsePositivePageSearchValue(search.page);

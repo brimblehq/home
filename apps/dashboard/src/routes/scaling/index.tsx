@@ -25,8 +25,8 @@ import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import { PlanUpgradePrompt } from "../../components/shared/plan-upgrade-prompt";
 
 export const Route = createFileRoute("/scaling/")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 300_000,
+  preloadStaleTime: 300_000,
   validateSearch: (search: Record<string, unknown>) => workspaceLoaderDeps(search),
   loaderDeps: ({ search }) => workspaceLoaderDeps(search),
   loader: async ({ deps }) => {

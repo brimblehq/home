@@ -42,8 +42,8 @@ import { getRouteApi } from "@tanstack/react-router";
 const rootRoute = getRouteApi("__root__");
 
 export const Route = createFileRoute("/")({
-  staleTime: 30_000,
-  preloadStaleTime: 30_000,
+  staleTime: 300_000,
+  preloadStaleTime: 300_000,
   validateSearch: (
     search: Record<string, unknown>,
   ): { workspace?: string; environmentId?: string; transferOwnership?: "1" } => {
