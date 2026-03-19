@@ -116,9 +116,9 @@ export function StatsRow({
   ];
 
   return (
-    <div className="mb-8 flex flex-col overflow-hidden rounded border-[0.5px] border-dash-border md:h-[160px] md:flex-row">
+    <div className="mb-8 flex flex-col overflow-hidden rounded border-[0.5px] border-dash-border lg:h-[160px] lg:flex-row">
       {/* Bandwidth */}
-      <div className="flex w-full shrink-0 flex-col border-b-[0.5px] border-dash-border md:w-[36%] md:border-b-0 md:border-r-[0.5px]">
+      <div className="flex w-full shrink-0 flex-col border-b-[0.5px] border-dash-border lg:w-[36%] lg:border-b-0 lg:border-r-[0.5px]">
         <div className="flex h-[30px] items-center border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-2">
           <span className="text-xs tracking-[-0.02px] text-dash-text-strong">
             Bandwidth
@@ -155,13 +155,13 @@ export function StatsRow({
       </div>
 
       {/* Deployment minutes */}
-      <div className="flex w-full shrink-0 flex-col md:w-[34%]">
+      <div className="flex w-full shrink-0 flex-col border-b-[0.5px] border-dash-border lg:w-[34%] lg:border-b-0">
         <div className="flex h-[30px] items-center border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-2">
           <span className="text-xs tracking-[-0.02px] text-dash-text-strong">
             Deployment minutes
           </span>
         </div>
-        <div className="flex flex-1 flex-col justify-between gap-1 px-2 py-3.5 md:gap-0">
+        <div className="flex flex-1 flex-col justify-between gap-1 px-2 py-3.5 lg:gap-0">
           {deploymentRows.map((row, i) => (
             <div key={row.label}>
               <div className="flex items-center justify-between text-sm leading-[1.3] text-dash-text-faded">
@@ -169,7 +169,7 @@ export function StatsRow({
                 <span className="text-right">{row.value}</span>
               </div>
               {i < deploymentRows.length - 1 && (
-                <hr className="mt-2 border-dash-border md:mt-1.5" />
+                <hr className="mt-2 border-dash-border lg:mt-1.5" />
               )}
             </div>
           ))}
@@ -177,13 +177,13 @@ export function StatsRow({
       </div>
 
       {/* Total deployments */}
-      <div className="flex flex-1 flex-col border-t-[0.5px] border-dash-border md:border-t-0 md:border-l-[0.5px]">
+      <div className="flex flex-1 flex-col border-t-[0.5px] border-dash-border lg:border-t-0 lg:border-l-[0.5px]">
         <div className="flex h-[30px] items-center border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-2.5">
           <span className="text-xs tracking-[-0.02px] text-dash-text-strong">
             Total projects
           </span>
         </div>
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-4 md:py-0">
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-4 lg:py-0">
           <div className="flex items-center gap-2.5">
             <p className="text-xl tracking-[-0.03px] text-dash-text-strong">
               {totalProjects}

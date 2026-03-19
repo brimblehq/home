@@ -83,6 +83,7 @@ export interface Project {
     installationId?: number | string;
   };
   log?: {
+    id?: string;
     message?: string;
   };
   tags?: Array<{
@@ -443,7 +444,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
           }
         : undefined,
       tags,
-      log: asRecord(row.log) ? { message: asString(asRecord(row.log)?.message) } : undefined,
+      log: asRecord(row.log) ? { id: asString(asRecord(row.log)?.id) || asString(asRecord(row.log)?._id), message: asString(asRecord(row.log)?.message) } : undefined,
       job,
     };
   }

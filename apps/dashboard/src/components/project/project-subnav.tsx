@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@brimble/ui";
 import { Link, getRouteApi, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Star, Share2, Check, Rocket, Plug, Bolt, ArrowUp } from "lucide-react";
+import { Star, Share2, Check, Plug, Bolt, ArrowUp, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 import { Spinner } from "../shared/spinner";
@@ -14,6 +15,8 @@ import {
   LockKey,
   RocketLaunch,
   Scroll,
+  GitBranch,
+  ArrowsClockwise,
 } from "@phosphor-icons/react";
 import { FolderTrashIcon } from "../shared/folder-trash-icon";
 import { WarningModal } from "../shared/warning-modal";
@@ -60,6 +63,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
       hasUpdates?: boolean;
       status?: string;
       connectionUri?: string;
+      log?: { id?: string; message?: string };
     };
   };
   const pathname = useRouterState({
@@ -71,6 +75,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     data: {
       projectId: string;
       workspace?: string;
+      logId?: string;
     };
   }) => Promise<{ id?: string; message?: string }>;
   const deleteProject = useServerFn(deleteProjectServerFn as any) as (args: {
@@ -97,9 +102,23 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   const [confirmName, setConfirmName] = useState("");
   const [copied, setCopied] = useState(false);
   const [deploying, setDeploying] = useState(false);
+  const [redeployOpen, setRedeployOpen] = useState(false);
+  const redeployRef = useRef<HTMLDivElement>(null);
   const [deleting, setDeleting] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
   const [refreshingDb, setRefreshingDb] = useState(false);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (redeployRef.current && !redeployRef.current.contains(e.target as Node)) {
+        setRedeployOpen(false);
+      }
+    }
+    if (redeployOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [redeployOpen]);
 
   const actualProjectId = parentLoaderData?.project?.id || projectId;
   const projectName = parentLoaderData?.project?.name || projectId;
@@ -139,7 +158,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     }
   }
 
-  async function handleRedeploy() {
+  async function handleRedeploy(options?: { logId?: string }) {
     if (deploying) {
       return;
     }
@@ -149,12 +168,14 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
     try {
       setDeploying(true);
+      setRedeployOpen(false);
       toast.loading("Redeploying project...", { id: "redeploy" });
 
       await redeployProject({
         data: {
           projectId: actualProjectId,
           workspace,
+          logId: options?.logId,
         },
       });
 
@@ -306,20 +327,47 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
             </>
           )}
           {canRedeployProject(project as any) && (
-            <button
-              disabled={deploying}
-              onClick={() => {
-                void handleRedeploy();
-              }}
-              className="flex items-center gap-1.5 text-sm font-light text-dash-text-body transition-colors hover:text-dash-text-strong disabled:opacity-50"
-            >
-              {deploying ? (
-                <Spinner size="size-3.5" />
-              ) : (
-                <Rocket className="size-4 sm:hidden" />
-              )}
-              <span className="hidden sm:inline">{deploying ? "Redeploying..." : "Redeploy"}</span>
-            </button>
+            <div className="relative" ref={redeployRef}>
+              <button
+                disabled={deploying}
+                onClick={() => setRedeployOpen((v) => !v)}
+                className="flex items-center gap-1.5 text-sm font-light text-dash-text-body transition-colors hover:text-dash-text-strong disabled:opacity-50"
+              >
+                {deploying ? (
+                  <Spinner size="size-3.5" />
+                ) : (
+                  <RocketLaunch className="size-4 sm:hidden" />
+                )}
+                <span className="hidden sm:inline">{deploying ? "Redeploying..." : "Redeploy"}</span>
+                <ChevronDown className="hidden size-3.5 sm:block" />
+              </button>
+              <AnimatePresence>
+                {redeployOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 top-full z-50 mt-1 w-[220px] origin-top-right overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_4px_12px_-4px_rgba(0,0,0,0.12)]"
+                  >
+                    <button
+                      onClick={() => void handleRedeploy()}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
+                    >
+                      <GitBranch className="size-4 shrink-0" />
+                      Deploy latest commit
+                    </button>
+                    <button
+                      onClick={() => void handleRedeploy({ logId: project?.log?.id })}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
+                    >
+                      <ArrowsClockwise className="size-4 shrink-0" />
+                      Redeploy service
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
           {visitHref && (
             <a

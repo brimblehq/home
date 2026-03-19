@@ -921,7 +921,7 @@ function DeploymentHistoryPage() {
 
       {/* Pagination */}
       {!fetching && (
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-end pt-4">
           <NumberPagination
             currentPage={currentPage}
             totalPages={deployments?.totalPages ?? 1}
