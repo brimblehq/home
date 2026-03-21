@@ -286,8 +286,8 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                     : "text-dash-text-faded font-light hover:text-dash-text-body"
                 )}
               >
-                <tab.Icon className={cn("size-4", !isActive && "dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80")} weight="fill" />
-                <span className="hidden md:inline">{tab.label}</span>
+                <tab.Icon className={cn("size-4 shrink-0", !isActive && "dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80")} weight="fill" />
+                <span className={cn("whitespace-nowrap md:inline", isActive ? "inline" : "hidden")}>{tab.label}</span>
               </Link>
             );
           })}

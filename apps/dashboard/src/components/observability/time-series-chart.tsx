@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -8,7 +8,24 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { ChartBar } from "@phosphor-icons/react";
 import { formatYTick } from "@/utils/observability";
+
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < breakpoint : false,
+  );
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth < breakpoint);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [breakpoint]);
+
+  return isMobile;
+}
 
 export function TimeSeriesChart({
   data: rawData,
@@ -45,9 +62,12 @@ export function TimeSeriesChart({
     ];
   }, [chartData, yUnit]);
 
+  const mobile = useIsMobile();
+  const maxTicks = mobile ? 5 : 12;
+
   const tickInterval = useMemo(() => {
-    return Math.max(0, Math.floor((chartData.length || 0) / 12) - 1);
-  }, [chartData.length]);
+    return Math.max(0, Math.floor((chartData.length || 0) / maxTicks) - 1);
+  }, [chartData.length, maxTicks]);
 
   const formatTooltipValue = (value: number): string => {
     if (yUnit === "%") return `${value.toFixed(2)}%`;
@@ -62,13 +82,20 @@ export function TimeSeriesChart({
     return `${value.toFixed(2)}`;
   };
 
-  if (chartData.length === 0) return null;
+  if (chartData.length === 0) {
+    return (
+      <div className="flex h-[200px] flex-col items-center justify-center gap-2 sm:h-[260px]">
+        <ChartBar className="size-8 text-dash-text-extra-faded" weight="duotone" />
+        <p className="text-sm text-dash-text-faded">No data for this time range</p>
+      </div>
+    );
+  }
 
   return (
-    <ResponsiveContainer width="100%" height={338} minWidth={0} minHeight={1}>
+    <ResponsiveContainer width="100%" height={mobile ? 240 : 338} minWidth={0} minHeight={1}>
       <BarChart
         data={chartData}
-        margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+        margin={mobile ? { top: 8, right: 4, left: 0, bottom: 0 } : { top: 10, right: 10, left: 10, bottom: 0 }}
       >
         <CartesianGrid
           strokeDasharray="3 3"
@@ -80,20 +107,25 @@ export function TimeSeriesChart({
         <XAxis
           dataKey="date"
           stroke="var(--color-dash-text-extra-faded)"
-          fontSize={11}
+          fontSize={mobile ? 10 : 11}
           tickLine={false}
           axisLine={false}
           dy={8}
           interval={tickInterval}
+          tickFormatter={mobile ? (v: string) => {
+            const parts = v.split(":");
+            return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : v;
+          } : undefined}
         />
         <YAxis
           stroke="var(--color-dash-text-extra-faded)"
-          fontSize={11}
+          fontSize={mobile ? 10 : 11}
           tickLine={false}
           axisLine={false}
           dx={-4}
           domain={domain}
           tickFormatter={(v: number) => formatYTick(v, yUnit)}
+          width={mobile ? 45 : undefined}
         />
         <Tooltip
           content={({ active, payload, label: tooltipLabel }) => {

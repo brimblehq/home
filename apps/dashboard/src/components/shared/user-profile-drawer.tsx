@@ -2741,12 +2741,13 @@ function Toggle({
   onChange: (checked: boolean) => void;
   disabled?: boolean;
 }) {
+  const haptics = useHaptics();
   return (
     <button
       role="switch"
       aria-checked={checked}
       disabled={disabled}
-      onClick={() => onChange(!checked)}
+      onClick={() => { haptics.selection(); onChange(!checked); }}
       className={cn(
         "relative h-5 w-9 shrink-0 rounded-full transition-colors",
         checked ? "bg-[#006fff]" : "bg-[#f2f4f7] dark:bg-[#3a3a3c]",

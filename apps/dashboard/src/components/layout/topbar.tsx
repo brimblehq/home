@@ -176,7 +176,7 @@ function ProjectSwitcher({
                           search: nextNav.search as any,
                         });
                       }}
-                      className={`flex h-8 items-center pl-px pr-2 text-left text-sm transition-colors ${
+                      className={`flex h-8 items-center px-3.5 text-left text-sm transition-colors ${
                         isActive
                           ? "text-dash-text-strong"
                           : "text-dash-text-faded hover:text-dash-text-body"
@@ -307,7 +307,7 @@ function WorkspaceSwitcher({
           alt=""
           className="size-6 rounded-full object-cover"
         />
-        <span className="truncate max-w-[180px]">{activeWorkspaceLabel}</span>
+        <span className="truncate max-w-[90px] sm:max-w-[180px]">{activeWorkspaceLabel}</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -1193,10 +1193,10 @@ function CreateDropdown() {
         <button
           type="button"
           onClick={handlePrimaryClick}
-          className="flex items-center gap-1 rounded-l border border-[#3964d5] bg-[#4879f8] py-[5px] pl-3 pr-2 text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)]"
+          className="flex items-center gap-1 whitespace-nowrap rounded-l border border-[#3964d5] bg-[#4879f8] py-[5px] pl-3 pr-2 text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)]"
         >
           <img src="/icons/plus-white.svg" alt="" className="size-4" />
-          {isDomainsPage ? "Add Domain" : "Create"}
+          <span className="hidden sm:inline">{isDomainsPage ? "Add Domain" : "Create"}</span>
         </button>
         <button
           type="button"
@@ -1380,13 +1380,15 @@ export function Topbar({
               </span>
             )}
           </div>
-          <div className="hidden items-center gap-4 md:flex">
+          <div className="flex items-center gap-4">
             {/* Environment selector */}
-            <EnvironmentDropdown
-              workspace={new URLSearchParams(searchStr || "").get("workspace") ?? undefined}
-              teamDetails={workspaceTeamMembers}
-              userProfile={userProfile}
-            />
+            <div className="hidden md:block">
+              <EnvironmentDropdown
+                workspace={new URLSearchParams(searchStr || "").get("workspace") ?? undefined}
+                teamDetails={workspaceTeamMembers}
+                userProfile={userProfile}
+              />
+            </div>
             {/* Create split button */}
             <CreateDropdown />
           </div>

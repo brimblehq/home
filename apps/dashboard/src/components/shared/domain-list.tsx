@@ -675,7 +675,7 @@ export function DomainList({
                       </div>
                     </div>
                   </td>
-                  <td className="w-[140px] py-2">
+                  <td className="w-auto py-2 sm:w-[140px]">
                     <div className="flex items-center gap-1.5">
                       <span className="size-[6px] shrink-0 rounded-full bg-[#fc391e]" />
                       <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
@@ -775,7 +775,7 @@ export function DomainList({
                       </div>
                     </div>
                   </td>
-                  <td className="w-[140px] py-2">
+                  <td className="w-auto py-2 sm:w-[140px]">
                     <div className="flex items-center gap-1.5">
                       <span className="size-[6px] shrink-0 rounded-full bg-[#f5a623]" />
                       <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
@@ -868,7 +868,7 @@ export function DomainList({
                         ) : null}
                       </div>
                     </td>
-                    <td className="w-[140px] py-2">
+                    <td className="w-auto py-2 sm:w-[140px]">
                       <div className="flex items-center gap-1.5">
                         <span className="size-[6px] shrink-0 rounded-full bg-[#34d399]" />
                         <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
@@ -876,7 +876,7 @@ export function DomainList({
                         </span>
                       </div>
                     </td>
-                    <td className="w-[180px] py-2">
+                    <td className="hidden w-[180px] py-2 sm:table-cell">
                       <div className="flex flex-col gap-1 text-right">
                         <span className="text-sm tracking-[-0.084px] text-dash-text-body">
                           {domain.addedAt}

@@ -2133,7 +2133,8 @@ function Phase3Configure({
         </AnimatePresence>
       </div>}
 
-      {/* Persistent storage */}
+      {/* Persistent storage — hidden for static/HTML frameworks */}
+      {!isNoBuildFramework(framework) && (<>
       <hr className="my-6 border-dash-border-soft" />
 
       <div>
@@ -2193,6 +2194,7 @@ function Phase3Configure({
           )}
         </AnimatePresence>
       </div>
+      </>)}
 
       {/* Save / Deploy actions */}
       <div className="mt-8">
