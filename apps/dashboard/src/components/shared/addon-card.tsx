@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { getWorkspaceFromSearch } from "@/utils/topbar-navigation";
+import { useLogoColor } from "@/hooks/use-logo-color";
 
 export interface Addon {
   id: string;
@@ -22,11 +23,19 @@ export function AddonCard({
 }) {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const workspace = getWorkspaceFromSearch({ searchStr });
+  const logoColors = useLogoColor(addon.logoImageUrl);
+
+  const gradientStyle = logoColors
+    ? { background: `linear-gradient(to bottom, ${logoColors.from}, ${logoColors.to})` }
+    : undefined;
+  const logoBgColor = logoColors?.logoBg ?? addon.logoBg;
+
   return (
     <div className="flex h-full flex-col overflow-clip rounded-[4px] border-[0.5px] border-dash-border-soft transition-shadow hover:shadow-[0px_2px_8px_rgba(0,0,0,0.06)]">
       {/* Gradient header with browser mockup + logo */}
       <div
-        className={`relative h-[101px] overflow-clip bg-gradient-to-b ${addon.gradient} border-b-[0.5px] border-dash-border`}
+        className={`relative h-[101px] overflow-clip border-b-[0.5px] border-dash-border ${logoColors ? "" : `bg-gradient-to-b ${addon.gradient}`}`}
+        style={gradientStyle}
       >
         {/* Browser window mockup */}
         <div
@@ -47,7 +56,7 @@ export function AddonCard({
         {/* Circular logo */}
         <div
           className="absolute left-3.5 top-[58px] flex size-8 items-center justify-center rounded-full"
-          style={{ backgroundColor: addon.logoBg }}
+          style={{ backgroundColor: logoBgColor }}
         >
           {addon.logoImageUrl ? (
             <img

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import axios from "axios";
 import { Drawer } from "vaul";
 import { cn } from "@brimble/ui";
+import { SUBSCRIPTION_PLAN_TYPE } from "@brimble/models/dist/enum";
 import { useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
@@ -20,7 +21,7 @@ import {
   Send,
 } from "lucide-react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
-import { useHaptics } from "@/hooks/use-haptics";
+import { useHaptics, setHapticsEnabled } from "@/hooks/use-haptics";
 import { invalidateSessionCache } from "@/lib/auth-guards";
 import { InviteMembersModal } from "../settings/invite-members-modal";
 import { Dropdown } from "./dropdown";
@@ -50,6 +51,8 @@ import {
   resetSettingsApiKeyServerFn,
   testSettingsWebhookServerFn,
   updateSettingsBuildsServerFn,
+  updateSettingsHapticsServerFn,
+  updateSettingsFollowedXServerFn,
   updateSettingsNotificationsServerFn,
   updateSettingsProfileServerFn,
   updateSettingsWebhooksServerFn,
@@ -383,6 +386,7 @@ function ProfileForm({
   onSave,
   onChangeEmail,
   onBuildsChange,
+  onHapticsChange,
   onCreateApiKey,
   onResetApiKey,
   onDecryptApiKey,
@@ -392,6 +396,7 @@ function ProfileForm({
   onRequestDeleteAccountOtp,
   onVerifyDeleteAccountOtp,
   onDeleteAccount,
+  onOpenBilling,
   isSaving,
 }: {
   profile: UserProfile;
@@ -404,6 +409,7 @@ function ProfileForm({
   }) => void | Promise<void>;
   onChangeEmail?: (email: string) => void | Promise<void>;
   onBuildsChange?: (enabled: boolean) => Promise<void> | void;
+  onHapticsChange?: (enabled: boolean) => Promise<void> | void;
   onCreateApiKey?: () => Promise<string | undefined> | string | undefined;
   onResetApiKey?: () => Promise<string | undefined> | string | undefined;
   onDecryptApiKey?: (
@@ -415,6 +421,7 @@ function ProfileForm({
   onRequestDeleteAccountOtp?: (turnstileToken?: string) => Promise<void> | void;
   onVerifyDeleteAccountOtp?: (code: string) => Promise<void> | void;
   onDeleteAccount?: () => Promise<void> | void;
+  onOpenBilling?: () => void;
   isSaving?: boolean;
 }) {
   const [firstName, setFirstName] = useState(profile.firstName);
@@ -423,6 +430,9 @@ function ProfileForm({
   const [email, setEmail] = useState(profile.email);
   const [buildsEnabled, setBuildsEnabled] = useState(
     profile.buildsEnabled ?? true,
+  );
+  const [hapticsEnabledLocal, setHapticsEnabledLocal] = useState(
+    profile.haptics !== false,
   );
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl ?? "");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -438,6 +448,10 @@ function ProfileForm({
 
   const inputClass =
     "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+  const normalizedPlanType = (profile.subscriptionPlanType ?? "").toUpperCase();
+  const isFreePlan =
+    !normalizedPlanType ||
+    normalizedPlanType === SUBSCRIPTION_PLAN_TYPE.FreePlan;
 
   function handleSave() {
     void onSave?.({
@@ -732,9 +746,39 @@ function ProfileForm({
 
       <hr className="border-dash-border-soft" />
 
+      {/* Haptics toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1">
+          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
+            Haptics
+          </span>
+          <span className="text-sm leading-5 text-dash-text-faded">
+            Sound and vibration feedback on interactions
+          </span>
+        </div>
+        <Toggle
+          checked={hapticsEnabledLocal}
+          onChange={async (nextValue) => {
+            setHapticsEnabledLocal(nextValue);
+            setHapticsEnabled(nextValue);
+            try {
+              await onHapticsChange?.(nextValue);
+            } catch (error) {
+              setHapticsEnabledLocal(!nextValue);
+              setHapticsEnabled(!nextValue);
+              throw error;
+            }
+          }}
+        />
+      </div>
+
+      <hr className="border-dash-border-soft" />
+
       {/* API Key */}
       <ApiKeySection
         initialApiKey={profile.apiKey}
+        isFreePlan={isFreePlan}
+        onUpgradePlan={onOpenBilling}
         onCreate={onCreateApiKey}
         onReset={onResetApiKey}
         onDecrypt={onDecryptApiKey}
@@ -1078,11 +1122,15 @@ function DangerZone({
 
 function ApiKeySection({
   initialApiKey,
+  isFreePlan = false,
+  onUpgradePlan,
   onCreate,
   onReset,
   onDecrypt,
 }: {
   initialApiKey?: string;
+  isFreePlan?: boolean;
+  onUpgradePlan?: () => void;
   onCreate?: () => Promise<string | undefined> | string | undefined;
   onReset?: () => Promise<string | undefined> | string | undefined;
   onDecrypt?: (encryptedApiKey: string) => Promise<string | null | undefined>;
@@ -1122,107 +1170,125 @@ function ApiKeySection({
           API key
         </span>
         <span className="text-sm leading-5 text-dash-text-faded">
-          Use this key to authenticate API requests. Keep it secret.
+          {isFreePlan
+            ? (
+              <>
+                API keys are available on paid plans.{" "}
+                <button
+                  type="button"
+                  onClick={onUpgradePlan}
+                  className="text-[#4879f8] underline underline-offset-2 transition-colors hover:text-[#3a6ae6]"
+                >
+                  Upgrade
+                </button>{" "}
+                to enable API key access.
+              </>
+            )
+            : "Use this key to authenticate API requests. Keep it secret."}
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={displayValue}
-            readOnly
-            className={cn(
-              inputClass,
-              "pr-20 font-mono text-[13px] text-dash-text-faded",
-            )}
-          />
-          <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-            <button
-              onClick={async () => {
-                if (!encryptedApiKey) {
-                  return;
-                }
-
-                if (revealed) {
-                  setRevealed(false);
-                  return;
-                }
-
-                if (decryptedApiKey) {
-                  setRevealed(true);
-                  return;
-                }
-
-                setIsDecrypting(true);
-
-                try {
-                  const decrypted = await onDecrypt?.(encryptedApiKey);
-                  if (decrypted) {
-                    setDecryptedApiKey(decrypted);
-                    setRevealed(true);
-                  }
-                } finally {
-                  setIsDecrypting(false);
-                }
-              }}
-              disabled={!encryptedApiKey || isDecrypting}
-              className="shrink-0 rounded-[4px] p-1 text-dash-text-faded transition-colors hover:text-dash-text-strong"
-              title={revealed ? "Hide" : "Reveal"}
-            >
-              {revealed ? (
-                <EyeOff className="size-3.5" />
-              ) : (
-                <Eye className="size-3.5" />
-              )}
-            </button>
-            {decryptedApiKey ? (
-              <CopyButton text={decryptedApiKey} />
-            ) : (
+      {!isFreePlan && (
+        <>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={displayValue}
+                readOnly
+                className={cn(
+                  inputClass,
+                  "pr-20 font-mono text-[13px] text-dash-text-faded",
+                )}
+              />
+            <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
               <button
-                disabled
-                className="shrink-0 rounded-[4px] p-1 text-dash-text-extra-faded"
-                title="Reveal key to copy"
+                onClick={async () => {
+                  if (!encryptedApiKey) {
+                    return;
+                  }
+
+                  if (revealed) {
+                    setRevealed(false);
+                    return;
+                  }
+
+                  if (decryptedApiKey) {
+                    setRevealed(true);
+                    return;
+                  }
+
+                  setIsDecrypting(true);
+
+                  try {
+                    const decrypted = await onDecrypt?.(encryptedApiKey);
+                    if (decrypted) {
+                      setDecryptedApiKey(decrypted);
+                      setRevealed(true);
+                    }
+                  } finally {
+                    setIsDecrypting(false);
+                  }
+                }}
+                disabled={!encryptedApiKey || isDecrypting}
+                className="shrink-0 rounded-[4px] p-1 text-dash-text-faded transition-colors hover:text-dash-text-strong"
+                title={revealed ? "Hide" : "Reveal"}
               >
-                <Copy className="size-4" />
+                {revealed ? (
+                  <EyeOff className="size-3.5" />
+                ) : (
+                  <Eye className="size-3.5" />
+                )}
               </button>
-            )}
+              {decryptedApiKey ? (
+                <CopyButton text={decryptedApiKey} />
+              ) : (
+                <button
+                  disabled
+                  className="shrink-0 rounded-[4px] p-1 text-dash-text-extra-faded"
+                  title="Reveal key to copy"
+                >
+                  <Copy className="size-4" />
+                </button>
+              )}
+            </div>
+            </div>
+
+            <button
+              onClick={() => setRerollOpen(true)}
+              disabled={isSubmitting}
+              className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
+            >
+              <RefreshCw className="size-3.5" />
+              {encryptedApiKey ? "Reroll" : "Generate"}
+            </button>
           </div>
-        </div>
 
-        <button
-          onClick={() => setRerollOpen(true)}
-          disabled={isSubmitting}
-          className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
-        >
-          <RefreshCw className="size-3.5" />
-          {encryptedApiKey ? "Reroll" : "Generate"}
-        </button>
-      </div>
-
-      <WarningModal
-        open={rerollOpen}
-        onOpenChange={setRerollOpen}
-        title="Reroll API key?"
-        description="Your current key will be permanently invalidated. Any services using it will lose access immediately."
-        confirmLabel="Reroll key"
-        cancelLabel="Cancel"
-        onConfirm={async () => {
-          setIsSubmitting(true);
-          try {
-            const nextKey = encryptedApiKey
-              ? await onReset?.()
-              : await onCreate?.();
-            if (nextKey) {
-              setEncryptedApiKey(nextKey);
-              setDecryptedApiKey(null);
-              setRevealed(false);
-            }
-          } finally {
-            setIsSubmitting(false);
-          }
-        }}
-      />
+          <WarningModal
+            open={rerollOpen}
+            onOpenChange={setRerollOpen}
+            title="Reroll API key?"
+            description="Your current key will be permanently invalidated. Any services using it will lose access immediately."
+            confirmLabel="Reroll key"
+            cancelLabel="Cancel"
+            onConfirm={async () => {
+              setIsSubmitting(true);
+              try {
+                const nextKey = encryptedApiKey
+                  ? await onReset?.()
+                  : await onCreate?.();
+                if (nextKey) {
+                  setEncryptedApiKey(nextKey);
+                  setDecryptedApiKey(null);
+                  setRevealed(false);
+                }
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -1856,6 +1922,11 @@ export function UserProfileDrawer({
   ) as (args: {
     data: { buildDisabled: boolean; workspace?: string };
   }) => Promise<{ ok: true }>;
+  const updateHaptics = useServerFn(
+    updateSettingsHapticsServerFn as any,
+  ) as (args: {
+    data: { haptics: boolean };
+  }) => Promise<{ ok: true }>;
   const createApiKey = useServerFn(createSettingsApiKeyServerFn);
   const resetApiKey = useServerFn(resetSettingsApiKeyServerFn);
   const disconnectGitProvider = useServerFn(
@@ -2286,6 +2357,27 @@ export function UserProfileDrawer({
                         throw error;
                       }
                     }}
+                    onHapticsChange={async (enabled) => {
+                      try {
+                        await updateHaptics({
+                          data: { haptics: enabled },
+                        });
+                        setSnapshot((prev) => {
+                          if (!prev) return prev;
+                          return {
+                            ...prev,
+                            profile: { ...prev.profile, haptics: enabled },
+                          };
+                        });
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to update haptics settings",
+                        );
+                        throw error;
+                      }
+                    }}
                     onCreateApiKey={async () => {
                       try {
                         const result = await createApiKey();
@@ -2459,6 +2551,9 @@ export function UserProfileDrawer({
                     onDeleteAccount={async () => {
                       invalidateSessionCache();
                       window.location.href = "/";
+                    }}
+                    onOpenBilling={() => {
+                      setActiveTab(ProfileTab.Billing);
                     }}
                   />
                 )}

@@ -7,6 +7,8 @@ export interface SettingsUserProfile {
   avatarUrl?: string;
   buildDisabled: boolean;
   buildDisabledBy?: string | null;
+  haptics: boolean;
+  followedX: boolean;
   spendingLimit?: number | null;
   apiKey?: string;
   notifications: {
@@ -35,6 +37,14 @@ export interface UpdateSettingsNotificationsInput {
 export interface UpdateSettingsBuildsInput {
   buildDisabled: boolean;
   teamId?: string;
+}
+
+export interface UpdateSettingsHapticsInput {
+  haptics: boolean;
+}
+
+export interface UpdateSettingsFollowedXInput {
+  followed_x: boolean;
 }
 
 export interface SettingsApiKeyResult {
@@ -146,6 +156,8 @@ export interface SettingsApi {
   requestEmailVerification(email: string): Promise<void>;
   updateNotifications(input: UpdateSettingsNotificationsInput): Promise<void>;
   updateBuilds(input: UpdateSettingsBuildsInput): Promise<void>;
+  updateHaptics(input: UpdateSettingsHapticsInput): Promise<void>;
+  updateFollowedX(input: UpdateSettingsFollowedXInput): Promise<void>;
   createApiKey(): Promise<SettingsApiKeyResult>;
   resetApiKey(): Promise<SettingsApiKeyResult>;
   decryptApiKey(input: DecryptSettingsApiKeyInput): Promise<string | null>;

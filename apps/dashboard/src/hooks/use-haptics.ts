@@ -1,12 +1,50 @@
 import { useWebHaptics } from "web-haptics/react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useCallback } from "react";
+
+/**
+ * Safari drops user-activation across `await` boundaries, so the library's
+ * `await audioCtx.resume()` never unlocks. We pre-warm a shared AudioContext
+ * on the very first synchronous user gesture so it's already `running` when
+ * web-haptics creates its own context later.
+ */
+let safariAudioWarmed = false;
+function warmSafariAudio() {
+  if (safariAudioWarmed) return;
+  safariAudioWarmed = true;
+
+  if (typeof AudioContext === "undefined") return;
+
+  const ctx = new AudioContext();
+  void ctx.resume().then(() => {
+    const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start();
+    src.onended = () => {
+      src.disconnect();
+      ctx.close();
+    };
+  });
+}
+
+/**
+ * Module-level enabled flag. Toggled via setHapticsEnabled() from settings.
+ * Defaults to true; the profile loader syncs it on mount.
+ */
+let hapticsEnabled = true;
+
+export function setHapticsEnabled(enabled: boolean) {
+  hapticsEnabled = enabled;
+}
+
+export function getHapticsEnabled() {
+  return hapticsEnabled;
+}
 
 const PATTERNS = {
   success: {
-    segments: [
-      { duration: 30 },
-      { delay: 60, duration: 40, intensity: 1 },
-    ],
+    segments: [{ duration: 30 }, { delay: 60, duration: 40, intensity: 1 }],
   },
   warning: {
     segments: [
@@ -38,12 +76,34 @@ const PATTERNS = {
 } as const;
 
 export function useHaptics() {
+  useEffect(() => {
+    if (safariAudioWarmed) return;
+
+    const handler = () => {
+      warmSafariAudio();
+      document.removeEventListener("click", handler, true);
+      document.removeEventListener("touchstart", handler, true);
+    };
+
+    document.addEventListener("click", handler, { capture: true, once: true });
+    document.addEventListener("touchstart", handler, {
+      capture: true,
+      once: true,
+    });
+
+    return () => {
+      document.removeEventListener("click", handler, true);
+      document.removeEventListener("touchstart", handler, true);
+    };
+  }, []);
+
   const { trigger } = useWebHaptics({
     debug: true,
     showSwitch: false,
   });
   return useMemo(() => {
     const fire = (key: keyof typeof PATTERNS) => {
+      if (!hapticsEnabled) return;
       const p = PATTERNS[key];
       trigger(
         p.segments as unknown as any[],

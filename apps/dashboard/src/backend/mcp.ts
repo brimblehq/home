@@ -69,6 +69,13 @@ export interface McpApi {
     category?: string;
     verified?: boolean;
   }): Promise<McpServerListResult>;
+  listRecommendedTemplates(input?: {
+    limit?: number;
+    category?: string;
+    officialOnly?: boolean;
+    shuffle?: boolean;
+    provider?: "smithery" | "pulsemcp" | "auto";
+  }): Promise<McpServerListResult>;
   getTemplate(id: string): Promise<McpServerTemplate | null>;
 }
 
@@ -175,8 +182,43 @@ export function createMcpApi(client: ApiClient): McpApi {
 
       return {
         servers: rawServers
-          .map(mapMcpServerTemplate)
-          .filter((item): item is McpServerTemplate => item !== null),
+          .map((item: unknown) => mapMcpServerTemplate(item))
+          .filter((item: McpServerTemplate | null): item is McpServerTemplate => item !== null),
+        pagination: {
+          total: pickNumber(paginationRow, "total"),
+          limit: pickNumber(paginationRow, "limit"),
+          offset: pickNumber(paginationRow, "offset"),
+          cursor: pickNumber(paginationRow, "cursor"),
+          hasMore: pickBoolean(paginationRow, "hasMore", "has_more"),
+        },
+        provider: pickString(asRecord(root), "provider"),
+      } satisfies McpServerListResult;
+    },
+
+    async listRecommendedTemplates(input) {
+      const response = await client.request<any>("/core/v1/templates/mcp-servers/recommended", {
+        method: "GET",
+        query: {
+          limit: input?.limit,
+          category: input?.category,
+          officialOnly: input?.officialOnly,
+          shuffle: input?.shuffle,
+          provider: input?.provider,
+        },
+      });
+
+      const root = response?.data?.data ?? response?.data ?? response ?? {};
+      const rawServers = Array.isArray(root?.servers)
+        ? root.servers
+        : Array.isArray(root)
+          ? root
+          : [];
+      const paginationRow = asRecord(root?.pagination);
+
+      return {
+        servers: rawServers
+          .map((item: unknown) => mapMcpServerTemplate(item))
+          .filter((item: McpServerTemplate | null): item is McpServerTemplate => item !== null),
         pagination: {
           total: pickNumber(paginationRow, "total"),
           limit: pickNumber(paginationRow, "limit"),
@@ -198,4 +240,3 @@ export function createMcpApi(client: ApiClient): McpApi {
     },
   };
 }
-

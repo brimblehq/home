@@ -198,6 +198,17 @@ function OtpStep({
           Resend code
         </button>
       </p>
+
+      <p className="mt-3 text-center text-xs leading-relaxed text-dash-text-faded">
+        Verification codes are only sent to emails linked to an existing Brimble
+        account. Don&apos;t have one?{" "}
+        <a
+          href="/signup"
+          className="font-medium text-[#006fff] transition-colors hover:text-[#0060e0] dark:text-[#4879f8]"
+        >
+          Create an account
+        </a>
+      </p>
     </motion.div>
   );
 }

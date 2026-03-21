@@ -11,7 +11,7 @@ import { OwnershipTransferModal } from "../components/shared/ownership-transfer-
 import { listHomeProjectsServerFn } from "@/server/projects/actions";
 import { getHomeOverviewServerFn } from "@/server/overview/actions";
 import { getHomeBandwidthServerFn } from "@/server/bandwidth/actions";
-import { listMcpTemplatesServerFn } from "@/server/mcp/actions";
+import { listRecommendedMcpTemplatesServerFn } from "@/server/mcp/actions";
 import {
   checkTeamInvitationServerFn,
   acceptTeamInvitationServerFn,
@@ -93,10 +93,10 @@ export const Route = createFileRoute("/")({
       }) => Promise<BandwidthSummary>)({
         data: { workspace, environmentId },
       }).catch(() => ({ results: [], total: 0 } as BandwidthSummary)),
-      (listMcpTemplatesServerFn as unknown as (input: {
-        data?: { limit?: number };
+      (listRecommendedMcpTemplatesServerFn as unknown as (input: {
+        data?: { limit?: number; category?: string; officialOnly?: boolean; shuffle?: boolean };
       }) => Promise<McpServerListResult>)({
-        data: { limit: 3 },
+        data: { limit: 3, category: "development", officialOnly: true, shuffle: true },
       }).catch(() => ({ servers: [], pagination: {} } as McpServerListResult)),
     ]);
 

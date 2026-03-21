@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Minus, X, ChevronDown, Check, Info } from "lucide-react";
+import { Plus, Minus, X, Check, Info } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Modal,
@@ -9,6 +9,7 @@ import {
   ModalContinueButton,
 } from "../shared/modal";
 import { Dropdown } from "../shared/dropdown";
+import { RoleDropdown } from "../shared/role-dropdown";
 import { WorkspaceStep } from "../../types/enums";
 import { usePricing } from "@/contexts/pricing-context";
 
@@ -254,70 +255,7 @@ interface InviteRow {
   role: string;
 }
 
-const roles = ["Member", "Administrator"];
 let inviteNextId = 1;
-
-function MiniRoleDropdown({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
-    }
-  }, [open]);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="input-base flex w-[100px] items-center justify-between px-2.5 py-2.5 text-sm text-dash-text-strong"
-      >
-        {value}
-        <ChevronDown className="size-3 text-dash-text-faded" />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.2, ease }}
-            className="absolute right-0 top-full z-50 mt-1 w-[100px] overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg"
-          >
-            {roles.map((r) => (
-              <button
-                key={r}
-                onClick={() => {
-                  onChange(r);
-                  setOpen(false);
-                }}
-                className={`flex w-full px-2.5 py-1.5 text-left text-sm ${
-                  r === value
-                    ? "font-medium text-[#4879f8]"
-                    : "text-dash-text-body hover:bg-dash-bg-elevated"
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 function StepInvite({
   rows,
@@ -360,7 +298,7 @@ function StepInvite({
               onChange={(e) => updateRow(row.id, "email", e.target.value)}
               className={`flex-1 ${inputClass}`}
             />
-            <MiniRoleDropdown
+            <RoleDropdown
               value={row.role}
               onChange={(v) => updateRow(row.id, "role", v)}
             />

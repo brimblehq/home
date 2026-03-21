@@ -204,6 +204,8 @@ code {
   --dash-btn-outline-bg: #ffffff;
   --dash-btn-outline-border: #d1d1db;
   --dash-btn-outline-text: #535358;
+  --dash-selection-bg: rgba(255, 155, 0, 0.35);
+  --dash-selection-text: #2f1b00;
 
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -280,6 +282,18 @@ code {
   --dash-btn-outline-bg: #29292a;
   --dash-btn-outline-border: #454545;
   --dash-btn-outline-text: #e8eaed;
+  --dash-selection-bg: rgba(255, 155, 0, 0.45);
+  --dash-selection-text: #fff6e8;
+}
+
+::selection {
+  background: var(--dash-selection-bg);
+  color: var(--dash-selection-text);
+}
+
+::-moz-selection {
+  background: var(--dash-selection-bg);
+  color: var(--dash-selection-text);
 }
 
 .create-new-project-card {

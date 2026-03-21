@@ -1,4 +1,10 @@
-import { type ReactNode, useState, useCallback, useEffect, useMemo } from "react";
+import {
+  type ReactNode,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+} from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -17,6 +23,7 @@ import { DashToaster } from "../shared/toaster";
 import { UserProfileDrawer } from "../shared/user-profile-drawer";
 import { ScoutBarProvider } from "../../contexts/scoutbar-context";
 import { useTheme } from "../../hooks/use-theme";
+import { setHapticsEnabled } from "../../hooks/use-haptics";
 import type { SettingsSidebarSnapshot } from "@/backend/settings";
 import type { ApiListResponse } from "@/backend";
 import type { Workspace } from "@/backend/workspaces";
@@ -53,13 +60,17 @@ const mobileNavItemBase =
   "flex w-full items-center gap-3 px-5 py-4 text-sm tracking-[-0.09px] transition-colors";
 const DISMISSED_SNACKBARS_STORAGE_PREFIX = "brimble:dismissed-snackbars:";
 
-function mapSnackbarVariant(level: AppTooltipMessage["level"]): "info" | "warning" | "error" {
+function mapSnackbarVariant(
+  level: AppTooltipMessage["level"],
+): "info" | "warning" | "error" {
   if (level === "critical") return "error";
   if (level === "warn") return "warning";
   return "info";
 }
 
-function getSnackbarActionLabel(message: AppTooltipMessage): string | undefined {
+function getSnackbarActionLabel(
+  message: AppTooltipMessage,
+): string | undefined {
   if (message.type === "payment") return "Update billing";
   if (!message.route) return undefined;
   if (message.type === "welcome") return "Create project";
@@ -93,7 +104,9 @@ function readDismissedSnackbars(workspace?: string): Set<string> {
   }
 
   try {
-    const raw = localStorage.getItem(getDismissedSnackbarsStorageKey(workspace));
+    const raw = localStorage.getItem(
+      getDismissedSnackbarsStorageKey(workspace),
+    );
     if (!raw) {
       return new Set();
     }
@@ -101,19 +114,29 @@ function readDismissedSnackbars(workspace?: string): Set<string> {
     if (!Array.isArray(parsed)) {
       return new Set();
     }
-    return new Set(parsed.filter((item): item is string => typeof item === "string" && item.length > 0));
+    return new Set(
+      parsed.filter(
+        (item): item is string => typeof item === "string" && item.length > 0,
+      ),
+    );
   } catch {
     return new Set();
   }
 }
 
-function writeDismissedSnackbars(workspace: string | undefined, keys: Set<string>) {
+function writeDismissedSnackbars(
+  workspace: string | undefined,
+  keys: Set<string>,
+) {
   if (typeof window === "undefined") {
     return;
   }
 
   try {
-    localStorage.setItem(getDismissedSnackbarsStorageKey(workspace), JSON.stringify([...keys]));
+    localStorage.setItem(
+      getDismissedSnackbarsStorageKey(workspace),
+      JSON.stringify([...keys]),
+    );
   } catch {
     // ignore storage write failures
   }
@@ -159,7 +182,10 @@ function HomeTabSkeleton() {
       <div className="mb-4 h-5 w-40 rounded bg-dash-border-soft/60" />
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+          <div
+            key={i}
+            className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30"
+          />
         ))}
       </div>
       <hr className="-mx-4 mb-10 border-dash-border-soft md:-ml-10 md:mr-0" />
@@ -200,7 +226,10 @@ function ProjectsTabSkeleton() {
       {/* Project cards grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+          <div
+            key={i}
+            className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30"
+          />
         ))}
       </div>
     </div>
@@ -219,7 +248,10 @@ function DomainsTabSkeleton() {
       {/* Table */}
       <div className="rounded-[4px] border-[0.5px] border-dash-border">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex h-[68px] items-center gap-3 border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
+          <div
+            key={i}
+            className="flex h-[68px] items-center gap-3 border-b-[0.5px] border-dash-border px-3.5 last:border-b-0"
+          >
             <div className="size-[14px] rounded-[3px] bg-dash-border-soft/50" />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="h-3.5 w-40 rounded bg-dash-border-soft/60" />
@@ -263,7 +295,10 @@ function DiscoverTabSkeleton() {
       {/* Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-[200px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+          <div
+            key={i}
+            className="h-[200px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30"
+          />
         ))}
       </div>
     </div>
@@ -283,7 +318,10 @@ function ScalingTabSkeleton() {
       {/* 2-col grid of scaling cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex h-[164px] flex-col rounded-[4px] border-[0.5px] border-dash-border">
+          <div
+            key={i}
+            className="flex h-[164px] flex-col rounded-[4px] border-[0.5px] border-dash-border"
+          >
             <div className="flex items-center justify-between px-3.5 pb-1 pt-3">
               <div className="h-4 w-28 rounded bg-dash-border-soft/50" />
               <div className="h-4 w-20 rounded bg-dash-border-soft/40" />
@@ -324,7 +362,10 @@ function ProjectDetailTabSkeleton() {
         <div className="flex-1 overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
           <div className="h-10 bg-dash-bg-elevated/60" />
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex h-12 items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
+            <div
+              key={i}
+              className="flex h-12 items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0"
+            >
               <div className="h-3 w-20 rounded bg-dash-border-soft/50" />
               <div className="h-3 w-28 rounded bg-dash-border-soft/40" />
             </div>
@@ -334,7 +375,10 @@ function ProjectDetailTabSkeleton() {
         <div className="flex-1 overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
           <div className="h-10 bg-dash-bg-elevated/60" />
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex h-12 items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
+            <div
+              key={i}
+              className="flex h-12 items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0"
+            >
               <div className="h-3 w-36 rounded bg-dash-border-soft/50" />
               <div className="h-3 w-16 rounded bg-dash-border-soft/40" />
             </div>
@@ -346,7 +390,10 @@ function ProjectDetailTabSkeleton() {
         <div className="mb-3 h-5 w-40 rounded bg-dash-border-soft/60" />
         <div className="rounded-[4px] border-[0.5px] border-dash-border">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex h-[52px] items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
+            <div
+              key={i}
+              className="flex h-[52px] items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0"
+            >
               <div className="h-3 w-44 rounded bg-dash-border-soft/50" />
               <div className="h-3 w-20 rounded bg-dash-border-soft/40" />
             </div>
@@ -364,7 +411,10 @@ function RouteTransitionSkeleton({
   pathname: string;
   fullWidth?: boolean;
 }) {
-  if (/^\/projects\/[^/]+(?:\/|$)/.test(pathname) && !/^\/projects\/new(?:\/|$)/.test(pathname)) {
+  if (
+    /^\/projects\/[^/]+(?:\/|$)/.test(pathname) &&
+    !/^\/projects\/new(?:\/|$)/.test(pathname)
+  ) {
     return <ProjectDetailTabSkeleton />;
   }
 
@@ -389,7 +439,12 @@ function RouteTransitionSkeleton({
   }
 
   return (
-    <div className={cn("mx-auto w-full animate-pulse", fullWidth ? "max-w-screen-xl px-4 md:px-0" : "max-w-[1000px]")}>
+    <div
+      className={cn(
+        "mx-auto w-full animate-pulse",
+        fullWidth ? "max-w-screen-xl px-4 md:px-0" : "max-w-[1000px]",
+      )}
+    >
       <div className="mb-6 h-10 w-56 rounded bg-dash-border-soft/70" />
       <div className="h-72 rounded bg-dash-border-soft/50" />
     </div>
@@ -415,7 +470,9 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
         const isActive =
           !("comingSoon" in item && item.comingSoon) &&
           !("external" in item && item.external) &&
-          (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
+          (item.href === "/"
+            ? pathname === "/"
+            : pathname.startsWith(item.href));
 
         if (i > 0) {
           // divider before each item
@@ -449,7 +506,7 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
                 rel="noopener noreferrer"
                 className={cn(
                   mobileNavItemBase,
-                  "text-dash-text-faded hover:bg-dash-bg-elevated"
+                  "text-dash-text-faded hover:bg-dash-bg-elevated",
                 )}
               >
                 {icon}
@@ -469,7 +526,7 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
                   "w-full text-left",
                   isActive
                     ? "bg-dash-bg-elevated font-medium text-dash-text-strong"
-                    : "text-dash-text-faded hover:bg-dash-bg-elevated"
+                    : "text-dash-text-faded hover:bg-dash-bg-elevated",
                 )}
               >
                 {icon}
@@ -486,7 +543,10 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
       <hr className="mx-4 border-dash-border-soft" />
       <button
         onClick={onSettingsClick}
-        className={cn(mobileNavItemBase, "text-dash-text-faded hover:bg-dash-bg-elevated")}
+        className={cn(
+          mobileNavItemBase,
+          "text-dash-text-faded hover:bg-dash-bg-elevated",
+        )}
       >
         <img
           src="/icons/settings.svg"
@@ -498,14 +558,21 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
       <hr className="mx-4 border-dash-border-soft" />
       <button
         onClick={cycleTheme}
-        className={cn(mobileNavItemBase, "text-dash-text-faded hover:bg-dash-bg-elevated")}
+        className={cn(
+          mobileNavItemBase,
+          "text-dash-text-faded hover:bg-dash-bg-elevated",
+        )}
       >
         {theme === "dark" ? (
           <Sun className="size-5 shrink-0" />
         ) : (
           <Moon className="size-5 shrink-0" />
         )}
-        {mode === Theme.System ? "System mode" : theme === Theme.Dark ? "Dark mode" : "Light mode"}
+        {mode === Theme.System
+          ? "System mode"
+          : theme === Theme.Dark
+            ? "Dark mode"
+            : "Light mode"}
       </button>
     </nav>
   );
@@ -540,7 +607,9 @@ export function DashboardLayout({
   initialPricing?: Pricing;
   initialActivityLogs?: ActivityLogsResponse | null;
   initialSubscriptionStats?: SubscriptionStats | null;
-  initialProjectEnvironments?: import("@/backend/environments").ProjectEnvironment[] | null;
+  initialProjectEnvironments?:
+    | import("@/backend/environments").ProjectEnvironment[]
+    | null;
 }) {
   const pathname = useRouterState({
     select: (s) => s.location.pathname,
@@ -550,7 +619,9 @@ export function DashboardLayout({
   });
   const matchedProjectSwitcherProjects = useRouterState({
     select: (s) => {
-      const projectMatch = s.matches.find((match) => match.routeId === "/projects/$projectId");
+      const projectMatch = s.matches.find(
+        (match) => match.routeId === "/projects/$projectId",
+      );
       const loaderData = projectMatch?.loaderData as
         | { projectSwitcherProjects?: ApiListResponse<Project> | null }
         | undefined;
@@ -571,9 +642,16 @@ export function DashboardLayout({
       // Try projects list route
       const listMatch = s.matches.find((m) => m.routeId === "/projects/");
       const listData = listMatch?.loaderData as
-        | { projects?: Array<{ name: string; slug: string; [key: string]: unknown }> | null }
+        | {
+            projects?: Array<{
+              name: string;
+              slug: string;
+              [key: string]: unknown;
+            }> | null;
+          }
         | undefined;
-      if (listData?.projects?.length) return listData.projects as unknown as Project[];
+      if (listData?.projects?.length)
+        return listData.projects as unknown as Project[];
 
       return null;
     },
@@ -589,9 +667,13 @@ export function DashboardLayout({
     },
   });
   const navigate = useNavigate();
-  const isAuthRoute = /^\/(login|signup)$/.test(layoutPathname) || /^\/(login|signup)$/.test(pathname);
-  const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
-  const isCatchAll = layoutPathname !== "/" && !knownPrefixes.test(layoutPathname);
+  const isAuthRoute =
+    /^\/(login|signup)$/.test(layoutPathname) ||
+    /^\/(login|signup)$/.test(pathname);
+  const knownPrefixes =
+    /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
+  const isCatchAll =
+    layoutPathname !== "/" && !knownPrefixes.test(layoutPathname);
   const resolvedIsFullWidth = isFullWidthLayoutPath(layoutPathname);
   const shouldRenderDesktopSidebar = !resolvedIsFullWidth;
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
@@ -653,7 +735,7 @@ export function DashboardLayout({
   const [settingsSnapshotCache, setSettingsSnapshotCache] = useState<
     Record<string, SettingsSidebarSnapshot | null>
   >(() => ({
-    [(initialWorkspaceSlug ?? "__personal__")]: initialSettingsSnapshot ?? null,
+    [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot ?? null,
   }));
   const [workspaceTeamMembersCache, setWorkspaceTeamMembersCache] = useState<
     Record<string, TeamDetails | null>
@@ -677,10 +759,14 @@ export function DashboardLayout({
   }, [initialWorkspaces?.items, stableWorkspaces.length]);
 
   const effectiveWorkspaces =
-    stableWorkspaces.length > 0 ? stableWorkspaces : (initialWorkspaces?.items ?? []);
+    stableWorkspaces.length > 0
+      ? stableWorkspaces
+      : (initialWorkspaces?.items ?? []);
   const isKnownWorkspace = Boolean(
     currentWorkspace &&
-      effectiveWorkspaces.some((workspace) => workspace.slug === currentWorkspace),
+    effectiveWorkspaces.some(
+      (workspace) => workspace.slug === currentWorkspace,
+    ),
   );
 
   const isTeamWorkspace = (() => {
@@ -697,15 +783,24 @@ export function DashboardLayout({
 
   // Settings drawer — shared between sidebar & topbar
   const [profileOpen, setProfileOpen] = useState(false);
-  const [profileRequestedTab, setProfileRequestedTab] = useState<ProfileTab | undefined>(undefined);
+  const [profileRequestedTab, setProfileRequestedTab] = useState<
+    ProfileTab | undefined
+  >(undefined);
 
   const openProfileDrawer = useCallback((tab?: ProfileTab) => {
     setProfileRequestedTab(tab);
     setProfileOpen(true);
   }, []);
 
-  const getTooltipMessages = useServerFn(listTooltipMessagesServerFn as any) as (args: {
-    data?: { workspace?: string; type?: "notifications"; limit?: number; page?: number };
+  const getTooltipMessages = useServerFn(
+    listTooltipMessagesServerFn as any,
+  ) as (args: {
+    data?: {
+      workspace?: string;
+      type?: "notifications";
+      limit?: number;
+      page?: number;
+    };
   }) => Promise<AppTooltipMessage[] | null>;
   const getSettingsSnapshot = useServerFn(
     getSettingsSidebarSnapshotServerFn as any,
@@ -715,20 +810,20 @@ export function DashboardLayout({
   const getWorkspaceTeamMembers = useServerFn(
     getWorkspaceTeamMembersServerFn as any,
   ) as (args: { data: { workspace: string } }) => Promise<TeamDetails>;
-  const [tooltipMessages, setTooltipMessages] = useState<AppTooltipMessage[] | null>(
-    initialTooltipMessages ?? null,
-  );
+  const [tooltipMessages, setTooltipMessages] = useState<
+    AppTooltipMessage[] | null
+  >(initialTooltipMessages ?? null);
   // Keep initial render deterministic for SSR hydration; load localStorage after mount.
-  const [dismissedSnackbarKeys, setDismissedSnackbarKeys] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [dismissedSnackbarKeys, setDismissedSnackbarKeys] = useState<
+    Set<string>
+  >(() => new Set());
   const activeSettingsSnapshot =
     settingsSnapshotCache[settingsScopeKey] ?? null;
 
   // Profile is workspace-independent — extract once and keep stable across workspace switches
-  const [userProfile, setUserProfile] = useState<SettingsSidebarSnapshot["profile"] | null>(
-    initialSettingsSnapshot?.profile ?? null,
-  );
+  const [userProfile, setUserProfile] = useState<
+    SettingsSidebarSnapshot["profile"] | null
+  >(initialSettingsSnapshot?.profile ?? null);
 
   useEffect(() => {
     const p = initialSettingsSnapshot?.profile;
@@ -742,9 +837,13 @@ export function DashboardLayout({
     const p = activeSettingsSnapshot?.profile;
     if (p && (p.firstName || p.lastName || p.username || p.email)) {
       setUserProfile((prev) => {
-        if (!prev || (!prev.firstName && !prev.lastName && p.firstName)) return p;
+        if (!prev || (!prev.firstName && !prev.lastName && p.firstName))
+          return p;
         return prev;
       });
+    }
+    if (p) {
+      setHapticsEnabled(p.haptics !== false);
     }
   }, [activeSettingsSnapshot?.profile]);
   const activeWorkspaceTeamMembers =
@@ -755,7 +854,7 @@ export function DashboardLayout({
   useEffect(() => {
     setSettingsSnapshotCache((prev) => ({
       ...prev,
-      [(initialWorkspaceSlug ?? "__personal__")]: initialSettingsSnapshot ?? null,
+      [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot ?? null,
     }));
   }, [initialSettingsSnapshot, initialWorkspaceSlug]);
 
@@ -771,7 +870,12 @@ export function DashboardLayout({
   }, [initialWorkspaceSlug, initialWorkspaceTeamMembers]);
 
   useEffect(() => {
-    if (Object.prototype.hasOwnProperty.call(settingsSnapshotCache, settingsScopeKey)) {
+    if (
+      Object.prototype.hasOwnProperty.call(
+        settingsSnapshotCache,
+        settingsScopeKey,
+      )
+    ) {
       return;
     }
 
@@ -804,14 +908,24 @@ export function DashboardLayout({
     return () => {
       cancelled = true;
     };
-  }, [currentWorkspace, getSettingsSnapshot, settingsScopeKey, settingsSnapshotCache]);
+  }, [
+    currentWorkspace,
+    getSettingsSnapshot,
+    settingsScopeKey,
+    settingsSnapshotCache,
+  ]);
 
   useEffect(() => {
     if (!currentWorkspace || !isKnownWorkspace) {
       return;
     }
 
-    if (Object.prototype.hasOwnProperty.call(workspaceTeamMembersCache, currentWorkspace)) {
+    if (
+      Object.prototype.hasOwnProperty.call(
+        workspaceTeamMembersCache,
+        currentWorkspace,
+      )
+    ) {
       return;
     }
 
@@ -844,7 +958,12 @@ export function DashboardLayout({
     return () => {
       cancelled = true;
     };
-  }, [currentWorkspace, getWorkspaceTeamMembers, isKnownWorkspace, workspaceTeamMembersCache]);
+  }, [
+    currentWorkspace,
+    getWorkspaceTeamMembers,
+    isKnownWorkspace,
+    workspaceTeamMembersCache,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -881,9 +1000,13 @@ export function DashboardLayout({
         const key = `${msg.type ?? "general"}:${msg.level}:${msg.route ?? ""}:${msg.message}:${index}`;
         return { key, msg, originalIndex: index };
       })
-      .filter(({ key, msg }) => !isSnackbarDismissible(msg) || !dismissedSnackbarKeys.has(key))
+      .filter(
+        ({ key, msg }) =>
+          !isSnackbarDismissible(msg) || !dismissedSnackbarKeys.has(key),
+      )
       .sort((a, b) => {
-        const priorityDiff = getSnackbarPriority(a.msg) - getSnackbarPriority(b.msg);
+        const priorityDiff =
+          getSnackbarPriority(a.msg) - getSnackbarPriority(b.msg);
         if (priorityDiff !== 0) {
           return priorityDiff;
         }
@@ -916,193 +1039,223 @@ export function DashboardLayout({
       canSeeBilling:
         !inWorkspace || role === "Creator" || role === "Administrator",
     };
-  }, [currentWorkspace, isKnownWorkspace, activeWorkspaceTeamMembers, userProfile?.id, userProfile?.email]);
+  }, [
+    currentWorkspace,
+    isKnownWorkspace,
+    activeWorkspaceTeamMembers,
+    userProfile?.id,
+    userProfile?.email,
+  ]);
 
   if (isAuthRoute || isCatchAll) {
     return (
       <QueryClientProvider client={dashboardQueryClient}>
-      <PricingProvider value={pricing}>
-      <PlanTypeProvider value={planType}>
-      <WorkspaceRoleProvider value={workspaceRoleValue}>
-      <TooltipProvider>
-        <DashToaster />
-        {children}
-      </TooltipProvider>
-      </WorkspaceRoleProvider>
-      </PlanTypeProvider>
-      </PricingProvider>
+        <PricingProvider value={pricing}>
+          <PlanTypeProvider value={planType}>
+            <WorkspaceRoleProvider value={workspaceRoleValue}>
+              <TooltipProvider>
+                <DashToaster />
+                {children}
+              </TooltipProvider>
+            </WorkspaceRoleProvider>
+          </PlanTypeProvider>
+        </PricingProvider>
       </QueryClientProvider>
     );
   }
 
   return (
     <QueryClientProvider client={dashboardQueryClient}>
-    <PricingProvider value={pricing}>
-    <PlanTypeProvider value={planType}>
-    <WorkspaceRoleProvider value={workspaceRoleValue}>
-    <ScoutBarProvider>
-    <TooltipProvider>
-    <ProfileDrawerProvider onOpen={openProfileDrawer}>
-      <DashToaster />
-      <CommandPalette />
-      <div className="flex h-dvh flex-col bg-dash-bg">
-        <Topbar
-          onSettingsClick={() => setProfileOpen(true)}
-          onMobileNavToggle={() => setMobileNavOpen((v) => !v)}
-          mobileNavOpen={mobileNavOpen}
-          settingsSnapshot={activeSettingsSnapshot}
-          userProfile={userProfile}
-          workspaces={effectiveWorkspaces}
-          workspaceTeamMembers={activeWorkspaceTeamMembers}
-          projectSwitcherProjects={
-            matchedProjectSwitcherProjects ?? initialProjectSwitcherProjects?.items ?? []
-          }
-        />
-        {/* Mobile navigation dropdown */}
-        <AnimatePresence>
-          {mobileNavOpen && (
-            <>
-              <motion.div
-                key="mobile-nav-backdrop"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-40 bg-black/40 md:hidden"
-                onClick={closeMobileNav}
-              />
-              <motion.div
-                key="mobile-nav-dropdown"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className="relative z-50 overflow-hidden border-b border-dash-border-soft bg-dash-bg md:hidden"
-              >
-                <MobileNavMenu
-                  onSettingsClick={() => {
-                    setProfileOpen(true);
-                    closeMobileNav();
-                  }}
-                />
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-        <AnimatePresence>
-          {visibleSnackbars.map(({ key, msg }) => {
-              const variant = mapSnackbarVariant(msg.level);
-              const actionLabel = getSnackbarActionLabel(msg);
-              const isPaymentMessage = msg.type === "payment";
-              const dismissible = isSnackbarDismissible(msg);
+      <PricingProvider value={pricing}>
+        <PlanTypeProvider value={planType}>
+          <WorkspaceRoleProvider value={workspaceRoleValue}>
+            <ScoutBarProvider>
+              <TooltipProvider>
+                <ProfileDrawerProvider onOpen={openProfileDrawer}>
+                  <DashToaster />
+                  <CommandPalette />
+                  <div className="flex h-dvh flex-col bg-dash-bg">
+                    <Topbar
+                      onSettingsClick={() => setProfileOpen(true)}
+                      onMobileNavToggle={() => setMobileNavOpen((v) => !v)}
+                      mobileNavOpen={mobileNavOpen}
+                      settingsSnapshot={activeSettingsSnapshot}
+                      userProfile={userProfile}
+                      workspaces={effectiveWorkspaces}
+                      workspaceTeamMembers={activeWorkspaceTeamMembers}
+                      projectSwitcherProjects={
+                        matchedProjectSwitcherProjects ??
+                        initialProjectSwitcherProjects?.items ??
+                        []
+                      }
+                    />
+                    {/* Mobile navigation dropdown */}
+                    <AnimatePresence>
+                      {mobileNavOpen && (
+                        <>
+                          <motion.div
+                            key="mobile-nav-backdrop"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="fixed inset-0 z-40 bg-black/40 md:hidden"
+                            onClick={closeMobileNav}
+                          />
+                          <motion.div
+                            key="mobile-nav-dropdown"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{
+                              duration: 0.25,
+                              ease: [0.16, 1, 0.3, 1],
+                            }}
+                            className="relative z-50 overflow-hidden border-b border-dash-border-soft bg-dash-bg md:hidden"
+                          >
+                            <MobileNavMenu
+                              onSettingsClick={() => {
+                                setProfileOpen(true);
+                                closeMobileNav();
+                              }}
+                            />
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                    <AnimatePresence>
+                      {visibleSnackbars.map(({ key, msg }) => {
+                        const variant = mapSnackbarVariant(msg.level);
+                        const actionLabel = getSnackbarActionLabel(msg);
+                        const isPaymentMessage = msg.type === "payment";
+                        const dismissible = isSnackbarDismissible(msg);
 
-              return (
-                <Snackbar
-                  key={key}
-                  variant={variant}
-                  message={msg.message}
-                  action={
-                    actionLabel
-                      ? {
-                          label: actionLabel,
-                          onClick: () => {
-                            if (isPaymentMessage) {
-                              setProfileRequestedTab(ProfileTab.Billing);
-                              setProfileOpen(true);
-                              return;
+                        return (
+                          <Snackbar
+                            key={key}
+                            variant={variant}
+                            message={msg.message}
+                            action={
+                              actionLabel
+                                ? {
+                                    label: actionLabel,
+                                    onClick: () => {
+                                      if (isPaymentMessage) {
+                                        setProfileRequestedTab(
+                                          ProfileTab.Billing,
+                                        );
+                                        setProfileOpen(true);
+                                        return;
+                                      }
+
+                                      if (!msg.route) {
+                                        return;
+                                      }
+
+                                      if (/^https?:\/\//.test(msg.route!)) {
+                                        window.location.href = msg.route!;
+                                        return;
+                                      }
+
+                                      void navigate({
+                                        to: msg.route as any,
+                                        search: currentWorkspace
+                                          ? ({
+                                              workspace: currentWorkspace,
+                                            } as any)
+                                          : undefined,
+                                      });
+                                    },
+                                  }
+                                : undefined
                             }
-
-                            if (!msg.route) {
-                              return;
+                            onDismiss={
+                              dismissible
+                                ? () => {
+                                    setDismissedSnackbarKeys((prev) => {
+                                      const next = new Set(prev);
+                                      next.add(key);
+                                      writeDismissedSnackbars(
+                                        currentWorkspace,
+                                        next,
+                                      );
+                                      return next;
+                                    });
+                                  }
+                                : undefined
                             }
+                          />
+                        );
+                      })}
+                    </AnimatePresence>
 
-                            if (/^https?:\/\//.test(msg.route!)) {
-                              window.location.href = msg.route!;
-                              return;
-                            }
-
-                            void navigate({
-                              to: msg.route as any,
-                              search: currentWorkspace ? ({ workspace: currentWorkspace } as any) : undefined,
-                            });
-                          },
-                        }
-                      : undefined
-                  }
-                  onDismiss={
-                    dismissible
-                      ? () => {
-                          setDismissedSnackbarKeys((prev) => {
-                            const next = new Set(prev);
-                            next.add(key);
-                            writeDismissedSnackbars(currentWorkspace, next);
-                            return next;
-                          });
-                        }
-                      : undefined
-                  }
-                />
-              );
-            })}
-        </AnimatePresence>
-
-        {!shouldRenderDesktopSidebar && resolvedIsFullWidth ? (
-          <main className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
-            <div className="mx-auto w-full max-w-screen-xl flex-1 px-4 md:px-0">
-              {shouldShowRouteSkeleton ? (
-                <div className="py-8">
-                  <RouteTransitionSkeleton pathname={pathname} fullWidth />
-                </div>
-              ) : (
-                children
-              )}
-            </div>
-            <Footer />
-          </main>
-        ) : (
-          <div className="mx-auto flex w-full max-w-screen-xl flex-1 overflow-hidden">
-            <div className="hidden md:flex">
-              <Sidebar profileOpen={profileOpen} onProfileOpenChange={setProfileOpen} />
-            </div>
-            <main className="scrollbar-hidden flex min-h-0 flex-1 flex-col overflow-y-auto">
-              <div className="flex-1 px-4 py-6 md:py-8 md:pl-10 md:pr-0">
-                {shouldShowRouteSkeleton ? (
-                  <RouteTransitionSkeleton pathname={pathname} />
-                ) : (
-                  children
-                )}
-              </div>
-              <Footer />
-            </main>
-          </div>
-        )}
-        <WelcomeModal />
-        <OnboardingChecklist
-          projects={dashboardProjects}
-          settingsSnapshot={activeSettingsSnapshot}
-          isTeamWorkspace={isTeamWorkspace}
-          teamDetails={activeWorkspaceTeamMembers}
-        />
-        <UserProfileDrawer
-          initialWorkspaceTeamMembers={activeWorkspaceTeamMembers}
-          open={profileOpen}
-          onOpenChange={setProfileOpen}
-          requestedTab={profileRequestedTab}
-          initialSnapshot={activeSettingsSnapshot}
-          initialPaymentMethods={initialPaymentMethods ?? null}
-          initialInvoices={initialInvoices ?? null}
-          initialActivityLogs={initialActivityLogs ?? null}
-          initialSubscriptionStats={initialSubscriptionStats ?? null}
-          initialProjectEnvironments={initialProjectEnvironments ?? null}
-          projectCount={accountProjectCount}
-        />
-      </div>
-    </ProfileDrawerProvider>
-    </TooltipProvider>
-    </ScoutBarProvider>
-    </WorkspaceRoleProvider>
-    </PlanTypeProvider>
-    </PricingProvider>
+                    {!shouldRenderDesktopSidebar && resolvedIsFullWidth ? (
+                      <main className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
+                        <div className="mx-auto w-full max-w-screen-xl flex-1 px-4 md:px-0">
+                          {shouldShowRouteSkeleton ? (
+                            <div className="py-8">
+                              <RouteTransitionSkeleton
+                                pathname={pathname}
+                                fullWidth
+                              />
+                            </div>
+                          ) : (
+                            children
+                          )}
+                        </div>
+                        <Footer />
+                      </main>
+                    ) : (
+                      <div className="mx-auto flex w-full max-w-screen-xl flex-1 overflow-hidden">
+                        <div className="hidden md:flex">
+                          <Sidebar
+                            profileOpen={profileOpen}
+                            onProfileOpenChange={setProfileOpen}
+                          />
+                        </div>
+                        <main className="scrollbar-hidden flex min-h-0 flex-1 flex-col overflow-y-auto">
+                          <div className="flex-1 px-4 py-6 md:py-8 md:pl-10 md:pr-0">
+                            {shouldShowRouteSkeleton ? (
+                              <RouteTransitionSkeleton pathname={pathname} />
+                            ) : (
+                              children
+                            )}
+                          </div>
+                          <Footer />
+                        </main>
+                      </div>
+                    )}
+                    <WelcomeModal />
+                    <OnboardingChecklist
+                      projects={dashboardProjects}
+                      settingsSnapshot={activeSettingsSnapshot}
+                      isTeamWorkspace={isTeamWorkspace}
+                      teamDetails={activeWorkspaceTeamMembers}
+                    />
+                    <UserProfileDrawer
+                      initialWorkspaceTeamMembers={activeWorkspaceTeamMembers}
+                      open={profileOpen}
+                      onOpenChange={setProfileOpen}
+                      requestedTab={profileRequestedTab}
+                      initialSnapshot={activeSettingsSnapshot}
+                      initialPaymentMethods={initialPaymentMethods ?? null}
+                      initialInvoices={initialInvoices ?? null}
+                      initialActivityLogs={initialActivityLogs ?? null}
+                      initialSubscriptionStats={
+                        initialSubscriptionStats ?? null
+                      }
+                      initialProjectEnvironments={
+                        initialProjectEnvironments ?? null
+                      }
+                      projectCount={accountProjectCount}
+                    />
+                  </div>
+                </ProfileDrawerProvider>
+              </TooltipProvider>
+            </ScoutBarProvider>
+          </WorkspaceRoleProvider>
+        </PlanTypeProvider>
+      </PricingProvider>
     </QueryClientProvider>
   );
 }

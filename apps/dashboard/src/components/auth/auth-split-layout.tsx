@@ -76,47 +76,39 @@ export function AuthSplitLayout({
   footer?: ReactNode;
 }) {
   return (
-    <div className="min-h-dvh bg-dash-bg dark:bg-[#1a1c1e]">
-      <div className="flex min-h-dvh">
-        {/* Form side */}
-        <section className="flex min-w-0 flex-1 flex-col items-center justify-center px-6 py-10 sm:px-10 lg:px-14">
-          <div className="w-full max-w-[400px]">
-            {/* Header row */}
-            <div className="mb-10 flex items-center justify-between">
-              <Link to="/" className="flex items-center gap-2 text-dash-text-strong">
-                <BrimbleMark className="size-6" />
-                <span className="text-sm font-semibold tracking-[-0.2px]">Brimble</span>
-              </Link>
-              <Link
-                to={mode === "login" ? "/signup" : "/login"}
-                className="rounded-full border border-dash-border bg-dash-bg px-3.5 py-1.5 text-xs font-medium text-dash-text-body transition-colors hover:bg-dash-bg-elevated dark:bg-dash-bg-elevated dark:hover:bg-[#333]"
-              >
-                {mode === "login" ? "Create account" : "Sign in"}
-              </Link>
-            </div>
+    <div className="flex min-h-dvh items-center justify-center bg-dash-bg px-6 py-10 dark:bg-[#1a1c1e]">
+      <div className="w-full max-w-[400px]">
+        {/* Header row */}
+        <div className="mb-10 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 text-dash-text-strong">
+            <BrimbleMark className="size-6" />
+            <span className="text-sm font-semibold tracking-[-0.2px]">Brimble</span>
+          </Link>
+          <Link
+            to={mode === "login" ? "/signup" : "/login"}
+            className="rounded-full border border-dash-border bg-dash-bg px-3.5 py-1.5 text-xs font-medium text-dash-text-body transition-colors hover:bg-dash-bg-elevated dark:bg-dash-bg-elevated dark:hover:bg-[#333]"
+          >
+            {mode === "login" ? "Create account" : "Sign in"}
+          </Link>
+        </div>
 
-            {/* Title */}
-            <div className="mb-8">
-              <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.5px] text-dash-text-strong sm:text-[32px]">
-                {title}
-              </h1>
-              <p className="mt-2.5 text-[13px] leading-[1.5] text-dash-text-faded">
-                {description}
-              </p>
-            </div>
+        {/* Title */}
+        <div className="mb-8">
+          <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.5px] text-dash-text-strong sm:text-[32px]">
+            {title}
+          </h1>
+          <p className="mt-2.5 text-[13px] leading-[1.5] text-dash-text-faded">
+            {description}
+          </p>
+        </div>
 
-            {children}
+        {children}
 
-            {footer && (
-              <div className="mt-8 border-t border-dash-border/50 pt-4 text-[11px] leading-[1.6] text-dash-text-extra-faded">
-                {footer}
-              </div>
-            )}
+        {footer && (
+          <div className="mt-8 border-t border-dash-border/50 pt-4 text-[11px] leading-[1.6] text-dash-text-extra-faded">
+            {footer}
           </div>
-        </section>
-
-        {/* Brand side */}
-        <AuthBrandPanel />
+        )}
       </div>
     </div>
   );

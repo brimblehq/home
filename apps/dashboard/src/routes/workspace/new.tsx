@@ -6,7 +6,6 @@ import { Formik, Form as FormikForm } from "formik";
 import axios from "axios";
 import {
   ArrowLeft,
-  ChevronDown,
   Plus,
   Minus,
   X,
@@ -15,6 +14,7 @@ import {
   Info,
   Settings,
 } from "lucide-react";
+import { RoleDropdown } from "../../components/shared/role-dropdown";
 import { ImageSquare } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { GlossyButton } from "../../components/shared/glossy-button";
@@ -60,8 +60,6 @@ const inputClass =
 type Phase = 1 | 2 | 3;
 
 const teamSizeOptions = [3, 5, 10, 15, 25, 50];
-
-const roles = ["Member", "Administrator"];
 
 /* ─── Summary Chip ─── */
 
@@ -144,66 +142,6 @@ function InfoBanner({ children }: { children: React.ReactNode }) {
       <div className="text-sm font-light leading-[1.4] text-dash-text-body">
         {children}
       </div>
-    </div>
-  );
-}
-
-/* ─── Mini Role Dropdown ─── */
-
-function MiniRoleDropdown({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
-    }
-  }, [open]);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="input-base flex w-[140px] items-center justify-between px-2.5 py-2.5 text-sm text-dash-text-strong"
-      >
-        {value}
-        <ChevronDown className="size-3 text-dash-text-faded" />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.2, ease }}
-            className="absolute right-0 top-full z-50 mt-1 w-[140px] overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg"
-          >
-            {roles.map((r) => (
-              <button
-                type="button"
-                key={r}
-                onClick={() => { onChange(r); setOpen(false); }}
-                className={`flex w-full px-2.5 py-1.5 text-left text-sm ${
-                  r === value ? "font-medium text-[#4879f8]" : "text-dash-text-body hover:bg-dash-bg-elevated"
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -706,7 +644,7 @@ function Phase3Invite({
                             : `flex-1 ${inputClass}`
                         }
                       />
-                      <MiniRoleDropdown
+                      <RoleDropdown
                         value={row.role}
                         onChange={(v) => updateRow(row.id, "role", v)}
                       />

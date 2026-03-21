@@ -9,6 +9,8 @@ export interface DrawerUserProfile {
   avatarUrl?: string;
   buildsEnabled?: boolean;
   buildDisabledBy?: string | null;
+  haptics?: boolean;
+  followedX?: boolean;
   spendingLimit?: number | null;
   notifications?: {
     mute: boolean;
@@ -35,6 +37,8 @@ export function mapSettingsSnapshotToDrawerProfile(
     avatarUrl: snapshot.profile.avatarUrl,
     buildsEnabled: !snapshot.profile.buildDisabled,
     buildDisabledBy: snapshot.profile.buildDisabledBy ?? null,
+    haptics: snapshot.profile.haptics,
+    followedX: snapshot.profile.followedX,
     spendingLimit: snapshot.profile.spendingLimit ?? null,
     notifications: snapshot.profile.notifications,
     apiKey: snapshot.profile.apiKey,

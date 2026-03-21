@@ -48,6 +48,41 @@ export const listMcpTemplatesServerFn = createServerFn({
   }
 });
 
+export const listRecommendedMcpTemplatesServerFn = createServerFn({
+  method: "GET",
+}).handler(async ({ data }) => {
+  const payload = data as
+    | {
+        limit?: number;
+        category?: string;
+        officialOnly?: boolean;
+        shuffle?: boolean;
+        provider?: "smithery" | "pulsemcp" | "auto";
+      }
+    | undefined;
+
+  const request = {
+    limit: payload?.limit,
+    category: payload?.category?.trim() || undefined,
+    officialOnly: payload?.officialOnly,
+    shuffle: payload?.shuffle,
+    provider: payload?.provider,
+  } as const;
+
+  try {
+    return await withTokenRefresh(
+      (api) => api.mcp.listRecommendedTemplates(request) as Promise<McpServerListResult>,
+    );
+  } catch (error) {
+    mcpLogger.debug(
+      "listRecommendedMcpTemplates: auth-backed request failed, retrying without auth",
+      error,
+    );
+
+    return getPublicBackendApi().mcp.listRecommendedTemplates(request) as Promise<McpServerListResult>;
+  }
+});
+
 export const getMcpTemplateServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {

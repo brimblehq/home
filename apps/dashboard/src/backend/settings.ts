@@ -37,6 +37,8 @@ export type {
   SettingsWebhookState,
   TestWebhookInput,
   UpdateSettingsBuildsInput,
+  UpdateSettingsFollowedXInput,
+  UpdateSettingsHapticsInput,
   UpdateSettingsNotificationsInput,
   UpdateSettingsProfileInput,
   UpdateSettingsWebhooksInput,
@@ -70,14 +72,10 @@ function mapProfile(payload: any): SettingsUserProfile {
     lastName,
     avatarUrl: data?.avatar,
     buildDisabled: Boolean(data?.build_disabled),
-    buildDisabledBy:
-      typeof data?.build_disabled_by === "string"
-        ? data.build_disabled_by
-        : null,
-    spendingLimit:
-      data?.spending_limit === null || data?.spending_limit === undefined
-        ? null
-        : Number(data.spending_limit),
+    buildDisabledBy: data?.build_disabled_by ?? null,
+    haptics: data?.haptics !== false,
+    followedX: Boolean(data?.followed_x),
+    spendingLimit: data?.spending_limit ?? null,
     apiKey: data?.api_key,
     notifications: {
       mute: Boolean(data?.notifications?.mute),
@@ -85,12 +83,9 @@ function mapProfile(payload: any): SettingsUserProfile {
     },
     subscription: data?.subscription
       ? {
-          id: data.subscription?._id,
-          planType:
-            data.subscription?.plan_type !== undefined
-              ? String(data.subscription.plan_type)
-              : undefined,
-          due: Boolean(data.subscription?.due),
+          id: data.subscription._id,
+          planType: data.subscription.plan_type,
+          due: Boolean(data.subscription.due),
         }
       : undefined,
   };
@@ -324,6 +319,8 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
     requestEmailVerification: `${config.authApiUrl}/user/update-email`,
     notifications: `${config.authApiUrl}/user/notifications`,
     builds: `${config.authApiUrl}/user/builds`,
+    haptics: `${config.authApiUrl}/user/haptics`,
+    followedX: `${config.authApiUrl}/user/followed-x`,
     webhooks: "/core/v1/webhooks",
     apiKeyCreate: "/core/v1/api-key/create",
     apiKeyReset: "/core/v1/api-key/reset",
@@ -411,6 +408,18 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
         method: "PUT",
         query: input.teamId ? { team_id: input.teamId } : undefined,
         body: { build_disabled: Boolean(input.buildDisabled) },
+      });
+    },
+    async updateHaptics(input) {
+      await client.request(endpoints.haptics, {
+        method: "POST",
+        body: { haptics: Boolean(input.haptics) },
+      });
+    },
+    async updateFollowedX(input) {
+      await client.request(endpoints.followedX, {
+        method: "POST",
+        body: { followed_x: Boolean(input.followed_x) },
       });
     },
     async createApiKey() {

@@ -111,6 +111,26 @@ export const updateSettingsBuildsServerFn = createServerFn({
   });
 });
 
+export const updateSettingsHapticsServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as unknown as { haptics: boolean };
+  return withTokenRefresh(async (api) => {
+    await api.settings.updateHaptics({ haptics: payload.haptics });
+    return { ok: true } as const;
+  });
+});
+
+export const updateSettingsFollowedXServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as unknown as { followed_x: boolean };
+  return withTokenRefresh(async (api) => {
+    await api.settings.updateFollowedX({ followed_x: payload.followed_x });
+    return { ok: true } as const;
+  });
+});
+
 export const createSettingsApiKeyServerFn = createServerFn({
   method: "POST",
 }).handler(async () => {

@@ -10,13 +10,13 @@ import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import { ProfileTab } from "@/types/enums";
 import { listGithubAccountsServerFn } from "@/server/repositories/actions";
 import { getWorkspaceTeamMembersServerFn } from "@/server/teams/actions";
+import { updateSettingsFollowedXServerFn } from "@/server/settings/actions";
 import type { Project } from "@/backend/projects";
 import type { SettingsSidebarSnapshot } from "@/backend/settings";
 import type { TeamDetails } from "@/backend/teams";
 import { usePaymentMethods } from "@/hooks/use-payments";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-const FOLLOW_KEY = "brimble:followed-on-x";
 
 interface OnboardingTask {
   label: string;
@@ -100,20 +100,15 @@ export function OnboardingChecklist({
   const profileDrawer = useProfileDrawer();
   const haptics = useHaptics();
   const [expanded, setExpanded] = useState(false);
-  const [hasFollowed, setHasFollowed] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-
-    try {
-      return localStorage.getItem(FOLLOW_KEY) === "true";
-    } catch {
-      return false;
-    }
-  });
+  const [hasFollowed, setHasFollowed] = useState(
+    Boolean(settingsSnapshot?.profile?.followedX),
+  );
 
   const navigate = useNavigate();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const updateFollowedX = useServerFn(updateSettingsFollowedXServerFn as any) as (args: {
+    data: { followed_x: boolean };
+  }) => Promise<{ ok: true }>;
   const getTeamMembers = useServerFn(getWorkspaceTeamMembersServerFn as any) as (args: {
     data: { workspace: string };
   }) => Promise<TeamDetails>;
@@ -300,11 +295,7 @@ export function OnboardingChecklist({
         // Mark as followed when clicking the X link
         if (task.action.includes("x.com")) {
           setHasFollowed(true);
-          try {
-            localStorage.setItem(FOLLOW_KEY, "true");
-          } catch {
-            // ignore
-          }
+          void updateFollowedX({ data: { followed_x: true } }).catch(() => {});
         }
         window.open(task.action, "_blank", "noopener,noreferrer");
       } else if (task.action) {

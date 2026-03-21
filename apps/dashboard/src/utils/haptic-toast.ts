@@ -1,6 +1,8 @@
 import { toast as sonnerToast } from "sonner";
+import { getHapticsEnabled } from "@/hooks/use-haptics";
 
 function vibrate(pattern: number[]) {
+  if (!getHapticsEnabled()) return;
   if (typeof navigator !== "undefined" && navigator.vibrate) {
     navigator.vibrate(pattern);
   }
