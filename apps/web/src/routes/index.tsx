@@ -7,6 +7,7 @@ import { Onboarding } from "@/components/sections/onboarding";
 import { Features } from "@/components/sections/features";
 import { Integrations } from "@/components/sections/integrations";
 import { Cta } from "@/components/sections/cta";
+import { CookieBanner } from "@/components/layout/cookie-banner";
 import { buildSeoHead } from "@/config/seo";
 
 export const Route = createFileRoute("/")({
@@ -27,6 +28,7 @@ function LandingPage() {
         <Integrations />
         <Cta />
       </main>
+      <CookieBanner />
     </div>
   );
 }

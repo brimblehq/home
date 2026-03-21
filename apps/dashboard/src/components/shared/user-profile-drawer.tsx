@@ -122,7 +122,7 @@ const reachUsNav = [
 
 const aboutNav = [
   { label: "Changelog", emoji: "👥" },
-  { label: "Terms and privacy", emoji: "🔔" },
+  { label: "Terms and privacy", emoji: "🔔", href: "https://brimble.io/legal" },
 ];
 
 const navItemBase =
@@ -1173,21 +1173,21 @@ function ApiKeySection({
           API key
         </span>
         <span className="text-sm leading-5 text-dash-text-faded">
-          {isFreePlan
-            ? (
-              <>
-                API keys are available on paid plans.{" "}
-                <button
-                  type="button"
-                  onClick={onUpgradePlan}
-                  className="text-[#4879f8] underline underline-offset-2 transition-colors hover:text-[#3a6ae6]"
-                >
-                  Upgrade
-                </button>{" "}
-                to enable API key access.
-              </>
-            )
-            : "Use this key to authenticate API requests. Keep it secret."}
+          {isFreePlan ? (
+            <>
+              API keys are available on paid plans.{" "}
+              <button
+                type="button"
+                onClick={onUpgradePlan}
+                className="text-[#4879f8] underline underline-offset-2 transition-colors hover:text-[#3a6ae6]"
+              >
+                Upgrade
+              </button>{" "}
+              to enable API key access.
+            </>
+          ) : (
+            "Use this key to authenticate API requests. Keep it secret."
+          )}
         </span>
       </div>
 
@@ -1204,57 +1204,57 @@ function ApiKeySection({
                   "pr-20 font-mono text-[13px] text-dash-text-faded",
                 )}
               />
-            <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-              <button
-                onClick={async () => {
-                  if (!encryptedApiKey) {
-                    return;
-                  }
-
-                  if (revealed) {
-                    setRevealed(false);
-                    return;
-                  }
-
-                  if (decryptedApiKey) {
-                    setRevealed(true);
-                    return;
-                  }
-
-                  setIsDecrypting(true);
-
-                  try {
-                    const decrypted = await onDecrypt?.(encryptedApiKey);
-                    if (decrypted) {
-                      setDecryptedApiKey(decrypted);
-                      setRevealed(true);
-                    }
-                  } finally {
-                    setIsDecrypting(false);
-                  }
-                }}
-                disabled={!encryptedApiKey || isDecrypting}
-                className="shrink-0 rounded-[4px] p-1 text-dash-text-faded transition-colors hover:text-dash-text-strong"
-                title={revealed ? "Hide" : "Reveal"}
-              >
-                {revealed ? (
-                  <EyeOff className="size-3.5" />
-                ) : (
-                  <Eye className="size-3.5" />
-                )}
-              </button>
-              {decryptedApiKey ? (
-                <CopyButton text={decryptedApiKey} />
-              ) : (
+              <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
                 <button
-                  disabled
-                  className="shrink-0 rounded-[4px] p-1 text-dash-text-extra-faded"
-                  title="Reveal key to copy"
+                  onClick={async () => {
+                    if (!encryptedApiKey) {
+                      return;
+                    }
+
+                    if (revealed) {
+                      setRevealed(false);
+                      return;
+                    }
+
+                    if (decryptedApiKey) {
+                      setRevealed(true);
+                      return;
+                    }
+
+                    setIsDecrypting(true);
+
+                    try {
+                      const decrypted = await onDecrypt?.(encryptedApiKey);
+                      if (decrypted) {
+                        setDecryptedApiKey(decrypted);
+                        setRevealed(true);
+                      }
+                    } finally {
+                      setIsDecrypting(false);
+                    }
+                  }}
+                  disabled={!encryptedApiKey || isDecrypting}
+                  className="shrink-0 rounded-[4px] p-1 text-dash-text-faded transition-colors hover:text-dash-text-strong"
+                  title={revealed ? "Hide" : "Reveal"}
                 >
-                  <Copy className="size-4" />
+                  {revealed ? (
+                    <EyeOff className="size-3.5" />
+                  ) : (
+                    <Eye className="size-3.5" />
+                  )}
                 </button>
-              )}
-            </div>
+                {decryptedApiKey ? (
+                  <CopyButton text={decryptedApiKey} />
+                ) : (
+                  <button
+                    disabled
+                    className="shrink-0 rounded-[4px] p-1 text-dash-text-extra-faded"
+                    title="Reveal key to copy"
+                  >
+                    <Copy className="size-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             <button
@@ -1928,9 +1928,7 @@ export function UserProfileDrawer({
   }) => Promise<{ ok: true }>;
   const updateHaptics = useServerFn(
     updateSettingsHapticsServerFn as any,
-  ) as (args: {
-    data: { haptics: boolean };
-  }) => Promise<{ ok: true }>;
+  ) as (args: { data: { haptics: boolean } }) => Promise<{ ok: true }>;
   const createApiKey = useServerFn(createSettingsApiKeyServerFn);
   const resetApiKey = useServerFn(resetSettingsApiKeyServerFn);
   const disconnectGitProvider = useServerFn(
@@ -2755,7 +2753,10 @@ function Toggle({
       role="switch"
       aria-checked={checked}
       disabled={disabled}
-      onClick={() => { haptics.selection(); onChange(!checked); }}
+      onClick={() => {
+        haptics.selection();
+        onChange(!checked);
+      }}
       className={cn(
         "relative h-5 w-9 shrink-0 rounded-full transition-colors",
         checked ? "bg-[#006fff]" : "bg-[#f2f4f7] dark:bg-[#3a3a3c]",
@@ -4430,9 +4431,13 @@ function MembersForm({
                 await refreshMembers();
               } catch (error) {
                 const message =
-                  error instanceof Error ? error.message : "Failed to transfer ownership";
+                  error instanceof Error
+                    ? error.message
+                    : "Failed to transfer ownership";
                 if (/already a pending/i.test(message)) {
-                  toast.error("There is already a pending transfer for this team. Cancel it first.");
+                  toast.error(
+                    "There is already a pending transfer for this team. Cancel it first.",
+                  );
                 } else if (/already the team owner/i.test(message)) {
                   toast.error("This person is already the team owner.");
                 } else {

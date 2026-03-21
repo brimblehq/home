@@ -3,6 +3,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import appCss from '../styles.css?url'
+import brimbleLogoIcon from '../assets/icons/brimble-logo.svg?url'
 
 const chatwootBootstrapScript = `(function(d,t){
   try {
@@ -62,19 +63,13 @@ export const Route = createRootRoute({
       },
       {
         rel: 'icon',
-        href: '/favicon/favicon.ico',
+        type: 'image/svg+xml',
+        href: brimbleLogoIcon,
       },
       {
-        rel: 'icon',
-        type: 'image/png',
-        sizes: '16x16',
-        href: '/favicon/favicon-16x16.png',
-      },
-      {
-        rel: 'icon',
-        type: 'image/png',
-        sizes: '32x32',
-        href: '/favicon/favicon-32x32.png',
+        rel: 'shortcut icon',
+        type: 'image/svg+xml',
+        href: brimbleLogoIcon,
       },
       {
         rel: 'apple-touch-icon',

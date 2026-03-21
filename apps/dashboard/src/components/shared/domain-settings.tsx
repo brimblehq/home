@@ -769,27 +769,28 @@ export function DomainSettings({
                 "
               </p>
             </div>
-            {domain.isExpired ? (
-              <SimpleTooltip content="DNS cannot be managed for expired domains" side="left">
-                <span
-                  className="flex w-fit shrink-0 cursor-not-allowed items-center gap-1 whitespace-nowrap rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-3 py-[5px] text-sm font-medium text-white opacity-50 shadow-[0px_1px_2px_rgba(18,18,23,0.05)]"
+            {records.length > 0 &&
+              (domain.isExpired ? (
+                <SimpleTooltip content="DNS cannot be managed for expired domains" side="left">
+                  <span
+                    className="flex w-fit shrink-0 cursor-not-allowed items-center gap-1 whitespace-nowrap rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-3 py-[5px] text-sm font-medium text-white opacity-50 shadow-[0px_1px_2px_rgba(18,18,23,0.05)]"
+                  >
+                    <Plus className="size-4" />
+                    <span className="px-1">Add a New Record</span>
+                  </span>
+                </SimpleTooltip>
+              ) : (
+                <button
+                  onClick={() => {
+                    setEditingRecord(null);
+                    setAddRecordOpen(true);
+                  }}
+                  className="flex w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-3 py-[5px] text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90"
                 >
                   <Plus className="size-4" />
                   <span className="px-1">Add a New Record</span>
-                </span>
-              </SimpleTooltip>
-            ) : (
-              <button
-                onClick={() => {
-                  setEditingRecord(null);
-                  setAddRecordOpen(true);
-                }}
-                className="flex w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-3 py-[5px] text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90"
-              >
-                <Plus className="size-4" />
-                <span className="px-1">Add a New Record</span>
-              </button>
-            )}
+                </button>
+              ))}
           </div>
 
           <hr className="border-dash-border" />
@@ -798,123 +799,116 @@ export function DomainSettings({
         {/* DNS Records table */}
         <div className="flex flex-col gap-2">
           {/* Column headers — hidden on mobile */}
-          <div className="hidden grid-cols-[92px_minmax(0,1fr)_84px_minmax(0,2fr)_76px] gap-2 px-3.5 sm:grid">
-            <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
-              Type
-            </span>
-            <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
-              Name
-            </span>
-            <span className="whitespace-nowrap text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
-              TTL
-            </span>
-            <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
-              Value
-            </span>
-            <span className="w-[76px]" />
-          </div>
+          {records.length > 0 && (
+            <div className="hidden grid-cols-[92px_minmax(0,1fr)_84px_minmax(0,2fr)_76px] gap-2 px-3.5 sm:grid">
+              <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
+                Type
+              </span>
+              <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
+                Name
+              </span>
+              <span className="whitespace-nowrap text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
+                TTL
+              </span>
+              <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
+                Value
+              </span>
+              <span className="w-[76px]" />
+            </div>
+          )}
 
           {/* DNS rows */}
           <div className="overflow-clip rounded-[2px] border-[0.5px] border-dash-border">
-            {records.map((record, i) => (
-              <div
-                key={i}
-                className={`bg-dash-bg-elevated px-3.5 py-2.5 ${
-                  i < records.length - 1
-                    ? "border-b-[0.5px] border-dash-border"
-                    : ""
-                }`}
-              >
-                {/* Desktop: grid layout */}
-                <div className="hidden items-center gap-2 sm:grid sm:grid-cols-[92px_minmax(0,1fr)_84px_minmax(0,2fr)_76px]">
-                  <span className="min-w-0 whitespace-nowrap font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
-                    <span className="flex items-center gap-1.5">
-                      {record.type}
-                      {record.isProxied && (
-                        <SimpleTooltip content={<><CheckCircle size={13} weight="fill" className="text-[#34d399]" />Proxied by Brimble</>}>
-                          <span className="text-[#4879f8]">
-                            <ShieldCheck size={14} weight="fill" />
+            {records.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 bg-dash-bg-elevated px-4 py-10 text-center">
+                <FolderOpen size={36} weight="fill" className="text-dash-text-faded/45" />
+                <p className="text-sm font-medium text-dash-text-body">No DNS records yet</p>
+                <p className="max-w-[420px] text-xs leading-5 text-dash-text-faded">
+                  Add your first DNS record to point <span className="font-mono">{domain.domainName}</span> to the service you want.
+                </p>
+                {domain.isExpired ? (
+                  <p className="text-xs text-[#ef2f1f]">
+                    DNS records cannot be managed for expired domains.
+                  </p>
+                ) : (
+                  <GlossyButton
+                    type="button"
+                    variant="black"
+                    onClick={() => {
+                      setEditingRecord(null);
+                      setAddRecordOpen(true);
+                    }}
+                    className="mt-2 h-8 rounded-[6px] px-2.5 text-xs"
+                  >
+                    <Plus className="size-3.5" />
+                    Add first record
+                  </GlossyButton>
+                )}
+              </div>
+            ) : (
+              records.map((record, i) => (
+                <div
+                  key={i}
+                  className={`bg-dash-bg-elevated px-3.5 py-2.5 ${
+                    i < records.length - 1
+                      ? "border-b-[0.5px] border-dash-border"
+                      : ""
+                  }`}
+                >
+                  {/* Desktop: grid layout */}
+                  <div className="hidden items-center gap-2 sm:grid sm:grid-cols-[92px_minmax(0,1fr)_84px_minmax(0,2fr)_76px]">
+                    <span className="min-w-0 whitespace-nowrap font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
+                      <span className="flex items-center gap-1.5">
+                        {record.type}
+                        {record.isProxied && (
+                          <SimpleTooltip content={<><CheckCircle size={13} weight="fill" className="text-[#34d399]" />Proxied by Brimble</>}>
+                            <span className="text-[#4879f8]">
+                              <ShieldCheck size={14} weight="fill" />
+                            </span>
+                          </SimpleTooltip>
+                        )}
+                      </span>
+                    </span>
+                    <span className="min-w-0 break-all font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
+                      {record.name}
+                    </span>
+                    <span className="min-w-0 whitespace-nowrap font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
+                      {record.ttl}
+                    </span>
+                    <span className="min-w-0 break-all whitespace-normal font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
+                      {record.value}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {domain.isExpired ? (
+                        <SimpleTooltip content="DNS cannot be managed for expired domains">
+                          <span className="cursor-not-allowed rounded-[4px] p-1 text-dash-text-faded opacity-50">
+                            <Pencil className="size-3.5" />
                           </span>
                         </SimpleTooltip>
-                      )}
-                    </span>
-                  </span>
-                  <span className="min-w-0 break-all font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
-                    {record.name}
-                  </span>
-                  <span className="min-w-0 whitespace-nowrap font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
-                    {record.ttl}
-                  </span>
-                  <span className="min-w-0 break-all whitespace-normal font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
-                    {record.value}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {domain.isExpired ? (
-                      <SimpleTooltip content="DNS cannot be managed for expired domains">
-                        <span className="cursor-not-allowed rounded-[4px] p-1 text-dash-text-faded opacity-50">
-                          <Pencil className="size-3.5" />
-                        </span>
-                      </SimpleTooltip>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setEditingRecord(record);
-                          setAddRecordOpen(true);
-                        }}
-                        className="rounded-[4px] p-1 text-dash-text-faded transition-colors hover:bg-dash-bg hover:text-dash-text-body"
-                        title="Edit record"
-                      >
-                        <Pencil className="size-3.5" />
-                      </button>
-                    )}
-                    {domain.isExpired ? (
-                      <SimpleTooltip content="DNS cannot be managed for expired domains">
-                        <span className="cursor-not-allowed rounded-[4px] p-1 opacity-50">
-                          <FolderTrashIcon className="size-3.5" />
-                        </span>
-                      </SimpleTooltip>
-                    ) : (
-                      <button
-                        onClick={() => deleteRecord(i)}
-                        disabled={deletingRecordId === record.id}
-                        className="rounded-[4px] p-1 transition-opacity hover:opacity-70"
-                        title="Delete record"
-                      >
-                        <FolderTrashIcon className="size-3.5" />
-                      </button>
-                    )}
-                    <CopyButton text={record.value} />
-                  </div>
-                </div>
-
-                {/* Mobile: stacked card layout */}
-                <div className="flex flex-col gap-2 sm:hidden">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 font-mono text-sm font-medium text-dash-text-strong">
-                      {record.type}
-                      {record.isProxied && (
-                        <span className="text-[#4879f8]">
-                          <ShieldCheck size={14} weight="fill" />
-                        </span>
-                      )}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      {!domain.isExpired && (
+                      ) : (
                         <button
                           onClick={() => {
                             setEditingRecord(record);
                             setAddRecordOpen(true);
                           }}
                           className="rounded-[4px] p-1 text-dash-text-faded transition-colors hover:bg-dash-bg hover:text-dash-text-body"
+                          title="Edit record"
                         >
                           <Pencil className="size-3.5" />
                         </button>
                       )}
-                      {!domain.isExpired && (
+                      {domain.isExpired ? (
+                        <SimpleTooltip content="DNS cannot be managed for expired domains">
+                          <span className="cursor-not-allowed rounded-[4px] p-1 opacity-50">
+                            <FolderTrashIcon className="size-3.5" />
+                          </span>
+                        </SimpleTooltip>
+                      ) : (
                         <button
                           onClick={() => deleteRecord(i)}
                           disabled={deletingRecordId === record.id}
                           className="rounded-[4px] p-1 transition-opacity hover:opacity-70"
+                          title="Delete record"
                         >
                           <FolderTrashIcon className="size-3.5" />
                         </button>
@@ -922,23 +916,60 @@ export function DomainSettings({
                       <CopyButton text={record.value} />
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1 text-xs text-dash-text-faded">
-                    <div className="flex gap-2">
-                      <span className="w-12 shrink-0 font-medium text-dash-text-body">Name</span>
-                      <span className="min-w-0 break-all font-mono">{record.name}</span>
+
+                  {/* Mobile: stacked card layout */}
+                  <div className="flex flex-col gap-2 sm:hidden">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 font-mono text-sm font-medium text-dash-text-strong">
+                        {record.type}
+                        {record.isProxied && (
+                          <span className="text-[#4879f8]">
+                            <ShieldCheck size={14} weight="fill" />
+                          </span>
+                        )}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {!domain.isExpired && (
+                          <button
+                            onClick={() => {
+                              setEditingRecord(record);
+                              setAddRecordOpen(true);
+                            }}
+                            className="rounded-[4px] p-1 text-dash-text-faded transition-colors hover:bg-dash-bg hover:text-dash-text-body"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                        )}
+                        {!domain.isExpired && (
+                          <button
+                            onClick={() => deleteRecord(i)}
+                            disabled={deletingRecordId === record.id}
+                            className="rounded-[4px] p-1 transition-opacity hover:opacity-70"
+                          >
+                            <FolderTrashIcon className="size-3.5" />
+                          </button>
+                        )}
+                        <CopyButton text={record.value} />
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <span className="w-12 shrink-0 font-medium text-dash-text-body">Value</span>
-                      <span className="min-w-0 break-all font-mono">{record.value}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="w-12 shrink-0 font-medium text-dash-text-body">TTL</span>
-                      <span className="font-mono">{record.ttl}</span>
+                    <div className="flex flex-col gap-1 text-xs text-dash-text-faded">
+                      <div className="flex gap-2">
+                        <span className="w-12 shrink-0 font-medium text-dash-text-body">Name</span>
+                        <span className="min-w-0 break-all font-mono">{record.name}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="w-12 shrink-0 font-medium text-dash-text-body">Value</span>
+                        <span className="min-w-0 break-all font-mono">{record.value}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="w-12 shrink-0 font-medium text-dash-text-body">TTL</span>
+                        <span className="font-mono">{record.ttl}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

@@ -55,7 +55,7 @@ export function WarningModal({
         </div>
         {children && <div className="w-full pt-1">{children}</div>}
       </div>
-      <div className="flex items-center gap-3 border-t-[0.5px] border-dash-border px-4 py-4">
+      <div className="flex flex-col-reverse gap-3 border-t-[0.5px] border-dash-border px-4 py-4 sm:flex-row sm:items-center">
         <Dialog.Close asChild>
           <button
             disabled={submitting}
