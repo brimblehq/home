@@ -27,6 +27,7 @@ import {
   useSetDefaultPaymentMethod,
   useCancelSubscription,
   useUpdateSpendingLimit,
+  useSpendingLimitStatus,
 } from "@/hooks/use-payments";
 import type { PaymentMethod, SubscriptionStats } from "@/backend/payments";
 import type { TeamDetails } from "@/backend/teams";
@@ -116,6 +117,7 @@ function BillingFormInner({
   const { data: paymentMethods = [], isLoading: isLoadingMethods } = usePaymentMethods(initialPaymentMethods ?? undefined);
   const { data: subscription } = useSubscription();
   const { data: estimate } = useBillEstimate();
+  const { data: spendingLimitStatus } = useSpendingLimitStatus();
   const { data: invoices } = useInvoices(invoiceCursor, teamId, initialInvoices);
   const cancelMutation = useCancelSubscription();
   const spendingLimitMutation = useUpdateSpendingLimit(teamId);
@@ -171,8 +173,8 @@ function BillingFormInner({
   const defaultMethod = paymentMethods.find((m) => m.is_default) ?? paymentMethods[0];
 
   useEffect(() => {
-    setSavedSpendingLimit(initialLimit);
-  }, [initialLimit]);
+    setSavedSpendingLimit(spendingLimitStatus?.spending_limit ?? initialLimit);
+  }, [initialLimit, spendingLimitStatus?.spending_limit]);
 
   function normalizeCurrencyInput(raw: string) {
     return raw.replace(/[^\d.]/g, "");
@@ -209,11 +211,7 @@ function BillingFormInner({
     });
   }
 
-  const snapshotUsage = initialSpendingStats?.used;
-  const currentUsage =
-    typeof snapshotUsage === "number"
-      ? snapshotUsage
-      : Number(estimate?.projected_total ?? estimate?.current_usage ?? 0);
+  const currentUsage = spendingLimitStatus?.current_usage ?? 0;
   const hasSpendingLimit =
     typeof savedSpendingLimit === "number" && savedSpendingLimit >= 5;
 

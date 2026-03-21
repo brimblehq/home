@@ -21,6 +21,8 @@ import { listTagsServerFn } from "@/server/tags/actions";
 import type { Project } from "@/backend/projects";
 import type { BackendTag } from "@/backend/tags";
 import { useTagsStore } from "@/hooks/use-tags-store";
+import { getSubscriptionStatsServerFn } from "@/server/payments/actions";
+import type { SubscriptionStats } from "@/backend/payments";
 
 import appCss from "../styles.css?url";
 
@@ -54,6 +56,7 @@ type RootLoaderData = {
   projectSwitcherProjects?: ApiListResponse<Project>;
   onboardingProjects?: ApiListResponse<Project>;
   tags?: BackendTag[];
+  subscriptionStats?: SubscriptionStats;
   pricing: Pricing;
 };
 
@@ -111,7 +114,14 @@ export const Route = createRootRoute({
         workspace = rawWorkspace.trim();
       }
 
-      const [settingsSnapshot, workspaces, onboardingProjects, pricingResult, tags] =
+      const [
+        settingsSnapshot,
+        workspaces,
+        onboardingProjects,
+        pricingResult,
+        tags,
+        subscriptionStats,
+      ] =
         await Promise.allSettled([
         (getSettingsSidebarSnapshotServerFn as unknown as (input: {
           data?: { workspace?: string };
@@ -128,6 +138,11 @@ export const Route = createRootRoute({
         (listTagsServerFn as unknown as (input: {
           data: { workspace?: string };
         }) => Promise<BackendTag[]>)({
+          data: { workspace },
+        }),
+        (getSubscriptionStatsServerFn as unknown as (input: {
+          data?: { workspace?: string };
+        }) => Promise<SubscriptionStats>)({
           data: { workspace },
         }),
       ]);
@@ -147,6 +162,9 @@ export const Route = createRootRoute({
       if (pricingResult.status === "rejected") {
         console.error("[root loader] pricing specs failed:", pricingResult.reason);
       }
+      if (subscriptionStats.status === "rejected") {
+        console.error("[root loader] subscription stats failed:", subscriptionStats.reason);
+      }
 
       return createRootLoaderData({
         workspace,
@@ -165,6 +183,10 @@ export const Route = createRootRoute({
             ? onboardingProjects.value
             : undefined,
         tags: tags.status === "fulfilled" ? tags.value : undefined,
+        subscriptionStats:
+          subscriptionStats.status === "fulfilled"
+            ? subscriptionStats.value
+            : undefined,
         pricing:
           pricingResult.status === "fulfilled"
             ? pricingResult.value
@@ -207,6 +229,7 @@ function RootComponent() {
     projectSwitcherProjects,
     onboardingProjects,
     tags,
+    subscriptionStats,
     pricing,
   } =
     Route.useLoaderData() ?? ({} as any);
@@ -249,6 +272,7 @@ function RootComponent() {
       initialWorkspaces={workspaces}
       initialProjectSwitcherProjects={projectSwitcherProjects}
       initialOnboardingProjects={onboardingProjects}
+      initialSubscriptionStats={subscriptionStats ?? null}
       initialPricing={pricing}
     >
       <Outlet />

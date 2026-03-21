@@ -14,6 +14,7 @@ import {
   purchaseServerFn,
   updateSpendingLimitServerFn,
   updateTeamSpendingLimitServerFn,
+  getSpendingLimitStatusServerFn,
 } from "@/server/payments/actions";
 
 /* ── Query key factory ── */
@@ -23,6 +24,7 @@ export const paymentKeys = {
   methods: () => [...paymentKeys.all, "methods"] as const,
   subscription: () => [...paymentKeys.all, "subscription"] as const,
   estimate: () => [...paymentKeys.all, "estimate"] as const,
+  spendingLimitStatus: () => [...paymentKeys.all, "spending-limit-status"] as const,
   invoices: (cursor: string | null, teamId?: string) =>
     [...paymentKeys.all, "invoices", cursor ?? "first", teamId ?? "personal"] as const,
 };
@@ -102,6 +104,13 @@ export function useInvoices(cursor?: string | null, teamId?: string, initialData
     queryFn: () => getInvoices({ data: { cursor: cursor ?? null, ...(teamId ? { team_id: teamId } : {}) } }),
     placeholderData: (prev: any) => prev,
     ...(hasInitialData ? { initialData } : {}),
+  });
+}
+
+export function useSpendingLimitStatus() {
+  return useQuery({
+    queryKey: paymentKeys.spendingLimitStatus(),
+    queryFn: () => getSpendingLimitStatusServerFn(),
   });
 }
 
@@ -208,6 +217,7 @@ export function useUpdateSpendingLimit(teamId?: string) {
         : updateLimit({ data: { spending_limit: spendingLimit } }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: paymentKeys.estimate() });
+      void qc.invalidateQueries({ queryKey: paymentKeys.spendingLimitStatus() });
     },
   });
 }

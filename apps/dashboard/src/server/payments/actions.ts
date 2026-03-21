@@ -164,6 +164,14 @@ export const verifyTransactionServerFn = createServerFn({
   });
 });
 
+export const getSpendingLimitStatusServerFn = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  return withTokenRefresh(async (api) => {
+    return api.payments.getSpendingLimitStatus();
+  });
+});
+
 export const updateSpendingLimitServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {

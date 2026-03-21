@@ -70,6 +70,20 @@ export interface SubscriptionStats {
   next_payment_date: string | null;
 }
 
+/* ── Spending limit status ── */
+
+export interface SpendingLimitStatus {
+  spending_limit: number;
+  current_usage: number;
+  plan_base_cost: number;
+  metered_usage: number;
+  usage_percentage: number;
+  builds_disabled: boolean;
+  builds_disabled_by: string;
+  has_subscription: boolean;
+  stripe_alerts_active: number;
+}
+
 /* ── Setup intent ── */
 
 export interface SetupIntentResult {
@@ -167,4 +181,5 @@ export interface PaymentsApi {
   updateTeamSubscription(input: UpdateTeamSubscriptionInput): Promise<void>;
   getSubscriptionStats(teamId?: string): Promise<SubscriptionStats>;
   getSubscriptionSpecs(): Promise<any>;
+  getSpendingLimitStatus(): Promise<SpendingLimitStatus>;
 }

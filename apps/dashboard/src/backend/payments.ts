@@ -17,6 +17,7 @@ import type {
   UpdateSpendingLimitInput,
   UpdateTeamSpendingLimitInput,
   UpdateTeamSubscriptionInput,
+  SpendingLimitStatus,
 } from "./payments/types";
 
 export type { PaymentsApi } from "./payments/types";
@@ -39,6 +40,7 @@ export type {
   SubscriptionStats,
   UpdateTeamSpendingLimitInput,
   UpdateTeamSubscriptionInput,
+  SpendingLimitStatus,
 } from "./payments/types";
 
 function unwrapData<T = any>(payload: any): T {
@@ -308,6 +310,24 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
         method: "GET",
       });
       return unwrapData<any>(res);
+    },
+
+    async getSpendingLimitStatus(): Promise<SpendingLimitStatus> {
+      const res = await client.request<any>(`${base}/payment/spending-limit`, {
+        method: "GET",
+      });
+      const data = unwrapData<any>(res);
+      return {
+        spending_limit: Number(data?.spending_limit ?? 0),
+        current_usage: Number(data?.current_usage ?? 0),
+        plan_base_cost: Number(data?.plan_base_cost ?? 0),
+        metered_usage: Number(data?.metered_usage ?? 0),
+        usage_percentage: Number(data?.usage_percentage ?? 0),
+        builds_disabled: Boolean(data?.builds_disabled),
+        builds_disabled_by: String(data?.builds_disabled_by ?? "system"),
+        has_subscription: Boolean(data?.has_subscription),
+        stripe_alerts_active: Number(data?.stripe_alerts_active ?? 0),
+      };
     },
   };
 }

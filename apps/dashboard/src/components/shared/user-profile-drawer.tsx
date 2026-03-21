@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Drawer } from "vaul";
 import { cn } from "@brimble/ui";
@@ -64,6 +65,8 @@ import { usePlanGate } from "@/hooks/use-plan-gate";
 import { useTheme } from "@/hooks/use-theme";
 import { isPushEnabled, setPushEnabled } from "@/hooks/use-push-notification";
 import type { PaymentMethod } from "@/backend/payments";
+import { getSpendingLimitStatusServerFn } from "@/server/payments/actions";
+import { paymentKeys } from "@/hooks/use-payments";
 import {
   getWorkspaceTeamMembersServerFn,
   inviteWorkspaceTeamMembersServerFn,
@@ -1880,6 +1883,7 @@ export function UserProfileDrawer({
   requestedTab?: ProfileTab;
 }) {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const queryClient = useQueryClient();
 
   const getSettingsSnapshot = useServerFn(
     getSettingsSidebarSnapshotServerFn as any,
@@ -2061,7 +2065,11 @@ export function UserProfileDrawer({
     }
 
     void refreshSettings();
-  }, [open, refreshSettings, snapshot]);
+    void queryClient.prefetchQuery({
+      queryKey: paymentKeys.spendingLimitStatus(),
+      queryFn: () => getSpendingLimitStatusServerFn(),
+    });
+  }, [open, refreshSettings, snapshot, queryClient]);
 
   useEffect(() => {
     if (!open || isGithubConnected !== null) {
