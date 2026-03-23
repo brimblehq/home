@@ -8,7 +8,7 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
 import { Search, Globe } from "lucide-react";
-import { CheckCircle } from "@phosphor-icons/react";
+import { DomainSearchResultCard } from "@brimble/ui";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import { AccessDenied, accessDeniedForbidden } from "../../components/shared/access-denied";
 import { hapticToast as toast } from "@/utils/haptic-toast";
@@ -57,12 +57,6 @@ interface DomainResult {
 
 /* ─── Helpers ─── */
 
-function splitDomain(domainName: string): { base: string; tld: string } {
-  const dot = domainName.indexOf(".");
-  if (dot === -1) return { base: domainName, tld: "" };
-  return { base: domainName.slice(0, dot), tld: domainName.slice(dot + 1) };
-}
-
 function normalizeQuery(raw: string): string {
   const trimmed = raw.trim().toLowerCase();
   return trimmed.includes(".") ? trimmed : `${trimmed}.com`;
@@ -100,54 +94,6 @@ function formatCardType(cardType?: string): string {
   if (lower === "amex" || lower === "american_express") return "Amex";
   if (lower === "discover") return "Discover";
   return cardType.charAt(0).toUpperCase() + cardType.slice(1);
-}
-
-/* ─── Domain Result Card ─── */
-
-function DomainResultCard({
-  result,
-  index,
-  isExactMatch,
-  onSelect,
-}: {
-  result: DomainResult;
-  index: number;
-  isExactMatch?: boolean;
-  onSelect: () => void;
-}) {
-  const { base, tld } = splitDomain(result.domainName);
-
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: 0.03 * index, ease }}
-      disabled={!result.available}
-      onClick={onSelect}
-      className={`flex items-center justify-between rounded-[4px] border-[0.5px] border-dash-border px-3.5 py-3 text-left transition-colors ${
-        result.available
-          ? "hover:bg-dash-bg-elevated"
-          : "cursor-default opacity-50"
-      }`}
-    >
-      <span className="flex items-center gap-1.5 text-sm text-dash-text-body">
-        {base}.
-        <span className="font-medium text-dash-text-strong">{tld}</span>
-        {isExactMatch && result.available && (
-          <CheckCircle size={15} weight="fill" className="text-[#4879f8]" />
-        )}
-      </span>
-      {result.available ? (
-        <span className="rounded-full bg-[#34d399]/10 px-2.5 py-0.5 text-xs font-medium text-[#34d399]">
-          {formatUsd(result.price ?? 0)}
-        </span>
-      ) : (
-        <span className="rounded-full bg-dash-bg-elevated px-2.5 py-0.5 text-xs font-medium text-dash-text-faded">
-          Taken
-        </span>
-      )}
-    </motion.button>
-  );
 }
 
 /* ─── Payment Card Image ─── */
@@ -399,13 +345,19 @@ function BuyDomainPage() {
               </p>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {paginatedResults.map((result, i) => (
-                  <DomainResultCard
+                  <motion.div
                     key={result.domainName}
-                    result={result}
-                    index={i}
-                    isExactMatch={result.domainName === searchedDomain}
-                    onSelect={() => handleOpenPurchase(result)}
-                  />
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, delay: 0.03 * i, ease }}
+                  >
+                    <DomainSearchResultCard
+                      result={result}
+                      variant="dashboard"
+                      isExactMatch={result.domainName === searchedDomain}
+                      onSelect={() => handleOpenPurchase(result)}
+                    />
+                  </motion.div>
                 ))}
               </div>
 
