@@ -31,6 +31,7 @@ export interface Project {
   passwordEnabled?: boolean;
   isPublicAccess?: boolean;
   connectionUri?: string;
+  domain?: string;
   previewUrl?: string;
   gitLink?: string;
   statusCode?: number;
@@ -255,6 +256,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
     }
 
     const passwordEnabled = pickBoolean(row, "passwordEnabled", "password_enabled");
+    const domain = pickNonEmptyString(row, "domain");
     const previewUrl = pickString(row, "previewUrl", "url");
     const gitLink =
       pickNonEmptyString(row, "gitLink") ??
@@ -406,6 +408,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       passwordEnabled,
       isPublicAccess,
       connectionUri,
+      domain,
       previewUrl,
       gitLink,
       statusCode,

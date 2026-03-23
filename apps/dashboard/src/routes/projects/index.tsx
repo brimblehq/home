@@ -27,6 +27,8 @@ import {
 } from "@/server/environments/actions";
 import type { ProjectEnvironment } from "@/backend/environments";
 import type { Project as BackendProject, PaginatedProjectsResponse } from "@/backend/projects";
+import type { FrameworkOption } from "@/backend/frameworks";
+import { listFrameworksServerFn } from "@/server/frameworks/actions";
 import { formatRelativeTime } from "@/utils/dashboard";
 import { resolveEnvironmentId } from "@/utils/environment-selection";
 import { parsePositivePageSearchValue, parseTextSearchValue, parseWorkspaceSearchValue, workspacePageLoaderDeps } from "@/utils/workspace-route-search";
@@ -47,7 +49,11 @@ const deleteEnvironmentFormSchema = Yup.object({
   moveTo: Yup.string().trim().required("Move target is required"),
 });
 
-function mapBackendProject(project: BackendProject): Project {
+function mapBackendProject(
+  project: BackendProject,
+  frameworkLogoMap?: Map<string, string>,
+): Project {
+  const framework = project.framework?.toLowerCase();
   return {
     name: project.name,
     slug: project.slug || project.name,
@@ -58,6 +64,9 @@ function mapBackendProject(project: BackendProject): Project {
     branch: project.repo?.branch || "main",
     updatedAt: formatRelativeTime(project.updatedAt),
     tags: project.tags,
+    domain: project.domain || project.previewUrl || project.domains?.[0]?.name,
+    framework,
+    frameworkLogo: framework && frameworkLogoMap ? frameworkLogoMap.get(framework) : undefined,
   };
 }
 
@@ -146,28 +155,38 @@ export const Route = createFileRoute("/projects/")({
       environments,
     });
 
-    const result = await (listProjectsPageServerFn as unknown as (input: {
-      data: {
-        page?: number;
-        workspace?: string;
-        q?: string;
-        serviceType?: string;
-        status?: string;
-        environmentId?: string;
-      };
-    }) => Promise<PaginatedProjectsResponse>)({
-      data: {
-        page: deps.page,
-        workspace: deps.workspace,
-        q: deps.q,
-        serviceType: deps.type && deps.type !== "all" ? deps.type : undefined,
-        status: deps.status && deps.status !== "all" ? deps.status : undefined,
-        environmentId: resolvedEnvironmentId,
-      },
-    });
+    const [result, frameworks] = await Promise.all([
+      (listProjectsPageServerFn as unknown as (input: {
+        data: {
+          page?: number;
+          workspace?: string;
+          q?: string;
+          serviceType?: string;
+          status?: string;
+          environmentId?: string;
+        };
+      }) => Promise<PaginatedProjectsResponse>)({
+        data: {
+          page: deps.page,
+          workspace: deps.workspace,
+          q: deps.q,
+          serviceType: deps.type && deps.type !== "all" ? deps.type : undefined,
+          status: deps.status && deps.status !== "all" ? deps.status : undefined,
+          environmentId: resolvedEnvironmentId,
+        },
+      }),
+      (listFrameworksServerFn as unknown as () => Promise<FrameworkOption[]>)()
+        .catch(() => [] as FrameworkOption[]),
+    ]);
+
+    const frameworkLogoMap = new Map<string, string>();
+    for (const fw of frameworks) {
+      if (fw.slug && fw.logo) frameworkLogoMap.set(fw.slug.toLowerCase(), fw.logo);
+    }
 
     return {
-      projects: result.items.map(mapBackendProject),
+      projects: result.items.map((p) => mapBackendProject(p, frameworkLogoMap)),
+      frameworkLogos: Object.fromEntries(frameworkLogoMap),
       environments,
       pagination: {
         currentPage: result.currentPage,
@@ -722,7 +741,8 @@ function ProjectsPage() {
             environmentId: effectiveEnvironmentId,
           },
         });
-        setProjects(result.items.map(mapBackendProject));
+        const fwMap = new Map(Object.entries(loaderData.frameworkLogos ?? {}));
+        setProjects(result.items.map((p) => mapBackendProject(p, fwMap)));
         setPagination({
           currentPage: result.currentPage,
           totalPages: result.totalPages,

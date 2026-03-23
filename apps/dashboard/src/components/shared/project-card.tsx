@@ -9,6 +9,9 @@ export interface Project {
   updatedAt: string;
   starred?: boolean;
   tags?: Array<{ id: string; name: string; color: string }>;
+  domain?: string;
+  framework?: string;
+  frameworkLogo?: string;
 }
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,6 +23,101 @@ import { ProjectCardTags } from "@/components/projects/project-card-tags";
 import { TagAssignmentPopover } from "@/components/projects/tag-assignment-popover";
 import { StatusChip } from "@/components/shared/status-chip";
 import { useTagsStore } from "@/hooks/use-tags-store";
+
+function normalizeProjectHostname(domain?: string): string | null {
+  const raw = domain?.trim();
+  if (!raw) return null;
+
+  const normalizedInput = /^[a-z]+:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    return new URL(normalizedInput).hostname || null;
+  } catch {
+    return null;
+  }
+}
+
+function buildProjectIconCandidates(project: Project): string[] {
+  const candidates: string[] = [];
+  const hostname = normalizeProjectHostname(project.domain);
+
+  if (hostname) {
+    candidates.push(`https://${hostname}/favicon.ico`);
+  }
+
+  if (project.frameworkLogo?.trim()) {
+    candidates.push(project.frameworkLogo.trim());
+  }
+
+  return candidates;
+}
+
+function isBrimbleIconSource(src: string): boolean {
+  const normalized = src.trim().toLowerCase();
+  if (!normalized) return false;
+
+  if (
+    normalized.includes("icon_np5cdu") ||
+    normalized.includes("/images/brimble.svg") ||
+    normalized.includes("brimble-logo")
+  ) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(normalized, "https://brimble.io");
+    const hostname = parsed.hostname;
+    const pathname = parsed.pathname;
+
+    if (
+      (hostname.endsWith("brimble.io") || hostname.endsWith("brimble.app")) &&
+      pathname.endsWith("/favicon.ico")
+    ) {
+      return true;
+    }
+
+    if (
+      hostname.includes("res.cloudinary.com") &&
+      pathname.includes("/dashboard-assets/icon_")
+    ) {
+      return true;
+    }
+  } catch {
+    return normalized.includes("brimble");
+  }
+
+  return normalized.includes("brimble");
+}
+
+function ProjectIdentityIcon({ project }: { project: Project }) {
+  const [candidateIndex, setCandidateIndex] = useState(0);
+  const candidates = useMemo(
+    () => buildProjectIconCandidates(project),
+    [project.domain, project.frameworkLogo],
+  );
+
+  useEffect(() => {
+    setCandidateIndex(0);
+  }, [project.name, project.domain, project.frameworkLogo]);
+
+  const iconSrc = candidates[candidateIndex];
+  const invertInDarkMode = iconSrc ? isBrimbleIconSource(iconSrc) : false;
+  if (iconSrc) {
+    return (
+      <img
+        src={iconSrc}
+        alt=""
+        className={`size-4 shrink-0 rounded-sm object-contain${invertInDarkMode ? " dark:invert" : ""}`}
+        onError={() => setCandidateIndex((current) => current + 1)}
+      />
+    );
+  }
+
+  return (
+    <span className="flex size-4 shrink-0 items-center justify-center rounded-sm bg-dash-bg-elevated text-[9px] font-semibold uppercase text-dash-text-faded">
+      {project.name.charAt(0)}
+    </span>
+  );
+}
 
 export function ProjectCard({
   project,
@@ -83,9 +181,12 @@ export function ProjectCard({
       {/* Project name + commit message */}
       <div className="flex min-h-0 flex-1 flex-col gap-0.5 px-3.5 pt-3 pb-2 text-sm tracking-[-0.02px]">
         <div className="flex items-start justify-between gap-2">
-          <span className="min-w-0 shrink font-medium leading-5 text-dash-text-strong">
-            {project.name}
-          </span>
+          <div className="flex min-w-0 items-center gap-2">
+            <ProjectIdentityIcon project={project} />
+            <span className="min-w-0 shrink font-medium leading-5 text-dash-text-strong">
+              {project.name}
+            </span>
+          </div>
           {project.status ? (
             <StatusChip status={project.status} className="shrink-0 scale-[0.92] origin-top-right" />
           ) : null}

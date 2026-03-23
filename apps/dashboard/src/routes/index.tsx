@@ -9,6 +9,8 @@ import { FeaturedIntegrations } from "../components/overview/featured-integratio
 import { TeamInviteModal } from "../components/shared/team-invite-modal";
 import { OwnershipTransferModal } from "../components/shared/ownership-transfer-modal";
 import { listHomeProjectsServerFn } from "@/server/projects/actions";
+import { listFrameworksServerFn } from "@/server/frameworks/actions";
+import type { FrameworkOption } from "@/backend/frameworks";
 import { getHomeOverviewServerFn } from "@/server/overview/actions";
 import { getHomeBandwidthServerFn } from "@/server/bandwidth/actions";
 import { listRecommendedMcpTemplatesServerFn } from "@/server/mcp/actions";
@@ -77,7 +79,7 @@ export const Route = createFileRoute("/")({
       environments,
     });
 
-    const [projectsResult, overviewResult, bandwidthResult, mcpTemplatesResult] = await Promise.all([
+    const [projectsResult, overviewResult, bandwidthResult, mcpTemplatesResult, frameworksList] = await Promise.all([
       (listHomeProjectsServerFn as unknown as (input: {
         data: { workspace?: string; environmentId?: string };
       }) => Promise<ApiListResponse<BackendProject>>)({
@@ -98,13 +100,21 @@ export const Route = createFileRoute("/")({
       }) => Promise<McpServerListResult>)({
         data: { limit: 3, category: "development", officialOnly: true, shuffle: true },
       }).catch(() => ({ servers: [], pagination: {} } as McpServerListResult)),
+      (listFrameworksServerFn as unknown as () => Promise<FrameworkOption[]>)()
+        .catch(() => [] as FrameworkOption[]),
     ]);
+
+    const frameworkLogoMap = new Map<string, string>();
+    for (const fw of frameworksList) {
+      if (fw.slug && fw.logo) frameworkLogoMap.set(fw.slug.toLowerCase(), fw.logo);
+    }
 
     return {
       projects: projectsResult.items,
       overview: overviewResult,
       bandwidth: bandwidthResult,
       featuredAddons: mcpTemplatesResult.servers.slice(0, 3).map(mapMcpTemplateToAddon),
+      frameworkLogos: Object.fromEntries(frameworkLogoMap),
       workspace,
     };
   },
@@ -113,7 +123,7 @@ export const Route = createFileRoute("/")({
 
 function DashboardHome() {
   const search = Route.useSearch();
-  const { projects, overview, bandwidth, featuredAddons, workspace } = Route.useLoaderData();
+  const { projects, overview, bandwidth, featuredAddons, frameworkLogos, workspace } = Route.useLoaderData();
   const { settingsSnapshot, workspaces, paymentMethods: initialPaymentMethods, workspaceTeamMembers } = (rootRoute.useLoaderData() ?? {}) as {
     settingsSnapshot: SettingsSidebarSnapshot | null;
     workspaces: { items: Array<Workspace> };
@@ -170,6 +180,9 @@ function DashboardHome() {
     branch: project.repo?.branch || "main",
     updatedAt: formatRelativeTime(project.updatedAt),
     tags: project.tags,
+    domain: project.domain || project.previewUrl || project.domains?.[0]?.name,
+    framework: project.framework?.toLowerCase(),
+    frameworkLogo: project.framework ? (frameworkLogos as Record<string, string>)?.[project.framework.toLowerCase()] : undefined,
   }));
 
   return (
