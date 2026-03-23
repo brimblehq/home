@@ -7,6 +7,7 @@ import { Onboarding } from "@/components/sections/onboarding";
 import { Features } from "@/components/sections/features";
 import { Integrations } from "@/components/sections/integrations";
 import { Cta } from "@/components/sections/cta";
+import { Socials } from "@/components/sections/socials";
 import { CookieBanner } from "@/components/layout/cookie-banner";
 import { buildSeoHead } from "@/config/seo";
 
@@ -27,6 +28,7 @@ function LandingPage() {
         <Features />
         <Integrations />
         <Cta />
+        <Socials />
       </main>
       <CookieBanner />
     </div>

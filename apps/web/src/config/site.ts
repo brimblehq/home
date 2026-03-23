@@ -9,6 +9,15 @@ export const siteConfig = {
     { label: "Docs", href: "https://docs.brimble.io" },
     { label: "Status", href: "https://status.brimble.io", status: true },
   ],
+  socials: {
+    heading: "Follow Brimble",
+    description:
+      "Get product updates, release drops, and platform news from our official community channels.",
+    links: [
+      { label: "X (Twitter)", href: "https://x.com/brimblehq" },
+      { label: "Discord", href: "https://discord.com/invite/XBCBwbXQJQ" },
+    ],
+  },
   hero: {
     heading: "Deploy Full-Stack Apps",
     subtitle:

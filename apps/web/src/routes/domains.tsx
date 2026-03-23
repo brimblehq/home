@@ -136,13 +136,13 @@ function DomainsHero() {
           >
             <div className="flex w-[532px] max-w-[90vw] items-center gap-2 rounded-lg border border-[rgba(152,157,164,0.3)] bg-brimble-surface p-4 shadow-[var(--shadow-big)] dark:border-white/10 dark:bg-[#1e2023]">
               <Search className="size-4 shrink-0 text-[rgba(152,157,164,0.6)]" />
-              <div className="flex flex-1 items-baseline font-body text-sm font-medium leading-[15.5px]">
+              <div className="flex flex-1 items-baseline font-body font-medium">
                 <input
                   type="text"
                   placeholder={siteConfig.domains.searchPlaceholder}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  className="w-full bg-transparent text-black placeholder:text-[rgba(152,157,164,0.6)] outline-none dark:text-white"
+                  className="w-full bg-transparent text-base leading-normal text-black placeholder:text-[rgba(152,157,164,0.6)] outline-none md:text-sm md:leading-[15.5px] dark:text-white"
                 />
               </div>
               <Button
