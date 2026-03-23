@@ -3,44 +3,39 @@ import { motion, useInView } from "motion/react";
 import { siteConfig } from "@/config/site";
 import trainStation from "@/assets/images/train-station.svg";
 
-import slackIcon from "@/assets/icons/slack.png";
-import githubIcon from "@/assets/icons/github.png";
-import stripeIcon from "@/assets/icons/stripe.png";
-import miroIcon from "@/assets/icons/miro.svg";
-import weathersparkIcon from "@/assets/icons/weatherspark.svg";
-
 const addons = [
   {
-    name: "Stripe",
-    icon: stripeIcon,
-    bg: "#635bff",
+    name: "Vue.js",
+    icon: "/images/icons8-vue.js.svg",
+    bg: "#2b6a50",
     position: { right: "10%", top: "-3%" },
+    iconStyle: { marginTop: "-2px" },
   },
   {
-    name: "WeatherSpark",
-    icon: weathersparkIcon,
-    bg: "#4977cb",
+    name: "Angular",
+    icon: "/images/icons8-angular.svg",
+    bg: "#9a0022",
     position: { left: "2%", top: "24%" },
   },
   {
-    name: "GitHub",
-    icon: githubIcon,
-    bg: "#050505",
+    name: "Golang",
+    icon: "/images/icons8-golang.svg",
+    bg: "#006d8a",
     position: { right: "5%", top: "40%" },
   },
   {
-    name: "Miro",
-    icon: miroIcon,
-    bg: "#ffd02f",
+    name: "PostgreSQL",
+    icon: "/images/icons8-postgres.svg",
+    bg: "#24508a",
     position: { left: "-4%", top: "53%" },
   },
   {
-    name: "Slack",
-    icon: slackIcon,
-    bg: "#4a154b",
+    name: "Grafana",
+    icon: "/images/icons8-grafana.svg",
+    bg: "#a84500",
     position: { right: "10%", top: "62%" },
   },
-];
+] as const;
 
 export function Integrations() {
   const ref = useRef(null);
@@ -84,6 +79,7 @@ export function Integrations() {
                   src={item.icon}
                   alt={item.name}
                   className="size-[53px] rounded-[13px] object-contain"
+                  style={"iconStyle" in item ? item.iconStyle : undefined}
                 />
               </div>
             </motion.div>

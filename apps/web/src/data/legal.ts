@@ -373,6 +373,6 @@ These providers process authentication requests and identity verification data.
 Brimble may update this list periodically as new service providers are added or removed.
 
 ## 13. Contact
-Questions regarding sub-processors: privacy@brimble.io`,
+Questions regarding sub-processors: privacy@brimble.app`,
   },
 ];

@@ -56,19 +56,25 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
           >
             <Button
+              asChild
               variant="pill"
               size="sm"
               className="flex-1 gap-2 transition-transform duration-150 hover:scale-[1.01] active:scale-[0.98]"
             >
-              {siteConfig.hero.primaryCta}
-              <img src={arrowRight} alt="" className="size-3 dark:brightness-0" />
+              <a href="https://app.brimble.io" target="_blank" rel="noopener noreferrer">
+                {siteConfig.hero.primaryCta}
+                <img src={arrowRight} alt="" className="size-3 dark:brightness-0" />
+              </a>
             </Button>
             <Button
+              asChild
               variant="ghost-nav"
               size="sm"
               className="transition-opacity duration-150 hover:opacity-70"
             >
-              {siteConfig.hero.secondaryCta}
+              <a href="https://docs.brimble.io" target="_blank" rel="noopener noreferrer">
+                {siteConfig.hero.secondaryCta}
+              </a>
             </Button>
           </motion.div>
         </div>

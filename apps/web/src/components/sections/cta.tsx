@@ -22,12 +22,15 @@ export function Cta() {
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         >
           <Button
+            asChild
             variant="pill"
             size="sm"
             className="flex-1 gap-2 transition-transform duration-150 hover:scale-[1.01] active:scale-[0.98]"
           >
-            {siteConfig.cta.buttons.primary}
-            <img src={arrowRight} alt="" className="size-3 brightness-0 invert dark:invert-0" />
+            <a href="https://app.brimble.io" target="_blank" rel="noopener noreferrer">
+              {siteConfig.cta.buttons.primary}
+              <img src={arrowRight} alt="" className="size-3 brightness-0 invert dark:invert-0" />
+            </a>
           </Button>
           <Link to="/legal">
           <Button
@@ -39,11 +42,14 @@ export function Cta() {
           </Button>
           </Link>
           <Button
+            asChild
             variant="pill-light"
             size="sm"
             className="transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
           >
-            {siteConfig.cta.buttons.tertiary}
+            <a href="mailto:hello@brimble.app">
+              {siteConfig.cta.buttons.tertiary}
+            </a>
           </Button>
         </motion.div>
 

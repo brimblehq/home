@@ -69,12 +69,15 @@ export function Features() {
             {siteConfig.features.footer}
           </p>
           <Button
+            asChild
             variant="pill"
             size="sm"
             className="w-full gap-2 transition-transform duration-150 hover:scale-[1.01] active:scale-[0.98]"
           >
-            {siteConfig.hero.primaryCta}
-            <img src={arrowRight} alt="" className="size-3 brightness-0 invert dark:invert-0" />
+            <a href="https://app.brimble.io" target="_blank" rel="noopener noreferrer">
+              {siteConfig.hero.primaryCta}
+              <img src={arrowRight} alt="" className="size-3 brightness-0 invert dark:invert-0" />
+            </a>
           </Button>
         </motion.div>
       </div>

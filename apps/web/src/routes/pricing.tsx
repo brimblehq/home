@@ -153,18 +153,21 @@ function PricingPlans() {
 
               {/* CTA */}
               <Button
+                asChild
                 variant={plan.popular ? "pill" : "pill-light"}
                 size="sm"
                 className="mt-6 w-full gap-2 transition-transform duration-150 hover:scale-[1.01] active:scale-[0.99]"
               >
-                {plan.cta}
-                {plan.popular && (
-                  <img
-                    src={arrowRight}
-                    alt=""
-                    className="size-3 brightness-0 invert dark:invert-0"
-                  />
-                )}
+                <a href="https://app.brimble.io" target="_blank" rel="noopener noreferrer">
+                  {plan.cta}
+                  {plan.popular && (
+                    <img
+                      src={arrowRight}
+                      alt=""
+                      className="size-3 brightness-0 invert dark:invert-0"
+                    />
+                  )}
+                </a>
               </Button>
 
               {/* Divider */}
@@ -217,12 +220,15 @@ function PricingPlans() {
               </p>
             </div>
             <Button
+              asChild
               variant="pill-light"
               size="sm"
               className="shrink-0 gap-2 transition-transform duration-150 hover:scale-[1.01] active:scale-[0.99]"
             >
-              {teamPlan.cta}
-              <ArrowRight className="size-3" />
+              <a href="https://app.brimble.io" target="_blank" rel="noopener noreferrer">
+                {teamPlan.cta}
+                <ArrowRight className="size-3" />
+              </a>
             </Button>
           </div>
 
@@ -269,12 +275,15 @@ function PricingEnterprise() {
           </p>
         </div>
         <Button
+          asChild
           variant="pill-light"
           size="sm"
           className="shrink-0 gap-2 bg-white text-black hover:bg-white/90 dark:bg-white dark:text-black"
         >
-          {siteConfig.pricing.enterprise.cta}
-          <ArrowRight className="size-3" />
+          <a href="mailto:hello@brimble.app">
+            {siteConfig.pricing.enterprise.cta}
+            <ArrowRight className="size-3" />
+          </a>
         </Button>
       </motion.div>
     </section>

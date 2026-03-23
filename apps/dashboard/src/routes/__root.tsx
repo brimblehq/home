@@ -84,7 +84,10 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, maximum-scale=1",
+      },
       { title: "Brimble Dashboard" },
     ],
     links: [
@@ -101,8 +104,10 @@ export const Route = createRootRoute({
   },
   loader: (async ({ location, deps }: any) => {
     const isAuthRoute = /^\/(login|signup)$/.test(location.pathname);
-    const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace|teams)?(\/|$)/;
-    const isCatchAll = location.pathname !== "/" && !knownPrefixes.test(location.pathname);
+    const knownPrefixes =
+      /^\/(login|signup|projects|domains|addons|scaling|workspace|teams)?(\/|$)/;
+    const isCatchAll =
+      location.pathname !== "/" && !knownPrefixes.test(location.pathname);
 
     if (isAuthRoute || isCatchAll) {
       return createRootLoaderData();
@@ -111,7 +116,11 @@ export const Route = createRootRoute({
     try {
       const rawWorkspace = deps.workspace;
       let workspace: string | undefined;
-      if (rawWorkspace && typeof rawWorkspace === "string" && rawWorkspace.trim()) {
+      if (
+        rawWorkspace &&
+        typeof rawWorkspace === "string" &&
+        rawWorkspace.trim()
+      ) {
         workspace = rawWorkspace.trim();
       }
 
@@ -122,55 +131,80 @@ export const Route = createRootRoute({
         pricingResult,
         tags,
         subscriptionStats,
-      ] =
-        await Promise.allSettled([
-        (getSettingsSidebarSnapshotServerFn as unknown as (input: {
-          data?: { workspace?: string };
-        }) => Promise<SettingsSidebarSnapshot>)({
+      ] = await Promise.allSettled([
+        (
+          getSettingsSidebarSnapshotServerFn as unknown as (input: {
+            data?: { workspace?: string };
+          }) => Promise<SettingsSidebarSnapshot>
+        )({
           data: { workspace },
         }),
-        (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)(),
-        (listHomeProjectsServerFn as unknown as (input: {
-          data: { workspace?: string };
-        }) => Promise<ApiListResponse<Project>>)({
+        (
+          listWorkspacesServerFn as unknown as () => Promise<
+            ApiListResponse<Workspace>
+          >
+        )(),
+        (
+          listHomeProjectsServerFn as unknown as (input: {
+            data: { workspace?: string };
+          }) => Promise<ApiListResponse<Project>>
+        )({
           data: { workspace },
         }),
         (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
-        (listTagsServerFn as unknown as (input: {
-          data: { workspace?: string };
-        }) => Promise<BackendTag[]>)({
+        (
+          listTagsServerFn as unknown as (input: {
+            data: { workspace?: string };
+          }) => Promise<BackendTag[]>
+        )({
           data: { workspace },
         }),
-        (getSubscriptionStatsServerFn as unknown as (input: {
-          data?: { workspace?: string };
-        }) => Promise<SubscriptionStats>)({
+        (
+          getSubscriptionStatsServerFn as unknown as (input: {
+            data?: { workspace?: string };
+          }) => Promise<SubscriptionStats>
+        )({
           data: { workspace },
         }),
       ]);
 
       if (settingsSnapshot.status === "rejected") {
-        console.error("[root loader] settings snapshot failed:", settingsSnapshot.reason);
+        console.error(
+          "[root loader] settings snapshot failed:",
+          settingsSnapshot.reason,
+        );
       }
       if (workspaces.status === "rejected") {
         console.error("[root loader] workspaces failed:", workspaces.reason);
       }
       if (onboardingProjects.status === "rejected") {
-        console.error("[root loader] onboarding projects failed:", onboardingProjects.reason);
+        console.error(
+          "[root loader] onboarding projects failed:",
+          onboardingProjects.reason,
+        );
       }
       if (tags.status === "rejected") {
         console.error("[root loader] tags failed:", tags.reason);
       }
       if (pricingResult.status === "rejected") {
-        console.error("[root loader] pricing specs failed:", pricingResult.reason);
+        console.error(
+          "[root loader] pricing specs failed:",
+          pricingResult.reason,
+        );
       }
       if (subscriptionStats.status === "rejected") {
-        console.error("[root loader] subscription stats failed:", subscriptionStats.reason);
+        console.error(
+          "[root loader] subscription stats failed:",
+          subscriptionStats.reason,
+        );
       }
 
       return createRootLoaderData({
         workspace,
         settingsSnapshot:
-          settingsSnapshot.status === "fulfilled" ? settingsSnapshot.value : undefined,
+          settingsSnapshot.status === "fulfilled"
+            ? settingsSnapshot.value
+            : undefined,
         workspaces:
           workspaces.status === "fulfilled"
             ? workspaces.value
@@ -234,8 +268,7 @@ function RootComponent() {
     tags,
     subscriptionStats,
     pricing,
-  } =
-    Route.useLoaderData() ?? ({} as any);
+  } = Route.useLoaderData() ?? ({} as any);
 
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const workspace = (() => {
@@ -253,7 +286,11 @@ function RootComponent() {
     if (!hydrated) {
       if (tags) {
         hydrate(
-          tags.map((t: BackendTag) => ({ id: t.id, name: t.name, color: t.color })),
+          tags.map((t: BackendTag) => ({
+            id: t.id,
+            name: t.name,
+            color: t.color,
+          })),
           workspace,
         );
       } else {
@@ -262,7 +299,6 @@ function RootComponent() {
       return;
     }
 
-    // On workspace changes, fetch directly instead of trusting potentially stale root loader cache.
     if (storeWorkspace !== workspace) {
       void fetchTags(workspace);
     }

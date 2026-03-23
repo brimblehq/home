@@ -17,10 +17,10 @@ export const siteConfig = {
     secondaryCta: "Read documentation",
   },
   codePreview: {
-    heading: "Ship full stack apps & MCP servers in seconds.",
+    heading: "Host apps, databases, domains & MCP servers — all in one place.",
     descriptions: [
-      "No complex setup is required. Connect your repo and deploy instantly with zero-config builds for all major frameworks.",
-      "We provide endpoints to all the popular LLMs. Provision MySQL, Postgres, Redis and more in seconds.",
+      "Deploy full-stack apps and connect custom domains with automatic HTTPS. Provision managed MySQL, Postgres, and Redis databases in seconds.",
+      "Integrate with MCP servers and AI models through a unified gateway. Everything your stack needs, from first commit to global scale.",
     ],
   },
   steps: [
@@ -43,7 +43,7 @@ export const siteConfig = {
   stepsSection: {
     heading: "Simplify Your Deployment Workflow",
     description:
-      "Deploy your WebApps, APIs and A.I workloads. Supports all your favorite stacks and frameworks including Next.js, Node.js, Remix, Hono, Docker, Go, Laravel, and more.",
+      "From frontend to backend, databases to AI — Brimble handles the infrastructure so you can focus on building. One platform, every layer of your stack.",
   },
   onboarding: {
     heading: "Brimble makes getting online easy and secure.",
@@ -97,12 +97,12 @@ export const siteConfig = {
       },
     ],
     footer:
-      "Deploy your WebApps, APIs and A.I workloads. Supports all your favorite stacks and frameworks including Next.js, Node.js, Remix, Hono, Docker, Go, Laravel, and more.",
+      "Ship web apps, APIs, and AI workloads to production in seconds. Brimble auto-detects your framework, provisions databases, and scales with you — no DevOps required.",
   },
   integrations: {
     heading: "Supports all your favorite stacks and frameworks.",
     description:
-      "Deploy your WebApps, APIs and A.I workloads. Next.js, Node.js, Remix, Hono, Docker, MongoDB, Go, PostgreSQL, Laravel — Brimble works with the tools you already love.",
+      "Vue, Angular, Go, Laravel, and beyond — bring whatever you build with. Brimble delivers zero-config deployments for the frameworks and languages your team already uses.",
   },
   domains: {
     heading: "Buy Custom Domains",
