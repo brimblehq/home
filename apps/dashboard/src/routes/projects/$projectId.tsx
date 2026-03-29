@@ -34,6 +34,13 @@ import config from "@/config";
 const SUCCESS_LOG_PATTERN = /site (is )?(live|running)\b/i;
 const FAILURE_LOG_PATTERN = /deployment failed|build failed|failed to deploy/i;
 
+const projectCache = new Map<string, { data: BackendProject; fetchedAt: number }>();
+const PROJECT_CACHE_TTL = 300_000;
+
+export function clearProjectCache() {
+  projectCache.clear();
+}
+
 export const Route = createFileRoute("/projects/$projectId")({
   staleTime: 300_000,
   preloadStaleTime: 300_000,
@@ -61,6 +68,13 @@ export const Route = createFileRoute("/projects/$projectId")({
         ? rawSearch.workspace.trim()
         : undefined;
 
+    const cacheKey = `${params.projectId}:${workspace ?? ""}`;
+    const cached = projectCache.get(cacheKey);
+
+    if (cached && Date.now() - cached.fetchedAt < PROJECT_CACHE_TTL) {
+      return { project: cached.data, workspace };
+    }
+
     const project = await (getProjectDetailsServerFn as unknown as (input: {
       data: { projectId: string; workspace?: string };
     }) => Promise<BackendProject>)({
@@ -70,11 +84,15 @@ export const Route = createFileRoute("/projects/$projectId")({
       },
     });
 
+    projectCache.set(cacheKey, { data: project, fetchedAt: Date.now() });
+
     return { project, workspace };
   },
   loader: async ({ params, deps, context }) => {
     const requestedProjectId = params.projectId.trim().toLowerCase();
     const workspace = deps.workspace;
+
+    projectCache.delete(`${params.projectId}:${workspace ?? ""}`);
     const searchEnvironmentId = deps.environmentId;
     const hasExplicitEnvironment = hasExplicitEnvironmentSelection(searchEnvironmentId);
     const [environments, persistedEnvironmentId] = await Promise.all([

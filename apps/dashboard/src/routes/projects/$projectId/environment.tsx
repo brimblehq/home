@@ -1176,11 +1176,7 @@ function EnvironmentPage() {
                   }
                 }}
                 disabled={rawLoading}
-                className={`flex h-[34px] items-center gap-2 rounded-[4px] border px-3.5 text-sm font-medium transition-colors ${
-                  rawMode
-                    ? "border-[#3964d5] bg-[#4879f8]/10 text-[#4879f8]"
-                    : "border-[#e9ebec] text-dash-text-strong hover:bg-dash-bg-elevated"
-                } disabled:opacity-60`}
+                className="flex h-[34px] items-center gap-2 rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-3.5 text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90 disabled:opacity-60"
               >
                 {rawLoading ? <Spinner size="size-3.5" /> : <Code2 className="size-4" />}
                 Raw Editor

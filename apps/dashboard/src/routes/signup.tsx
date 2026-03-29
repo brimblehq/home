@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Github, ArrowLeft, Loader2 } from "lucide-react";
@@ -155,6 +155,13 @@ function OtpStep({
   onResend: () => void;
   loading: boolean;
 }) {
+  function handleOtpChange(value: string) {
+    onOtpChange(value);
+    if (value.length === 6) {
+      onVerify();
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -187,7 +194,7 @@ function OtpStep({
         }}
         className="space-y-5"
       >
-        <OtpInput value={otp} onChange={onOtpChange} autoFocus />
+        <OtpInput value={otp} onChange={handleOtpChange} autoFocus />
 
         <button
           type="submit"
@@ -241,6 +248,8 @@ function SignupPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [otp, setOtp] = useState("");
+  const otpRef = useRef(otp);
+  otpRef.current = otp;
   const [loading, setLoading] = useState(false);
   const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OauthProvider | null>(null);
 
@@ -310,10 +319,11 @@ function SignupPage() {
 
   async function handleVerify() {
     haptics.selection();
-    if (otp.length < 6) return;
+    const code = otpRef.current;
+    if (code.length < 6) return;
     setLoading(true);
     try {
-      await verifyEmailCode({ data: { email, code: otp } });
+      await verifyEmailCode({ data: { email, code } });
       toast.success("Account created successfully");
       invalidateSessionCache();
       window.location.replace(getNextUrl());
@@ -388,7 +398,7 @@ function SignupPage() {
             key="otp"
             email={email}
             otp={otp}
-            onOtpChange={setOtp}
+            onOtpChange={(v) => { setOtp(v); otpRef.current = v; }}
             onVerify={handleVerify}
             onBack={() => {
               haptics.selection();

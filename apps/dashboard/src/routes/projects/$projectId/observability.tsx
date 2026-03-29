@@ -632,51 +632,15 @@ function ObservabilityPage() {
     );
   }
   const { metrics, grafanaUrl } = Route.useLoaderData();
-  const { analytics: analyticsEnabled } = usePlanGate();
-  const [section, setSection] = useState<"metrics" | "analytics">("metrics");
 
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 px-4 py-8 sm:px-0">
-      <div className="scrollbar-hidden w-full overflow-x-auto sm:w-auto sm:self-start">
-        <div className="flex min-w-max items-center gap-1 rounded-[4px] border-[0.5px] border-dash-border p-0.5">
-        <button
-          onClick={() => setSection("metrics")}
-          className={`whitespace-nowrap rounded-[3px] px-4 py-1.5 text-sm font-medium transition-colors ${
-            section === "metrics"
-              ? "bg-dash-bg-elevated text-dash-text-strong"
-              : "text-dash-text-faded hover:text-dash-text-body"
-          }`}
-        >
-          App Metrics
-        </button>
-        <button
-          onClick={() => setSection("analytics")}
-          className={`whitespace-nowrap rounded-[3px] px-4 py-1.5 text-sm font-medium transition-colors ${
-            section === "analytics"
-              ? "bg-dash-bg-elevated text-dash-text-strong"
-              : "text-dash-text-faded hover:text-dash-text-body"
-          }`}
-        >
-          App Analytics
-        </button>
-        </div>
-      </div>
-
-      {section === "metrics" ? (
-        <AppMetrics
-          project={project}
-          initialMetrics={metrics}
-          grafanaUrl={grafanaUrl}
-          workspace={workspace}
-        />
-      ) : analyticsEnabled ? (
-        <AppAnalytics />
-      ) : (
-        <PlanUpgradePrompt
-          feature="App Analytics"
-          description="App Analytics provides detailed insights into your application's usage patterns. Upgrade your plan to access analytics."
-        />
-      )}
+      <AppMetrics
+        project={project}
+        initialMetrics={metrics}
+        grafanaUrl={grafanaUrl}
+        workspace={workspace}
+      />
     </div>
   );
 }

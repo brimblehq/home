@@ -223,6 +223,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
         id: "database-backup",
         description: result?.message || "Backup has been queued.",
       });
+      router.invalidate();
     } catch (error: any) {
       toast.error("Failed to initiate backup", {
         id: "database-backup",
@@ -254,6 +255,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
         id: "database-refresh",
         description: result?.message || "Updates should be visible shortly.",
       });
+      router.invalidate();
     } catch (error: any) {
       toast.error("Failed to update database", {
         id: "database-refresh",
@@ -445,6 +447,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
             toast.success(`${projectName} deleted successfully`, {
               id: "delete-project",
             });
+            router.invalidate();
 
             const nextUrl = withWorkspaceQuery({
               pathname: "/projects",

@@ -79,9 +79,15 @@ export async function startOauthPopup(
   return await new Promise<OauthAuthEventPayload>((resolve, reject) => {
     let settled = false;
 
+    let popupPollId: ReturnType<typeof setInterval> | undefined;
+
     const cleanup = () => {
       if (timeoutId !== undefined) {
         window.clearTimeout(timeoutId);
+      }
+
+      if (popupPollId !== undefined) {
+        clearInterval(popupPollId);
       }
 
       try {
@@ -110,6 +116,12 @@ export async function startOauthPopup(
     const timeoutId = window.setTimeout(() => {
       finish(() => reject(new Error("OAuth login timed out. Please try again.")));
     }, timeoutMs);
+
+    popupPollId = setInterval(() => {
+      if (popup.closed) {
+        finish(() => reject(new Error("Sign-in window was closed.")));
+      }
+    }, 500);
 
     channel.subscribe("auth", (message: any) => {
       const data = message?.data as OauthAuthEventPayload | undefined;

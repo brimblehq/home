@@ -611,15 +611,7 @@ export function DomainList({
           )}
         />
 
-        {onAddDomain && (
-          <button
-            onClick={onAddDomain}
-            className="flex shrink-0 items-center gap-1 rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-3 py-[5px] text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90"
-          >
-            <Plus className="size-4" />
-            <span className="px-1">Add Domain</span>
-          </button>
-        )}
+        {/* Add Domain button hidden for now */}
       </div>
 
       {/* Empty state */}
