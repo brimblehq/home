@@ -124,7 +124,7 @@ export function OnboardingChecklist({
   const [gitRefreshKey, setGitRefreshKey] = useState(0);
   const workspaceCacheKey = activeWorkspaceSlug ?? "__personal__";
 
-  const projectList = projects ?? [];
+  const projectList = Array.isArray(projects) ? projects : [];
   const deployableProjects = projectList.filter((project) => {
     const serviceType = String(project.serviceType ?? "").toLowerCase();
     return serviceType !== "database" && serviceType !== "database-service";
@@ -159,8 +159,6 @@ export function OnboardingChecklist({
         // if auth cookies haven't settled yet on page load.
         if (attempt < 2) {
           retryTimeout = setTimeout(() => fetchGitStatus(attempt + 1), 1500);
-        } else {
-          setHasConnectedGit(hasGitFromProjects);
         }
       }
     }
@@ -220,12 +218,20 @@ export function OnboardingChecklist({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- getTeamMembers is stable in behavior but unstable in reference (useServerFn)
   }, [activeWorkspaceSlug, isTeamWorkspace, teamDetails, teamDetailsByWorkspace]);
 
+  useEffect(() => {
+    setHasFollowed(Boolean(settingsSnapshot?.profile?.followedX));
+  }, [settingsSnapshot?.profile?.followedX]);
+
   const hasGit = hasConnectedGit ?? hasGitFromProjects;
   const hasProject = deployableProjects.length > 0;
   const planType = (settingsSnapshot?.profile?.subscription?.planType ?? "").toUpperCase();
   const isFreePlan =
     !planType || planType === SUBSCRIPTION_PLAN_TYPE.FreePlan;
-  const { data: fetchedPaymentMethods } = usePaymentMethods();
+  const {
+    data: fetchedPaymentMethods,
+    isFetched: paymentMethodsFetched,
+    isError: paymentMethodsFailed,
+  } = usePaymentMethods();
   const hasPaymentCard =
     (Array.isArray(fetchedPaymentMethods) && fetchedPaymentMethods.length > 0);
   const resolvedTeamDetails =
@@ -276,13 +282,23 @@ export function OnboardingChecklist({
   const completedCount = tasks.filter((t) => t.done).length;
   const progress = completedCount / tasks.length;
 
+  const settingsResolved = Boolean(settingsSnapshot?.profile);
+  const projectsResolved = Array.isArray(projects);
+  const paymentMethodsResolved = paymentMethodsFetched && !paymentMethodsFailed;
   const teamMembersResolved =
     !isTeamWorkspace ||
-    Boolean(resolvedTeamDetails) ||
-    (activeWorkspaceSlug ? activeWorkspaceSlug in teamMembersFetchFailedByWorkspace : false);
+    Boolean(resolvedTeamDetails);
+  const teamMembersFetchFailed =
+    Boolean(isTeamWorkspace) &&
+    Boolean(activeWorkspaceSlug) &&
+    Boolean(activeWorkspaceSlug in teamMembersFetchFailedByWorkspace);
   const checklistSignalsReady =
+    settingsResolved &&
+    projectsResolved &&
+    paymentMethodsResolved &&
     hasConnectedGit !== null &&
-    teamMembersResolved;
+    teamMembersResolved &&
+    !teamMembersFetchFailed;
 
   const handleTaskClick = useCallback(
     (task: OnboardingTask) => {

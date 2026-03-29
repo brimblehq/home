@@ -65,6 +65,18 @@ export function getServerUserAgent(): string | null {
   }
 }
 
+export function getServerClientIp(): string | null {
+  try {
+    return (
+      getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ??
+      getRequestHeader("cf-connecting-ip") ??
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
 export function clearServerAuthCookies() {
   const existingAccessToken = getServerAccessToken();
   const existingRefreshToken = getServerRefreshToken();

@@ -4,6 +4,7 @@ import {
   getServerAccessToken,
   getServerRefreshToken,
   getServerUserAgent,
+  getServerClientIp,
   setServerAuthCookies,
   clearServerAuthCookies,
   tokenFingerprint,
@@ -82,14 +83,37 @@ function getClientHeaders(): Record<string, string> {
   if (ua) {
     headers["X-Client-User-Agent"] = ua;
   }
+  const ip = getServerClientIp();
+  if (ip) {
+    headers["X-Forwarded-For"] = ip;
+  }
   return headers;
 }
 
-export function getServerBackendApi() {
+export type ClientGeoData = {
+  ip?: string;
+  city?: string;
+  region?: string;
+  country?: string;
+  timezone?: string;
+};
+
+export function getServerBackendApi(geo?: ClientGeoData | null) {
+  const headers = getClientHeaders();
+  if (geo?.ip) {
+    headers["X-Forwarded-For"] = geo.ip;
+    headers["X-Client-Real-IP"] = geo.ip;
+  }
+  if (geo?.city || geo?.region || geo?.country) {
+    headers["X-Client-Location"] = [geo.city, geo.region, geo.country].filter(Boolean).join(", ");
+  }
+  if (geo?.timezone) {
+    headers["X-Client-Timezone"] = geo.timezone;
+  }
   return createBackendApi({
     baseUrl: config.apiUrl,
     getAccessToken: getServerAccessToken,
-    defaultHeaders: getClientHeaders(),
+    defaultHeaders: headers,
   });
 }
 

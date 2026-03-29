@@ -719,6 +719,12 @@ export function DashboardLayout({
     initialOnboardingProjects?.items ??
     initialProjectSwitcherProjects?.items ??
     [];
+  const checklistProjects =
+    matchedProjects ??
+    matchedProjectSwitcherProjects ??
+    initialOnboardingProjects?.items ??
+    initialProjectSwitcherProjects?.items ??
+    null;
   const accountProjectCount = Math.max(
     0,
     Math.floor(
@@ -1227,7 +1233,7 @@ export function DashboardLayout({
                     )}
                     <WelcomeModal />
                     <OnboardingChecklist
-                      projects={dashboardProjects}
+                      projects={checklistProjects}
                       settingsSnapshot={activeSettingsSnapshot}
                       isTeamWorkspace={isTeamWorkspace}
                       teamDetails={activeWorkspaceTeamMembers}

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { LoaderCircle } from "lucide-react";
@@ -10,9 +10,8 @@ import type { DiscoverAddon } from "@/utils/discover-mcp";
 import { mapMcpTemplateToAddon } from "@/utils/discover-mcp";
 import { listMcpTemplatesServerFn, listMcpCategoriesServerFn } from "@/server/mcp/actions";
 import type { McpServerListResult } from "@/backend/mcp";
-import { parsePositivePageSearchValue } from "@/utils/workspace-route-search";
+import { parsePositivePageSearchValue, parseTextSearchValue } from "@/utils/workspace-route-search";
 import { useHaptics } from "@/hooks/use-haptics";
-import { useServerFn } from "@tanstack/react-start";
 
 const ADDONS_PAGE_SIZE = 18;
 
@@ -20,16 +19,20 @@ export const Route = createFileRoute("/addons/")({
   staleTime: 300_000,
   preloadStaleTime: 300_000,
   validateSearch: (search: Record<string, unknown>) => {
-    const next: { page?: number; category?: string } = {};
+    const next: { page?: number; category?: string; q?: string } = {};
     const page = parsePositivePageSearchValue(search.page);
+    const q = parseTextSearchValue(search.q);
     if (page && page > 1) next.page = page;
     if (typeof search.category === "string" && search.category.trim()) {
       next.category = search.category.trim();
     }
+    if (q) next.q = q;
     return next;
   },
   loaderDeps: ({ search }) => ({
     page: parsePositivePageSearchValue(search.page) ?? 1,
+    category: parseTextSearchValue(search.category),
+    q: parseTextSearchValue(search.q),
   }),
   loader: async ({ deps }) => {
     const page = deps.page;
@@ -37,11 +40,13 @@ export const Route = createFileRoute("/addons/")({
 
     const [result, categories] = await Promise.all([
       (listMcpTemplatesServerFn as unknown as (input: {
-        data?: { limit?: number; offset?: number; category?: string };
+        data?: { query?: string; limit?: number; offset?: number; category?: string };
       }) => Promise<McpServerListResult>)({
         data: {
+          query: deps.q,
           limit: ADDONS_PAGE_SIZE,
           offset,
+          category: deps.category,
         },
       }),
       (listMcpCategoriesServerFn as unknown as () => Promise<string[]>)().catch(
@@ -80,10 +85,20 @@ function AddonGrid({ items, delayOffset = 0 }: { items: DiscoverAddon[]; delayOf
 function AddonsPage() {
   const navigate = useNavigate({ from: "/addons/" });
   const haptics = useHaptics();
-  const [search, setSearch] = useState("");
   const routeSearch = Route.useSearch();
+  const [searchQuery, setSearchQuery] = useState(routeSearch.q ?? "");
   const loaderData = Route.useLoaderData();
   const isRouterLoading = useRouterState({ select: (s) => s.isLoading });
+  const pendingSearch = useRouterState({
+    select: (s) => {
+      const pending = s.pendingLocation ?? s.location;
+      const pendingSearchRow = pending.search as Record<string, unknown>;
+      return {
+        q: parseTextSearchValue(pendingSearchRow.q),
+        category: parseTextSearchValue(pendingSearchRow.category),
+      };
+    },
+  });
   const pendingPage = useRouterState({
     select: (s) => {
       const pending = s.pendingLocation ?? s.location;
@@ -93,58 +108,73 @@ function AddonsPage() {
     },
   });
 
-  const listMcpTemplates = useServerFn(listMcpTemplatesServerFn as any) as (args: {
-    data?: { limit?: number; offset?: number; category?: string };
-  }) => Promise<McpServerListResult>;
+  const activeCategory = routeSearch.category ?? undefined;
+  const displayAddons = loaderData.addons;
+  const displayTotal = loaderData.total;
+  const settledSearchQuery = routeSearch.q?.trim() ?? "";
+  const pendingSearchQuery = searchQuery.trim();
+  const isSearchSettling = pendingSearchQuery !== settledSearchQuery;
+  const isSearchOrCategoryLoading = isRouterLoading
+    && (
+      (pendingSearch.q ?? undefined) !== (routeSearch.q ?? undefined)
+      || (pendingSearch.category ?? undefined) !== (routeSearch.category ?? undefined)
+    );
 
-  const [activeCategory, setActiveCategory] = useState<string | undefined>(
-    routeSearch.category ?? undefined,
-  );
-  const [categoryAddons, setCategoryAddons] = useState<DiscoverAddon[] | null>(null);
-  const [categoryTotal, setCategoryTotal] = useState<number | null>(null);
-  const [categoryLoading, setCategoryLoading] = useState(false);
+  function buildAddonsSearch(next: {
+    page?: number;
+    category?: string;
+    q?: string;
+  }) {
+    return {
+      page: next.page,
+      category: next.category,
+      q: next.q,
+    };
+  }
 
-  const displayAddons = activeCategory ? (categoryAddons ?? []) : loaderData.addons;
-  const displayTotal = activeCategory ? (categoryTotal ?? 0) : loaderData.total;
+  useEffect(() => {
+    setSearchQuery(routeSearch.q ?? "");
+  }, [routeSearch.q]);
 
-  const fetchCategory = useCallback(async (cat?: string) => {
-    if (!cat) {
-      setCategoryAddons(null);
-      setCategoryTotal(null);
-      return;
-    }
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const nextQ = searchQuery.trim() || undefined;
+      if ((routeSearch.q ?? undefined) === nextQ) {
+        return;
+      }
 
-    setCategoryLoading(true);
-    try {
-      const result = await listMcpTemplates({
-        data: { limit: ADDONS_PAGE_SIZE, offset: 0, category: cat },
+      navigate({
+        to: "/addons/",
+        replace: true,
+        search: buildAddonsSearch({
+          category: routeSearch.category,
+          q: nextQ,
+          page: undefined,
+        }),
       });
-      setCategoryAddons(result.servers.map(mapMcpTemplateToAddon));
-      setCategoryTotal(result.pagination.total ?? result.servers.length);
-    } catch {
-      setCategoryAddons([]);
-      setCategoryTotal(0);
-    } finally {
-      setCategoryLoading(false);
-    }
-  }, [listMcpTemplates]);
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [navigate, routeSearch.category, routeSearch.q, searchQuery]);
 
   function selectCategory(cat?: string) {
     haptics.selection();
-    const next = cat === activeCategory ? undefined : cat;
-    setActiveCategory(next);
-    void fetchCategory(next);
-  }
+    const nextCategory = cat === activeCategory ? undefined : cat;
+    if (nextCategory === activeCategory) {
+      return;
+    }
 
-  const filteredAddons = useMemo(() => {
-    if (!search.trim()) return displayAddons;
-    const q = search.trim().toLowerCase();
-    return displayAddons.filter(
-      (a) =>
-        a.name.toLowerCase().includes(q) ||
-        a.description.toLowerCase().includes(q),
-    );
-  }, [displayAddons, search]);
+    navigate({
+      to: "/addons/",
+      search: buildAddonsSearch({
+        category: nextCategory,
+        q: routeSearch.q,
+        page: undefined,
+      }),
+    });
+  }
 
   return (
     <div className="px-4 py-8 md:px-10">
@@ -205,15 +235,16 @@ function AddonsPage() {
 
       <div className="mt-4">
         <SearchFilterBar
-          value={search}
-          onChange={setSearch}
+          value={searchQuery}
+          onChange={setSearchQuery}
           placeholder="Search MCP servers..."
+          loading={isSearchSettling}
         />
       </div>
 
       <div className="mt-6">
         <AnimatePresence mode="wait">
-          {categoryLoading ? (
+          {isSearchOrCategoryLoading ? (
             <motion.div
               key="loading"
               initial={{ opacity: 0 }}
@@ -227,16 +258,16 @@ function AddonsPage() {
                 Loading servers...
               </p>
             </motion.div>
-          ) : filteredAddons.length ? (
+          ) : displayAddons.length ? (
             <motion.div
-              key={`grid-${activeCategory ?? "all"}`}
+              key={`grid-${activeCategory ?? "all"}-${routeSearch.q ?? ""}-${loaderData.page}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              <AddonGrid items={filteredAddons} />
-              {!search.trim() && !activeCategory && (
+              <AddonGrid items={displayAddons} />
+              {loaderData.totalPages > 1 && (
                 <div className="mt-6 flex justify-end">
                   <NumberPagination
                     currentPage={loaderData.page}
@@ -245,11 +276,12 @@ function AddonsPage() {
                     loadingPage={isRouterLoading ? pendingPage : null}
                     onPageChange={(nextPage) => {
                       navigate({
-                        to: "/addons",
-                        search: {
-                          ...routeSearch,
+                        to: "/addons/",
+                        search: buildAddonsSearch({
+                          category: routeSearch.category,
+                          q: routeSearch.q,
                           page: nextPage === 1 ? undefined : nextPage,
-                        },
+                        }),
                       });
                     }}
                   />

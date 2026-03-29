@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Github, ArrowLeft, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { invalidateSessionCache } from "../lib/auth-guards";
+import { getClientGeo } from "@/lib/client-geo";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 import {
@@ -273,6 +274,7 @@ function LoginPage() {
             company: data.company,
             onboarded: Boolean(data.onboard?.user),
           },
+          geo: await getClientGeo(),
         },
       });
 
@@ -294,7 +296,7 @@ function LoginPage() {
     if (!email.trim()) return;
     setLoading(true);
     try {
-      await requestLoginOtp({ data: { email } });
+      await requestLoginOtp({ data: { email, geo: await getClientGeo() } });
       toast.success("Verification code sent");
       setStep("otp");
     } catch (error) {
@@ -310,7 +312,7 @@ function LoginPage() {
     if (code.length < 6) return;
     setLoading(true);
     try {
-      const response = await verifyEmailCode({ data: { email, code } });
+      const response = await verifyEmailCode({ data: { email, code, geo: await getClientGeo() } });
       toast.success(
         `Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
       );
@@ -330,7 +332,7 @@ function LoginPage() {
     if (!email.trim()) return;
     setLoading(true);
     try {
-      await resendAuthCode({ data: { email } });
+      await resendAuthCode({ data: { email, geo: await getClientGeo() } });
       toast.success("Code resent");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to resend code");

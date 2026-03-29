@@ -59,7 +59,10 @@ async function hmacSha256Hex(input: string, secret: string): Promise<string> {
   return crypto.createHmac("sha256", secret).update(input).digest("hex");
 }
 
-async function createBrimbleSignatureHeader(data: unknown, expiryInSeconds: number) {
+async function createBrimbleSignatureHeader(
+  data: unknown,
+  expiryInSeconds: number,
+) {
   const secret = appConfig.hmacSecretKey?.trim();
   if (!secret) {
     return "";
@@ -88,7 +91,9 @@ async function createPaymentKeyHeader(length: number) {
   return crypto.randomBytes(length).toString("base64");
 }
 
-export function createBackendClient(config: BackendClientConfig): BackendClient {
+export function createBackendClient(
+  config: BackendClientConfig,
+): BackendClient {
   const http: AxiosInstance = axios.create({
     baseURL: config.baseUrl,
     timeout: 25_000,
@@ -130,7 +135,11 @@ export function createBackendClient(config: BackendClientConfig): BackendClient 
     ) {
       return "The request took too long to complete. Please try again.";
     }
-    if (lower.includes("network error") || lower.includes("econnrefused") || lower.includes("enotfound")) {
+    if (
+      lower.includes("network error") ||
+      lower.includes("econnrefused") ||
+      lower.includes("enotfound")
+    ) {
       return "Unable to reach the server. Please check your connection and try again.";
     }
     if (lower.includes("econnreset") || lower.includes("socket hang up")) {
@@ -195,16 +204,6 @@ export function createBackendClient(config: BackendClientConfig): BackendClient 
       try {
         const requestUrl = buildUrl(path, options?.query);
 
-        if (process.env.NODE_ENV !== "production") {
-          console.log("[backend-client] request", {
-            method,
-            url: requestUrl,
-            hasAuthorization: Boolean(headers.Authorization),
-            hasBrimbleSignature: Boolean(headers["X-Brimble-Signature"]),
-            hasPaymentKey: Boolean(headers["X-Payment-Key"]),
-          });
-        }
-
         const response = await http.request<TResponse>({
           url: requestUrl,
           method,
@@ -217,7 +216,14 @@ export function createBackendClient(config: BackendClientConfig): BackendClient 
       } catch (error) {
         const axiosError = error as AxiosError<any>;
         const payload = axiosError.response?.data;
-        console.error("[backend-client] error response:", JSON.stringify({ status: axiosError.response?.status, data: payload }, null, 2));
+        console.error(
+          "[backend-client] error response:",
+          JSON.stringify(
+            { status: axiosError.response?.status, data: payload },
+            null,
+            2,
+          ),
+        );
         throw new BackendApiError({
           code:
             typeof (payload as any)?.code === "string"
@@ -226,7 +232,9 @@ export function createBackendClient(config: BackendClientConfig): BackendClient 
           status: axiosError.response?.status,
           message: getErrorMessage(
             payload,
-            axiosError.response?.statusText || axiosError.message || "Request failed",
+            axiosError.response?.statusText ||
+              axiosError.message ||
+              "Request failed",
           ),
           details: payload,
         });

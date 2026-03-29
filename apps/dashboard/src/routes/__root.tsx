@@ -274,6 +274,11 @@ gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });
 
 function RootComponent() {
   useTheme();
+
+  useEffect(() => {
+    import("@/lib/client-geo").then((m) => m.getClientGeo());
+  }, []);
+
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const {

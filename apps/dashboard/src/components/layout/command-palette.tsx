@@ -8,7 +8,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
 import { Command } from "cmdk";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Moon, Sun, ArrowsClockwise, TreeStructure, Check } from "@phosphor-icons/react";
+import { ArrowLeft, Moon, Sun, ArrowsClockwise, TreeStructure, Check, SignOut } from "@phosphor-icons/react";
 import { PaletteView, Theme } from "../../types/enums";
 import { useScoutBar } from "../../contexts/scoutbar-context";
 import { useTheme } from "../../hooks/use-theme";
@@ -25,6 +25,8 @@ import type { Project } from "@/backend/projects";
 import type { Workspace } from "@/backend/workspaces";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import type { SettingsSidebarSnapshot } from "@/backend/settings";
+import { logoutServerFn } from "@/server/auth/actions";
+import { invalidateSessionCache } from "@/lib/auth-guards";
 
 const rootRoute = getRouteApi("__root__");
 
@@ -698,7 +700,7 @@ export function CommandPalette() {
                             </Command.Item>
                           </Command.Group>
 
-                          <Command.Group heading="HELP">
+                          <Command.Group heading="HELP &amp; ACCOUNT">
                             <Command.Item
                               value="cli docs documentation"
                               onSelect={() =>
@@ -735,6 +737,22 @@ export function CommandPalette() {
                                 alt=""
                               />
                               <span>Contact support</span>
+                            </Command.Item>
+                            <Command.Item
+                              value="logout sign out"
+                              onSelect={() =>
+                                runAction(() => {
+                                  logoutServerFn()
+                                    .catch(() => {})
+                                    .then(() => {
+                                      invalidateSessionCache();
+                                      window.location.href = "/login";
+                                    });
+                                })
+                              }
+                            >
+                              <SignOut className="size-4" />
+                              <span>Log out</span>
                             </Command.Item>
                           </Command.Group>
                         </motion.div>

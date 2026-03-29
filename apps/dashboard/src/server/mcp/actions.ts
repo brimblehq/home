@@ -44,7 +44,9 @@ export const listMcpTemplatesServerFn = createServerFn({
       error,
     );
 
-    return getPublicBackendApi().mcp.listTemplates(request) as Promise<McpServerListResult>;
+    return getPublicBackendApi().mcp.listTemplates(
+      request,
+    ) as Promise<McpServerListResult>;
   }
 });
 
@@ -71,7 +73,10 @@ export const listRecommendedMcpTemplatesServerFn = createServerFn({
 
   try {
     return await withTokenRefresh(
-      (api) => api.mcp.listRecommendedTemplates(request) as Promise<McpServerListResult>,
+      (api) =>
+        api.mcp.listRecommendedTemplates(
+          request,
+        ) as Promise<McpServerListResult>,
     );
   } catch (error) {
     mcpLogger.debug(
@@ -79,7 +84,9 @@ export const listRecommendedMcpTemplatesServerFn = createServerFn({
       error,
     );
 
-    return getPublicBackendApi().mcp.listRecommendedTemplates(request) as Promise<McpServerListResult>;
+    return getPublicBackendApi().mcp.listRecommendedTemplates(
+      request,
+    ) as Promise<McpServerListResult>;
   }
 });
 
@@ -96,8 +103,6 @@ export const getMcpTemplateServerFn = createServerFn({
   const result = await withTokenRefresh(
     (api) => api.mcp.getTemplate(id) as Promise<McpServerTemplate | null>,
   );
-
-  mcpLogger.debug("getMcpTemplate result:", JSON.stringify(result, null, 2));
 
   return result;
 });

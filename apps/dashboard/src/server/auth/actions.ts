@@ -11,6 +11,7 @@ import config from "@/config";
 import {
   clearServerAuthCookies,
   getServerAccessToken,
+  getServerClientIp,
   getServerRefreshToken,
   setServerAuthCookies,
 } from "./cookies";
@@ -18,6 +19,7 @@ import {
   getServerBackendApi,
   refreshServerSession,
   withTokenRefresh,
+  type ClientGeoData,
 } from "@/server/shared/backend";
 import { authLogger } from "@/server/shared/logger";
 
@@ -35,16 +37,16 @@ function getErrorMeta(error: any) {
 
 export const requestLoginOtpServerFn = createServerFn({ method: "POST" }).handler(
   async ({ data }) => {
-    const input = data as LoginInput;
-    await getServerBackendApi().auth.login(input);
+    const { geo, ...rest } = data as LoginInput & { geo?: ClientGeoData };
+    await getServerBackendApi(geo).auth.login(rest);
     return { ok: true } as const;
   },
 );
 
 export const startSignupServerFn = createServerFn({ method: "POST" }).handler(
   async ({ data }) => {
-    const input = data as SignupInput;
-    await getServerBackendApi().auth.signup(input);
+    const { geo, ...rest } = data as SignupInput & { geo?: ClientGeoData };
+    await getServerBackendApi(geo).auth.signup(rest);
     return { ok: true } as const;
   },
 );
@@ -58,16 +60,25 @@ export const lookupAuthServerFn = createServerFn({ method: "POST" }).handler(
 
 export const resendAuthCodeServerFn = createServerFn({ method: "POST" }).handler(
   async ({ data }) => {
-    const input = data as LoginInput;
-    await getServerBackendApi().auth.resendCode(input.email);
+    const { geo, ...rest } = data as LoginInput & { geo?: ClientGeoData };
+    await getServerBackendApi(geo).auth.resendCode(rest.email);
     return { ok: true } as const;
   },
 );
 
 export const verifyEmailCodeServerFn = createServerFn({ method: "POST" }).handler(
   async ({ data }) => {
-    const input = data as VerifyEmailCodeInput;
-    const session = await getServerBackendApi().auth.verifyEmailCode(input);
+    const { geo, ...rest } = data as VerifyEmailCodeInput & { geo?: ClientGeoData };
+
+    const proxyIp = getServerClientIp();
+    console.log("[auth-geo] verifyEmailCode", {
+      geoReceived: geo ?? null,
+      geoIp: geo?.ip ?? null,
+      geoLocation: geo ? [geo.city, geo.region, geo.country].filter(Boolean).join(", ") : null,
+      proxyIp,
+    });
+
+    const session = await getServerBackendApi(geo).auth.verifyEmailCode(rest);
     setServerAuthCookies(session);
 
     authLogger.info("verifyEmailCode success", {
@@ -187,15 +198,25 @@ export const refreshSessionServerFn = createServerFn({ method: "POST" }).handler
 
 export const finalizeOauthSessionServerFn = createServerFn({ method: "POST" }).handler(
   async ({ data }) => {
-    const payload = data as {
+    const { geo, ...rest } = data as {
       accessToken: string;
       refreshToken?: string;
       user?: Partial<AuthSession["user"]>;
+      geo?: ClientGeoData;
     };
+    const payload = rest;
+
+    const geoHeaders: Record<string, string> = {};
+    if (geo?.ip) geoHeaders["X-Forwarded-For"] = geo.ip;
+    if (geo?.city || geo?.region || geo?.country) {
+      geoHeaders["X-Client-Location"] = [geo?.city, geo?.region, geo?.country].filter(Boolean).join(", ");
+    }
+    if (geo?.timezone) geoHeaders["X-Client-Timezone"] = geo.timezone;
 
     const backendWithOauthToken = createBackendApi({
       baseUrl: config.apiUrl,
       getAccessToken: () => payload.accessToken,
+      defaultHeaders: geoHeaders,
     });
 
     const currentSession = await backendWithOauthToken.auth.getCurrentSession();
