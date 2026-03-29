@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
@@ -150,6 +150,7 @@ function mapDomainToRow(domain: DomainRecord): Domain {
 
 function DomainsPage() {
   const { canWrite } = useWorkspaceRole();
+  const router = useRouter();
   const search = Route.useSearch();
   const { domains: domainsResult, projects, workspace } = Route.useLoaderData();
   const { settingsSnapshot } = RootRoute.useLoaderData() ?? ({} as any);
@@ -363,6 +364,7 @@ function DomainsPage() {
       } else {
         toast.success("Domain status refreshed");
       }
+      router.invalidate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to refresh domain status");
     }
@@ -394,6 +396,7 @@ function DomainsPage() {
       const createdRow = mapDomainToRow(created);
       setRows((prev) => [createdRow, ...prev]);
       toast.success("Domain added successfully");
+      router.invalidate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add domain");
     }
@@ -450,6 +453,7 @@ function DomainsPage() {
     );
 
     toast.success("Domain settings updated");
+    router.invalidate();
   }
 
   async function handleDeleteDomain(domain: Domain) {
@@ -467,6 +471,7 @@ function DomainsPage() {
 
     setRows((prev) => prev.filter((row) => row.id !== domain.id));
     toast.success("Domain deleted successfully");
+    router.invalidate();
   }
 
   return (

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { IpWhitelist } from "@/components/shared/ip-whitelist";
-import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -2400,6 +2400,7 @@ function Phase3Configure({
 
 function NewProjectPage() {
   const { canWrite } = useWorkspaceRole();
+  const router = useRouter();
   const navigate = useNavigate({ from: "/projects/new" });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const workspace = useMemo(() => {
@@ -3032,6 +3033,7 @@ function NewProjectPage() {
       } else {
         toast.success("Project saved. You can continue configuring it anytime.");
       }
+      router.invalidate();
       navigate({
         to: withWorkspaceQuery({
           pathname: deploy
@@ -3103,6 +3105,7 @@ function NewProjectPage() {
 
       const targetProjectId = created?.name?.trim() || normalizedName;
       toast.success("Database provisioning started");
+      router.invalidate();
       navigate({
         to: withWorkspaceQuery({
           pathname: `/projects/${encodeURIComponent(targetProjectId)}`,

@@ -3,6 +3,7 @@ import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import type { StripeCardElementOptions } from "@stripe/stripe-js";
 import { motion } from "motion/react";
+import { useRouter } from "@tanstack/react-router";
 import { cn } from "@brimble/ui";
 import { usePricing } from "@/contexts/pricing-context";
 import { ArrowSquareOut, CreditCard, PencilSimple } from "@phosphor-icons/react";
@@ -104,6 +105,7 @@ function BillingFormInner({
   workspaceTeam?: TeamDetails | null;
   onSpendingLimitSaved?: () => void | Promise<void>;
 }) {
+  const router = useRouter();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [changePlanOpen, setChangePlanOpen] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
@@ -203,6 +205,7 @@ function BillingFormInner({
         setIsEditingLimit(false);
         setSpendingLimitInput("");
         await onSpendingLimitSaved?.();
+        router.invalidate();
       },
       onError: (err) => {
         toast.error(err instanceof Error ? err.message : "Failed to update spending limit");
@@ -495,6 +498,7 @@ function BillingFormInner({
               onSuccess: () => {
                 toast.success("Subscription cancelled. You'll keep access until the end of this billing period.");
                 setCancelOpen(false);
+                router.invalidate();
               },
               onError: (err) => {
                 toast.error(err instanceof Error ? err.message : "Failed to cancel subscription");
@@ -750,7 +754,7 @@ function PaymentMethodRow({
             disabled={setDefaultMutation.isPending}
             onClick={() =>
               setDefaultMutation.mutate(method.id, {
-                onSuccess: () => toast.success("Default payment method updated"),
+                onSuccess: () => { toast.success("Default payment method updated"); router.invalidate(); },
                 onError: (err) =>
                   toast.error(err instanceof Error ? err.message : "Failed to set default"),
               })
@@ -767,7 +771,7 @@ function PaymentMethodRow({
           onClick={() =>
             canRemove
               ? removeMutation.mutate(method.id, {
-                  onSuccess: () => toast.success("Payment method removed"),
+                  onSuccess: () => { toast.success("Payment method removed"); router.invalidate(); },
                   onError: (err) =>
                     toast.error(err instanceof Error ? err.message : "Failed to remove payment method"),
                 })
@@ -804,6 +808,7 @@ function AddCardForm({
   onClose: () => void;
   replacePaymentMethodId?: string | null;
 }) {
+  const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
   const setupIntentMutation = useCreateSetupIntent();
@@ -904,6 +909,7 @@ function AddCardForm({
           ? "Payment method updated successfully"
           : "Payment method added successfully",
       );
+      router.invalidate();
       onClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to add payment method");

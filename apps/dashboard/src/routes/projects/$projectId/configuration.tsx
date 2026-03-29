@@ -1400,6 +1400,7 @@ function DangerSection({
               data: { projectId, workspace },
             });
             toast.success("Project deleted successfully");
+            router.invalidate();
             await navigate({
               to: "/projects",
               search: workspace ? { workspace } : {},
@@ -1731,6 +1732,7 @@ function ConfigurationPage() {
       }
 
       toast.success("Configuration saved. Redeploy started.");
+      router.invalidate();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to save configuration",
@@ -1752,6 +1754,7 @@ function ConfigurationPage() {
         },
       });
       toast.success("Build configuration saved. Redeploy started.");
+      router.invalidate();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -1793,6 +1796,7 @@ function ConfigurationPage() {
     }
 
     toast.success("Database configuration updated");
+    router.invalidate();
   }
 
   async function handleSubmitResources(values: ResourcesConfigValues) {
@@ -1823,6 +1827,7 @@ function ConfigurationPage() {
     });
 
     toast.success("Resources updated");
+    router.invalidate();
   }
 
   return (

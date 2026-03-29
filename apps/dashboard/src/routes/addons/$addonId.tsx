@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Copy, Check, ExternalLink, ChevronDown } from "lucide-react";
@@ -140,6 +140,7 @@ function chooseGithubInstallation(accounts: GithubAccount[], workspace?: string)
 
 function AddonDetailPage() {
   const { canWrite } = useWorkspaceRole();
+  const router = useRouter();
   const navigate = useNavigate();
   const search = Route.useSearch() as { workspace?: string };
   const { detail, relatedAddons } = Route.useLoaderData();
@@ -239,6 +240,7 @@ function AddonDetailPage() {
       }
 
       toast.success("MCP server deployment started");
+      router.invalidate();
       await navigate({
         to: "/projects/$projectId",
         params: { projectId },

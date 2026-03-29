@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import { Search, Plus, Pencil } from "lucide-react";
@@ -517,6 +517,7 @@ function EmptyState({ onCreateClick, canWrite = true }: { onCreateClick: () => v
 
 function ScalingPage() {
   const { canWrite } = useWorkspaceRole();
+  const router = useRouter();
   const { autoscalingEnabled } = usePlanGate();
   const { groups: serverGroups, workspace } = Route.useLoaderData();
   const saveScalingGroup = useServerFn(saveScalingGroupServerFn as any) as (args: {
@@ -617,6 +618,7 @@ function ScalingPage() {
       } else {
         toast.success(`Created ${saved.name}`);
       }
+      router.invalidate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save scaling group");
     } finally {
@@ -651,6 +653,7 @@ function ScalingPage() {
       });
 
       toast.success(`${nextActive ? "Enabled" : "Disabled"} ${group.name}`);
+      router.invalidate();
     } catch (error) {
       setRows((prev) =>
         prev.map((row) => {
@@ -694,6 +697,7 @@ function ScalingPage() {
       setRows((prev) => prev.filter((row) => row.id !== target.id));
       setDeleteTarget(null);
       toast.success(`Deleted ${target.name}`);
+      router.invalidate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete scaling group");
       throw error;

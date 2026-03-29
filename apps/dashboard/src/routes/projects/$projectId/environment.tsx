@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, ChevronDown, ChevronUp, Code2, Copy as CopyIcon, Eye, EyeOff, Lock, Search, X } from "lucide-react";
 import { Info } from "@phosphor-icons/react";
@@ -571,6 +571,7 @@ function EnvironmentLevelVarsSection({
   workspace?: string;
   canWrite: boolean;
 }) {
+  const router = useRouter();
   const [envVars, setEnvVars] = useState<EffectiveEnvironmentVariable[]>([]);
   const [envName, setEnvName] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -638,6 +639,7 @@ function EnvironmentLevelVarsSection({
       });
       setDraftRows([]);
       toast.success("Environment variables saved");
+      router.invalidate();
       void fetchVars();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save variables");
@@ -767,6 +769,7 @@ function EnvironmentLevelVarsSection({
 
 function EnvironmentPage() {
   const { project, workspace } = parentRoute.useLoaderData() as any;
+  const router = useRouter();
   const { initialTarget, initialSnapshot, targets: initialTargets } = Route.useLoaderData() as LoaderData;
   const { canWrite } = useWorkspaceRole();
 
@@ -875,6 +878,7 @@ function EnvironmentPage() {
         },
       });
       toast.success("Redeploy started");
+      router.invalidate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to start redeploy");
     }

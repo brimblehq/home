@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "motion/react";
 import { FolderOpen } from "@phosphor-icons/react";
@@ -221,6 +221,7 @@ function EnvironmentManagerModal({
   onActiveEnvironmentChange: (environmentId?: string) => void;
   canWrite?: boolean;
 }) {
+  const router = useRouter();
   const createEnvironment = useServerFn(
     createProjectEnvironmentServerFn as any,
   ) as (args: {
@@ -380,6 +381,7 @@ function EnvironmentManagerModal({
                     ),
                   );
                   toast.success("Environment updated");
+                  router.invalidate();
                 } else {
                   nextEnvironment = await createEnvironment({
                     data: {
@@ -392,6 +394,7 @@ function EnvironmentManagerModal({
                   onEnvironmentListChange([...environments, nextEnvironment]);
                   setSelectedEnvironmentId(nextEnvironment._id);
                   toast.success("Environment created");
+                  router.invalidate();
                 }
               } catch (error) {
                 toast.error(
@@ -507,6 +510,7 @@ function EnvironmentManagerModal({
 
                     setSelectedEnvironmentId(nextEnvironments[0]?._id ?? null);
                     toast.success("Environment deleted");
+                    router.invalidate();
                   } catch (error) {
                     toast.error(
                       error instanceof Error

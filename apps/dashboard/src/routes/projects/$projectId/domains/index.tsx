@@ -3,6 +3,7 @@ import {
   createFileRoute,
   getRouteApi,
   useNavigate,
+  useRouter,
   useRouterState,
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -182,6 +183,7 @@ function mapDomainToRow(
 
 function ProjectDomainsPage() {
   const { projectId } = Route.useParams();
+  const router = useRouter();
   const search = Route.useSearch();
   const { project, workspace } = parentRoute.useLoaderData() as any;
   const { settingsSnapshot } = (RootRoute.useLoaderData() ?? {}) as any;
@@ -309,6 +311,7 @@ function ProjectDomainsPage() {
       } else {
         toast.success("Domain status refreshed");
       }
+      router.invalidate();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -344,6 +347,7 @@ function ProjectDomainsPage() {
       });
       setRows((prev) => [mapDomainToRow(created, project.name), ...prev]);
       toast.success("Domain added successfully");
+      router.invalidate();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to add domain",
@@ -429,6 +433,7 @@ function ProjectDomainsPage() {
     if (nextProjectId && nextProjectId !== project.id) {
       setRows((prev) => prev.filter((row) => row.id !== input.domain.id));
       toast.success("Domain moved to another project");
+      router.invalidate();
       return;
     }
 
@@ -447,6 +452,7 @@ function ProjectDomainsPage() {
     );
 
     toast.success("Domain settings updated");
+    router.invalidate();
   }
 
   async function handleDeleteDomain(domain: Domain) {
@@ -464,6 +470,7 @@ function ProjectDomainsPage() {
 
     setRows((prev) => prev.filter((row) => row.id !== domain.id));
     toast.success("Domain deleted successfully");
+    router.invalidate();
   }
 
   return (
