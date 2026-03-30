@@ -150,9 +150,10 @@ export function OnboardingChecklist({
 
     async function fetchGitStatus(attempt = 0) {
       try {
-        const accounts = await listGithubAccounts();
+        const result = await listGithubAccounts();
         if (cancelled) return;
-        setHasConnectedGit(Array.isArray(accounts) && accounts.length > 0);
+        const accounts = Array.isArray(result) ? result : (result?.accounts ?? []);
+        setHasConnectedGit(accounts.length > 0);
       } catch {
         if (cancelled) return;
         // Retry up to 2 times with a delay — the initial call can fail

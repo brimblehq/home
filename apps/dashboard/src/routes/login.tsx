@@ -49,6 +49,7 @@ function EmailStep({
   onGithub,
   onGoogle,
   oauthLoadingProvider,
+  lastAuthMethod,
 }: {
   email: string;
   onEmailChange: (v: string) => void;
@@ -57,6 +58,7 @@ function EmailStep({
   onGithub: () => void;
   onGoogle: () => void;
   oauthLoadingProvider: OauthProvider | null;
+  lastAuthMethod?: AuthMethod | null;
 }) {
   return (
     <motion.div
@@ -75,6 +77,7 @@ function EmailStep({
           }
           onClick={onGithub}
           disabled={loading || oauthLoadingProvider !== null}
+          lastUsed={lastAuthMethod === "github"}
         />
         <AuthProviderButton
           icon={<GoogleIcon />}
@@ -85,6 +88,7 @@ function EmailStep({
           }
           onClick={onGoogle}
           disabled={loading || oauthLoadingProvider !== null}
+          lastUsed={lastAuthMethod === "google"}
         />
       </div>
 
@@ -111,12 +115,17 @@ function EmailStep({
         <button
           type="submit"
           disabled={!email.trim() || loading}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#006fff] text-sm font-semibold text-white shadow-[0_1px_2px_rgba(0,80,200,0.3)] transition-all hover:bg-[#0060e0] disabled:opacity-40 disabled:hover:bg-[#006fff]"
+          className="relative flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#006fff] text-sm font-semibold text-white shadow-[0_1px_2px_rgba(0,80,200,0.3)] transition-all hover:bg-[#0060e0] disabled:opacity-40 disabled:hover:bg-[#006fff]"
         >
           {loading ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
             "Continue with email"
+          )}
+          {lastAuthMethod === "email" && !loading && (
+            <span className="absolute right-3 rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] font-normal">
+              Last used
+            </span>
           )}
         </button>
       </form>
@@ -237,6 +246,19 @@ function getNextUrl(): string {
   }
 }
 
+const AUTH_METHOD_KEY = "brimble:last-auth-method";
+type AuthMethod = "github" | "google" | "email";
+
+function getLastAuthMethod(): AuthMethod | null {
+  try {
+    return localStorage.getItem(AUTH_METHOD_KEY) as AuthMethod | null;
+  } catch { return null; }
+}
+
+function saveLastAuthMethod(method: AuthMethod) {
+  try { localStorage.setItem(AUTH_METHOD_KEY, method); } catch {}
+}
+
 function LoginPage() {
   const haptics = useHaptics();
   const requestLoginOtp = useServerFn(requestLoginOtpServerFn);
@@ -250,6 +272,7 @@ function LoginPage() {
   otpRef.current = otp;
   const [loading, setLoading] = useState(false);
   const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OauthProvider | null>(null);
+  const [lastAuthMethod] = useState<AuthMethod | null>(() => getLastAuthMethod());
 
   async function handleOauth(provider: OauthProvider) {
     if (oauthLoadingProvider) {
@@ -278,6 +301,7 @@ function LoginPage() {
         },
       });
 
+      saveLastAuthMethod(provider);
       toast.success(
         `Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
       );
@@ -313,6 +337,7 @@ function LoginPage() {
     setLoading(true);
     try {
       const response = await verifyEmailCode({ data: { email, code, geo: await getClientGeo() } });
+      saveLastAuthMethod("email");
       toast.success(
         `Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
       );
@@ -381,6 +406,7 @@ function LoginPage() {
               void handleOauth("google");
             }}
             oauthLoadingProvider={oauthLoadingProvider}
+            lastAuthMethod={lastAuthMethod}
           />
         ) : (
           <OtpStep

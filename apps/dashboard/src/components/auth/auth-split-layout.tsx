@@ -126,21 +126,28 @@ export function AuthProviderButton({
   label,
   onClick,
   disabled,
+  lastUsed,
 }: {
   icon: ReactNode;
   label: string;
   onClick?: () => void;
   disabled?: boolean;
+  lastUsed?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex h-11 w-full items-center justify-center gap-2.5 rounded-[10px] border border-dash-border bg-dash-bg text-sm font-medium text-dash-text-strong shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:bg-dash-bg-elevated hover:shadow-[0_2px_4px_rgba(16,24,40,0.08)] dark:bg-dash-bg-elevated dark:hover:bg-[#333]"
+      className="relative flex h-11 w-full items-center justify-center gap-2.5 rounded-[10px] border border-dash-border bg-dash-bg text-sm font-medium text-dash-text-strong shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all hover:bg-dash-bg-elevated hover:shadow-[0_2px_4px_rgba(16,24,40,0.08)] dark:bg-dash-bg-elevated dark:hover:bg-[#333]"
     >
       {icon}
       <span>{label}</span>
+      {lastUsed && (
+        <span className="absolute right-3 rounded-full bg-dash-bg-elevated px-1.5 py-0.5 text-[10px] font-normal text-dash-text-faded dark:bg-[#444]">
+          Last used
+        </span>
+      )}
     </button>
   );
 }

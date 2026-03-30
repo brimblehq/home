@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type {
-  GithubAccount,
+  GithubAccountsResult,
   GithubRepoListResult,
   RepositoryMetadata,
   RepositoryRootDirResult,
@@ -34,7 +34,7 @@ export const listGithubAccountsServerFn = createServerFn({
 }).handler(async () => {
   return withTokenRefresh((api) =>
     api.repositories.listGithubAccounts(),
-  ) as Promise<GithubAccount[]>;
+  ) as Promise<GithubAccountsResult>;
 });
 
 export const listGithubReposServerFn = createServerFn({

@@ -2075,8 +2075,9 @@ export function UserProfileDrawer({
     }
 
     listGithubAccounts()
-      .then((accounts) => {
-        setIsGithubConnected(Array.isArray(accounts) && accounts.length > 0);
+      .then((result) => {
+        const accounts = Array.isArray(result) ? result : (result?.accounts ?? []);
+        setIsGithubConnected(accounts.length > 0);
       })
       .catch(() => {
         setIsGithubConnected(false);

@@ -265,7 +265,7 @@ function BuyDomainPage() {
 
       toast.success(`${purchaseTarget.domainName} purchased successfully!`);
       setPurchaseTarget(null);
-      router.invalidate();
+      await router.invalidate();
       const detailPath = `/domains/${encodeURIComponent(purchaseTarget.domainName)}`;
       router.navigate({
         to: withWorkspaceQuery({ pathname: detailPath, searchStr }) as any,
@@ -333,7 +333,7 @@ function BuyDomainPage() {
         </div>
         <GlossyButton
           variant="blue"
-          onClick={handleSearch}
+          onClick={() => handleSearch()}
           disabled={!query.trim() || searching}
           loading={searching}
           loadingLabel="Searching..."

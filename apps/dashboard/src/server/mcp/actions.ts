@@ -178,8 +178,6 @@ export const deployMcpTemplateServerFn = createServerFn({
       ...(teamId ? { teamId } : {}),
     };
 
-    mcpLogger.debug("deployMcpTemplate request body:", body);
-
     return api.projects.create(body as any);
   });
 });

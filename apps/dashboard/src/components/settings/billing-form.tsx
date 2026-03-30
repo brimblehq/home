@@ -252,14 +252,21 @@ function BillingFormInner({
               </button>
             )}
           </div>
-          <div className="absolute inset-y-0 right-0 hidden w-[96px] overflow-hidden sm:block">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_28%,#ffffff_0%,#ececec_48%,#f7f7f7_100%)] dark:bg-[radial-gradient(circle_at_72%_28%,rgba(72,121,248,0.18)_0%,rgba(28,33,42,0.65)_45%,rgba(18,20,24,0.95)_100%)]" />
+          <div className="absolute inset-y-0 right-0 hidden w-[96px] items-center justify-center sm:flex">
+            <img
+              src="/images/construction-trowel.svg"
+              alt=""
+              className="size-16 opacity-60 dark:invert dark:opacity-40"
+            />
           </div>
         </div>
       )}
 
       {/* ── Forecasted bill ── */}
-      <BillForecast stats={initialSubscriptionStats} />
+      <BillForecast
+        stats={initialSubscriptionStats}
+        hasOpenInvoice={invoices?.items?.some((inv) => inv.status === "open") ?? false}
+      />
 
       {/* ── Usage / Bill estimate ── */}
       <UsageSection estimate={estimate} spendingLimit={savedSpendingLimit} usage={currentUsage} />
@@ -552,8 +559,10 @@ function PaymentFailureBanner({
 
 function BillForecast({
   stats,
+  hasOpenInvoice,
 }: {
   stats?: SubscriptionStats | null;
+  hasOpenInvoice?: boolean;
 }) {
   if (!stats) return null;
 
@@ -566,22 +575,31 @@ function BillForecast({
     : null;
 
   return (
-    <div className="flex items-baseline justify-between gap-4">
-      <div className="flex flex-col gap-1">
-        <p className="text-xs font-medium uppercase tracking-wider text-dash-text-faded">
-          Forecasted bill
-        </p>
-        <p className="text-3xl font-semibold tabular-nums text-dash-text-strong">
-          {stats.total}
-        </p>
-      </div>
-      {nextPaymentDate && (
-        <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-col gap-1">
           <p className="text-xs font-medium uppercase tracking-wider text-dash-text-faded">
-            Next payment
+            Forecasted bill
           </p>
-          <p className="text-sm font-medium text-dash-text-body">
-            {nextPaymentDate}
+          <p className="text-3xl font-semibold tabular-nums text-dash-text-strong">
+            {stats.total}
+          </p>
+        </div>
+        {nextPaymentDate && (
+          <div className="flex flex-col items-end gap-1">
+            <p className="text-xs font-medium uppercase tracking-wider text-dash-text-faded">
+              Next payment
+            </p>
+            <p className="text-sm font-medium text-dash-text-body">
+              {nextPaymentDate}
+            </p>
+          </div>
+        )}
+      </div>
+      {hasOpenInvoice && (
+        <div className="rounded-[4px] bg-[#f5a623]/[0.06] px-3 py-2 dark:bg-[#f5a623]/[0.08]">
+          <p className="text-xs leading-relaxed text-[#b37a10] dark:text-[#f5a623]">
+            You have an outstanding invoice. Please clear it before your next billing cycle to avoid service interruption.
           </p>
         </div>
       )}

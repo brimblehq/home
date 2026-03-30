@@ -2620,10 +2620,11 @@ function NewProjectPage() {
       if (!options?.silent) {
         setGithubAccountsLoading(true);
       }
-      const items = await listGithubAccounts();
-      setGithubAccounts(Array.isArray(items) ? items : []);
+      const result = await listGithubAccounts();
+      const items = Array.isArray(result) ? result : (result?.accounts ?? []);
+      setGithubAccounts(items);
       setGithubAccountsChecked(true);
-      if (Array.isArray(items) && items.length > 0) {
+      if (items.length > 0) {
         setGithubConnectError(null);
         setConnectedProviders((prev) => {
           const next = new Set(prev);
@@ -2631,7 +2632,7 @@ function NewProjectPage() {
           return next;
         });
       }
-      return Array.isArray(items) ? items : [];
+      return items;
     } catch (error) {
       if (!options?.silent) {
         toast.error(error instanceof Error ? error.message : "Failed to load GitHub accounts");
@@ -3033,7 +3034,7 @@ function NewProjectPage() {
       } else {
         toast.success("Project saved. You can continue configuring it anytime.");
       }
-      router.invalidate();
+      await router.invalidate();
       navigate({
         to: withWorkspaceQuery({
           pathname: deploy
@@ -3105,7 +3106,7 @@ function NewProjectPage() {
 
       const targetProjectId = created?.name?.trim() || normalizedName;
       toast.success("Database provisioning started");
-      router.invalidate();
+      await router.invalidate();
       navigate({
         to: withWorkspaceQuery({
           pathname: `/projects/${encodeURIComponent(targetProjectId)}`,

@@ -10,6 +10,11 @@ export interface GithubAccount {
   type?: "User" | "Organization" | string;
 }
 
+export interface GithubAccountsResult {
+  accounts: GithubAccount[];
+  authenticated: boolean;
+}
+
 export interface GithubRepoListItem {
   id?: number | string;
   name: string;
@@ -59,7 +64,7 @@ export interface RepositoryRootDirResult {
 }
 
 export interface RepositoriesApi {
-  listGithubAccounts(): Promise<GithubAccount[]>;
+  listGithubAccounts(): Promise<GithubAccountsResult>;
   listGithubRepos(input?: {
     q?: string;
     page?: number;
@@ -102,6 +107,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
 
       const root = response?.data?.data ?? response?.data ?? response ?? [];
       const rootRecord = asRecord(root);
+      const authenticated = rootRecord?.authenticated === true;
       const items = Array.isArray(root)
         ? root
         : Array.isArray(rootRecord?.accounts)
@@ -167,7 +173,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
         }
       }
 
-      return [...deduped.values()];
+      return { accounts: [...deduped.values()], authenticated };
     },
     async listGithubRepos(input) {
       const response = await client.request<any>("/core/v1/repos/github", {

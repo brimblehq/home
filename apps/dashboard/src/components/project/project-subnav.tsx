@@ -447,7 +447,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
             toast.success(`${projectName} deleted successfully`, {
               id: "delete-project",
             });
-            router.invalidate();
+            await router.invalidate();
 
             const nextUrl = withWorkspaceQuery({
               pathname: "/projects",

@@ -11,7 +11,7 @@ import { AddonCard } from "../../components/shared/addon-card";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { startOauthPopup } from "@/lib/auth/oauth-popup";
 import type { McpServerListResult, McpServerTemplate } from "@/backend/mcp";
-import type { GithubAccount } from "@/backend/repositories";
+import type { GithubAccount, GithubAccountsResult } from "@/backend/repositories";
 import { finalizeOauthSessionServerFn } from "@/server/auth/actions";
 import { deployMcpTemplateServerFn, getMcpTemplateServerFn, listMcpTemplatesServerFn } from "@/server/mcp/actions";
 import { listGithubAccountsServerFn } from "@/server/repositories/actions";
@@ -146,7 +146,7 @@ function AddonDetailPage() {
   const { detail, relatedAddons } = Route.useLoaderData();
   const [deploying, setDeploying] = useState(false);
   const [authEnabled, setAuthEnabled] = useState(true);
-  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<GithubAccount[]>;
+  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<GithubAccountsResult>;
   const finalizeOauthSession = useServerFn(finalizeOauthSessionServerFn as any) as (args: {
     data: {
       accessToken: string;
@@ -184,8 +184,8 @@ function AddonDetailPage() {
 
 
   async function ensureGithubAccounts() {
-    let accounts = await listGithubAccounts();
-    if (accounts.length > 0) return accounts;
+    let result = await listGithubAccounts();
+    if (result.accounts.length > 0 && result.authenticated) return result.accounts;
 
     const oauth = await startOauthPopup("github");
     await finalizeOauthSession({
@@ -204,8 +204,8 @@ function AddonDetailPage() {
       },
     });
 
-    accounts = await listGithubAccounts();
-    return accounts;
+    result = await listGithubAccounts();
+    return result.accounts;
   }
 
   async function handleDeployServer() {
@@ -240,7 +240,7 @@ function AddonDetailPage() {
       }
 
       toast.success("MCP server deployment started");
-      router.invalidate();
+      await router.invalidate();
       await navigate({
         to: "/projects/$projectId",
         params: { projectId },
