@@ -2634,6 +2634,7 @@ function NewProjectPage() {
       }
       return items;
     } catch (error) {
+      setGithubAccountsChecked(true);
       if (!options?.silent) {
         toast.error(error instanceof Error ? error.message : "Failed to load GitHub accounts");
       }
