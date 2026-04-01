@@ -12,12 +12,17 @@ export interface Project {
   domain?: string;
   framework?: string;
   frameworkLogo?: string;
+  dbImage?: {
+    image_url?: string;
+    name?: string;
+    [key: string]: unknown;
+  } | null;
 }
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Star, MoreVertical } from "lucide-react";
+import { Database, Star, MoreVertical } from "lucide-react";
 import { getWorkspaceFromSearch } from "@/utils/topbar-navigation";
 import { ProjectCardTags } from "@/components/projects/project-card-tags";
 import { TagAssignmentPopover } from "@/components/projects/tag-assignment-popover";
@@ -98,6 +103,35 @@ function ProjectIdentityIcon({ project }: { project: Project }) {
   useEffect(() => {
     setCandidateIndex(0);
   }, [project.name, project.domain, project.frameworkLogo]);
+
+  const isDatabaseProject = project.serviceType === "database";
+
+  if (isDatabaseProject) {
+    const imageUrl = project.dbImage?.image_url as string | undefined;
+    if (imageUrl) {
+      const isSvgString =
+        imageUrl.trim().startsWith("<svg") || imageUrl.includes("<svg");
+
+      if (isSvgString) {
+        return (
+          <div
+            className="flex size-6 shrink-0 items-center justify-center dark:invert [&_svg]:size-full"
+            dangerouslySetInnerHTML={{ __html: imageUrl }}
+          />
+        );
+      }
+
+      return (
+        <img
+          src={imageUrl}
+          alt={project.dbImage?.name || "Database"}
+          className="size-6 shrink-0 rounded-sm object-contain dark:invert"
+        />
+      );
+    }
+
+    return <Database className="size-6 shrink-0 text-dash-text-faded" />;
+  }
 
   const iconSrc = candidates[candidateIndex];
   const invertInDarkMode = iconSrc ? isBrimbleIconSource(iconSrc) : false;

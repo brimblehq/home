@@ -183,6 +183,7 @@ function DashboardHome() {
     domain: project.domain || project.previewUrl || project.domains?.[0]?.name,
     framework: project.framework?.toLowerCase(),
     frameworkLogo: project.framework ? (frameworkLogos as Record<string, string>)?.[project.framework.toLowerCase()] : undefined,
+    dbImage: project.dbImage,
   }));
 
   return (

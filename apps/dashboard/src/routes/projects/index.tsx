@@ -67,6 +67,7 @@ function mapBackendProject(
     domain: project.domain || project.previewUrl || project.domains?.[0]?.name,
     framework,
     frameworkLogo: framework && frameworkLogoMap ? frameworkLogoMap.get(framework) : undefined,
+    dbImage: project.dbImage,
   };
 }
 

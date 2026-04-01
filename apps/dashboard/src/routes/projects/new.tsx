@@ -376,22 +376,22 @@ function Phase1SourceType({
   onSelect: (type: SourceType) => void;
 }) {
   const haptics = useHaptics();
-  const sourceCards: { type: SourceType; Icon: IconComponent; title: string; desc: string }[] = [
+  const sourceCards: { type: SourceType; icon: string; title: string; desc: string }[] = [
     ...gitProviders.map((p) => ({
       type: p.id as SourceType,
-      Icon: p.Icon,
+      icon: "/images/icons8-git.svg",
       title: `Import from ${p.name}`,
       desc: p.description,
     })),
     {
       type: SourceType.Docker,
-      Icon: Cube,
+      icon: "/images/icons8-container.svg",
       title: "Deploy Docker image",
       desc: "Deploy from a public or private registry",
     },
     {
       type: SourceType.Database,
-      Icon: Database,
+      icon: "/images/icons8-database.svg",
       title: "Provision a Database",
       desc: "Deploy a managed database instance",
     },
@@ -420,7 +420,7 @@ function Phase1SourceType({
             }}
             className="group flex flex-col gap-3 rounded-[4px] border-[0.5px] border-dash-border p-5 text-left transition-all hover:border-dash-text-faded hover:bg-dash-bg-elevated"
           >
-            <card.Icon className="size-5 text-dash-text-body" />
+            <img src={card.icon} alt="" className="size-5 brightness-0 dark:brightness-200" />
             <div>
               <div className="text-sm font-medium text-dash-text-strong">
                 {card.title}
