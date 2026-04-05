@@ -1,7 +1,7 @@
 import { Realtime } from "ably";
 import config from "@/config";
 
-export type OauthProvider = "github" | "google";
+export type OauthProvider = "github" | "google" | "gitlab";
 
 export interface OauthAuthEventPayload {
   access_token: string;

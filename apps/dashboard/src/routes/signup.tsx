@@ -40,6 +40,14 @@ function GoogleIcon() {
   );
 }
 
+function GitlabIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="currentColor">
+      <path d="M23.955 13.587l-1.342-4.135-2.664-8.189a.455.455 0 0 0-.867 0L16.418 9.45H7.582L4.918 1.263a.455.455 0 0 0-.867 0L1.387 9.452.045 13.587a.924.924 0 0 0 .331 1.023L12 23.054l11.624-8.443a.92.92 0 0 0 .331-1.024" />
+    </svg>
+  );
+}
+
 /* ─── Step 1: Enter details ─── */
 
 function DetailsStep({
@@ -51,6 +59,7 @@ function DetailsStep({
   loading,
   onGithub,
   onGoogle,
+  onGitlab,
   oauthLoadingProvider,
 }: {
   email: string;
@@ -61,6 +70,7 @@ function DetailsStep({
   loading: boolean;
   onGithub: () => void;
   onGoogle: () => void;
+  onGitlab: () => void;
   oauthLoadingProvider: OauthProvider | null;
 }) {
   return (
@@ -89,6 +99,16 @@ function DetailsStep({
               : "Sign up with Google"
           }
           onClick={onGoogle}
+          disabled={loading || oauthLoadingProvider !== null}
+        />
+        <AuthProviderButton
+          icon={<GitlabIcon />}
+          label={
+            oauthLoadingProvider === "gitlab"
+              ? "Connecting GitLab..."
+              : "Sign up with GitLab"
+          }
+          onClick={onGitlab}
           disabled={loading || oauthLoadingProvider !== null}
         />
       </div>
@@ -392,6 +412,9 @@ function SignupPage() {
             }}
             onGoogle={() => {
               void handleOauth("google");
+            }}
+            onGitlab={() => {
+              void handleOauth("gitlab");
             }}
             oauthLoadingProvider={oauthLoadingProvider}
           />

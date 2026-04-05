@@ -30,7 +30,7 @@ import { WarningModal } from "./warning-modal";
 import { GlossyButton } from "./glossy-button";
 import { OtpInput } from "../auth/auth-split-layout";
 import { Turnstile } from "@marsidev/react-turnstile";
-import { CheckCircle, XCircle, TreeStructure } from "@phosphor-icons/react";
+import { CheckCircle, XCircle, TreeStructure, CopySimple } from "@phosphor-icons/react";
 import {
   confirmDeleteAccountServerFn,
   logoutServerFn,
@@ -77,7 +77,8 @@ import {
   updateMemberRoleServerFn,
   transferOwnershipServerFn,
 } from "@/server/teams/actions";
-import { listGithubAccountsServerFn } from "@/server/repositories/actions";
+import { listGithubAccountsServerFn, listGitlabAccountsServerFn } from "@/server/repositories/actions";
+import config from "@/config";
 import type {
   SettingsSidebarSnapshot,
   SettingsWebhookGroup as ServerWebhookGroup,
@@ -88,7 +89,6 @@ import type {
   TeamOwnershipTransfer,
 } from "@/backend/teams";
 import { normalizeMemberRole as normalizeRole } from "@/utils/workspace-role";
-import config from "@/config";
 import {
   mapSettingsSnapshotToDrawerProfile,
   maskSecretWithAsterisks,
@@ -396,6 +396,9 @@ function ProfileForm({
   isGithubConnected,
   onDisconnectGithub,
   onConnectGithub,
+  isGitlabConnected,
+  onDisconnectGitlab,
+  onConnectGitlab,
   onRequestDeleteAccountOtp,
   onVerifyDeleteAccountOtp,
   onDeleteAccount,
@@ -421,6 +424,9 @@ function ProfileForm({
   isGithubConnected: boolean;
   onDisconnectGithub?: () => Promise<void> | void;
   onConnectGithub?: () => void;
+  isGitlabConnected: boolean;
+  onDisconnectGitlab?: () => Promise<void> | void;
+  onConnectGitlab?: () => void;
   onRequestDeleteAccountOtp?: (turnstileToken?: string) => Promise<void> | void;
   onVerifyDeleteAccountOtp?: (code: string) => Promise<void> | void;
   onDeleteAccount?: () => Promise<void> | void;
@@ -431,6 +437,7 @@ function ProfileForm({
   const [lastName, setLastName] = useState(profile.lastName);
   const [username, setUsername] = useState(profile.username);
   const [email, setEmail] = useState(profile.email);
+  const [emailCopied, setEmailCopied] = useState(false);
   const [buildsEnabled, setBuildsEnabled] = useState(
     profile.buildsEnabled ?? true,
   );
@@ -706,12 +713,26 @@ function ProfileForm({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className={cn(inputClass, "text-dash-text-faded")}
-          />
+          <div className="relative flex-1">
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className={cn(inputClass, "pr-9 text-dash-text-faded")}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(email);
+                setEmailCopied(true);
+                setTimeout(() => setEmailCopied(false), 2000);
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dash-text-faded transition-colors hover:text-dash-text-strong"
+              title="Copy email"
+            >
+              {emailCopied ? <CheckCircle className="size-4 text-[#34d399]" /> : <CopySimple className="size-4" />}
+            </button>
+          </div>
           <button
             onClick={() => onChangeEmail?.(email)}
             className="shrink-0 text-sm font-medium tracking-[-0.0224px] text-dash-text-strong transition-colors hover:text-dash-text-body"
@@ -795,6 +816,9 @@ function ProfileForm({
         isGithubConnected={isGithubConnected}
         onDisconnectGithub={onDisconnectGithub}
         onConnectGithub={onConnectGithub}
+        isGitlabConnected={isGitlabConnected}
+        onDisconnectGitlab={onDisconnectGitlab}
+        onConnectGitlab={onConnectGitlab}
         onRequestDeleteAccountOtp={onRequestDeleteAccountOtp}
         onVerifyDeleteAccountOtp={onVerifyDeleteAccountOtp}
         onDeleteAccount={onDeleteAccount}
@@ -808,6 +832,9 @@ function DangerZone({
   isGithubConnected,
   onDisconnectGithub,
   onConnectGithub,
+  isGitlabConnected,
+  onDisconnectGitlab,
+  onConnectGitlab,
   onRequestDeleteAccountOtp,
   onVerifyDeleteAccountOtp,
   onDeleteAccount,
@@ -816,6 +843,9 @@ function DangerZone({
   isGithubConnected: boolean;
   onDisconnectGithub?: () => Promise<void> | void;
   onConnectGithub?: () => void;
+  isGitlabConnected: boolean;
+  onDisconnectGitlab?: () => Promise<void> | void;
+  onConnectGitlab?: () => void;
   onRequestDeleteAccountOtp?: (turnstileToken?: string) => Promise<void> | void;
   onVerifyDeleteAccountOtp?: (code: string) => Promise<void> | void;
   onDeleteAccount?: () => Promise<void> | void;
@@ -830,9 +860,11 @@ function DangerZone({
   const hasRemainingProjects = normalizedProjectCount > 0;
   const projectsLabel = normalizedProjectCount === 1 ? "project" : "projects";
   const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const [disconnectGitlabOpen, setDisconnectGitlabOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteStep, setDeleteStep] = useState<"confirm" | "otp">("confirm");
   const [disconnectConfirm, setDisconnectConfirm] = useState("");
+  const [disconnectGitlabConfirm, setDisconnectGitlabConfirm] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [isTurnstileReady, setIsTurnstileReady] = useState(false);
   const [deleteOtp, setDeleteOtp] = useState("");
@@ -873,6 +905,29 @@ function DangerZone({
           </GlossyButton>
         ) : (
           <GlossyButton variant="black" onClick={() => onConnectGithub?.()}>
+            Connect
+          </GlossyButton>
+        )}
+      </div>
+
+      {/* GitLab connection */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium text-dash-text-strong">
+            {isGitlabConnected ? "Disconnect GitLab" : "Connect GitLab"}
+          </span>
+          <span className="text-xs text-dash-text-faded">
+            {isGitlabConnected
+              ? "You won't be able to deploy from GitLab until you reconnect."
+              : "Connect your GitLab account to deploy from Git."}
+          </span>
+        </div>
+        {isGitlabConnected ? (
+          <GlossyButton variant="red" onClick={() => setDisconnectGitlabOpen(true)}>
+            Disconnect
+          </GlossyButton>
+        ) : (
+          <GlossyButton variant="black" onClick={() => onConnectGitlab?.()}>
             Connect
           </GlossyButton>
         )}
@@ -919,6 +974,38 @@ function DangerZone({
             type="text"
             value={disconnectConfirm}
             onChange={(e) => setDisconnectConfirm(e.target.value)}
+            placeholder="DISCONNECT"
+            className="w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]"
+          />
+        </div>
+      </WarningModal>
+
+      <WarningModal
+        open={disconnectGitlabOpen}
+        onOpenChange={(open) => {
+          setDisconnectGitlabOpen(open);
+          if (!open) setDisconnectGitlabConfirm("");
+        }}
+        title="Disconnect GitLab?"
+        description="This will remove your GitLab connection. All GitLab-based deployments will stop working until you reconnect your account."
+        confirmLabel="Disconnect GitLab"
+        confirmDisabled={disconnectGitlabConfirm !== "DISCONNECT"}
+        onConfirm={async () => {
+          await onDisconnectGitlab?.();
+        }}
+      >
+        <div className="flex flex-col gap-2 text-left">
+          <label className="text-sm leading-5 text-dash-text-faded">
+            Type{" "}
+            <span className="font-medium text-dash-text-strong">
+              DISCONNECT
+            </span>{" "}
+            to confirm
+          </label>
+          <input
+            type="text"
+            value={disconnectGitlabConfirm}
+            onChange={(e) => setDisconnectGitlabConfirm(e.target.value)}
             placeholder="DISCONNECT"
             className="w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]"
           />
@@ -1935,7 +2022,11 @@ export function UserProfileDrawer({
     disconnectGitProviderServerFn as any,
   ) as (args: { data: { provider: string } }) => Promise<{ ok: true }>;
   const listGithubAccounts = useServerFn(listGithubAccountsServerFn);
+  const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn);
   const [isGithubConnected, setIsGithubConnected] = useState<boolean | null>(
+    null,
+  );
+  const [isGitlabConnected, setIsGitlabConnected] = useState<boolean | null>(
     null,
   );
   const decryptApiKey = useServerFn(
@@ -2070,18 +2161,29 @@ export function UserProfileDrawer({
   }, [open, refreshSettings, snapshot, queryClient]);
 
   useEffect(() => {
-    if (!open || isGithubConnected !== null) {
-      return;
+    if (!open) return;
+
+    if (isGithubConnected === null) {
+      listGithubAccounts()
+        .then((result) => {
+          const accounts = Array.isArray(result) ? result : (result?.accounts ?? []);
+          setIsGithubConnected(accounts.length > 0);
+        })
+        .catch(() => {
+          setIsGithubConnected(false);
+        });
     }
 
-    listGithubAccounts()
-      .then((result) => {
-        const accounts = Array.isArray(result) ? result : (result?.accounts ?? []);
-        setIsGithubConnected(accounts.length > 0);
-      })
-      .catch(() => {
-        setIsGithubConnected(false);
-      });
+    if (isGitlabConnected === null) {
+      listGitlabAccounts()
+        .then((result) => {
+          const accounts = Array.isArray(result) ? result : (result?.accounts ?? []);
+          setIsGitlabConnected(accounts.length > 0);
+        })
+        .catch(() => {
+          setIsGitlabConnected(false);
+        });
+    }
   }, [open]);
 
   useEffect(() => {
@@ -2519,6 +2621,64 @@ export function UserProfileDrawer({
                         window.clearInterval(interval);
                         if (isGithubConnected === null) {
                           setIsGithubConnected(false);
+                        }
+                      }, 90_000);
+                    }}
+                    isGitlabConnected={isGitlabConnected ?? true}
+                    onDisconnectGitlab={async () => {
+                      try {
+                        await disconnectGitProvider({
+                          data: { provider: "gitlab" },
+                        });
+                        setIsGitlabConnected(false);
+                        window.dispatchEvent(
+                          new Event("brimble:git-connection-changed"),
+                        );
+                        toast.success("GitLab disconnected successfully");
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to disconnect GitLab",
+                        );
+                      }
+                    }}
+                    onConnectGitlab={() => {
+                      const connectUrl = `${config.authApiUrl}/connect/gitlab`;
+                      const popup = window.open(
+                        connectUrl,
+                        "_blank",
+                        "width=900,height=760",
+                      );
+
+                      if (!popup) {
+                        toast.error(
+                          "Popup blocked. Please allow popups and try again.",
+                        );
+                        return;
+                      }
+
+                      toast.success(
+                        "Complete the GitLab authorization in the popup, then refresh.",
+                      );
+                      setIsGitlabConnected(null);
+                      const interval = window.setInterval(async () => {
+                        try {
+                          const accounts = await listGitlabAccounts();
+                          if (Array.isArray(accounts) && accounts.length > 0) {
+                            setIsGitlabConnected(true);
+                            window.clearInterval(interval);
+                            window.dispatchEvent(
+                              new Event("brimble:git-connection-changed"),
+                            );
+                            toast.success("GitLab connected successfully");
+                          }
+                        } catch {}
+                      }, 3000);
+                      window.setTimeout(() => {
+                        window.clearInterval(interval);
+                        if (isGitlabConnected === null) {
+                          setIsGitlabConnected(false);
                         }
                       }, 90_000);
                     }}
