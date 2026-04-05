@@ -17,6 +17,7 @@ import {
   Copy,
   ShieldAlert,
   HardDrive,
+  ArrowUpRight,
 } from "lucide-react";
 import { GithubLogo, Cube, Database, CircleNotch } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
@@ -371,10 +372,12 @@ function SummaryChip({
   icon,
   label,
   onChangeClick,
+  externalUrl,
 }: {
   icon: React.ReactNode;
   label: string;
   onChangeClick: () => void;
+  externalUrl?: string;
 }) {
   return (
     <motion.div
@@ -386,6 +389,17 @@ function SummaryChip({
       <span className="inline-flex items-center gap-1.5 rounded-full border border-dash-border-soft bg-dash-bg-elevated px-3 py-1 text-xs text-dash-text-strong">
         {icon}
         {label}
+        {externalUrl && (
+          <a
+            href={externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-0.5 text-dash-text-faded transition-colors hover:text-dash-text-strong"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ArrowUpRight className="size-3" />
+          </a>
+        )}
       </span>
       <button
         onClick={onChangeClick}
@@ -3461,6 +3475,13 @@ function NewProjectPage() {
                   : sourceName
               }
               onChangeClick={() => handleChangePhase(2)}
+              externalUrl={
+                sourceType === SourceType.Github
+                  ? `https://github.com/${sourceName}`
+                  : sourceType === SourceType.Gitlab
+                    ? `https://gitlab.com/${sourceName}`
+                    : undefined
+              }
             />
           </div>
         ) : (
