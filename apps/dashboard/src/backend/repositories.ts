@@ -15,6 +15,10 @@ export interface GithubAccountsResult {
   authenticated: boolean;
 }
 
+export interface GithubInstallUrlResult {
+  url: string;
+}
+
 export interface GithubRepoListItem {
   id?: number | string;
   name: string;
@@ -69,6 +73,7 @@ export interface RepositoryRootDirResult {
 }
 
 export interface RepositoriesApi {
+  getGithubInstallUrl(): Promise<GithubInstallUrlResult>;
   listGithubAccounts(): Promise<GithubAccountsResult>;
   listGithubRepos(input?: {
     q?: string;
@@ -122,6 +127,21 @@ function mapRepositoryFrameworkDefaults(value: unknown): RepositoryFrameworkDefa
 
 export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
   return {
+    async getGithubInstallUrl() {
+      const response = await client.request<any>("/auth/github/install-url", {
+        method: "GET",
+      });
+
+      const root = response?.data?.data ?? response?.data ?? response ?? {};
+      const row = asRecord(root);
+      const url = row ? pickString(row, "url") : undefined;
+
+      if (!url) {
+        throw new Error("Unable to initialize GitHub install URL. Please try again.");
+      }
+
+      return { url } satisfies GithubInstallUrlResult;
+    },
     async listGithubAccounts() {
       const response = await client.request<any>("/core/v1/accounts/github", {
         method: "GET",

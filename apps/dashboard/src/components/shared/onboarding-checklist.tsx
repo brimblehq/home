@@ -2,13 +2,17 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 import { SUBSCRIPTION_PLAN_TYPE } from "@brimble/models/dist/enum";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { useProfileDrawer } from "@/contexts/profile-drawer-context";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import { ProfileTab } from "@/types/enums";
-import { listGithubAccountsServerFn } from "@/server/repositories/actions";
+import {
+  getGithubInstallUrlServerFn,
+  listGithubAccountsServerFn,
+} from "@/server/repositories/actions";
 import { getWorkspaceTeamMembersServerFn } from "@/server/teams/actions";
 import { updateSettingsFollowedXServerFn } from "@/server/settings/actions";
 import type { Project } from "@/backend/projects";
@@ -33,6 +37,7 @@ function buildTasks({
   hasFollowed,
   hasPaymentCard,
   onAddPaymentCard,
+  onConnectGit,
   isTeamWorkspace,
   hasTeamMembers,
   showInviteTeamMemberTask,
@@ -43,6 +48,7 @@ function buildTasks({
   hasFollowed: boolean;
   hasPaymentCard: boolean;
   onAddPaymentCard?: () => void;
+  onConnectGit?: () => void;
   isTeamWorkspace: boolean;
   hasTeamMembers: boolean;
   showInviteTeamMemberTask: boolean;
@@ -51,8 +57,7 @@ function buildTasks({
     {
       label: "Connect Git",
       done: hasGit,
-      action: "https://github.com/apps/brimble-build/installations/new",
-      external: true,
+      onClick: onConnectGit,
     },
     { label: "Deploy a project", done: hasProject, action: "/projects/new" },
   ];
@@ -109,10 +114,13 @@ export function OnboardingChecklist({
   const updateFollowedX = useServerFn(updateSettingsFollowedXServerFn as any) as (args: {
     data: { followed_x: boolean };
   }) => Promise<{ ok: true }>;
+  const getGithubInstallUrl = useServerFn(getGithubInstallUrlServerFn as any) as () => Promise<{ url: string }>;
   const getTeamMembers = useServerFn(getWorkspaceTeamMembersServerFn as any) as (args: {
     data: { workspace: string };
   }) => Promise<TeamDetails>;
-  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<unknown[]>;
+  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<
+    unknown[] | { accounts?: unknown[] }
+  >;
   const activeWorkspaceSlug = (() => {
     const params = new URLSearchParams(searchStr || "");
     const workspace = params.get("workspace")?.trim();
@@ -122,8 +130,6 @@ export function OnboardingChecklist({
   const [teamMembersFetchFailedByWorkspace, setTeamMembersFetchFailedByWorkspace] = useState<Record<string, true>>({});
   const [hasConnectedGit, setHasConnectedGit] = useState<boolean | null>(null);
   const [gitRefreshKey, setGitRefreshKey] = useState(0);
-  const workspaceCacheKey = activeWorkspaceSlug ?? "__personal__";
-
   const projectList = Array.isArray(projects) ? projects : [];
   const deployableProjects = projectList.filter((project) => {
     const serviceType = String(project.serviceType ?? "").toLowerCase();
@@ -263,6 +269,33 @@ export function OnboardingChecklist({
         hasFollowed,
         hasPaymentCard,
         onAddPaymentCard: () => profileDrawer.open(ProfileTab.Billing),
+        onConnectGit: () => {
+          void (async () => {
+            try {
+              const install = await getGithubInstallUrl();
+              const installUrl = install?.url?.trim();
+              if (!installUrl) {
+                throw new Error("Unable to get GitHub install link.");
+              }
+
+              const popup = window.open(
+                installUrl,
+                "_blank",
+                "width=900,height=760",
+              );
+
+              if (!popup) {
+                throw new Error("Popup blocked. Please allow popups and try again.");
+              }
+            } catch (error) {
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Failed to open GitHub install page",
+              );
+            }
+          })();
+        },
         isTeamWorkspace: isTeamWorkspace ?? false,
         hasTeamMembers,
         showInviteTeamMemberTask,
@@ -274,6 +307,7 @@ export function OnboardingChecklist({
       isFreePlan,
       hasFollowed,
       hasPaymentCard,
+      getGithubInstallUrl,
       isTeamWorkspace,
       hasTeamMembers,
       showInviteTeamMemberTask,

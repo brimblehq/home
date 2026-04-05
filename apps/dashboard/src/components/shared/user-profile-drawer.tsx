@@ -30,7 +30,12 @@ import { WarningModal } from "./warning-modal";
 import { GlossyButton } from "./glossy-button";
 import { OtpInput } from "../auth/auth-split-layout";
 import { Turnstile } from "@marsidev/react-turnstile";
-import { CheckCircle, XCircle, TreeStructure, CopySimple } from "@phosphor-icons/react";
+import {
+  CheckCircle,
+  XCircle,
+  TreeStructure,
+  CopySimple,
+} from "@phosphor-icons/react";
 import {
   confirmDeleteAccountServerFn,
   logoutServerFn,
@@ -77,7 +82,11 @@ import {
   updateMemberRoleServerFn,
   transferOwnershipServerFn,
 } from "@/server/teams/actions";
-import { listGithubAccountsServerFn, listGitlabAccountsServerFn } from "@/server/repositories/actions";
+import {
+  getGithubInstallUrlServerFn,
+  listGithubAccountsServerFn,
+  listGitlabAccountsServerFn,
+} from "@/server/repositories/actions";
 import config from "@/config";
 import type {
   SettingsSidebarSnapshot,
@@ -730,7 +739,11 @@ function ProfileForm({
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dash-text-faded transition-colors hover:text-dash-text-strong"
               title="Copy email"
             >
-              {emailCopied ? <CheckCircle className="size-4 text-[#34d399]" /> : <CopySimple className="size-4" />}
+              {emailCopied ? (
+                <CheckCircle className="size-4 text-[#34d399]" />
+              ) : (
+                <CopySimple className="size-4" />
+              )}
             </button>
           </div>
           <button
@@ -923,7 +936,10 @@ function DangerZone({
           </span>
         </div>
         {isGitlabConnected ? (
-          <GlossyButton variant="red" onClick={() => setDisconnectGitlabOpen(true)}>
+          <GlossyButton
+            variant="red"
+            onClick={() => setDisconnectGitlabOpen(true)}
+          >
             Disconnect
           </GlossyButton>
         ) : (
@@ -2022,6 +2038,9 @@ export function UserProfileDrawer({
     disconnectGitProviderServerFn as any,
   ) as (args: { data: { provider: string } }) => Promise<{ ok: true }>;
   const listGithubAccounts = useServerFn(listGithubAccountsServerFn);
+  const getGithubInstallUrl = useServerFn(
+    getGithubInstallUrlServerFn as any,
+  ) as () => Promise<{ url: string }>;
   const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn);
   const [isGithubConnected, setIsGithubConnected] = useState<boolean | null>(
     null,
@@ -2166,7 +2185,9 @@ export function UserProfileDrawer({
     if (isGithubConnected === null) {
       listGithubAccounts()
         .then((result) => {
-          const accounts = Array.isArray(result) ? result : (result?.accounts ?? []);
+          const accounts = Array.isArray(result)
+            ? result
+            : (result?.accounts ?? []);
           setIsGithubConnected(accounts.length > 0);
         })
         .catch(() => {
@@ -2177,7 +2198,9 @@ export function UserProfileDrawer({
     if (isGitlabConnected === null) {
       listGitlabAccounts()
         .then((result) => {
-          const accounts = Array.isArray(result) ? result : (result?.accounts ?? []);
+          const accounts = Array.isArray(result)
+            ? result
+            : (result?.accounts ?? []);
           setIsGitlabConnected(accounts.length > 0);
         })
         .catch(() => {
@@ -2584,45 +2607,61 @@ export function UserProfileDrawer({
                         );
                       }
                     }}
-                    onConnectGithub={() => {
-                      const popup = window.open(
-                        "https://github.com/apps/brimble-build/installations/new",
-                        "_blank",
-                        "width=900,height=760",
-                      );
-
-                      if (!popup) {
-                        toast.error(
-                          "Popup blocked. Please allow popups and try again.",
-                        );
-                        return;
-                      }
-
-                      toast.success(
-                        "Complete the GitHub installation in the popup, then refresh.",
-                      );
-                      setIsGithubConnected(null);
-                      // Poll for connection
-                      const interval = window.setInterval(async () => {
-                        try {
-                          const accounts = await listGithubAccounts();
-                          if (Array.isArray(accounts) && accounts.length > 0) {
-                            setIsGithubConnected(true);
-                            window.clearInterval(interval);
-                            window.dispatchEvent(
-                              new Event("brimble:git-connection-changed"),
-                            );
-                            toast.success("GitHub connected successfully");
-                          }
-                        } catch {}
-                      }, 3000);
-                      // Stop polling after 90s
-                      window.setTimeout(() => {
-                        window.clearInterval(interval);
-                        if (isGithubConnected === null) {
-                          setIsGithubConnected(false);
+                    onConnectGithub={async () => {
+                      try {
+                        const install = await getGithubInstallUrl();
+                        const installUrl = install?.url?.trim();
+                        if (!installUrl) {
+                          throw new Error("Unable to get GitHub install link.");
                         }
-                      }, 90_000);
+
+                        const popup = window.open(
+                          installUrl,
+                          "_blank",
+                          "width=900,height=760",
+                        );
+
+                        if (!popup) {
+                          toast.error(
+                            "Popup blocked. Please allow popups and try again.",
+                          );
+                          return;
+                        }
+
+                        toast.success(
+                          "Complete the GitHub installation in the popup, then refresh.",
+                        );
+                        setIsGithubConnected(null);
+                        // Poll for connection
+                        const interval = window.setInterval(async () => {
+                          try {
+                            const accounts = await listGithubAccounts();
+                            if (
+                              Array.isArray(accounts) &&
+                              accounts.length > 0
+                            ) {
+                              setIsGithubConnected(true);
+                              window.clearInterval(interval);
+                              window.dispatchEvent(
+                                new Event("brimble:git-connection-changed"),
+                              );
+                              toast.success("GitHub connected successfully");
+                            }
+                          } catch {}
+                        }, 3000);
+                        window.setTimeout(() => {
+                          window.clearInterval(interval);
+                          if (isGithubConnected === null) {
+                            setIsGithubConnected(false);
+                          }
+                        }, 90_000);
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Failed to open GitHub install page",
+                        );
+                      }
                     }}
                     isGitlabConnected={isGitlabConnected ?? true}
                     onDisconnectGitlab={async () => {

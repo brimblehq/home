@@ -46,6 +46,7 @@ import { ServiceType } from "@brimble/models/dist/enum";
 import { listFrameworksServerFn } from "@/server/frameworks/actions";
 import { listRegionsServerFn } from "@/server/regions/actions";
 import {
+  getGithubInstallUrlServerFn,
   getGithubRepoServerFn,
   listGithubAccountsServerFn,
   listGithubReposServerFn,
@@ -2449,14 +2450,19 @@ function NewProjectPage() {
   const listRegions = useServerFn(listRegionsServerFn as any) as (args: {
     data?: { type?: "web" | "database"; enabled?: boolean; workspace?: string };
   }) => Promise<Region[]>;
-  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<GithubAccount[]>;
+  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<
+    GithubAccount[] | { accounts?: GithubAccount[] }
+  >;
+  const getGithubInstallUrl = useServerFn(getGithubInstallUrlServerFn as any) as () => Promise<{ url: string }>;
   const listGithubRepos = useServerFn(listGithubReposServerFn as any) as (args: {
     data?: { q?: string; page?: number; limit?: number; installationId?: number | string };
   }) => Promise<{ repositories: GithubRepoListItem[] }>;
   const getGithubRepo = useServerFn(getGithubRepoServerFn as any) as (args: {
     data: { repoName: string; installationId?: number | string };
   }) => Promise<RepositoryMetadata>;
-  const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn as any) as () => Promise<GithubAccount[]>;
+  const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn as any) as () => Promise<
+    GithubAccount[] | { accounts?: GithubAccount[] }
+  >;
   const listGitlabRepos = useServerFn(listGitlabReposServerFn as any) as (args: {
     data?: { q?: string; page?: number; limit?: number; installationId?: number | string };
   }) => Promise<{ repositories: GithubRepoListItem[] }>;
@@ -2777,8 +2783,14 @@ function NewProjectPage() {
     setGithubConnectOpening(true);
 
     try {
+      const install = await getGithubInstallUrl();
+      const installUrl = install?.url?.trim();
+      if (!installUrl) {
+        throw new Error("Unable to get GitHub install link. Please try again.");
+      }
+
       const popup = window.open(
-        "https://github.com/apps/brimble-build/installations/new",
+        installUrl,
         "_blank",
         "width=900,height=760",
       );

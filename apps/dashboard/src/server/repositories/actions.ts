@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import type {
   GithubAccountsResult,
+  GithubInstallUrlResult,
   GithubRepoListResult,
   GitlabAccountsResult,
   GitlabRepoListResult,
@@ -29,6 +30,14 @@ export const getGithubRepoServerFn = createServerFn({
       installationId: payload.installationId,
     }),
   ) as Promise<RepositoryMetadata>;
+});
+
+export const getGithubInstallUrlServerFn = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  return withTokenRefresh((api) =>
+    api.repositories.getGithubInstallUrl(),
+  ) as Promise<GithubInstallUrlResult>;
 });
 
 export const listGithubAccountsServerFn = createServerFn({
