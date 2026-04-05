@@ -1964,6 +1964,7 @@ function ConfigurationPage() {
         <RootDirectoryDrawer
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
+          provider={project?.repo?.git?.toLowerCase() === "gitlab" ? "gitlab" : "github"}
           repoName={project?.repo?.fullName || project?.repo?.name}
           installationId={project?.repo?.installationId}
           branch={generalInitialValues.branch}

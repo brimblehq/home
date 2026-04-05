@@ -12,8 +12,8 @@ import type {
   RepositoryFrameworkDefaults,
 } from "@/backend/repositories";
 import {
-  getGithubRepoServerFn,
   getGithubRootDirServerFn,
+  getGitlabRootDirServerFn,
 } from "@/server/repositories/actions";
 
 function DrawerShell({
@@ -257,6 +257,7 @@ function DirectoryRow({
 interface RootDirectoryDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  provider?: "github" | "gitlab";
   repoName?: string;
   installationId?: number | string;
   branch?: string;
@@ -270,13 +271,14 @@ interface RootDirectoryDrawerProps {
 export function RootDirectoryDrawer({
   open,
   onOpenChange,
+  provider = "github",
   repoName,
   installationId,
   branch,
   selectedPath = "./",
   onSelect,
 }: RootDirectoryDrawerProps) {
-  const getGithubRootDir = useServerFn(getGithubRootDirServerFn as any) as (args: {
+  type RootDirFn = (args: {
     data: {
       repoName: string;
       installationId?: number | string;
@@ -287,6 +289,10 @@ export function RootDirectoryDrawer({
     rootDir: RepositoryDirectoryEntry[];
     framework?: RepositoryFrameworkDefaults;
   }>;
+
+  const getGithubRootDir = useServerFn(getGithubRootDirServerFn as any) as RootDirFn;
+  const getGitlabRootDir = useServerFn(getGitlabRootDirServerFn as any) as RootDirFn;
+  const getRootDir = provider === "gitlab" ? getGitlabRootDir : getGithubRootDir;
 
   const [currentPath, setCurrentPath] = useState<string>(selectedPath || "./");
   const [selectedNodePath, setSelectedNodePath] = useState<string>(selectedPath || "./");
@@ -337,7 +343,7 @@ export function RootDirectoryDrawer({
           apiPath = "";
         }
 
-        const result = await getGithubRootDir({
+        const result = await getRootDir({
           data: {
             repoName,
             installationId,
@@ -373,7 +379,7 @@ export function RootDirectoryDrawer({
     return () => {
       cancelled = true;
     };
-  }, [open, repoName, installationId, branch, currentPath, getGithubRootDir]);
+  }, [open, repoName, installationId, branch, currentPath, getRootDir]);
 
   function handleGoBack() {
     if (!currentPath || currentPath === "./" || currentPath === ".") {
@@ -459,7 +465,7 @@ export function RootDirectoryDrawer({
             <path d="M6 9v3a3 3 0 0 0 3 3" />
           </svg>
         </div>
-        <span className="text-sm font-medium text-dash-text-strong">Github</span>
+        <span className="text-sm font-medium text-dash-text-strong">{provider === "gitlab" ? "GitLab" : "GitHub"}</span>
       </div>
 
       <button

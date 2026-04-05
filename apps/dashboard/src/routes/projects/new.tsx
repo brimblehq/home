@@ -2404,6 +2404,7 @@ function Phase3Configure({
         <RootDirectoryDrawer
           open={rootDirDrawerOpen}
           onOpenChange={setRootDirDrawerOpen}
+          provider={sourceType === SourceType.Gitlab ? "gitlab" : "github"}
           repoName={repoBrowser?.repoName}
           installationId={repoBrowser?.installationId}
           branch={branch}
