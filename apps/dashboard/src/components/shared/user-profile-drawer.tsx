@@ -84,6 +84,7 @@ import {
 } from "@/server/teams/actions";
 import {
   getGithubInstallUrlServerFn,
+  getGitlabConnectUrlServerFn,
   listGithubAccountsServerFn,
   listGitlabAccountsServerFn,
 } from "@/server/repositories/actions";
@@ -2041,6 +2042,9 @@ export function UserProfileDrawer({
   const getGithubInstallUrl = useServerFn(
     getGithubInstallUrlServerFn as any,
   ) as () => Promise<{ url: string }>;
+  const getGitlabConnectUrl = useServerFn(
+    getGitlabConnectUrlServerFn as any,
+  ) as (args: { data?: { device?: string } }) => Promise<{ url: string }>;
   const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn);
   const [isGithubConnected, setIsGithubConnected] = useState<boolean | null>(
     null,
@@ -2612,7 +2616,9 @@ export function UserProfileDrawer({
                         const install = await getGithubInstallUrl();
                         const installUrl = install?.url?.trim();
                         if (!installUrl) {
-                          throw new Error("Unable to get GitHub install link.");
+                          throw new Error(
+                            "We could not start GitHub connection right now. Please refresh and try again.",
+                          );
                         }
 
                         const popup = window.open(
@@ -2659,7 +2665,7 @@ export function UserProfileDrawer({
                         toast.error(
                           error instanceof Error
                             ? error.message
-                            : "Failed to open GitHub install page",
+                            : "We could not open the GitHub connection window. Please try again.",
                         );
                       }
                     }}
@@ -2682,44 +2688,66 @@ export function UserProfileDrawer({
                         );
                       }
                     }}
-                    onConnectGitlab={() => {
-                      const connectUrl = `${config.authApiUrl}/connect/gitlab`;
-                      const popup = window.open(
-                        connectUrl,
-                        "_blank",
-                        "width=900,height=760",
-                      );
-
-                      if (!popup) {
-                        toast.error(
-                          "Popup blocked. Please allow popups and try again.",
-                        );
-                        return;
-                      }
-
-                      toast.success(
-                        "Complete the GitLab authorization in the popup, then refresh.",
-                      );
-                      setIsGitlabConnected(null);
-                      const interval = window.setInterval(async () => {
-                        try {
-                          const accounts = await listGitlabAccounts();
-                          if (Array.isArray(accounts) && accounts.length > 0) {
-                            setIsGitlabConnected(true);
-                            window.clearInterval(interval);
-                            window.dispatchEvent(
-                              new Event("brimble:git-connection-changed"),
-                            );
-                            toast.success("GitLab connected successfully");
-                          }
-                        } catch {}
-                      }, 3000);
-                      window.setTimeout(() => {
-                        window.clearInterval(interval);
-                        if (isGitlabConnected === null) {
-                          setIsGitlabConnected(false);
+                    onConnectGitlab={async () => {
+                      try {
+                        const deviceId =
+                          window.sessionStorage.getItem("brimble.oauth.device_id") ??
+                          "";
+                        const connect = await getGitlabConnectUrl({
+                          data: {
+                            device: deviceId || undefined,
+                          },
+                        });
+                        const connectUrl = connect?.url?.trim();
+                        if (!connectUrl) {
+                          throw new Error(
+                            "We could not start GitLab connection right now. Please refresh and try again.",
+                          );
                         }
-                      }, 90_000);
+
+                        const popup = window.open(
+                          connectUrl,
+                          "_blank",
+                          "width=900,height=760",
+                        );
+
+                        if (!popup) {
+                          toast.error(
+                            "Popup blocked. Please allow popups and try again.",
+                          );
+                          return;
+                        }
+
+                        toast.success(
+                          "Complete the GitLab authorization in the popup, then refresh.",
+                        );
+                        setIsGitlabConnected(null);
+                        const interval = window.setInterval(async () => {
+                          try {
+                            const accounts = await listGitlabAccounts();
+                            if (Array.isArray(accounts) && accounts.length > 0) {
+                              setIsGitlabConnected(true);
+                              window.clearInterval(interval);
+                              window.dispatchEvent(
+                                new Event("brimble:git-connection-changed"),
+                              );
+                              toast.success("GitLab connected successfully");
+                            }
+                          } catch {}
+                        }, 3000);
+                        window.setTimeout(() => {
+                          window.clearInterval(interval);
+                          if (isGitlabConnected === null) {
+                            setIsGitlabConnected(false);
+                          }
+                        }, 90_000);
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "We could not start GitLab connection right now. Please refresh and try again.",
+                        );
+                      }
                     }}
                     onRequestDeleteAccountOtp={async (turnstileToken) => {
                       try {

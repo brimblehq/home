@@ -19,6 +19,10 @@ export interface GithubInstallUrlResult {
   url: string;
 }
 
+export interface GitlabConnectUrlResult {
+  url: string;
+}
+
 export interface GithubRepoListItem {
   id?: number | string;
   name: string;
@@ -74,6 +78,7 @@ export interface RepositoryRootDirResult {
 
 export interface RepositoriesApi {
   getGithubInstallUrl(): Promise<GithubInstallUrlResult>;
+  getGitlabConnectUrl(input?: { device?: string }): Promise<GitlabConnectUrlResult>;
   listGithubAccounts(): Promise<GithubAccountsResult>;
   listGithubRepos(input?: {
     q?: string;
@@ -128,7 +133,7 @@ function mapRepositoryFrameworkDefaults(value: unknown): RepositoryFrameworkDefa
 export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
   return {
     async getGithubInstallUrl() {
-      const response = await client.request<any>("/auth/github/install-url", {
+      const response = await client.request<any>("/auth/github/connect-url", {
         method: "GET",
       });
 
@@ -137,10 +142,28 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
       const url = row ? pickString(row, "url") : undefined;
 
       if (!url) {
-        throw new Error("Unable to initialize GitHub install URL. Please try again.");
+        throw new Error("We could not start GitHub connection right now. Please refresh and try again.");
       }
 
       return { url } satisfies GithubInstallUrlResult;
+    },
+    async getGitlabConnectUrl(input) {
+      const response = await client.request<any>("/auth/gitlab/connect-url", {
+        method: "GET",
+        query: {
+          device: input?.device,
+        },
+      });
+
+      const root = response?.data?.data ?? response?.data ?? response ?? {};
+      const row = asRecord(root);
+      const url = row ? pickString(row, "url") : undefined;
+
+      if (!url) {
+        throw new Error("We could not start GitLab connection right now. Please refresh and try again.");
+      }
+
+      return { url } satisfies GitlabConnectUrlResult;
     },
     async listGithubAccounts() {
       const response = await client.request<any>("/core/v1/accounts/github", {

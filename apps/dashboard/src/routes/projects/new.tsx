@@ -47,6 +47,7 @@ import { listFrameworksServerFn } from "@/server/frameworks/actions";
 import { listRegionsServerFn } from "@/server/regions/actions";
 import {
   getGithubInstallUrlServerFn,
+  getGitlabConnectUrlServerFn,
   getGithubRepoServerFn,
   listGithubAccountsServerFn,
   listGithubReposServerFn,
@@ -70,7 +71,6 @@ import type {
   RepositoryMetadata,
   RepositoryFrameworkDefaults,
 } from "@/backend/repositories";
-import config from "@/config";
 import type { Project } from "@/backend/projects";
 import { usePlanGate } from "@/hooks/use-plan-gate";
 import { usePricing } from "@/contexts/pricing-context";
@@ -2463,6 +2463,9 @@ function NewProjectPage() {
   const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn as any) as () => Promise<
     GithubAccount[] | { accounts?: GithubAccount[] }
   >;
+  const getGitlabConnectUrl = useServerFn(getGitlabConnectUrlServerFn as any) as (args: {
+    data?: { device?: string };
+  }) => Promise<{ url: string }>;
   const listGitlabRepos = useServerFn(listGitlabReposServerFn as any) as (args: {
     data?: { q?: string; page?: number; limit?: number; installationId?: number | string };
   }) => Promise<{ repositories: GithubRepoListItem[] }>;
@@ -2786,7 +2789,7 @@ function NewProjectPage() {
       const install = await getGithubInstallUrl();
       const installUrl = install?.url?.trim();
       if (!installUrl) {
-        throw new Error("Unable to get GitHub install link. Please try again.");
+        throw new Error("We could not start GitHub connection right now. Please refresh and try again.");
       }
 
       const popup = window.open(
@@ -2819,7 +2822,11 @@ function NewProjectPage() {
         setGithubConnectError("Timed out waiting for GitHub connection. Finish installation, then click refresh.");
       }, 90_000);
     } catch (error) {
-      setGithubConnectError(error instanceof Error ? error.message : "Failed to open GitHub install page");
+      setGithubConnectError(
+        error instanceof Error
+          ? error.message
+          : "We could not open the GitHub connection window. Please try again.",
+      );
     } finally {
       setGithubConnectOpening(false);
     }
@@ -2932,7 +2939,15 @@ function NewProjectPage() {
 
     try {
       const deviceId = window.sessionStorage.getItem("brimble.oauth.device_id") ?? "";
-      const connectUrl = `${config.authApiUrl}/connect/gitlab${deviceId ? `?device=${encodeURIComponent(deviceId)}` : ""}`;
+      const connect = await getGitlabConnectUrl({
+        data: {
+          device: deviceId || undefined,
+        },
+      });
+      const connectUrl = connect?.url?.trim();
+      if (!connectUrl) {
+        throw new Error("We could not start GitLab connection right now. Please refresh and try again.");
+      }
       const popup = window.open(
         connectUrl,
         "_blank",
@@ -2963,7 +2978,11 @@ function NewProjectPage() {
         setGitlabConnectError("Timed out waiting for GitLab connection. Finish authorization, then click refresh.");
       }, 90_000);
     } catch (error) {
-      setGitlabConnectError(error instanceof Error ? error.message : "Failed to open GitLab connect page");
+      setGitlabConnectError(
+        error instanceof Error
+          ? error.message
+          : "We could not open the GitLab connection window. Please try again.",
+      );
     } finally {
       setGitlabConnectOpening(false);
     }

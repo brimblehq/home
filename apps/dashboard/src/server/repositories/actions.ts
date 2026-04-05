@@ -4,6 +4,7 @@ import type {
   GithubInstallUrlResult,
   GithubRepoListResult,
   GitlabAccountsResult,
+  GitlabConnectUrlResult,
   GitlabRepoListResult,
   RepositoryMetadata,
   RepositoryRootDirResult,
@@ -38,6 +39,17 @@ export const getGithubInstallUrlServerFn = createServerFn({
   return withTokenRefresh((api) =>
     api.repositories.getGithubInstallUrl(),
   ) as Promise<GithubInstallUrlResult>;
+});
+
+export const getGitlabConnectUrlServerFn = createServerFn({
+  method: "GET",
+}).handler(async ({ data }) => {
+  const payload = data as { device?: string } | undefined;
+  return withTokenRefresh((api) =>
+    api.repositories.getGitlabConnectUrl({
+      device: payload?.device?.trim() || undefined,
+    }),
+  ) as Promise<GitlabConnectUrlResult>;
 });
 
 export const listGithubAccountsServerFn = createServerFn({
