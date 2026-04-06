@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   createFileRoute,
   getRouteApi,
   useNavigate,
+  useRouter,
 } from "@tanstack/react-router";
 import {
   ExternalLink,
@@ -128,7 +129,16 @@ export const Route = createFileRoute("/projects/$projectId/")({
 function ProjectDetailPage() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const haptics = useHaptics();
+  const router = useRouter();
   const { openDeploymentDrawer } = useProjectDeploymentLogsDrawer();
+
+  useEffect(() => {
+    function handleDeploymentUpdated() {
+      router.invalidate();
+    }
+    window.addEventListener("brimble:deployment-updated", handleDeploymentUpdated);
+    return () => window.removeEventListener("brimble:deployment-updated", handleDeploymentUpdated);
+  }, [router]);
   const navigate = useNavigate();
   const { projectId } = Route.useParams();
   const { project } = parentRoute.useLoaderData() as any;

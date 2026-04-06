@@ -938,13 +938,7 @@ function LogsPage() {
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 py-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <TabHeader title="Logs">
-          Monitor your application and request logs in real-time.{" "}
-          <a
-            href="#"
-            className="text-[#4879f8] underline transition-colors hover:text-[#3a6ae6]"
-          >
-            Learn more
-          </a>
+          Monitor your application and request logs in real-time.
         </TabHeader>
 
         {/* Tab switcher */}

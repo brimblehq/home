@@ -738,6 +738,14 @@ function DeploymentHistoryPage() {
   }, [environment, status, dateRange]);
 
   useEffect(() => {
+    function handleDeploymentUpdated() {
+      void fetchDeployments(currentPage, { silent: true });
+    }
+    window.addEventListener("brimble:deployment-updated", handleDeploymentUpdated);
+    return () => window.removeEventListener("brimble:deployment-updated", handleDeploymentUpdated);
+  }, [fetchDeployments, currentPage]);
+
+  useEffect(() => {
     if (typeof document === "undefined") {
       return;
     }

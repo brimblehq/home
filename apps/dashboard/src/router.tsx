@@ -13,7 +13,7 @@ export function getRouter() {
     defaultStaleTime: 300_000,
     defaultPreloadStaleTime: 300_000,
     defaultGcTime: 30 * 60_000,
-    defaultPendingMs: 300,
+    defaultPendingMs: 100,
     defaultErrorComponent: DefaultErrorComponent,
   });
 

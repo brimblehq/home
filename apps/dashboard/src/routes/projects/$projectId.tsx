@@ -26,6 +26,7 @@ import {
   ProjectDeploymentLogsDrawerContext,
   type ProjectDeploymentLogsDrawerContextValue,
 } from "@/contexts/project-deployment-logs-drawer-context";
+import { Realtime } from "ably";
 import { getSupabaseClient } from "@/lib/supabase";
 import { mapDeploymentRunLogsToDrawerEntries } from "@/utils/deployment-logs";
 import { usePushNotification } from "@/hooks/use-push-notification";
@@ -290,6 +291,36 @@ function ProjectLayout() {
       supabase.removeChannel(channel);
     };
   }, [drawerOpen, selectedDeployment, sendNotification, project, projectId]);
+
+  useEffect(() => {
+    const backendProjectId = (project as BackendProject)?.id;
+    if (!backendProjectId) return;
+
+    const ably = new Realtime({
+      authUrl: `${config.apiUrl}/v1/ably/token?clientId=${backendProjectId}`,
+      clientId: backendProjectId,
+    });
+
+    const channel = ably.channels.get(backendProjectId);
+
+    channel.subscribe((message) => {
+      const eventName = message.name ?? "";
+      if (
+        eventName === "deployment:started" ||
+        eventName === "deployment:completed" ||
+        eventName === "deployment:failed" ||
+        eventName.startsWith("deployment:")
+      ) {
+        window.dispatchEvent(new CustomEvent("brimble:deployment-updated", {
+          detail: { projectId: backendProjectId, ...(message.data ?? {}) },
+        }));
+      }
+    });
+
+    return () => {
+      try { ably.close(); } catch {}
+    };
+  }, [(project as BackendProject)?.id]);
 
   const openDeploymentDrawer = useCallback(
     (deployment: DeploymentLog) => {

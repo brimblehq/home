@@ -3,6 +3,8 @@ import { Theme } from "../types/enums";
 
 const listeners = new Set<() => void>();
 const DARK_MEDIA_QUERY = "(prefers-color-scheme: dark)";
+const DASHBOARD_THEME_STORAGE_KEY = "theme";
+const LEGACY_THEME_STORAGE_KEY = "brimble-theme";
 
 function emitThemeChange() {
   for (const cb of listeners) cb();
@@ -14,13 +16,18 @@ function getStoredThemeMode(): Theme {
   }
 
   try {
-    const stored = window.localStorage.getItem("theme");
+    const stored = window.localStorage.getItem(DASHBOARD_THEME_STORAGE_KEY);
     if (
       stored === Theme.Light ||
       stored === Theme.Dark ||
       stored === Theme.System
     ) {
       return stored;
+    }
+
+    const legacyStored = window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+    if (legacyStored === Theme.Light || legacyStored === Theme.Dark) {
+      return legacyStored;
     }
   } catch {
     // no-op
@@ -54,7 +61,7 @@ function applyTheme(mode: Theme) {
   document.documentElement.classList.toggle("dark", effectiveTheme === Theme.Dark);
 
   try {
-    window.localStorage.setItem("theme", mode);
+    window.localStorage.setItem(DASHBOARD_THEME_STORAGE_KEY, mode);
   } catch {
     // no-op
   }

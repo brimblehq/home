@@ -88,6 +88,7 @@ import {
 import {
   getGithubInstallUrlServerFn,
   getGitlabConnectUrlServerFn,
+  listBitbucketAccountsServerFn,
   listGithubAccountsServerFn,
   listGitlabAccountsServerFn,
 } from "@/server/repositories/actions";
@@ -1992,9 +1993,11 @@ export function UserProfileDrawer({
     getGitlabConnectUrlServerFn as any,
   ) as (args: { data?: { device?: string } }) => Promise<{ url: string }>;
   const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn);
+  const listBitbucketAccounts = useServerFn(listBitbucketAccountsServerFn);
   const [gitConnectionStatus, setGitConnectionStatus] = useState<Record<string, boolean | null>>({
     github: null,
     gitlab: null,
+    bitbucket: null,
   });
   const getTwoFactorStatus = useServerFn(getTwoFactorStatusServerFn as any) as () => Promise<TwoFactorStatus>;
   const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatus | null>(null);
@@ -2138,6 +2141,7 @@ export function UserProfileDrawer({
     const checks: { id: string; fn: () => Promise<any> }[] = [
       { id: "github", fn: listGithubAccounts },
       { id: "gitlab", fn: listGitlabAccounts },
+      { id: "bitbucket", fn: listBitbucketAccounts },
     ];
     for (const check of checks) {
       if (gitConnectionStatus[check.id] === null) {
@@ -2575,6 +2579,7 @@ export function UserProfileDrawer({
                         const checkFns: Record<string, () => Promise<any>> = {
                           github: listGithubAccounts,
                           gitlab: listGitlabAccounts,
+                          bitbucket: listBitbucketAccounts,
                         };
                         const checkFn = checkFns[providerId];
                         if (checkFn) {

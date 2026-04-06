@@ -99,7 +99,7 @@ export function shouldShowDeploymentHistoryTab(project?: Pick<Project, "serviceT
 }
 
 export function shouldShowProjectLogsTab(project?: Pick<Project, "serviceType"> | null): boolean {
-  if (isDatabaseProject(project) || isStaticProject(project)) {
+  if (isStaticProject(project)) {
     return false;
   }
 

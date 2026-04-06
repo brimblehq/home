@@ -68,6 +68,13 @@ const DEFAULT_ROOT_LOADER_DATA: RootLoaderData = {
   pricing: DEFAULT_PRICING,
 };
 
+const globalDataCache: {
+  workspaces: ApiListResponse<Workspace> | null;
+  pricing: Pricing | null;
+  fetchedAt: number;
+} = { workspaces: null, pricing: null, fetchedAt: 0 };
+const GLOBAL_CACHE_TTL = 300_000;
+
 function createRootLoaderData(
   overrides: Partial<RootLoaderData> = {},
 ): RootLoaderData {
@@ -126,6 +133,8 @@ export const Route = createRootRoute({
         workspace = rawWorkspace.trim();
       }
 
+      const hasGlobalCache = globalDataCache.fetchedAt > 0 && Date.now() - globalDataCache.fetchedAt < GLOBAL_CACHE_TTL;
+
       const [
         settingsSnapshot,
         workspaces,
@@ -141,11 +150,13 @@ export const Route = createRootRoute({
         )({
           data: { workspace },
         }),
-        (
-          listWorkspacesServerFn as unknown as () => Promise<
-            ApiListResponse<Workspace>
-          >
-        )(),
+        hasGlobalCache && globalDataCache.workspaces
+          ? Promise.resolve(globalDataCache.workspaces)
+          : (
+              listWorkspacesServerFn as unknown as () => Promise<
+                ApiListResponse<Workspace>
+              >
+            )(),
         (
           listHomeProjectsServerFn as unknown as (input: {
             data: { workspace?: string };
@@ -153,7 +164,9 @@ export const Route = createRootRoute({
         )({
           data: { workspace },
         }),
-        (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
+        hasGlobalCache && globalDataCache.pricing
+          ? Promise.resolve(globalDataCache.pricing)
+          : (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
         (
           listTagsServerFn as unknown as (input: {
             data: { workspace?: string };
@@ -170,35 +183,14 @@ export const Route = createRootRoute({
         }),
       ]);
 
-      if (settingsSnapshot.status === "rejected") {
-        console.error(
-          "[root loader] settings snapshot failed:",
-          settingsSnapshot.reason,
-        );
+      if (workspaces.status === "fulfilled") {
+        globalDataCache.workspaces = workspaces.value;
       }
-      if (workspaces.status === "rejected") {
-        console.error("[root loader] workspaces failed:", workspaces.reason);
+      if (pricingResult.status === "fulfilled") {
+        globalDataCache.pricing = pricingResult.value;
       }
-      if (onboardingProjects.status === "rejected") {
-        console.error(
-          "[root loader] onboarding projects failed:",
-          onboardingProjects.reason,
-        );
-      }
-      if (tags.status === "rejected") {
-        console.error("[root loader] tags failed:", tags.reason);
-      }
-      if (pricingResult.status === "rejected") {
-        console.error(
-          "[root loader] pricing specs failed:",
-          pricingResult.reason,
-        );
-      }
-      if (subscriptionStats.status === "rejected") {
-        console.error(
-          "[root loader] subscription stats failed:",
-          subscriptionStats.reason,
-        );
+      if (workspaces.status === "fulfilled" || pricingResult.status === "fulfilled") {
+        globalDataCache.fetchedAt = Date.now();
       }
 
       return createRootLoaderData({
@@ -259,7 +251,7 @@ gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement;var t=localStorage.getItem('theme');var sys=(t==='system'||(!t));var dark=t==='dark'||(sys&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(dark){d.classList.add('dark')}else{d.classList.remove('dark')}}catch(e){}})()`,
+            __html: `(function(){try{var d=document.documentElement;var t=localStorage.getItem('theme');var legacy=localStorage.getItem('brimble-theme');if(t!=='light'&&t!=='dark'&&t!=='system'){t=(legacy==='light'||legacy==='dark')?legacy:null}var sys=(t==='system'||(!t));var dark=t==='dark'||(sys&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(dark){d.classList.add('dark')}else{d.classList.remove('dark')}}catch(e){}})()`,
           }}
         />
       </head>
