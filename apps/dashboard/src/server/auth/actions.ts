@@ -4,8 +4,10 @@ import type {
   AuthSession,
   LoginInput,
   SignupInput,
+  TwoFactorCodeInput,
   UserLookupInput,
   VerifyEmailCodeInput,
+  VerifyTwoFactorChallengeInput,
 } from "@/backend/auth/types";
 import config from "@/config";
 import {
@@ -68,7 +70,18 @@ export const resendAuthCodeServerFn = createServerFn({ method: "POST" }).handler
 export const verifyEmailCodeServerFn = createServerFn({ method: "POST" }).handler(
   async ({ data }) => {
     const { geo, ...rest } = data as VerifyEmailCodeInput & { geo?: ClientGeoData };
-    const session = await getServerBackendApi(geo).auth.verifyEmailCode(rest);
+    const result = await getServerBackendApi(geo).auth.verifyEmailCode(rest);
+
+    if (result.requiresTwoFactor) {
+      return {
+        ok: true as const,
+        requiresTwoFactor: true as const,
+        challengeToken: result.challengeToken,
+        expiresIn: result.expiresIn,
+      };
+    }
+
+    const session = result.session;
     setServerAuthCookies(session);
 
     authLogger.info("verifyEmailCode success", {
@@ -79,10 +92,106 @@ export const verifyEmailCodeServerFn = createServerFn({ method: "POST" }).handle
 
     return {
       ok: true as const,
+      requiresTwoFactor: false as const,
       user: session.user,
     };
   },
 );
+
+export const verifyTwoFactorChallengeServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as VerifyTwoFactorChallengeInput & { geo?: ClientGeoData };
+  const challengeToken = payload.challengeToken?.trim();
+  const code = String(payload.code ?? "").trim();
+
+  if (!challengeToken) {
+    throw new Error("Missing challenge token. Please log in again.");
+  }
+
+  if (!code) {
+    throw new Error("Enter a verification code.");
+  }
+
+  const session = await getServerBackendApi(payload.geo).auth.verifyTwoFactorChallenge({
+    challengeToken,
+    code,
+  });
+  setServerAuthCookies(session);
+
+  authLogger.info("verifyTwoFactorChallenge success", {
+    userId: session.user?.id ?? null,
+    hasAccessToken: Boolean(session.accessToken),
+    hasRefreshToken: Boolean(session.refreshToken),
+  });
+
+  return {
+    ok: true as const,
+    user: session.user,
+  };
+});
+
+export const getTwoFactorStatusServerFn = createServerFn({ method: "GET" }).handler(
+  async () => {
+    return withTokenRefresh((api) => api.auth.getTwoFactorStatus());
+  },
+);
+
+export const startTwoFactorSetupServerFn = createServerFn({ method: "POST" }).handler(
+  async () => {
+    return withTokenRefresh((api) => api.auth.startTwoFactorSetup());
+  },
+);
+
+export const verifyTwoFactorSetupServerFn = createServerFn({ method: "POST" }).handler(
+  async ({ data }) => {
+    const payload = data as TwoFactorCodeInput | undefined;
+    const code = String(payload?.code ?? "").trim();
+
+    if (!/^\d{6}$/.test(code)) {
+      throw new Error("Enter a valid 6-digit code");
+    }
+
+    return withTokenRefresh(async (api) => {
+      await api.auth.verifyTwoFactorSetup({ code });
+      return { ok: true } as const;
+    });
+  },
+);
+
+export const disableTwoFactorServerFn = createServerFn({ method: "POST" }).handler(
+  async ({ data }) => {
+    const payload = data as TwoFactorCodeInput | undefined;
+    const code = String(payload?.code ?? "").trim();
+
+    if (!/^\d{6}$/.test(code)) {
+      throw new Error("Enter a valid 6-digit code");
+    }
+
+    return withTokenRefresh(async (api) => {
+      await api.auth.disableTwoFactor({ code });
+      return { ok: true } as const;
+    });
+  },
+);
+
+export const regenerateTwoFactorRecoveryCodesServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as TwoFactorCodeInput | undefined;
+  const code = String(payload?.code ?? "").trim();
+
+  if (!/^\d{6}$/.test(code)) {
+    throw new Error("Enter a valid 6-digit code");
+  }
+
+  return withTokenRefresh(async (api) => {
+    const recoveryCodes = await api.auth.regenerateTwoFactorRecoveryCodes({
+      code,
+    });
+    return { recoveryCodes } as const;
+  });
+});
 
 export const logoutServerFn = createServerFn({ method: "POST" }).handler(async () => {
   const refreshToken = getServerRefreshToken();

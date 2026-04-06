@@ -1,10 +1,14 @@
 import { Realtime } from "ably";
 import config from "@/config";
+import {
+  extractTwoFactorChallenge,
+  parseTwoFactorChallengeHash,
+} from "./two-factor";
 
 export type OauthProvider = "github" | "google" | "gitlab";
 
 export interface OauthAuthEventPayload {
-  access_token: string;
+  access_token?: string;
   refresh_token?: string;
   id?: string;
   email?: string;
@@ -15,6 +19,9 @@ export interface OauthAuthEventPayload {
   onboard?: {
     user?: boolean;
   };
+  requires_2fa?: boolean;
+  challenge_token?: string;
+  expires_in?: number;
 }
 
 const OAUTH_DEVICE_ID_KEY = "brimble.oauth.device_id";
@@ -120,11 +127,51 @@ export async function startOauthPopup(
     popupPollId = setInterval(() => {
       if (popup.closed) {
         finish(() => reject(new Error("Sign-in window was closed.")));
+        return;
+      }
+
+      try {
+        const popupUrl = new URL(popup.location.href);
+        if (popupUrl.origin !== window.location.origin) {
+          return;
+        }
+
+        if (popupUrl.pathname !== "/2fa") {
+          return;
+        }
+
+        const challenge = parseTwoFactorChallengeHash(popupUrl.hash);
+        if (!challenge) {
+          return;
+        }
+
+        finish(() =>
+          resolve({
+            requires_2fa: true,
+            challenge_token: challenge.challengeToken,
+            expires_in: challenge.expiresIn,
+          }),
+        );
+      } catch {
+        // Ignore cross-origin access errors until popup returns to this origin.
       }
     }, 500);
 
     channel.subscribe("auth", (message: any) => {
       const data = message?.data as OauthAuthEventPayload | undefined;
+
+      const challenge = extractTwoFactorChallenge(data);
+      if (challenge) {
+        finish(() =>
+          resolve({
+            ...data,
+            requires_2fa: true,
+            challenge_token: challenge.challengeToken,
+            expires_in: challenge.expiresIn,
+          }),
+        );
+        return;
+      }
 
       if (!data?.access_token) {
         finish(() => reject(new Error("Invalid OAuth response from server.")));

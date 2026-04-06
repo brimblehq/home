@@ -15,6 +15,43 @@ export interface VerifyEmailCodeInput {
   code: string;
 }
 
+export interface VerifyTwoFactorChallengeInput {
+  challengeToken: string;
+  code: string;
+}
+
+export interface TwoFactorCodeInput {
+  code: string;
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  hasRecoveryCodes: boolean;
+  recoveryCodesRemaining: number;
+}
+
+export interface TwoFactorSetup {
+  secret: string;
+  provisioningUri: string;
+  qrCode: string;
+  recoveryCodes: string[];
+}
+
+export interface VerifyEmailCodeChallenge {
+  requiresTwoFactor: true;
+  challengeToken: string;
+  expiresIn: number;
+}
+
+export interface VerifyEmailCodeSession {
+  requiresTwoFactor: false;
+  session: AuthSession;
+}
+
+export type VerifyEmailCodeResult =
+  | VerifyEmailCodeSession
+  | VerifyEmailCodeChallenge;
+
 export interface ConfirmDeleteAccountInput {
   accessCode: string | number;
 }
@@ -49,7 +86,17 @@ export interface AuthSession {
 export interface AuthApi {
   login(input: LoginInput): Promise<void>;
   signup(input: SignupInput): Promise<void>;
-  verifyEmailCode(input: VerifyEmailCodeInput): Promise<AuthSession>;
+  verifyEmailCode(input: VerifyEmailCodeInput): Promise<VerifyEmailCodeResult>;
+  verifyTwoFactorChallenge(
+    input: VerifyTwoFactorChallengeInput,
+  ): Promise<AuthSession>;
+  getTwoFactorStatus(): Promise<TwoFactorStatus>;
+  startTwoFactorSetup(): Promise<TwoFactorSetup>;
+  verifyTwoFactorSetup(input: TwoFactorCodeInput): Promise<void>;
+  disableTwoFactor(input: TwoFactorCodeInput): Promise<void>;
+  regenerateTwoFactorRecoveryCodes(
+    input: TwoFactorCodeInput,
+  ): Promise<string[]>;
   resendCode(email: string): Promise<void>;
   requestDeleteAccountCode(turnstileToken?: string): Promise<void>;
   confirmDeleteAccount(input: ConfirmDeleteAccountInput): Promise<void>;

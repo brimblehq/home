@@ -1142,6 +1142,7 @@ function DangerZone({
                     }
                   }}
                   autoFocus
+                  error={Boolean(deleteOtpError)}
                 />
               </div>
               {deleteOtpError ? (

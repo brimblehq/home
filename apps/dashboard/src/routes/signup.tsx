@@ -22,6 +22,10 @@ import {
   verifyEmailCodeServerFn,
 } from "../server/auth/actions";
 import { startOauthPopup, type OauthProvider } from "../lib/auth/oauth-popup";
+import {
+  buildTwoFactorChallengeUrl,
+  extractTwoFactorChallenge,
+} from "@/lib/auth/two-factor";
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
@@ -284,6 +288,18 @@ function SignupPage() {
 
     try {
       const data = await startOauthPopup(provider);
+      const challenge = extractTwoFactorChallenge(data);
+      if (challenge) {
+        window.location.assign(
+          buildTwoFactorChallengeUrl(challenge, { next: getNextUrl() }),
+        );
+        return;
+      }
+
+      if (!data.access_token) {
+        throw new Error("OAuth response did not include an access token.");
+      }
+
       const response = await finalizeOauthSession({
         data: {
           accessToken: data.access_token,
@@ -345,7 +361,22 @@ function SignupPage() {
     if (code.length < 6) return;
     setLoading(true);
     try {
-      await verifyEmailCode({ data: { email, code, geo: await getClientGeo() } });
+      const response = await verifyEmailCode({
+        data: { email, code, geo: await getClientGeo() },
+      });
+      if (response.requiresTwoFactor) {
+        window.location.assign(
+          buildTwoFactorChallengeUrl(
+            {
+              challengeToken: response.challengeToken,
+              expiresIn: response.expiresIn,
+            },
+            { next: getNextUrl() },
+          ),
+        );
+        return;
+      }
+
       toast.success("Account created successfully");
       invalidateSessionCache();
       window.location.replace(getNextUrl());

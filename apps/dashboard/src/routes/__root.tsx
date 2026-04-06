@@ -105,9 +105,9 @@ export const Route = createRootRoute({
     await enforceRouteAuth(location.pathname, location.searchStr);
   },
   loader: (async ({ location, deps }: any) => {
-    const isAuthRoute = /^\/(login|signup)$/.test(location.pathname);
+    const isAuthRoute = /^\/(login|signup|2fa)$/.test(location.pathname);
     const knownPrefixes =
-      /^\/(login|signup|projects|domains|addons|scaling|workspace|teams)?(\/|$)/;
+      /^\/(login|signup|2fa|projects|domains|addons|scaling|workspace|teams)?(\/|$)/;
     const isCatchAll =
       location.pathname !== "/" && !knownPrefixes.test(location.pathname);
 

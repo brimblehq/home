@@ -10,6 +10,10 @@ import { useHaptics } from "@/hooks/use-haptics";
 import { AddonCard } from "../../components/shared/addon-card";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { startOauthPopup } from "@/lib/auth/oauth-popup";
+import {
+  buildTwoFactorChallengeUrl,
+  extractTwoFactorChallenge,
+} from "@/lib/auth/two-factor";
 import type { McpServerListResult, McpServerTemplate } from "@/backend/mcp";
 import type { GithubAccount, GithubAccountsResult } from "@/backend/repositories";
 import { finalizeOauthSessionServerFn } from "@/server/auth/actions";
@@ -57,6 +61,7 @@ export const Route = createFileRoute("/addons/$addonId")({
 });
 
 const ease = [0.16, 1, 0.3, 1] as const;
+const TWO_FACTOR_REDIRECT_SIGNAL = "__TWO_FACTOR_REDIRECT__";
 
 function ToolCard({ tool }: { tool: { name: string; description?: string; requiredCount?: number; inputSchema?: Record<string, unknown> } }) {
   const [expanded, setExpanded] = useState(false);
@@ -188,6 +193,19 @@ function AddonDetailPage() {
     if (result.accounts.length > 0 && result.authenticated) return result.accounts;
 
     const oauth = await startOauthPopup("github");
+    const challenge = extractTwoFactorChallenge(oauth);
+    if (challenge) {
+      const nextPath = `${window.location.pathname}${window.location.search}`;
+      window.location.assign(
+        buildTwoFactorChallengeUrl(challenge, { next: nextPath }),
+      );
+      throw new Error(TWO_FACTOR_REDIRECT_SIGNAL);
+    }
+
+    if (!oauth.access_token) {
+      throw new Error("OAuth response did not include an access token.");
+    }
+
     await finalizeOauthSession({
       data: {
         accessToken: oauth.access_token,
@@ -247,6 +265,9 @@ function AddonDetailPage() {
         search: search.workspace ? { workspace: search.workspace } : {},
       });
     } catch (error) {
+      if (error instanceof Error && error.message === TWO_FACTOR_REDIRECT_SIGNAL) {
+        return;
+      }
       toast.error(error instanceof Error ? error.message : "Failed to deploy MCP server");
     } finally {
       setDeploying(false);

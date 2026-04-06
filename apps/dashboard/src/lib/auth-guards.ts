@@ -7,7 +7,7 @@ import {
   markSessionVerified,
 } from "./auth-cache";
 
-const publicRoutes = new Set<string>(["/login", "/signup"]);
+const publicRoutes = new Set<string>(["/login", "/signup", "/2fa"]);
 
 function buildNextPath(pathname: string, search?: string) {
   if (!search) {
@@ -27,12 +27,18 @@ export function invalidateSessionCache() {
 
 export async function enforceRouteAuth(pathname: string, search?: string) {
   const isPublicRoute = publicRoutes.has(pathname);
+  const isTwoFactorRoute = pathname === "/2fa";
 
   if (!isPublicRoute && hasAccessTokenCookie() && isSessionRecentlyVerified()) {
     return { session: true };
   }
 
-  if (isPublicRoute && hasAccessTokenCookie() && isSessionRecentlyVerified()) {
+  if (
+    isPublicRoute &&
+    !isTwoFactorRoute &&
+    hasAccessTokenCookie() &&
+    isSessionRecentlyVerified()
+  ) {
     const nextParam = new URLSearchParams(
       search?.startsWith("?") ? search : `?${search || ""}`,
     ).get("next");
@@ -67,7 +73,7 @@ export async function enforceRouteAuth(pathname: string, search?: string) {
     });
   }
 
-  if (session && isPublicRoute) {
+  if (session && isPublicRoute && !isTwoFactorRoute) {
     const nextParam = new URLSearchParams(search?.startsWith("?") ? search : `?${search || ""}`).get("next");
     throw redirect({ to: nextParam || "/" });
   }

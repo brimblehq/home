@@ -3,6 +3,10 @@ import type {
   AuthApi,
   AuthSession,
   ConfirmDeleteAccountInput,
+  TwoFactorCodeInput,
+  TwoFactorSetup,
+  TwoFactorStatus,
+  VerifyEmailCodeResult,
 } from "./auth/types";
 export type {
   AuthApi,
@@ -11,9 +15,14 @@ export type {
   ConfirmDeleteAccountInput,
   LoginInput,
   SignupInput,
+  TwoFactorCodeInput,
+  TwoFactorSetup,
+  TwoFactorStatus,
   UserLookupInput,
   UserLookupResult,
   VerifyEmailCodeInput,
+  VerifyEmailCodeResult,
+  VerifyTwoFactorChallengeInput,
 } from "./auth/types";
 
 export function createAuthApi(client: ApiClient): AuthApi {
@@ -26,6 +35,12 @@ export function createAuthApi(client: ApiClient): AuthApi {
     me: "/auth/user/me",
     lookup: "/auth/beta/lookup",
     deleteAccount: "/auth/user/delete-account",
+    twoFactorStatus: "/auth/2fa/status",
+    twoFactorSetup: "/auth/2fa/setup",
+    twoFactorVerifySetup: "/auth/2fa/verify-setup",
+    twoFactorDisable: "/auth/2fa/disable",
+    twoFactorVerify: "/auth/2fa/verify",
+    twoFactorRegenerateRecoveryCodes: "/auth/2fa/recovery-codes/regenerate",
   } as const;
 
   const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -49,6 +64,81 @@ export function createAuthApi(client: ApiClient): AuthApi {
         onboarded: Boolean(data?.onboard?.user ?? data?.onboarded),
       },
     };
+  };
+
+  const parseTwoFactorChallenge = (payload: any): VerifyEmailCodeResult | null => {
+    const data = payload?.data?.data ?? payload?.data ?? payload;
+    const challengeToken = String(
+      data?.challenge_token ?? data?.challengeToken ?? "",
+    ).trim();
+    const requiresTwoFactor = Boolean(
+      data?.requires_2fa ?? data?.requiresTwoFactor ?? data?.requires2fa,
+    );
+
+    if (!requiresTwoFactor && !challengeToken) {
+      return null;
+    }
+
+    if (!challengeToken) {
+      throw new Error("Two-factor challenge token is missing");
+    }
+
+    const expiresIn = Number.parseInt(
+      String(data?.expires_in ?? data?.expiresIn ?? "300"),
+      10,
+    );
+
+    return {
+      requiresTwoFactor: true,
+      challengeToken,
+      expiresIn: Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 300,
+    };
+  };
+
+  const mapTwoFactorStatus = (payload: any): TwoFactorStatus => {
+    const data = payload?.data?.data ?? payload?.data ?? payload;
+    return {
+      enabled: Boolean(data?.enabled),
+      hasRecoveryCodes: Boolean(
+        data?.has_recovery_codes ?? data?.hasRecoveryCodes,
+      ),
+      recoveryCodesRemaining: Number(
+        data?.recovery_codes_remaining ?? data?.recoveryCodesRemaining ?? 0,
+      ),
+    };
+  };
+
+  const mapTwoFactorSetup = (payload: any): TwoFactorSetup => {
+    const data = payload?.data?.data ?? payload?.data ?? payload;
+    const recoveryCodes = Array.isArray(data?.recovery_codes)
+      ? data.recovery_codes
+      : Array.isArray(data?.recoveryCodes)
+        ? data.recoveryCodes
+        : [];
+
+    return {
+      secret: String(data?.secret ?? ""),
+      provisioningUri: String(
+        data?.provisioning_uri ?? data?.provisioningUri ?? "",
+      ),
+      qrCode: String(data?.qr_code ?? data?.qrCode ?? ""),
+      recoveryCodes: recoveryCodes
+        .map((entry: unknown) => String(entry ?? "").trim())
+        .filter(Boolean),
+    };
+  };
+
+  const mapRecoveryCodes = (payload: any): string[] => {
+    const data = payload?.data?.data ?? payload?.data ?? payload;
+    const recoveryCodes = Array.isArray(data?.recovery_codes)
+      ? data.recovery_codes
+      : Array.isArray(data?.recoveryCodes)
+        ? data.recoveryCodes
+        : [];
+
+    return recoveryCodes
+      .map((entry: unknown) => String(entry ?? "").trim())
+      .filter(Boolean);
   };
 
   return {
@@ -79,7 +169,64 @@ export function createAuthApi(client: ApiClient): AuthApi {
         },
       });
 
+      const challenge = parseTwoFactorChallenge(response);
+      if (challenge) {
+        return challenge;
+      }
+
+      return {
+        requiresTwoFactor: false,
+        session: mapSession(response),
+      };
+    },
+    async verifyTwoFactorChallenge(input) {
+      const response = await client.request(endpoints.twoFactorVerify, {
+        method: "POST",
+        body: {
+          challenge_token: input.challengeToken,
+          code: String(input.code ?? "").trim(),
+        },
+        headers: { Authorization: "" },
+      });
+
       return mapSession(response);
+    },
+    async getTwoFactorStatus() {
+      const response = await client.request(endpoints.twoFactorStatus, {
+        method: "GET",
+      });
+      return mapTwoFactorStatus(response);
+    },
+    async startTwoFactorSetup() {
+      const response = await client.request(endpoints.twoFactorSetup, {
+        method: "POST",
+      });
+      return mapTwoFactorSetup(response);
+    },
+    async verifyTwoFactorSetup(input: TwoFactorCodeInput) {
+      await client.request(endpoints.twoFactorVerifySetup, {
+        method: "POST",
+        body: {
+          code: String(input.code ?? "").trim(),
+        },
+      });
+    },
+    async disableTwoFactor(input: TwoFactorCodeInput) {
+      await client.request(endpoints.twoFactorDisable, {
+        method: "POST",
+        body: {
+          code: String(input.code ?? "").trim(),
+        },
+      });
+    },
+    async regenerateTwoFactorRecoveryCodes(input: TwoFactorCodeInput) {
+      const response = await client.request(endpoints.twoFactorRegenerateRecoveryCodes, {
+        method: "POST",
+        body: {
+          code: String(input.code ?? "").trim(),
+        },
+      });
+      return mapRecoveryCodes(response);
     },
     async resendCode(email) {
       await client.request(endpoints.login, {

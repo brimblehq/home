@@ -1,10 +1,22 @@
-import { useState } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { cn } from "@brimble/ui";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, Loader2, TriangleAlert } from "lucide-react";
 import { CheckCircle, CopySimple } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "motion/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
+import {
+  disableTwoFactorServerFn,
+  getTwoFactorStatusServerFn,
+  regenerateTwoFactorRecoveryCodesServerFn,
+  startTwoFactorSetupServerFn,
+  verifyTwoFactorSetupServerFn,
+} from "@/server/auth/actions";
+import type {
+  TwoFactorSetup,
+  TwoFactorStatus,
+} from "@/backend/auth/types";
 import { GlossyButton } from "../shared/glossy-button";
 import {
   Modal,
@@ -15,18 +27,6 @@ import {
 } from "../shared/modal";
 import { OtpInput } from "../auth/auth-split-layout";
 
-const MOCK_SECRET_KEY = "JBSWY3DPEHPK3PXP";
-const MOCK_RECOVERY_CODES = [
-  "a1b2c-3d4e5",
-  "f6g7h-8i9j0",
-  "k1l2m-3n4o5",
-  "p6q7r-8s9t0",
-  "u1v2w-3x4y5",
-  "z6a7b-8c9d0",
-  "e1f2g-3h4i5",
-  "j6k7l-8m9n0",
-];
-
 const stepTransition = {
   duration: 0.25,
   ease: [0.16, 1, 0.3, 1] as const,
@@ -34,6 +34,46 @@ const stepTransition = {
 
 const inputClass =
   "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+
+function normalizeCodeEntry(value: string) {
+  return value.replace(/\s+/g, "").trim().toUpperCase();
+}
+
+function downloadRecoveryCodes(codes: string[]) {
+  const content = codes.join("\n");
+  const blob = new Blob([content], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "brimble-2fa-recovery-codes.txt";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function RecoveryCodesGrid({ codes }: { codes: string[] }) {
+  const normalizedCodes = codes.map(normalizeCodeEntry).filter(Boolean);
+  const columnSize = Math.ceil(normalizedCodes.length / 2);
+  const leftColumn = normalizedCodes.slice(0, columnSize);
+  const rightColumn = normalizedCodes.slice(columnSize);
+  const rowCount = Math.max(leftColumn.length, rightColumn.length);
+
+  return (
+    <div className="flex justify-center rounded-[6px] border border-dash-border bg-dash-bg-elevated p-4">
+      <div className="grid grid-cols-2 gap-x-16 gap-y-2.5">
+        {Array.from({ length: rowCount }).map((_, rowIndex) => (
+          <Fragment key={rowIndex}>
+            <code className="block font-mono text-sm tabular-nums tracking-[0.08em] text-dash-text-strong">
+              {leftColumn[rowIndex] ?? ""}
+            </code>
+            <code className="block font-mono text-sm tabular-nums tracking-[0.08em] text-dash-text-strong">
+              {rightColumn[rowIndex] ?? ""}
+            </code>
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function SecurityForm({
   email: initialEmail,
@@ -43,86 +83,218 @@ export function SecurityForm({
   onChangeEmail?: (email: string) => void | Promise<void>;
 }) {
   const haptics = useHaptics();
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
 
-  // Email
+  const getTwoFactorStatus = useServerFn(
+    getTwoFactorStatusServerFn as any,
+  ) as () => Promise<TwoFactorStatus>;
+  const startTwoFactorSetup = useServerFn(
+    startTwoFactorSetupServerFn as any,
+  ) as () => Promise<TwoFactorSetup>;
+  const verifyTwoFactorSetup = useServerFn(
+    verifyTwoFactorSetupServerFn as any,
+  ) as (args: { data: { code: string } }) => Promise<{ ok: true }>;
+  const disableTwoFactor = useServerFn(disableTwoFactorServerFn as any) as (
+    args: { data: { code: string } },
+  ) => Promise<{ ok: true }>;
+  const regenerateTwoFactorRecoveryCodes = useServerFn(
+    regenerateTwoFactorRecoveryCodesServerFn as any,
+  ) as (args: { data: { code: string } }) => Promise<{ recoveryCodes: string[] }>;
+
   const [email, setEmail] = useState(initialEmail);
   const [emailCopied, setEmailCopied] = useState(false);
 
-  // Setup modal
+  const [status, setStatus] = useState<TwoFactorStatus | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+
   const [showSetupModal, setShowSetupModal] = useState(false);
-  const [setupStep, setSetupStep] = useState<1 | 2 | 3>(1);
-  const [otpValue, setOtpValue] = useState("");
-  const [otpError, setOtpError] = useState<string | null>(null);
+  const [setupStep, setSetupStep] = useState<"scan" | "verify" | "codes">(
+    "scan",
+  );
+  const [setupData, setSetupData] = useState<TwoFactorSetup | null>(null);
+  const [setupCode, setSetupCode] = useState("");
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupAcknowledged, setSetupAcknowledged] = useState(false);
 
-  // Disable modal
   const [showDisableModal, setShowDisableModal] = useState(false);
-  const [disableOtp, setDisableOtp] = useState("");
-  const [disableOtpError, setDisableOtpError] = useState<string | null>(null);
+  const [disableCode, setDisableCode] = useState("");
+  const [disableError, setDisableError] = useState<string | null>(null);
+  const [disableLoading, setDisableLoading] = useState(false);
 
-  // Recovery codes modal
-  const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
+  const [showRegenerateModal, setShowRegenerateModal] = useState(false);
+  const [regenerateCode, setRegenerateCode] = useState("");
+  const [regenerateError, setRegenerateError] = useState<string | null>(null);
+  const [regenerateLoading, setRegenerateLoading] = useState(false);
 
-  // Secret key copy
+  const [showCodesModal, setShowCodesModal] = useState(false);
+  const [codesModalTitle, setCodesModalTitle] = useState("Recovery codes");
+  const [codesModalDescription, setCodesModalDescription] = useState(
+    "Store these codes in a safe place. Each code can only be used once.",
+  );
+  const [codesModalCodes, setCodesModalCodes] = useState<string[]>([]);
+
   const [keyCopied, setKeyCopied] = useState(false);
 
-  function resetSetup() {
+  useEffect(() => {
+    setEmail(initialEmail);
+  }, [initialEmail]);
+
+  async function refreshStatus() {
+    setLoadingStatus(true);
+    try {
+      const nextStatus = await getTwoFactorStatus();
+      setStatus(nextStatus);
+    } catch (error) {
+      setStatus(null);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to load two-factor status",
+      );
+    } finally {
+      setLoadingStatus(false);
+    }
+  }
+
+  useEffect(() => {
+    void refreshStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function resetSetupModal() {
     setShowSetupModal(false);
-    setSetupStep(1);
-    setOtpValue("");
-    setOtpError(null);
+    setSetupStep("scan");
+    setSetupCode("");
+    setSetupError(null);
+    setSetupLoading(false);
+    setSetupAcknowledged(false);
+    setSetupData(null);
   }
 
-  function handleVerifyOtp() {
-    if (otpValue.length !== 6) return;
-    setOtpError(null);
-    setSetupStep(3);
+  async function handleOpenSetup() {
+    setSetupLoading(true);
+    try {
+      const nextSetup = await startTwoFactorSetup();
+      setSetupData(nextSetup);
+      setSetupStep("scan");
+      setShowSetupModal(true);
+      setSetupError(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to start 2FA setup",
+      );
+    } finally {
+      setSetupLoading(false);
+    }
   }
 
-  function handleFinishSetup() {
-    setIs2FAEnabled(true);
-    resetSetup();
-    toast.success("Two-factor authentication enabled");
+  async function handleVerifySetup() {
+    if (!/^\d{6}$/.test(setupCode) || setupLoading) {
+      return;
+    }
+
+    setSetupLoading(true);
+    setSetupError(null);
+
+    try {
+      await verifyTwoFactorSetup({ data: { code: setupCode } });
+      setSetupStep("codes");
+      await refreshStatus();
+      toast.success("Two-factor authentication enabled");
+    } catch (error) {
+      setSetupError(
+        error instanceof Error ? error.message : "Invalid verification code",
+      );
+    } finally {
+      setSetupLoading(false);
+    }
   }
 
-  function handleDisable() {
-    if (disableOtp.length !== 6) return;
-    setIs2FAEnabled(false);
-    setShowDisableModal(false);
-    setDisableOtp("");
-    setDisableOtpError(null);
-    toast.success("Two-factor authentication disabled");
+  async function handleDisable() {
+    if (!/^\d{6}$/.test(disableCode) || disableLoading) {
+      return;
+    }
+
+    setDisableLoading(true);
+    setDisableError(null);
+
+    try {
+      await disableTwoFactor({ data: { code: disableCode } });
+      setShowDisableModal(false);
+      setDisableCode("");
+      await refreshStatus();
+      toast.success("Two-factor authentication disabled");
+    } catch (error) {
+      setDisableError(
+        error instanceof Error ? error.message : "Failed to disable 2FA",
+      );
+    } finally {
+      setDisableLoading(false);
+    }
+  }
+
+  async function handleRegenerateCodes() {
+    if (!/^\d{6}$/.test(regenerateCode) || regenerateLoading) {
+      return;
+    }
+
+    setRegenerateLoading(true);
+    setRegenerateError(null);
+
+    try {
+      const response = await regenerateTwoFactorRecoveryCodes({
+        data: { code: regenerateCode },
+      });
+      setShowRegenerateModal(false);
+      setRegenerateCode("");
+
+      setCodesModalTitle("New recovery codes");
+      setCodesModalDescription(
+        "Your previous recovery codes are now invalid. Save this new list in a safe place.",
+      );
+      setCodesModalCodes(response.recoveryCodes ?? []);
+      setShowCodesModal(true);
+
+      await refreshStatus();
+      toast.success("Recovery codes regenerated");
+    } catch (error) {
+      setRegenerateError(
+        error instanceof Error
+          ? error.message
+          : "Failed to regenerate recovery codes",
+      );
+    } finally {
+      setRegenerateLoading(false);
+    }
   }
 
   function handleCopySecret() {
-    void navigator.clipboard.writeText(MOCK_SECRET_KEY);
+    if (!setupData?.secret) {
+      return;
+    }
+
+    void navigator.clipboard.writeText(setupData.secret);
     setKeyCopied(true);
     haptics.selection();
     setTimeout(() => setKeyCopied(false), 2000);
   }
 
-  function handleCopyRecoveryCodes() {
-    void navigator.clipboard.writeText(MOCK_RECOVERY_CODES.join("\n"));
+  function handleCopyCodes(codes: string[]) {
+    if (!codes.length) {
+      return;
+    }
+
+    void navigator.clipboard.writeText(codes.join("\n"));
     haptics.selection();
     toast.success("Recovery codes copied");
   }
 
-  function handleDownloadRecoveryCodes() {
-    const content = MOCK_RECOVERY_CODES.join("\n");
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "brimble-2fa-recovery-codes.txt";
-    a.click();
-    URL.revokeObjectURL(url);
-    haptics.selection();
-  }
+  const normalizedRemaining = status?.recoveryCodesRemaining ?? 0;
+  const lowCodesWarning = Boolean(status?.enabled && normalizedRemaining <= 3);
 
   return (
     <>
       <div className="flex max-w-[488px] flex-col gap-8">
-        {/* Email */}
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-1">
             <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
@@ -168,92 +340,102 @@ export function SecurityForm({
 
         <hr className="border-dash-border-soft" />
 
-        {/* 2FA heading */}
         <div className="flex flex-col gap-1">
           <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
             Two-factor authentication
           </span>
           <span className="text-sm leading-5 text-dash-text-faded">
-            {is2FAEnabled
+            {status?.enabled
               ? "Your account is protected with two-factor authentication."
-              : "Add an extra layer of security to your account by requiring a verification code in addition to your password."}
+              : "Add an extra layer of security by requiring a verification code when you sign in."}
           </span>
         </div>
 
-        {/* Status + action */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {is2FAEnabled ? (
-              <CheckCircle
-                className="size-4 text-[#34d399]"
-                weight="fill"
-              />
+            {status?.enabled ? (
+              <CheckCircle className="size-4 text-[#34d399]" weight="fill" />
             ) : (
-              <img
-                src="/images/secure.svg"
-                alt=""
-                className="size-4"
-              />
+              <img src="/images/secure.svg" alt="" className="size-4" />
             )}
             <span className="text-sm text-dash-text-body">
-              {is2FAEnabled ? "2FA is enabled" : "2FA is not enabled"}
+              {loadingStatus
+                ? "Checking 2FA status..."
+                : status?.enabled
+                  ? "2FA is enabled"
+                  : "2FA is not enabled"}
             </span>
           </div>
-          {is2FAEnabled ? (
-            <GlossyButton
-              variant="red"
-              onClick={() => setShowDisableModal(true)}
-            >
-              Disable
-            </GlossyButton>
+          {status?.enabled ? (
+            <div className="flex items-center gap-2">
+              <GlossyButton
+                variant="white"
+                onClick={() => setShowRegenerateModal(true)}
+              >
+                Regenerate recovery codes
+              </GlossyButton>
+              <GlossyButton
+                variant="red"
+                onClick={() => setShowDisableModal(true)}
+              >
+                Disable
+              </GlossyButton>
+            </div>
           ) : (
             <GlossyButton
               variant="blue"
               onClick={() => {
-                setShowSetupModal(true);
-                setSetupStep(1);
+                void handleOpenSetup();
               }}
+              disabled={setupLoading || loadingStatus}
             >
-              Enable
+              {setupLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Starting...
+                </span>
+              ) : (
+                "Enable"
+              )}
             </GlossyButton>
           )}
         </div>
 
-        {/* Recovery codes (only when enabled) */}
-        {is2FAEnabled && (
+        {status?.enabled && (
           <>
             <hr className="border-dash-border-soft" />
-            <div className="flex flex-col gap-1">
-              <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-                Recovery codes
-              </span>
-              <span className="text-sm leading-5 text-dash-text-faded">
-                Use these codes to access your account if you lose your
-                authenticator device.
-              </span>
+            <div className="space-y-2">
+              <p className="text-sm text-dash-text-body">
+                Recovery codes remaining: {normalizedRemaining}
+              </p>
+              {lowCodesWarning && (
+                <div className="flex items-start gap-2 rounded-[6px] border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-3 py-2.5 text-xs text-[#f59e0b]">
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                  <span>
+                    You have {normalizedRemaining} recovery code
+                    {normalizedRemaining === 1 ? "" : "s"} left. Regenerate a
+                    new set to avoid being locked out.
+                  </span>
+                </div>
+              )}
             </div>
-            <GlossyButton
-              variant="white"
-              onClick={() => setShowRecoveryCodes(true)}
-            >
-              View recovery codes
-            </GlossyButton>
           </>
         )}
       </div>
 
-      {/* ── Setup modal ── */}
       <Modal
         open={showSetupModal}
         onOpenChange={(open) => {
-          if (!open) resetSetup();
+          if (!open) {
+            resetSetupModal();
+          }
         }}
-        width={440}
+        width={460}
       >
         <AnimatePresence mode="wait" initial={false}>
-          {setupStep === 1 && (
+          {setupStep === "scan" && setupData && (
             <motion.div
-              key="step-1"
+              key="setup-scan"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -261,50 +443,28 @@ export function SecurityForm({
             >
               <ModalHeader
                 title="Set up two-factor authentication"
-                description="Scan the QR code with your authenticator app"
+                description="Scan this QR code with Google Authenticator, Authy, or any TOTP app."
               />
               <div className="flex flex-col items-center gap-6 px-6 py-6">
-                {/* QR code placeholder */}
-                <div className="flex size-[200px] items-center justify-center rounded-lg border-2 border-dashed border-dash-border bg-dash-bg-elevated">
-                  <div className="flex flex-col items-center gap-2">
-                    <svg
-                      width="48"
-                      height="48"
-                      viewBox="0 0 48 48"
-                      fill="none"
-                      className="text-dash-text-extra-faded"
-                    >
-                      <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
-                      <rect x="8" y="8" width="8" height="8" rx="1" fill="currentColor" />
-                      <rect x="28" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
-                      <rect x="32" y="8" width="8" height="8" rx="1" fill="currentColor" />
-                      <rect x="4" y="28" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
-                      <rect x="8" y="32" width="8" height="8" rx="1" fill="currentColor" />
-                      <rect x="28" y="28" width="4" height="4" rx="0.5" fill="currentColor" />
-                      <rect x="36" y="28" width="4" height="4" rx="0.5" fill="currentColor" />
-                      <rect x="28" y="36" width="4" height="4" rx="0.5" fill="currentColor" />
-                      <rect x="36" y="36" width="4" height="4" rx="0.5" fill="currentColor" />
-                      <rect x="40" y="40" width="4" height="4" rx="0.5" fill="currentColor" />
-                    </svg>
-                    <span className="text-xs text-dash-text-extra-faded">
-                      QR Code
-                    </span>
-                  </div>
-                </div>
+                <img
+                  src={setupData.qrCode}
+                  alt="Two-factor authentication QR code"
+                  className="size-[200px] rounded-lg border border-dash-border bg-white p-2"
+                />
 
-                {/* Manual key */}
                 <div className="flex w-full flex-col gap-2">
                   <span className="text-xs text-dash-text-faded">
-                    Or enter this key manually:
+                    Manual setup key
                   </span>
                   <div className="flex items-center gap-2 rounded-[6px] border border-dash-border bg-dash-bg-elevated px-3 py-2.5">
-                    <code className="flex-1 font-mono text-sm tracking-wider text-dash-text-strong">
-                      {MOCK_SECRET_KEY}
+                    <code className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-sm tracking-wider text-dash-text-strong">
+                      {setupData.secret}
                     </code>
                     <button
                       type="button"
                       onClick={handleCopySecret}
                       className="shrink-0 text-dash-text-faded transition-colors hover:text-dash-text-strong"
+                      title="Copy secret"
                     >
                       {keyCopied ? (
                         <CheckCircle
@@ -320,16 +480,16 @@ export function SecurityForm({
               </div>
               <ModalFooter>
                 <ModalCancelButton />
-                <ModalContinueButton onClick={() => setSetupStep(2)}>
+                <ModalContinueButton onClick={() => setSetupStep("verify")}>
                   Continue
                 </ModalContinueButton>
               </ModalFooter>
             </motion.div>
           )}
 
-          {setupStep === 2 && (
+          {setupStep === "verify" && (
             <motion.div
-              key="step-2"
+              key="setup-verify"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -342,29 +502,32 @@ export function SecurityForm({
               <div className="flex flex-col items-center gap-4 px-6 py-6">
                 <div className="w-full max-w-[320px]">
                   <OtpInput
-                    value={otpValue}
-                    onChange={(val) => {
-                      setOtpValue(val);
-                      setOtpError(null);
+                    value={setupCode}
+                    onChange={(value) => {
+                      setSetupCode(value);
+                      setSetupError(null);
                     }}
                     autoFocus
+                    error={Boolean(setupError)}
                   />
                 </div>
-                {otpError && (
-                  <p className="text-xs text-[#ef2f1f]">{otpError}</p>
-                )}
+                {setupError && <p className="text-xs text-[#ef2f1f]">{setupError}</p>}
               </div>
               <ModalFooter>
                 <ModalCancelButton
                   onClick={() => {
-                    setSetupStep(1);
-                    setOtpValue("");
-                    setOtpError(null);
+                    setSetupStep("scan");
+                    setSetupCode("");
+                    setSetupError(null);
                   }}
                 />
                 <ModalContinueButton
-                  onClick={handleVerifyOtp}
-                  disabled={otpValue.length !== 6}
+                  onClick={() => {
+                    void handleVerifySetup();
+                  }}
+                  disabled={!/^\d{6}$/.test(setupCode)}
+                  loading={setupLoading}
+                  loadingLabel="Verifying..."
                 >
                   Verify
                 </ModalContinueButton>
@@ -372,9 +535,9 @@ export function SecurityForm({
             </motion.div>
           )}
 
-          {setupStep === 3 && (
+          {setupStep === "codes" && (
             <motion.div
-              key="step-3"
+              key="setup-codes"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -382,24 +545,17 @@ export function SecurityForm({
             >
               <ModalHeader
                 title="Save your recovery codes"
-                description="Store these codes in a safe place. Each code can only be used once."
+                description="Recovery codes are shown once. Store them in a safe place."
               />
               <div className="flex flex-col gap-4 px-6 py-6">
-                <div className="grid grid-cols-2 gap-2 rounded-[6px] border border-dash-border bg-dash-bg-elevated p-4">
-                  {MOCK_RECOVERY_CODES.map((code) => (
-                    <code
-                      key={code}
-                      className="font-mono text-sm text-dash-text-strong"
-                    >
-                      {code}
-                    </code>
-                  ))}
-                </div>
+                <RecoveryCodesGrid codes={setupData?.recoveryCodes ?? []} />
                 <div className="flex gap-2">
                   <GlossyButton
                     variant="white"
                     className="flex-1"
-                    onClick={handleCopyRecoveryCodes}
+                    onClick={() => {
+                      handleCopyCodes(setupData?.recoveryCodes ?? []);
+                    }}
                   >
                     <Copy className="mr-1.5 size-3.5" />
                     Copy all
@@ -407,16 +563,32 @@ export function SecurityForm({
                   <GlossyButton
                     variant="white"
                     className="flex-1"
-                    onClick={handleDownloadRecoveryCodes}
+                    onClick={() => {
+                      downloadRecoveryCodes(setupData?.recoveryCodes ?? []);
+                    }}
                   >
                     <Download className="mr-1.5 size-3.5" />
                     Download
                   </GlossyButton>
                 </div>
+                <label className="flex items-center gap-2 text-sm text-dash-text-faded">
+                  <input
+                    type="checkbox"
+                    className="size-4 shrink-0 rounded border-dash-border"
+                    checked={setupAcknowledged}
+                    onChange={(event) =>
+                      setSetupAcknowledged(event.target.checked)
+                    }
+                  />
+                  I have saved my recovery codes.
+                </label>
               </div>
               <ModalFooter>
                 <div />
-                <ModalContinueButton onClick={handleFinishSetup}>
+                <ModalContinueButton
+                  onClick={resetSetupModal}
+                  disabled={!setupAcknowledged}
+                >
                   Done
                 </ModalContinueButton>
               </ModalFooter>
@@ -425,74 +597,116 @@ export function SecurityForm({
         </AnimatePresence>
       </Modal>
 
-      {/* ── Disable modal ── */}
       <Modal
         open={showDisableModal}
         onOpenChange={(open) => {
           if (!open) {
             setShowDisableModal(false);
-            setDisableOtp("");
-            setDisableOtpError(null);
+            setDisableCode("");
+            setDisableError(null);
+            setDisableLoading(false);
           }
         }}
         width={440}
       >
         <ModalHeader
           title="Disable two-factor authentication"
-          description="Enter your verification code to confirm"
+          description="Enter your authenticator code to confirm"
         />
         <div className="flex flex-col items-center gap-4 px-6 py-6">
           <div className="w-full max-w-[320px]">
             <OtpInput
-              value={disableOtp}
-              onChange={(val) => {
-                setDisableOtp(val);
-                setDisableOtpError(null);
+              value={disableCode}
+              onChange={(value) => {
+                setDisableCode(value);
+                setDisableError(null);
               }}
               autoFocus
+              error={Boolean(disableError)}
             />
           </div>
-          {disableOtpError && (
-            <p className="text-xs text-[#ef2f1f]">{disableOtpError}</p>
-          )}
+          {disableError && <p className="text-xs text-[#ef2f1f]">{disableError}</p>}
         </div>
         <ModalFooter>
           <ModalCancelButton />
           <ModalContinueButton
-            onClick={handleDisable}
-            disabled={disableOtp.length !== 6}
+            onClick={() => {
+              void handleDisable();
+            }}
+            disabled={!/^\d{6}$/.test(disableCode)}
+            loading={disableLoading}
+            loadingLabel="Disabling..."
           >
             Disable
           </ModalContinueButton>
         </ModalFooter>
       </Modal>
 
-      {/* ── View recovery codes modal ── */}
       <Modal
-        open={showRecoveryCodes}
-        onOpenChange={setShowRecoveryCodes}
+        open={showRegenerateModal}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowRegenerateModal(false);
+            setRegenerateCode("");
+            setRegenerateError(null);
+            setRegenerateLoading(false);
+          }
+        }}
         width={440}
       >
         <ModalHeader
-          title="Recovery codes"
-          description="Store these codes in a safe place. Each code can only be used once."
+          title="Regenerate recovery codes"
+          description="Enter your authenticator code to generate a new set"
         />
-        <div className="flex flex-col gap-4 px-6 py-6">
-          <div className="grid grid-cols-2 gap-2 rounded-[6px] border border-dash-border bg-dash-bg-elevated p-4">
-            {MOCK_RECOVERY_CODES.map((code) => (
-              <code
-                key={code}
-                className="font-mono text-sm text-dash-text-strong"
-              >
-                {code}
-              </code>
-            ))}
+        <div className="flex flex-col items-center gap-4 px-6 py-6">
+          <div className="w-full max-w-[320px]">
+            <OtpInput
+              value={regenerateCode}
+              onChange={(value) => {
+                setRegenerateCode(value);
+                setRegenerateError(null);
+              }}
+              autoFocus
+              error={Boolean(regenerateError)}
+            />
           </div>
+          {regenerateError && (
+            <p className="text-xs text-[#ef2f1f]">{regenerateError}</p>
+          )}
+        </div>
+        <ModalFooter>
+          <ModalCancelButton />
+          <ModalContinueButton
+            onClick={() => {
+              void handleRegenerateCodes();
+            }}
+            disabled={!/^\d{6}$/.test(regenerateCode)}
+            loading={regenerateLoading}
+            loadingLabel="Generating..."
+          >
+            Regenerate
+          </ModalContinueButton>
+        </ModalFooter>
+      </Modal>
+
+      <Modal
+        open={showCodesModal}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowCodesModal(false);
+            setCodesModalCodes([]);
+          }
+        }}
+        width={460}
+      >
+        <ModalHeader title={codesModalTitle} description={codesModalDescription} />
+        <div className="flex flex-col gap-4 px-6 py-6">
+          <RecoveryCodesGrid codes={codesModalCodes} />
           <div className="flex gap-2">
             <GlossyButton
               variant="white"
               className="flex-1"
-              onClick={handleCopyRecoveryCodes}
+              onClick={() => handleCopyCodes(codesModalCodes)}
             >
               <Copy className="mr-1.5 size-3.5" />
               Copy all
@@ -500,7 +714,7 @@ export function SecurityForm({
             <GlossyButton
               variant="white"
               className="flex-1"
-              onClick={handleDownloadRecoveryCodes}
+              onClick={() => downloadRecoveryCodes(codesModalCodes)}
             >
               <Download className="mr-1.5 size-3.5" />
               Download
@@ -509,7 +723,7 @@ export function SecurityForm({
         </div>
         <ModalFooter>
           <div />
-          <ModalContinueButton onClick={() => setShowRecoveryCodes(false)}>
+          <ModalContinueButton onClick={() => setShowCodesModal(false)}>
             Done
           </ModalContinueButton>
         </ModalFooter>

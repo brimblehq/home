@@ -220,11 +220,13 @@ export function OtpInput({
   onChange,
   length = 6,
   autoFocus,
+  error = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   length?: number;
   autoFocus?: boolean;
+  error?: boolean;
 }) {
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -275,7 +277,11 @@ export function OtpInput({
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
-          className="h-12 min-w-0 flex-1 rounded-[10px] border border-dash-border bg-dash-bg text-center text-lg font-semibold text-dash-text-strong outline-none transition-shadow placeholder:text-dash-text-extra-faded focus:border-[#006fff] focus:shadow-[0_0_0_3px_rgba(0,111,255,0.1)] dark:bg-dash-bg-elevated dark:focus:border-[#4879f8] dark:focus:shadow-[0_0_0_3px_rgba(72,121,248,0.15)]"
+          className={`h-12 min-w-0 flex-1 rounded-[10px] border bg-dash-bg text-center text-lg font-semibold text-dash-text-strong outline-none transition-shadow placeholder:text-dash-text-extra-faded dark:bg-dash-bg-elevated ${
+            error
+              ? "border-[#ef2f1f] focus:border-[#ef2f1f] focus:shadow-[0_0_0_3px_rgba(239,47,31,0.18)] dark:focus:border-[#ef2f1f] dark:focus:shadow-[0_0_0_3px_rgba(239,47,31,0.2)]"
+              : "border-dash-border focus:border-[#006fff] focus:shadow-[0_0_0_3px_rgba(0,111,255,0.1)] dark:focus:border-[#4879f8] dark:focus:shadow-[0_0_0_3px_rgba(72,121,248,0.15)]"
+          }`}
           aria-label={`Digit ${i + 1}`}
         />
       ))}

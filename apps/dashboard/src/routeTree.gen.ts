@@ -15,6 +15,7 @@ import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DomainsRouteImport } from './routes/domains'
 import { Route as AddonsRouteImport } from './routes/addons'
+import { Route as R2faRouteImport } from './routes/2fa'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ScalingIndexRouteImport } from './routes/scaling/index'
@@ -68,6 +69,11 @@ const DomainsRoute = DomainsRouteImport.update({
 const AddonsRoute = AddonsRouteImport.update({
   id: '/addons',
   path: '/addons',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const R2faRoute = R2faRouteImport.update({
+  id: '/2fa',
+  path: '/2fa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SplatRoute = SplatRouteImport.update({
@@ -202,6 +208,7 @@ const ProjectsProjectIdDomainsDomainNameRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/2fa': typeof R2faRoute
   '/addons': typeof AddonsRouteWithChildren
   '/domains': typeof DomainsRouteWithChildren
   '/login': typeof LoginRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/2fa': typeof R2faRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/addons/$addonId': typeof AddonsAddonIdRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/2fa': typeof R2faRoute
   '/addons': typeof AddonsRouteWithChildren
   '/domains': typeof DomainsRouteWithChildren
   '/login': typeof LoginRoute
@@ -295,6 +304,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/2fa'
     | '/addons'
     | '/domains'
     | '/login'
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/2fa'
     | '/login'
     | '/signup'
     | '/addons/$addonId'
@@ -353,6 +364,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
+    | '/2fa'
     | '/addons'
     | '/domains'
     | '/login'
@@ -386,6 +398,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  R2faRoute: typeof R2faRoute
   AddonsRoute: typeof AddonsRouteWithChildren
   DomainsRoute: typeof DomainsRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -440,6 +453,13 @@ declare module '@tanstack/react-router' {
       path: '/addons'
       fullPath: '/addons'
       preLoaderRoute: typeof AddonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/2fa': {
+      id: '/2fa'
+      path: '/2fa'
+      fullPath: '/2fa'
+      preLoaderRoute: typeof R2faRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$': {
@@ -712,6 +732,7 @@ const ScalingRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  R2faRoute: R2faRoute,
   AddonsRoute: AddonsRouteWithChildren,
   DomainsRoute: DomainsRouteWithChildren,
   LoginRoute: LoginRoute,
