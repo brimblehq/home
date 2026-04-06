@@ -581,6 +581,8 @@ function GeneralSection({
                   onChange={(v) => setFieldValue("framework", v)}
                   placeholder="Select framework..."
                   disabled={!canWrite}
+                  searchable
+                  searchPlaceholder="Search frameworks..."
                 />
               </div>
 
