@@ -142,14 +142,6 @@ function writeDismissedSnackbars(
   }
 }
 
-function isFullWidthLayoutPath(pathname: string) {
-  const isProjectDetailsRoute =
-    /^\/projects\/[^/]+(?:\/|$)/.test(pathname) &&
-    !/^\/projects\/new(?:\/|$)/.test(pathname);
-
-  return isProjectDetailsRoute;
-}
-
 function PageHeaderSkeleton() {
   return (
     <div className="mb-8 flex items-center gap-4">
@@ -617,6 +609,12 @@ export function DashboardLayout({
   const layoutPathname = useRouterState({
     select: (s) => s.resolvedLocation?.pathname ?? s.location.pathname,
   });
+  const isRenderedProjectDetailsRoute = useRouterState({
+    select: (s) =>
+      s.matches.some((match) =>
+        /^\/projects\/\$projectId(?:\/|$)/.test(match.routeId),
+      ),
+  });
   const matchedProjectSwitcherProjects = useRouterState({
     select: (s) => {
       const projectMatch = s.matches.find(
@@ -674,8 +672,7 @@ export function DashboardLayout({
     /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
   const isCatchAll =
     layoutPathname !== "/" && !knownPrefixes.test(layoutPathname);
-  const resolvedIsFullWidth = isFullWidthLayoutPath(layoutPathname);
-  const shouldRenderDesktopSidebar = !resolvedIsFullWidth;
+  const shouldRenderDesktopSidebar = !isRenderedProjectDetailsRoute;
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const resolvedSearchStr = useRouterState({
     select: (s) => s.resolvedLocation?.searchStr ?? s.location.searchStr,
@@ -1195,7 +1192,7 @@ export function DashboardLayout({
                       })}
                     </AnimatePresence>
 
-                    {!shouldRenderDesktopSidebar && resolvedIsFullWidth ? (
+                    {!shouldRenderDesktopSidebar ? (
                       <main className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
                         <div className="mx-auto w-full max-w-screen-xl flex-1 px-4 md:px-0">
                           {shouldShowRouteSkeleton ? (

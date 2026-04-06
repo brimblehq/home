@@ -76,6 +76,14 @@ export function ChangePlanModal({
       ? "Downgrade"
       : "Confirm change";
 
+  function hardRefreshPage() {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.location.reload();
+  }
+
   function handleConfirm() {
     if (!selectedObj) return;
 
@@ -108,6 +116,7 @@ export function ChangePlanModal({
             setSelectedPlan("");
             setAcceptedTerms(false);
             onOpenChange(false);
+            hardRefreshPage();
           },
           onError: (err) => {
             toast.error(err instanceof Error ? err.message : "Failed to create subscription");
@@ -121,6 +130,7 @@ export function ChangePlanModal({
           setSelectedPlan("");
           setAcceptedTerms(false);
           onOpenChange(false);
+          hardRefreshPage();
         },
         onError: (err) => {
           toast.error(err instanceof Error ? err.message : "Failed to change plan");

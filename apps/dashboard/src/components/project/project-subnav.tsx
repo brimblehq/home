@@ -37,6 +37,7 @@ import {
   shouldShowProjectObservabilityTab,
   shouldShowProjectVisitSite,
 } from "@/utils/project-capabilities";
+import { markDeploymentHistoryForRefresh } from "@/utils/deployment-history-refresh";
 import { DatabaseConnectionModal } from "./database-connection-modal";
 
 const baseTabs = [
@@ -190,6 +191,10 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
         description: `${projectName} is being redeployed to production.`,
       });
 
+      markDeploymentHistoryForRefresh({
+        projectId: actualProjectId,
+        workspace,
+      });
       router.invalidate();
     } catch (error: any) {
       toast.error("Failed to redeploy project", {

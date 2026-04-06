@@ -74,6 +74,7 @@ import type {
   DatabaseConfigValues,
   ResourcesConfigValues,
 } from "@/utils/configuration-schemas";
+import { markDeploymentHistoryForRefresh } from "@/utils/deployment-history-refresh";
 
 const parentRoute = getRouteApi("/projects/$projectId");
 
@@ -1736,6 +1737,10 @@ function ConfigurationPage() {
         });
       }
 
+      markDeploymentHistoryForRefresh({
+        projectId: nextProjectId || project?.id || params.projectId,
+        workspace,
+      });
       toast.success("Configuration saved. Redeploy started.");
       router.invalidate();
     } catch (error) {
@@ -1757,6 +1762,10 @@ function ConfigurationPage() {
           healthCheckPath: values.healthCheckPath,
           preStartCommand: values.preStartCommand,
         },
+      });
+      markDeploymentHistoryForRefresh({
+        projectId: project?.id || params.projectId,
+        workspace,
       });
       toast.success("Build configuration saved. Redeploy started.");
       router.invalidate();

@@ -49,6 +49,7 @@ import {
   type RawEnvFormat,
   validateEnvironmentEntries,
 } from "@/utils/project-environment";
+import { markDeploymentHistoryForRefresh } from "@/utils/deployment-history-refresh";
 
 const parentRoute = getRouteApi("/projects/$projectId");
 const DEFAULT_TARGET = "PRODUCTION";
@@ -900,6 +901,7 @@ function EnvironmentPage() {
           startOnly: true,
         },
       });
+      markDeploymentHistoryForRefresh({ projectId, workspace });
       toast.success("Redeploy started");
       router.invalidate();
     } catch (error) {

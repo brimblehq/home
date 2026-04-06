@@ -34,6 +34,7 @@ import {
   deploymentStatusLabel as statusLabel,
   formatDeploymentTimeAgo,
 } from "@/utils/deployment-history";
+import { consumeDeploymentHistoryRefresh } from "@/utils/deployment-history-refresh";
 import { useProjectDeploymentLogsDrawer } from "@/contexts/project-deployment-logs-drawer-context";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import { usePushNotification } from "@/hooks/use-push-notification";
@@ -718,6 +719,18 @@ function DeploymentHistoryPage() {
     },
     [projectId, workspace, environment, status, dateRange, projectName, sendNotification],
   );
+
+  useEffect(() => {
+    if (!projectId) {
+      return;
+    }
+
+    if (!consumeDeploymentHistoryRefresh({ projectId, workspace })) {
+      return;
+    }
+
+    void fetchDeployments(1);
+  }, [fetchDeployments, projectId, workspace]);
 
   // Re-fetch when filters change
   useEffect(() => {
