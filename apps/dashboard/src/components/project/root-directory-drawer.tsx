@@ -257,7 +257,7 @@ function DirectoryRow({
 interface RootDirectoryDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  provider?: "github" | "gitlab";
+  provider?: "github" | "gitlab" | "bitbucket";
   repoName?: string;
   installationId?: number | string;
   branch?: string;

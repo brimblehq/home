@@ -22,6 +22,7 @@ import {
 import { GithubLogo, Cube, Database, CircleNotch } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
+import { useGitProvider, type UseGitProviderResult } from "@/hooks/use-git-provider";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { DashButton } from "../../components/shared/dash-button";
 import { ToggleSwitch } from "../../components/shared/toggle-switch";
@@ -48,6 +49,10 @@ import { listFrameworksServerFn } from "@/server/frameworks/actions";
 import { listRegionsServerFn } from "@/server/regions/actions";
 import {
   getGithubInstallUrlServerFn,
+  getBitbucketConnectUrlServerFn,
+  getBitbucketRepoServerFn,
+  listBitbucketAccountsServerFn,
+  listBitbucketReposServerFn,
   getGitlabConnectUrlServerFn,
   getGithubRepoServerFn,
   listGithubAccountsServerFn,
@@ -113,6 +118,14 @@ function GitlabLogo({ className }: { className?: string }) {
   );
 }
 
+function BitbucketLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M.778 1.213a.768.768 0 0 0-.768.892l3.263 19.81c.084.5.515.868 1.022.873H19.95a.772.772 0 0 0 .77-.646l3.27-20.03a.768.768 0 0 0-.768-.891zM14.52 15.53H9.522L8.17 8.466h7.561z" />
+    </svg>
+  );
+}
+
 const gitProviders: GitProvider[] = [
   {
     id: "github",
@@ -139,11 +152,30 @@ const gitProviders: GitProvider[] = [
       { label: "Deploy keys", desc: "Securely clone private repos" },
     ],
   },
+  {
+    id: "bitbucket",
+    name: "Bitbucket",
+    Icon: BitbucketLogo,
+    cardIcon: "/icons/bitbucket.svg",
+    cardIconClass: "size-5",
+    description: "Connect a repository from your Bitbucket account",
+    permissions: [
+      { label: "Read access to your repositories", desc: "Browse and import repos" },
+      { label: "Webhook notifications", desc: "Auto-deploy on push" },
+      { label: "Deploy keys", desc: "Securely clone private repos" },
+    ],
+  },
 ];
 
 function getGitProvider(id: string): GitProvider | undefined {
   return gitProviders.find((p) => p.id === id);
 }
+
+const GIT_BASE_URLS: Record<string, string> = {
+  github: "https://github.com",
+  gitlab: "https://gitlab.com",
+  bitbucket: "https://bitbucket.org",
+};
 
 function isGitSource(type: string): boolean {
   return gitProviders.some((p) => p.id === type);
@@ -238,23 +270,6 @@ const frameworks = [
 
 const regions = ["US East", "EU West", "Asia Pacific"];
 const branches = ["main", "develop", "staging"];
-
-function getGithubAccountsSignature(accounts: GithubAccount[]) {
-  return [...accounts]
-    .map((account) => ({
-      installationId: String(account.installationId ?? ""),
-      username: String(account.username ?? ""),
-      name: String(account.name ?? ""),
-      type: String(account.type ?? ""),
-    }))
-    .sort((a, b) =>
-      `${a.installationId}:${a.username}:${a.name}:${a.type}`.localeCompare(
-        `${b.installationId}:${b.username}:${b.name}:${b.type}`,
-      ),
-    )
-    .map((item) => `${item.installationId}:${item.username}:${item.name}:${item.type}`)
-    .join("|");
-}
 
 /* ─── Database Config ─── */
 
@@ -2427,7 +2442,7 @@ function Phase3Configure({
         <RootDirectoryDrawer
           open={rootDirDrawerOpen}
           onOpenChange={setRootDirDrawerOpen}
-          provider={sourceType === SourceType.Gitlab ? "gitlab" : "github"}
+          provider={(sourceType as "github" | "gitlab" | "bitbucket") ?? "github"}
           repoName={repoBrowser?.repoName}
           installationId={repoBrowser?.installationId}
           branch={branch}
@@ -2510,6 +2525,18 @@ function NewProjectPage() {
   const getGitlabRepo = useServerFn(getGitlabRepoServerFn as any) as (args: {
     data: { repoName: string; installationId?: number | string };
   }) => Promise<RepositoryMetadata>;
+  const listBitbucketAccounts = useServerFn(listBitbucketAccountsServerFn as any) as () => Promise<
+    GithubAccount[] | { accounts?: GithubAccount[] }
+  >;
+  const getBitbucketConnectUrl = useServerFn(getBitbucketConnectUrlServerFn as any) as (args: {
+    data?: { device?: string };
+  }) => Promise<{ url: string }>;
+  const listBitbucketRepos = useServerFn(listBitbucketReposServerFn as any) as (args: {
+    data?: { q?: string; page?: number; limit?: number; installationId?: number | string };
+  }) => Promise<{ repositories: GithubRepoListItem[] }>;
+  const getBitbucketRepo = useServerFn(getBitbucketRepoServerFn as any) as (args: {
+    data: { repoName: string; installationId?: number | string };
+  }) => Promise<RepositoryMetadata>;
   const createProject = useServerFn(createProjectServerFn as any) as (args: {
     data: Record<string, unknown>;
   }) => Promise<Project>;
@@ -2579,19 +2606,55 @@ function NewProjectPage() {
   );
   const [databaseEnginesLoading, setDatabaseEnginesLoading] = useState(false);
 
-  const [githubAccounts, setGithubAccounts] = useState<GithubAccount[]>([]);
-  const [githubAccountsLoading, setGithubAccountsLoading] = useState(false);
-  const [githubAccountsChecked, setGithubAccountsChecked] = useState(false);
-  const [githubRepos, setGithubRepos] = useState<GithubRepoListItem[]>([]);
-  const [githubReposLoading, setGithubReposLoading] = useState(false);
-  const [githubConnectOpening, setGithubConnectOpening] = useState(false);
-  const [githubConnectPolling, setGithubConnectPolling] = useState(false);
-  const [githubConnectError, setGithubConnectError] = useState<string | null>(null);
-  const [importingRepoFullName, setImportingRepoFullName] = useState<string | null>(null);
-  const [selectedGithubRepo, setSelectedGithubRepo] = useState<{
-    repo: GithubRepoListItem;
-    metadata: RepositoryMetadata;
-  } | null>(null);
+  const handleProviderConnected = useCallback((providerId: string) => {
+    setConnectedProviders((prev) => {
+      const next = new Set(prev);
+      next.add(providerId);
+      return next;
+    });
+  }, []);
+
+  const handleProviderRepoSelected = useCallback((name: string) => {
+    setSourceName(name);
+    setPhase(3);
+  }, []);
+
+  const github = useGitProvider({
+    providerName: "GitHub",
+    providerId: "github",
+    api: { listAccounts: listGithubAccounts, getConnectUrl: getGithubInstallUrl, listRepos: listGithubRepos, getRepo: getGithubRepo },
+    active: sourceType === SourceType.Github,
+    phase,
+    onConnected: handleProviderConnected,
+    onRepoSelected: handleProviderRepoSelected,
+  });
+
+  const gitlab = useGitProvider({
+    providerName: "GitLab",
+    providerId: "gitlab",
+    api: { listAccounts: listGitlabAccounts, getConnectUrl: getGitlabConnectUrl, listRepos: listGitlabRepos, getRepo: getGitlabRepo },
+    active: sourceType === SourceType.Gitlab,
+    phase,
+    onConnected: handleProviderConnected,
+    onRepoSelected: handleProviderRepoSelected,
+  });
+
+  const bitbucket = useGitProvider({
+    providerName: "Bitbucket",
+    providerId: "bitbucket",
+    api: { listAccounts: listBitbucketAccounts, getConnectUrl: getBitbucketConnectUrl, listRepos: listBitbucketRepos, getRepo: getBitbucketRepo },
+    active: sourceType === SourceType.Bitbucket,
+    phase,
+    onConnected: handleProviderConnected,
+    onRepoSelected: handleProviderRepoSelected,
+  });
+
+  const gitProviders_: Record<string, UseGitProviderResult> = {
+    github,
+    gitlab,
+    bitbucket,
+  };
+
   const [selectedDockerSource, setSelectedDockerSource] =
     useState<DockerSourceSelection | null>(null);
   const [validatingDockerImage, setValidatingDockerImage] = useState(false);
@@ -2599,35 +2662,6 @@ function NewProjectPage() {
   const [deployingProject, setDeployingProject] = useState(false);
   const [savingProject, setSavingProject] = useState(false);
   const [provisioningDatabase, setProvisioningDatabase] = useState(false);
-  const githubReposRequestIdRef = useRef(0);
-  const githubPollingIntervalRef = useRef<number | null>(null);
-  const githubPollingTimeoutRef = useRef<number | null>(null);
-  const githubPollingBaselineSignatureRef = useRef("");
-  const githubAccountsSignature = useMemo(
-    () => getGithubAccountsSignature(githubAccounts),
-    [githubAccounts],
-  );
-
-  const [gitlabAccounts, setGitlabAccounts] = useState<GithubAccount[]>([]);
-  const [gitlabAccountsLoading, setGitlabAccountsLoading] = useState(false);
-  const [gitlabAccountsChecked, setGitlabAccountsChecked] = useState(false);
-  const [gitlabRepos, setGitlabRepos] = useState<GithubRepoListItem[]>([]);
-  const [gitlabReposLoading, setGitlabReposLoading] = useState(false);
-  const [gitlabConnectOpening, setGitlabConnectOpening] = useState(false);
-  const [gitlabConnectPolling, setGitlabConnectPolling] = useState(false);
-  const [gitlabConnectError, setGitlabConnectError] = useState<string | null>(null);
-  const [selectedGitlabRepo, setSelectedGitlabRepo] = useState<{
-    repo: GithubRepoListItem;
-    metadata: RepositoryMetadata;
-  } | null>(null);
-  const gitlabReposRequestIdRef = useRef(0);
-  const gitlabPollingIntervalRef = useRef<number | null>(null);
-  const gitlabPollingTimeoutRef = useRef<number | null>(null);
-  const gitlabPollingBaselineSignatureRef = useRef("");
-  const gitlabAccountsSignature = useMemo(
-    () => getGithubAccountsSignature(gitlabAccounts),
-    [gitlabAccounts],
-  );
 
   useEffect(() => {
     let active = true;
@@ -2712,341 +2746,13 @@ function NewProjectPage() {
     };
   }, [listFrameworks, listRegions, workspace]);
 
-  useEffect(() => {
-    return () => {
-      if (githubPollingIntervalRef.current !== null) {
-        window.clearInterval(githubPollingIntervalRef.current);
-      }
-      if (githubPollingTimeoutRef.current !== null) {
-        window.clearTimeout(githubPollingTimeoutRef.current);
-      }
-      if (gitlabPollingIntervalRef.current !== null) {
-        window.clearInterval(gitlabPollingIntervalRef.current);
-      }
-      if (gitlabPollingTimeoutRef.current !== null) {
-        window.clearTimeout(gitlabPollingTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  async function refreshGithubAccounts(options?: { silent?: boolean }) {
-    try {
-      if (!options?.silent) {
-        setGithubAccountsLoading(true);
-      }
-      const result = await listGithubAccounts();
-      const items = Array.isArray(result) ? result : (result?.accounts ?? []);
-      setGithubAccounts(items);
-      setGithubAccountsChecked(true);
-      if (items.length > 0) {
-        setGithubConnectError(null);
-        setConnectedProviders((prev) => {
-          const next = new Set(prev);
-          next.add("github");
-          return next;
-        });
-      }
-      return items;
-    } catch (error) {
-      setGithubAccountsChecked(true);
-      if (!options?.silent) {
-        toast.error(error instanceof Error ? error.message : "Failed to load GitHub accounts");
-      }
-      return [];
-    } finally {
-      if (!options?.silent) {
-        setGithubAccountsLoading(false);
-      }
-    }
-  }
-
-  useEffect(() => {
-    if (sourceType === SourceType.Github && phase >= 2 && githubAccounts.length === 0 && !githubAccountsLoading) {
-      void refreshGithubAccounts({ silent: false });
-    }
-  }, [sourceType, phase]); // intentionally not depending on refresh function identity
-
-  const loadGithubRepos = useCallback(async (input: {
-    installationId?: number | string;
-    q?: string;
-  }) => {
-    if (!input.installationId) {
-      setGithubRepos([]);
-      setGithubReposLoading(false);
-      return;
-    }
-
-    const requestId = ++githubReposRequestIdRef.current;
-    setGithubReposLoading(true);
-
-    try {
-      const result = await listGithubRepos({
-        data: {
-          installationId: input.installationId,
-          q: input.q,
-          page: 1,
-          limit: 50,
-        },
-      });
-
-      if (requestId !== githubReposRequestIdRef.current) {
-        return;
-      }
-
-      setGithubRepos(Array.isArray(result?.repositories) ? result.repositories : []);
-    } catch (error) {
-      if (requestId !== githubReposRequestIdRef.current) {
-        return;
-      }
-      setGithubRepos([]);
-      toast.error(error instanceof Error ? error.message : "Failed to load repositories");
-    } finally {
-      if (requestId === githubReposRequestIdRef.current) {
-        setGithubReposLoading(false);
-      }
-    }
-  }, [listGithubRepos]);
-
-  function stopGithubPolling() {
-    if (githubPollingIntervalRef.current !== null) {
-      window.clearInterval(githubPollingIntervalRef.current);
-      githubPollingIntervalRef.current = null;
-    }
-    if (githubPollingTimeoutRef.current !== null) {
-      window.clearTimeout(githubPollingTimeoutRef.current);
-      githubPollingTimeoutRef.current = null;
-    }
-    setGithubConnectPolling(false);
-  }
-
-  async function handleGithubConnect() {
-    setGithubConnectError(null);
-    setGithubConnectOpening(true);
-
-    try {
-      const install = await getGithubInstallUrl();
-      const installUrl = install?.url?.trim();
-      if (!installUrl) {
-        throw new Error("We could not start GitHub connection right now. Please refresh and try again.");
-      }
-
-      const popup = window.open(
-        installUrl,
-        "_blank",
-        "width=900,height=760",
-      );
-
-      if (!popup) {
-        throw new Error("Popup blocked. Please allow popups and try again.");
-      }
-
-      githubPollingBaselineSignatureRef.current = githubAccountsSignature;
-      setGithubConnectPolling(true);
-      void refreshGithubAccounts({ silent: true });
-
-      if (githubPollingIntervalRef.current !== null) {
-        window.clearInterval(githubPollingIntervalRef.current);
-      }
-      if (githubPollingTimeoutRef.current !== null) {
-        window.clearTimeout(githubPollingTimeoutRef.current);
-      }
-
-      githubPollingIntervalRef.current = window.setInterval(() => {
-        void refreshGithubAccounts({ silent: true });
-      }, 3000);
-
-      githubPollingTimeoutRef.current = window.setTimeout(() => {
-        stopGithubPolling();
-        setGithubConnectError("Timed out waiting for GitHub connection. Finish installation, then click refresh.");
-      }, 90_000);
-    } catch (error) {
-      setGithubConnectError(
-        error instanceof Error
-          ? error.message
-          : "We could not open the GitHub connection window. Please try again.",
-      );
-    } finally {
-      setGithubConnectOpening(false);
-    }
-  }
-
-  useEffect(() => {
-    if (
-      githubConnectPolling &&
-      githubAccountsSignature.length > 0 &&
-      githubAccountsSignature !== githubPollingBaselineSignatureRef.current
-    ) {
-      stopGithubPolling();
-      toast.success("GitHub connected. Select a repository to continue.");
-    }
-  }, [githubAccountsSignature, githubConnectPolling]);
-
-  async function refreshGitlabAccounts(options?: { silent?: boolean }) {
-    try {
-      if (!options?.silent) {
-        setGitlabAccountsLoading(true);
-      }
-      const result = await listGitlabAccounts();
-      const items = Array.isArray(result) ? result : (result?.accounts ?? []);
-      setGitlabAccounts(items);
-      setGitlabAccountsChecked(true);
-      if (items.length > 0) {
-        setGitlabConnectError(null);
-        setConnectedProviders((prev) => {
-          const next = new Set(prev);
-          next.add("gitlab");
-          return next;
-        });
-      }
-      return items;
-    } catch (error) {
-      setGitlabAccountsChecked(true);
-      if (!options?.silent) {
-        toast.error(error instanceof Error ? error.message : "Failed to load GitLab accounts");
-      }
-      return [];
-    } finally {
-      if (!options?.silent) {
-        setGitlabAccountsLoading(false);
-      }
-    }
-  }
-
-  useEffect(() => {
-    if (sourceType === SourceType.Gitlab && phase >= 2 && gitlabAccounts.length === 0 && !gitlabAccountsLoading) {
-      void refreshGitlabAccounts({ silent: false });
-    }
-  }, [sourceType, phase]);
-
-  const loadGitlabRepos = useCallback(async (input: {
-    installationId?: number | string;
-    q?: string;
-  }) => {
-    if (!input.installationId) {
-      setGitlabRepos([]);
-      setGitlabReposLoading(false);
-      return;
-    }
-
-    const requestId = ++gitlabReposRequestIdRef.current;
-    setGitlabReposLoading(true);
-
-    try {
-      const result = await listGitlabRepos({
-        data: {
-          installationId: input.installationId,
-          q: input.q,
-          page: 1,
-          limit: 50,
-        },
-      });
-
-      if (requestId !== gitlabReposRequestIdRef.current) {
-        return;
-      }
-
-      setGitlabRepos(Array.isArray(result?.repositories) ? result.repositories : []);
-    } catch (error) {
-      if (requestId !== gitlabReposRequestIdRef.current) {
-        return;
-      }
-      setGitlabRepos([]);
-      toast.error(error instanceof Error ? error.message : "Failed to load repositories");
-    } finally {
-      if (requestId === gitlabReposRequestIdRef.current) {
-        setGitlabReposLoading(false);
-      }
-    }
-  }, [listGitlabRepos]);
-
-  function stopGitlabPolling() {
-    if (gitlabPollingIntervalRef.current !== null) {
-      window.clearInterval(gitlabPollingIntervalRef.current);
-      gitlabPollingIntervalRef.current = null;
-    }
-    if (gitlabPollingTimeoutRef.current !== null) {
-      window.clearTimeout(gitlabPollingTimeoutRef.current);
-      gitlabPollingTimeoutRef.current = null;
-    }
-    setGitlabConnectPolling(false);
-  }
-
-  async function handleGitlabConnect() {
-    setGitlabConnectError(null);
-    setGitlabConnectOpening(true);
-
-    try {
-      const deviceId = window.sessionStorage.getItem("brimble.oauth.device_id") ?? "";
-      const connect = await getGitlabConnectUrl({
-        data: {
-          device: deviceId || undefined,
-        },
-      });
-      const connectUrl = connect?.url?.trim();
-      if (!connectUrl) {
-        throw new Error("We could not start GitLab connection right now. Please refresh and try again.");
-      }
-      const popup = window.open(
-        connectUrl,
-        "_blank",
-        "width=900,height=760",
-      );
-
-      if (!popup) {
-        throw new Error("Popup blocked. Please allow popups and try again.");
-      }
-
-      gitlabPollingBaselineSignatureRef.current = gitlabAccountsSignature;
-      setGitlabConnectPolling(true);
-      void refreshGitlabAccounts({ silent: true });
-
-      if (gitlabPollingIntervalRef.current !== null) {
-        window.clearInterval(gitlabPollingIntervalRef.current);
-      }
-      if (gitlabPollingTimeoutRef.current !== null) {
-        window.clearTimeout(gitlabPollingTimeoutRef.current);
-      }
-
-      gitlabPollingIntervalRef.current = window.setInterval(() => {
-        void refreshGitlabAccounts({ silent: true });
-      }, 3000);
-
-      gitlabPollingTimeoutRef.current = window.setTimeout(() => {
-        stopGitlabPolling();
-        setGitlabConnectError("Timed out waiting for GitLab connection. Finish authorization, then click refresh.");
-      }, 90_000);
-    } catch (error) {
-      setGitlabConnectError(
-        error instanceof Error
-          ? error.message
-          : "We could not open the GitLab connection window. Please try again.",
-      );
-    } finally {
-      setGitlabConnectOpening(false);
-    }
-  }
-
-  useEffect(() => {
-    if (
-      gitlabConnectPolling &&
-      gitlabAccountsSignature.length > 0 &&
-      gitlabAccountsSignature !== gitlabPollingBaselineSignatureRef.current
-    ) {
-      stopGitlabPolling();
-      toast.success("GitLab connected. Select a repository to continue.");
-    }
-  }, [gitlabAccountsSignature, gitlabConnectPolling]);
-
   function handleSourceTypeSelect(type: SourceType) {
     setSourceType(type);
-    setSelectedGithubRepo(null);
-    setSelectedGitlabRepo(null);
+    github.reset();
+    gitlab.reset();
+    bitbucket.reset();
     setSelectedDockerSource(null);
     setDockerImageValidationError(null);
-    setGithubRepos([]);
-    setGitlabRepos([]);
-    setGithubConnectError(null);
-    setGitlabConnectError(null);
     setPhase(2);
   }
 
@@ -3112,7 +2818,9 @@ function NewProjectPage() {
     if (target === 1) {
       setSourceType(null);
       setSourceName("");
-      setSelectedGithubRepo(null);
+      github.reset();
+      gitlab.reset();
+      bitbucket.reset();
       setSelectedDockerSource(null);
       setDockerImageValidationError(null);
     } else if (target <= 2) {
@@ -3120,47 +2828,9 @@ function NewProjectPage() {
       if (sourceType === SourceType.Docker) {
         setDockerImageValidationError(null);
       }
-      if (sourceType === SourceType.Github) {
-        setSelectedGithubRepo(null);
+      if (sourceType && gitProviders_[sourceType]) {
+        gitProviders_[sourceType].reset();
       }
-    }
-  }
-
-  async function handleGithubRepoSelect(repo: GithubRepoListItem) {
-    setImportingRepoFullName(repo.fullName);
-    try {
-      const metadata = await getGithubRepo({
-        data: {
-          repoName: repo.fullName,
-          installationId: repo.installationId,
-        },
-      });
-
-      setSelectedGithubRepo({ repo, metadata });
-      handleSourceSelect(metadata.fullName || repo.fullName);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to import repository");
-    } finally {
-      setImportingRepoFullName(null);
-    }
-  }
-
-  async function handleGitlabRepoSelect(repo: GithubRepoListItem) {
-    setImportingRepoFullName(repo.fullName);
-    try {
-      const metadata = await getGitlabRepo({
-        data: {
-          repoName: repo.fullName,
-          installationId: repo.installationId,
-        },
-      });
-
-      setSelectedGitlabRepo({ repo, metadata });
-      handleSourceSelect(metadata.fullName || repo.fullName);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to import repository");
-    } finally {
-      setImportingRepoFullName(null);
     }
   }
 
@@ -3183,9 +2853,10 @@ function NewProjectPage() {
 
     let payload: Record<string, unknown>;
 
-    if (sourceType === SourceType.Github || sourceType === SourceType.Gitlab) {
-      const selectedRepo = sourceType === SourceType.Github ? selectedGithubRepo : selectedGitlabRepo;
-      const gitTag = sourceType === SourceType.Github ? "GITHUB" : "GITLAB";
+    if (sourceType === SourceType.Github || sourceType === SourceType.Gitlab || sourceType === SourceType.Bitbucket) {
+      const providerState = gitProviders_[sourceType];
+      const selectedRepo = providerState?.selectedRepo ?? null;
+      const gitTag = sourceType.toUpperCase();
 
       if (!selectedRepo?.repo || !selectedRepo?.metadata) {
         toast.error("Please select a repository first.");
@@ -3498,11 +3169,9 @@ function NewProjectPage() {
               }
               onChangeClick={() => handleChangePhase(2)}
               externalUrl={
-                sourceType === SourceType.Github
-                  ? `https://github.com/${sourceName}`
-                  : sourceType === SourceType.Gitlab
-                    ? `https://gitlab.com/${sourceName}`
-                    : undefined
+                sourceType && GIT_BASE_URLS[sourceType]
+                  ? `${GIT_BASE_URLS[sourceType]}/${sourceName}`
+                  : undefined
               }
             />
           </div>
@@ -3528,45 +3197,34 @@ function NewProjectPage() {
                   );
                 }
                 const provider = getGitProvider(sourceType);
-                const isGithub = provider?.id === "github";
-                const isGitlab = provider?.id === "gitlab";
-                if (provider && !connectedProviders.has(provider.id)) {
+                const ps = provider ? gitProviders_[provider.id] : undefined;
+                if (provider && ps && !connectedProviders.has(provider.id)) {
                   return (
                     <Phase2GitConnect
                       key={`phase2-connect-${provider.id}`}
                       provider={provider}
-                      onConnected={isGithub ? handleGithubConnect : isGitlab ? handleGitlabConnect : () => {
-                        toast.message(`${provider.name} integration is not available yet.`);
-                      }}
-                      connecting={isGithub ? githubConnectOpening : isGitlab ? gitlabConnectOpening : false}
-                      polling={isGithub ? githubConnectPolling : isGitlab ? gitlabConnectPolling : false}
-                      checkingConnection={
-                        isGithub
-                          ? (!githubAccountsChecked || githubAccountsLoading)
-                          : isGitlab
-                            ? (!gitlabAccountsChecked || gitlabAccountsLoading)
-                            : false
-                      }
-                      errorMessage={isGithub ? githubConnectError : isGitlab ? gitlabConnectError : null}
+                      onConnected={ps.handleConnect}
+                      connecting={ps.connectOpening}
+                      polling={ps.connectPolling}
+                      checkingConnection={!ps.accountsChecked || ps.accountsLoading}
+                      errorMessage={ps.connectError}
                     />
                   );
                 }
-                if (provider) {
+                if (provider && ps) {
                   return (
                     <Phase2GitRepoSelect
                       key={`phase2-repos-${provider.id}`}
                       provider={provider}
-                      accounts={isGithub ? githubAccounts : isGitlab ? gitlabAccounts : []}
-                      repos={isGithub ? githubRepos : isGitlab ? gitlabRepos : []}
-                      accountsLoading={isGithub ? githubAccountsLoading : isGitlab ? gitlabAccountsLoading : false}
-                      reposLoading={isGithub ? githubReposLoading : isGitlab ? gitlabReposLoading : false}
-                      importingRepoFullName={importingRepoFullName}
-                      onRefreshAccounts={isGithub ? () => void refreshGithubAccounts() : isGitlab ? () => void refreshGitlabAccounts() : undefined}
-                      onConnectAccount={isGithub ? handleGithubConnect : isGitlab ? handleGitlabConnect : undefined}
-                      onLoadRepos={isGithub ? loadGithubRepos : isGitlab ? loadGitlabRepos : undefined}
-                      onSelect={isGithub ? handleGithubRepoSelect : isGitlab ? handleGitlabRepoSelect : () => {
-                        toast.message(`${provider.name} repo import is not available yet.`);
-                      }}
+                      accounts={ps.accounts}
+                      repos={ps.repos}
+                      accountsLoading={ps.accountsLoading}
+                      reposLoading={ps.reposLoading}
+                      importingRepoFullName={ps.importingRepoFullName}
+                      onRefreshAccounts={() => void ps.refreshAccounts()}
+                      onConnectAccount={ps.handleConnect}
+                      onLoadRepos={ps.loadRepos}
+                      onSelect={ps.handleRepoSelect}
                     />
                   );
                 }
@@ -3627,11 +3285,7 @@ function NewProjectPage() {
               })()
             ) : (
               (() => {
-                const activeRepo = sourceType === SourceType.Github
-                  ? selectedGithubRepo
-                  : sourceType === SourceType.Gitlab
-                    ? selectedGitlabRepo
-                    : null;
+                const activeRepo = sourceType ? (gitProviders_[sourceType]?.selectedRepo ?? null) : null;
                 return (
                   <Phase3Configure
                     key="phase3"

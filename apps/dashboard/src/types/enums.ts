@@ -15,6 +15,7 @@ export enum Theme {
 export enum SourceType {
   Github = "github",
   Gitlab = "gitlab",
+  Bitbucket = "bitbucket",
   Docker = "docker",
   Database = "database",
 }

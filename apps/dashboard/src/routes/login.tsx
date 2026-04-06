@@ -51,6 +51,14 @@ function GitlabIcon() {
   );
 }
 
+function BitbucketIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="currentColor">
+      <path d="M.778 1.213a.768.768 0 0 0-.768.892l3.263 19.81c.084.5.515.868 1.022.873H19.95a.772.772 0 0 0 .77-.646l3.27-20.03a.768.768 0 0 0-.768-.891zM14.52 15.53H9.522L8.17 8.466h7.561z" />
+    </svg>
+  );
+}
+
 /* ─── Step 1: Enter email ─── */
 
 function EmailStep({
@@ -71,6 +79,7 @@ function EmailStep({
   onGithub: () => void;
   onGoogle: () => void;
   onGitlab: () => void;
+  onBitbucket: () => void;
   oauthLoadingProvider: OauthProvider | null;
   lastAuthMethod?: AuthMethod | null;
 }) {
@@ -114,6 +123,17 @@ function EmailStep({
           onClick={onGitlab}
           disabled={loading || oauthLoadingProvider !== null}
           lastUsed={lastAuthMethod === "gitlab"}
+        />
+        <AuthProviderButton
+          icon={<BitbucketIcon />}
+          label={
+            oauthLoadingProvider === "bitbucket"
+              ? "Connecting Bitbucket..."
+              : "Continue with Bitbucket"
+          }
+          onClick={onBitbucket}
+          disabled={loading || oauthLoadingProvider !== null}
+          lastUsed={lastAuthMethod === "bitbucket"}
         />
       </div>
 
@@ -272,7 +292,7 @@ function getNextUrl(): string {
 }
 
 const AUTH_METHOD_KEY = "brimble:last-auth-method";
-type AuthMethod = "github" | "google" | "gitlab" | "email";
+type AuthMethod = "github" | "google" | "gitlab" | "bitbucket" | "email";
 
 function getLastAuthMethod(): AuthMethod | null {
   try {
@@ -465,6 +485,9 @@ function LoginPage() {
             }}
             onGitlab={() => {
               void handleOauth("gitlab");
+            }}
+            onBitbucket={() => {
+              void handleOauth("bitbucket");
             }}
             oauthLoadingProvider={oauthLoadingProvider}
             lastAuthMethod={lastAuthMethod}

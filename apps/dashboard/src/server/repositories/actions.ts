@@ -1,5 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import type {
+  BitbucketAccountsResult,
+  BitbucketConnectUrlResult,
+  BitbucketRepoListResult,
   GithubAccountsResult,
   GithubInstallUrlResult,
   GithubRepoListResult,
@@ -186,6 +189,99 @@ export const getGitlabRootDirServerFn = createServerFn({
 
   return withTokenRefresh((api) =>
     api.repositories.getGitlabRootDir({
+      repoName: payload.repoName.trim(),
+      installationId: payload.installationId,
+      branch: payload.branch.trim(),
+      path: payload.path?.trim() || undefined,
+    }),
+  ) as Promise<RepositoryRootDirResult>;
+});
+
+export const getBitbucketConnectUrlServerFn = createServerFn({
+  method: "GET",
+}).handler(async ({ data }) => {
+  const payload = data as { device?: string } | undefined;
+  return withTokenRefresh((api) =>
+    api.repositories.getBitbucketConnectUrl({
+      device: payload?.device?.trim() || undefined,
+    }),
+  ) as Promise<BitbucketConnectUrlResult>;
+});
+
+export const listBitbucketAccountsServerFn = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  return withTokenRefresh((api) =>
+    api.repositories.listBitbucketAccounts(),
+  ) as Promise<BitbucketAccountsResult>;
+});
+
+export const listBitbucketReposServerFn = createServerFn({
+  method: "GET",
+}).handler(async ({ data }) => {
+  const payload = data as
+    | {
+        q?: string;
+        page?: number;
+        limit?: number;
+        installationId?: number | string;
+      }
+    | undefined;
+
+  return withTokenRefresh((api) =>
+    api.repositories.listBitbucketRepos({
+      q: payload?.q?.trim() || undefined,
+      page: payload?.page,
+      limit: payload?.limit,
+      installationId: payload?.installationId,
+    }),
+  ) as Promise<BitbucketRepoListResult>;
+});
+
+export const getBitbucketRepoServerFn = createServerFn({
+  method: "GET",
+}).handler(async ({ data }) => {
+  const payload = data as
+    | {
+        repoName: string;
+        installationId?: number | string;
+      }
+    | undefined;
+
+  if (!payload?.repoName?.trim()) {
+    throw new Error("Repository name is required");
+  }
+
+  return withTokenRefresh((api) =>
+    api.repositories.getBitbucketRepo({
+      repoName: payload.repoName.trim(),
+      installationId: payload.installationId,
+    }),
+  ) as Promise<RepositoryMetadata>;
+});
+
+export const getBitbucketRootDirServerFn = createServerFn({
+  method: "GET",
+}).handler(async ({ data }) => {
+  const payload = data as
+    | {
+        repoName: string;
+        installationId?: number | string;
+        branch: string;
+        path?: string;
+      }
+    | undefined;
+
+  if (!payload?.repoName?.trim()) {
+    throw new Error("Repository name is required");
+  }
+
+  if (!payload?.branch?.trim()) {
+    throw new Error("Branch is required");
+  }
+
+  return withTokenRefresh((api) =>
+    api.repositories.getBitbucketRootDir({
       repoName: payload.repoName.trim(),
       installationId: payload.installationId,
       branch: payload.branch.trim(),

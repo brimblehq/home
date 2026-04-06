@@ -192,6 +192,7 @@ function ProjectDetailPage() {
   const repoSource = project?.repo?.git || "Git";
   const repoName = project?.repo?.name || repoSource;
   const isGitlab = repoSource.toLowerCase() === "gitlab";
+  const isBitbucket = repoSource.toLowerCase() === "bitbucket";
   const repositoryHref = project?.gitLink || "";
   const lastUpdatedText = project?.updatedAt
     ? formatRelativeTime(project.updatedAt)
@@ -493,11 +494,11 @@ function ProjectDetailPage() {
                         </span>
                         {isGitlab ? (
                           <div className="flex size-6 items-center justify-center rounded-full border border-[#e24329]/30 bg-gradient-to-b from-[#fca326] to-[#e24329] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">
-                            <img
-                              src="/icons/gitlab.svg"
-                              alt="GitLab"
-                              className="size-3.5"
-                            />
+                            <img src="/icons/gitlab.svg" alt="GitLab" className="size-3.5" />
+                          </div>
+                        ) : isBitbucket ? (
+                          <div className="flex size-6 items-center justify-center rounded-full border border-[#2684ff]/30 bg-gradient-to-b from-[#2684ff] to-[#0052cc] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">
+                            <img src="/icons/bitbucket.svg" alt="Bitbucket" className="size-3.5 text-white" />
                           </div>
                         ) : (
                           <div className="flex size-6 items-center justify-center rounded-full border border-[#3e3e3e] bg-gradient-to-b from-[#666] to-[#1b1b1b] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">
@@ -519,11 +520,11 @@ function ProjectDetailPage() {
                         </span>
                         {isGitlab ? (
                           <div className="flex size-6 items-center justify-center rounded-full border border-[#e24329]/30 bg-gradient-to-b from-[#fca326] to-[#e24329] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">
-                            <img
-                              src="/icons/gitlab.svg"
-                              alt="GitLab"
-                              className="size-3.5"
-                            />
+                            <img src="/icons/gitlab.svg" alt="GitLab" className="size-3.5" />
+                          </div>
+                        ) : isBitbucket ? (
+                          <div className="flex size-6 items-center justify-center rounded-full border border-[#2684ff]/30 bg-gradient-to-b from-[#2684ff] to-[#0052cc] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">
+                            <img src="/icons/bitbucket.svg" alt="Bitbucket" className="size-3.5 text-white" />
                           </div>
                         ) : (
                           <div className="flex size-6 items-center justify-center rounded-full border border-[#3e3e3e] bg-gradient-to-b from-[#666] to-[#1b1b1b] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">

@@ -5,7 +5,7 @@ import {
   parseTwoFactorChallengeHash,
 } from "./two-factor";
 
-export type OauthProvider = "github" | "google" | "gitlab";
+export type OauthProvider = "github" | "google" | "gitlab" | "bitbucket";
 
 export interface OauthAuthEventPayload {
   access_token?: string;
