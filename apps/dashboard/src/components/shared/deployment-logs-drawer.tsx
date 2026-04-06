@@ -126,6 +126,7 @@ export function DeploymentLogsDrawer({
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastScrollTopRef = useRef(0);
 
   useEffect(() => {
     if (!open) {
@@ -134,6 +135,7 @@ export function DeploymentLogsDrawer({
 
     setCollapsedSections(new Set());
     setAutoScroll(true);
+    lastScrollTopRef.current = 0;
   }, [open]);
 
   useEffect(() => {
@@ -185,8 +187,22 @@ export function DeploymentLogsDrawer({
     }
 
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    const nearBottom = scrollHeight - scrollTop - clientHeight < 40;
-    setAutoScroll(nearBottom);
+    const previousScrollTop = lastScrollTopRef.current;
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+    const isScrollingUp = scrollTop < previousScrollTop - 1;
+
+    lastScrollTopRef.current = scrollTop;
+
+    if (isScrollingUp) {
+      if (autoScroll) {
+        setAutoScroll(false);
+      }
+      return;
+    }
+
+    if (distanceToBottom < 8 && !autoScroll) {
+      setAutoScroll(true);
+    }
   }
 
   function copyLogLine(log: DeploymentDrawerLogEntry, index: number) {
@@ -280,7 +296,13 @@ export function DeploymentLogsDrawer({
                 {/* Actions */}
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })}
+                    onClick={() => {
+                      setAutoScroll(true);
+                      scrollRef.current?.scrollTo({
+                        top: scrollRef.current.scrollHeight,
+                        behavior: "smooth",
+                      });
+                    }}
                     className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                   >
                     <ChevronsDown className="size-4" />
