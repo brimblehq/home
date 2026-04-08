@@ -417,32 +417,34 @@ function VisitorBarChart({ points, unit }: { points: { x: string; y: number }[];
                   }}
                 />
 
-                <motion.div
-                  className="absolute inset-x-0 bottom-0 origin-bottom"
-                  style={{ height: valH }}
-                  initial={{ scaleY: 0 }}
-                  animate={inView ? { scaleY: 1 } : { scaleY: 0 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 130,
-                    damping: 13,
-                    mass: 1.1,
-                  }}
-                >
-                  <div
-                    className="size-full transition-opacity duration-200 ease-out"
-                    style={{
-                      backgroundColor: "#ff7a00",
-                      opacity: isActive ? 1 : 0.3,
+                {valH > 0 && (
+                  <motion.div
+                    className="absolute inset-x-0 bottom-0 origin-bottom"
+                    style={{ height: valH }}
+                    initial={{ scaleY: 0 }}
+                    animate={inView ? { scaleY: 1 } : { scaleY: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 130,
+                      damping: 13,
+                      mass: 1.1,
                     }}
-                  />
-                  {isActive && (
+                  >
                     <div
-                      className="absolute inset-x-0 top-0 -translate-y-full"
-                      style={{ height: 10, backgroundColor: "#ffa800" }}
+                      className="size-full transition-opacity duration-200 ease-out"
+                      style={{
+                        backgroundColor: "#ff7a00",
+                        opacity: isActive ? 1 : 0.3,
+                      }}
                     />
-                  )}
-                </motion.div>
+                    {isActive && (
+                      <div
+                        className="absolute inset-x-0 top-0 -translate-y-full"
+                        style={{ height: 10, backgroundColor: "#ffa800" }}
+                      />
+                    )}
+                  </motion.div>
+                )}
               </div>
 
               <span
@@ -549,6 +551,7 @@ export function AppAnalytics({
   initial: AnalyticsPayload;
   projectId: string;
 }) {
+  const haptics = useHaptics();
   const getAnalytics = useServerFn(getAnalyticsServerFn as any) as (args: {
     data: { projectId: string; startAt: number; endAt: number; unit?: string; timezone?: string };
   }) => Promise<AnalyticsLoadResult>;
@@ -604,6 +607,7 @@ export function AppAnalytics({
       setPeriodOpen(false);
       return;
     }
+    haptics.selection();
     setPreset(next);
     setPeriodOpen(false);
     setRefetching(true);
@@ -668,32 +672,34 @@ export function AppAnalytics({
             Learn more
           </a>
         </TabHeader>
-        <button
-          type="button"
-          onClick={() => setInstallOpen(true)}
-          className="shrink-0 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg px-3 py-1.5 text-xs font-medium text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
-        >
-          Install snippet
-        </button>
-      </div>
-
-      {!hasAnyData && (
-        <div className="flex flex-col gap-2 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-dash-text-strong">Waiting for first pageview</p>
-            <p className="text-xs font-light text-dash-text-faded">
-              Once you paste the tracking snippet into your site and someone loads a page, data will start showing up here.
-            </p>
-          </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {!hasAnyData && (
+            <button
+              type="button"
+              onClick={() => setInstallOpen(true)}
+              title="Once you paste the tracking snippet into your site, data will appear here."
+              className="inline-flex items-center gap-1.5 rounded-full border-[0.5px] border-dash-border bg-dash-bg-elevated px-2.5 py-1 text-[11px] font-medium text-dash-text-faded transition-colors hover:text-dash-text-strong"
+            >
+              <span className="relative flex size-1.5">
+                <motion.span
+                  className="absolute inset-0 rounded-full bg-[#4879f8]"
+                  animate={{ scale: [1, 2.4, 1], opacity: [0.7, 0, 0.7] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
+                />
+                <span className="relative size-1.5 rounded-full bg-[#4879f8]" />
+              </span>
+              Waiting for first pageview
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setInstallOpen(true)}
             className="shrink-0 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg px-3 py-1.5 text-xs font-medium text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
           >
-            Show install snippet
+            Install snippet
           </button>
         </div>
-      )}
+      </div>
 
       <>
       <div className="flex flex-col gap-6 overflow-hidden rounded-[4px] bg-[#0a1430] px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:pl-7 sm:pr-10 sm:py-7">

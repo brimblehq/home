@@ -30,6 +30,10 @@ const TOKEN_CLASS: Record<string, string> = {
   ident: "",
 };
 
+function formatSnippet(code: string): string {
+  return code.replace(/<\/script>\s*<script/g, "</script>\n\n<script");
+}
+
 function highlight(code: string) {
   const out: { text: string; cls: string }[] = [];
   let last = 0;
@@ -141,7 +145,7 @@ export function InstallTrackingModal({
 
   async function handleCopySnippet() {
     try {
-      await navigator.clipboard.writeText(snippet);
+      await navigator.clipboard.writeText(formatSnippet(snippet));
       haptics.success();
       setCopied(true);
       toast.success("Copied to clipboard");
@@ -206,9 +210,9 @@ export function InstallTrackingModal({
         )}
 
         <div className="relative">
-          <pre className="overflow-x-auto rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated p-3.5 pr-14 font-mono text-xs leading-relaxed text-dash-text-body">
+          <pre className="max-h-[420px] overflow-y-auto whitespace-pre-wrap break-words rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated p-4 pr-14 font-mono text-[11px] leading-[1.7] text-dash-text-body">
             <code>
-              {highlight(snippet).map((tok, i) => (
+              {highlight(formatSnippet(snippet)).map((tok, i) => (
                 <Fragment key={i}>
                   {tok.cls ? <span className={tok.cls}>{tok.text}</span> : tok.text}
                 </Fragment>
