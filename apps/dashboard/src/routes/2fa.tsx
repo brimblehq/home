@@ -56,8 +56,12 @@ function TwoFactorChallengePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const didExpireRef = useRef(false);
+  const didParseHashRef = useRef(false);
 
   useEffect(() => {
+    if (didParseHashRef.current) return;
+    didParseHashRef.current = true;
+
     const parsed = parseTwoFactorChallengeHash(window.location.hash);
     if (!parsed) {
       setErrorMessage("Missing or invalid challenge token. Please log in again.");

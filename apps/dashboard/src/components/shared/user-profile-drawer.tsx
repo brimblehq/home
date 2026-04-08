@@ -86,6 +86,7 @@ import {
   transferOwnershipServerFn,
 } from "@/server/teams/actions";
 import {
+  getBitbucketConnectUrlServerFn,
   getGithubInstallUrlServerFn,
   getGitlabConnectUrlServerFn,
   listBitbucketAccountsServerFn,
@@ -1992,6 +1993,9 @@ export function UserProfileDrawer({
   const getGitlabConnectUrl = useServerFn(
     getGitlabConnectUrlServerFn as any,
   ) as (args: { data?: { device?: string } }) => Promise<{ url: string }>;
+  const getBitbucketConnectUrl = useServerFn(
+    getBitbucketConnectUrlServerFn as any,
+  ) as (args: { data?: { device?: string } }) => Promise<{ url: string }>;
   const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn);
   const listBitbucketAccounts = useServerFn(listBitbucketAccountsServerFn);
   const [gitConnectionStatus, setGitConnectionStatus] = useState<Record<string, boolean | null>>({
@@ -2143,24 +2147,34 @@ export function UserProfileDrawer({
       { id: "gitlab", fn: listGitlabAccounts },
       { id: "bitbucket", fn: listBitbucketAccounts },
     ];
-    for (const check of checks) {
-      if (gitConnectionStatus[check.id] === null) {
+
+    const refreshGitStatuses = () => {
+      for (const check of checks) {
         check.fn()
           .then((result) => {
             const accounts = Array.isArray(result) ? result : (result?.accounts ?? []);
             setGitConnectionStatus((prev) => ({ ...prev, [check.id]: accounts.length > 0 }));
           })
           .catch(() => {
-            setGitConnectionStatus((prev) => ({ ...prev, [check.id]: false }));
+            setGitConnectionStatus((prev) => ({ ...prev, [check.id]: prev[check.id] ?? false }));
           });
       }
-    }
+    };
+
+    refreshGitStatuses();
+
+    const handleConnectionChanged = () => refreshGitStatuses();
+    window.addEventListener("brimble:git-connection-changed", handleConnectionChanged);
 
     if (!twoFactorStatus) {
       getTwoFactorStatus()
         .then(setTwoFactorStatus)
         .catch(() => {});
     }
+
+    return () => {
+      window.removeEventListener("brimble:git-connection-changed", handleConnectionChanged);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -2557,6 +2571,7 @@ export function UserProfileDrawer({
                         const connectFns: Record<string, () => Promise<{ url: string }>> = {
                           github: () => getGithubInstallUrl(),
                           gitlab: () => getGitlabConnectUrl({ data: { device: window.sessionStorage.getItem("brimble.oauth.device_id") ?? undefined } }),
+                          bitbucket: () => getBitbucketConnectUrl({ data: { device: window.sessionStorage.getItem("brimble.oauth.device_id") ?? undefined } }),
                         };
                         const getFn = connectFns[providerId];
                         if (!getFn) {

@@ -1,5 +1,25 @@
 import type { ApiClient } from "./types";
 import { asRecord, asString, asStringOrNumber, pickString } from "./normalize";
+import { BackendApiError } from "./errors";
+
+export const CONNECT_EXPIRED_PREFIX = "CONNECT_EXPIRED:";
+export const CONNECT_AUTH_REQUIRED_PREFIX = "CONNECT_AUTH_REQUIRED:";
+
+function mapConnectError(error: unknown, providerName: string): never {
+  if (error instanceof BackendApiError) {
+    if (error.status === 400) {
+      throw new Error(`${CONNECT_EXPIRED_PREFIX}Connection expired, please try again.`);
+    }
+    if (error.status === 401) {
+      throw new Error(
+        `${CONNECT_AUTH_REQUIRED_PREFIX}You need to sign in again to connect ${providerName}.`,
+      );
+    }
+  }
+  throw error instanceof Error
+    ? error
+    : new Error(`We could not start ${providerName} connection right now. Please try again.`);
+}
 
 export interface GithubAccount {
   id?: string;
@@ -157,37 +177,45 @@ function mapRepositoryFrameworkDefaults(value: unknown): RepositoryFrameworkDefa
 export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
   return {
     async getGithubInstallUrl() {
-      const response = await client.request<any>("/auth/github/connect-url", {
-        method: "GET",
-      });
+      try {
+        const response = await client.request<any>("/auth/github/connect-url", {
+          method: "GET",
+        });
 
-      const root = response?.data?.data ?? response?.data ?? response ?? {};
-      const row = asRecord(root);
-      const url = row ? pickString(row, "url") : undefined;
+        const root = response?.data?.data ?? response?.data ?? response ?? {};
+        const row = asRecord(root);
+        const url = row ? pickString(row, "url") : undefined;
 
-      if (!url) {
-        throw new Error("We could not start GitHub connection right now. Please refresh and try again.");
+        if (!url) {
+          throw new Error("We could not start GitHub connection right now. Please refresh and try again.");
+        }
+
+        return { url } satisfies GithubInstallUrlResult;
+      } catch (error) {
+        mapConnectError(error, "GitHub");
       }
-
-      return { url } satisfies GithubInstallUrlResult;
     },
     async getGitlabConnectUrl(input) {
-      const response = await client.request<any>("/auth/gitlab/connect-url", {
-        method: "GET",
-        query: {
-          device: input?.device,
-        },
-      });
+      try {
+        const response = await client.request<any>("/auth/gitlab/connect-url", {
+          method: "GET",
+          query: {
+            device: input?.device,
+          },
+        });
 
-      const root = response?.data?.data ?? response?.data ?? response ?? {};
-      const row = asRecord(root);
-      const url = row ? pickString(row, "url") : undefined;
+        const root = response?.data?.data ?? response?.data ?? response ?? {};
+        const row = asRecord(root);
+        const url = row ? pickString(row, "url") : undefined;
 
-      if (!url) {
-        throw new Error("We could not start GitLab connection right now. Please refresh and try again.");
+        if (!url) {
+          throw new Error("We could not start GitLab connection right now. Please refresh and try again.");
+        }
+
+        return { url } satisfies GitlabConnectUrlResult;
+      } catch (error) {
+        mapConnectError(error, "GitLab");
       }
-
-      return { url } satisfies GitlabConnectUrlResult;
     },
     async listGithubAccounts() {
       const response = await client.request<any>("/core/v1/accounts/github", {
@@ -589,20 +617,24 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
       };
     },
     async getBitbucketConnectUrl(input) {
-      const response = await client.request<any>("/auth/bitbucket/connect-url", {
-        method: "GET",
-        query: { device: input?.device },
-      });
+      try {
+        const response = await client.request<any>("/auth/bitbucket/connect-url", {
+          method: "GET",
+          query: { device: input?.device },
+        });
 
-      const root = response?.data?.data ?? response?.data ?? response ?? {};
-      const row = asRecord(root);
-      const url = row ? pickString(row, "url") : undefined;
+        const root = response?.data?.data ?? response?.data ?? response ?? {};
+        const row = asRecord(root);
+        const url = row ? pickString(row, "url") : undefined;
 
-      if (!url) {
-        throw new Error("We could not start Bitbucket connection right now. Please refresh and try again.");
+        if (!url) {
+          throw new Error("We could not start Bitbucket connection right now. Please refresh and try again.");
+        }
+
+        return { url } satisfies BitbucketConnectUrlResult;
+      } catch (error) {
+        mapConnectError(error, "Bitbucket");
       }
-
-      return { url } satisfies BitbucketConnectUrlResult;
     },
     async listBitbucketAccounts() {
       const response = await client.request<any>("/core/v1/accounts/bitbucket", {

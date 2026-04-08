@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Github, ArrowLeft, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -22,7 +22,7 @@ import {
 } from "../server/auth/actions";
 import { startOauthPopup, type OauthProvider } from "../lib/auth/oauth-popup";
 import {
-  buildTwoFactorChallengeUrl,
+  buildTwoFactorChallengeNavigation,
   extractTwoFactorChallenge,
 } from "@/lib/auth/two-factor";
 
@@ -309,6 +309,7 @@ function saveLastAuthMethod(method: AuthMethod) {
 
 function LoginPage() {
   const haptics = useHaptics();
+  const navigate = useNavigate();
   const requestLoginOtp = useServerFn(requestLoginOtpServerFn);
   const resendAuthCode = useServerFn(resendAuthCodeServerFn);
   const verifyEmailCode = useServerFn(verifyEmailCodeServerFn);
@@ -334,9 +335,8 @@ function LoginPage() {
       const data = await startOauthPopup(provider);
       const challenge = extractTwoFactorChallenge(data);
       if (challenge) {
-        window.location.assign(
-          buildTwoFactorChallengeUrl(challenge, { next: getNextUrl() }),
-        );
+        const nav = buildTwoFactorChallengeNavigation(challenge, { next: getNextUrl() });
+        navigate({ to: "/2fa", search: nav.search, hash: nav.hash });
         return;
       }
 
@@ -397,15 +397,14 @@ function LoginPage() {
     try {
       const response = await verifyEmailCode({ data: { email, code, geo: await getClientGeo() } });
       if (response.requiresTwoFactor) {
-        window.location.assign(
-          buildTwoFactorChallengeUrl(
-            {
-              challengeToken: response.challengeToken,
-              expiresIn: response.expiresIn,
-            },
-            { next: getNextUrl() },
-          ),
+        const nav = buildTwoFactorChallengeNavigation(
+          {
+            challengeToken: response.challengeToken,
+            expiresIn: response.expiresIn,
+          },
+          { next: getNextUrl() },
         );
+        navigate({ to: "/2fa", search: nav.search, hash: nav.hash });
         return;
       }
 

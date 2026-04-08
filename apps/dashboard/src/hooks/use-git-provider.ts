@@ -212,11 +212,23 @@ export function useGitProvider({
         );
       }, 90_000);
     } catch (error) {
-      setConnectError(
+      const rawMessage =
         error instanceof Error
           ? error.message
-          : `We could not open the ${providerName} connection window. Please try again.`,
-      );
+          : `We could not open the ${providerName} connection window. Please try again.`;
+
+      if (rawMessage.startsWith("CONNECT_AUTH_REQUIRED:")) {
+        toast.error("Please sign in again to continue.");
+        const next = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+        return;
+      }
+
+      const cleanMessage = rawMessage.startsWith("CONNECT_EXPIRED:")
+        ? "Connection expired, please try again."
+        : rawMessage;
+
+      setConnectError(cleanMessage);
     } finally {
       setConnectOpening(false);
     }
@@ -230,6 +242,9 @@ export function useGitProvider({
     ) {
       stopPolling();
       toast.success(`${providerName} connected. Select a repository to continue.`);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("brimble:git-connection-changed"));
+      }
     }
   }, [accountsSignature, connectPolling, providerName]);
 

@@ -79,3 +79,17 @@ export function buildTwoFactorChallengeUrl(
 
   return `/2fa${search}#${hash}`;
 }
+
+export function buildTwoFactorChallengeNavigation(
+  challenge: TwoFactorChallenge,
+  opts?: { next?: string | null },
+): { search: Record<string, string>; hash: string } {
+  const next = opts?.next?.trim();
+  const search: Record<string, string> = {};
+  if (next) search.next = next;
+  const hash = new URLSearchParams({
+    challenge_token: challenge.challengeToken,
+    expires_in: String(toPositiveInt(challenge.expiresIn)),
+  }).toString();
+  return { search, hash };
+}
