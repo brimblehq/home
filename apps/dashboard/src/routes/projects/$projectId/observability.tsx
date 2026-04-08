@@ -1,8 +1,12 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
-import { Archive } from "@phosphor-icons/react";
+import {
+  ArrowBendUpLeft,
+  GlobeHemisphereWest,
+  UsersThree,
+} from "@phosphor-icons/react";
 import { motion, useInView } from "motion/react";
 import { TabHeader } from "../../../components/shared/tab-header";
 import { TimeSeriesChart } from "@/components/observability/time-series-chart";
@@ -17,6 +21,17 @@ import {
 import { normalizeMemoryGbValue } from "@/utils/project-configuration";
 import { useHaptics } from "@/hooks/use-haptics";
 import { isDatabaseProject, shouldShowProjectObservabilityTab } from "@/utils/project-capabilities";
+import { InstallTrackingModal } from "@/components/analytics/install-tracking-modal";
+import { VisitorsMap } from "@/components/analytics/visitors-map";
+import { TrafficHeatmap } from "@/components/analytics/traffic-heatmap";
+import type {
+  AnalyticsPayload,
+  AnalyticsPerformanceMetric,
+  AnalyticsSummary,
+} from "@/backend/analytics";
+import { getAnalyticsServerFn, type AnalyticsLoadResult } from "@/server/analytics/actions";
+import { friendlyAnalyticsError } from "@/lib/analytics-errors";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { usePlanGate } from "@/hooks/use-plan-gate";
 import { PlanUpgradePrompt } from "@/components/shared/plan-upgrade-prompt";
 
@@ -334,119 +349,57 @@ function AppMetrics({
   );
 }
 
-const visitorData = [
-  { month: "JAN", value: 14 },
-  { month: "FEB", value: 108 },
-  { month: "MAR", value: 166 },
-  { month: "APR", value: 55 },
-  { month: "MAY", value: 137 },
-  { month: "JUN", value: 14 },
-  { month: "JUL", value: 76 },
-  { month: "AUG", value: 55 },
-  { month: "SEP", value: 183 },
-  { month: "OCT", value: 89 },
-  { month: "NOV", value: 154 },
-  { month: "DEC", value: 13 },
-];
 
-const topPages = [
-  { path: "/about", visitors: 148 },
-  { path: "/blog", visitors: 148 },
-  { path: "/home", visitors: 148 },
-];
-
-const funnelSources = [
-  { name: "Asana", icon: "🔷", visitors: 148 },
-  { name: "Confluence", icon: "🔵", visitors: 148 },
-  { name: "LinkedIn", icon: "🔗", visitors: 148 },
-  { name: "Google.com", icon: "🔍", visitors: 148 },
-];
-
-const countries = [
-  { name: "Nigeria", flag: "🇳🇬", visitors: 148 },
-  { name: "United States", flag: "🇺🇸", visitors: 148 },
-  { name: "Canada", flag: "🇨🇦", visitors: 148 },
-  { name: "Mexico", flag: "🇲🇽", visitors: 148 },
-  { name: "Botswana", flag: "🇧🇼", visitors: 148 },
-];
-
-const browsers = [
-  { name: "Chrome", visitors: 148 },
-  { name: "Mozilla Firefox", visitors: 148 },
-  { name: "Arc", visitors: 148 },
-  { name: "Edge", visitors: 148 },
-  { name: "Safari", visitors: 148 },
-];
-
-const devices = [
-  { name: "Desktop", visitors: 3200 },
-  { name: "Mobile", visitors: 1400 },
-  { name: "Tablet", visitors: 300 },
-];
-
-function MiniSparkline({ className, color = "#fff" }: { className?: string; color?: string }) {
-  const points = [2, 8, 5, 12, 7, 18, 14, 22, 16, 28, 20, 35];
-  const max = Math.max(...points);
-  const h = 40;
-  const w = 120;
-  const d = points
-    .map((v, i) => `${(i / (points.length - 1)) * w},${h - (v / max) * (h - 4)}`)
-    .join(" L ");
-
+function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className={className} fill="none">
-      <polyline points={d} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </svg>
+    <div className="flex flex-1 flex-col gap-1">
+      <span className="text-[10px] font-medium uppercase tracking-[1px] text-dash-text-faded">
+        {label}
+      </span>
+      <span className="text-2xl font-light text-dash-text-strong">{value}</span>
+    </div>
   );
 }
 
-function MiniSkyline({ className }: { className?: string }) {
-  const bars = [
-    6, 8, 10, 14, 18, 22, 26, 30, 32, 34, 32, 30, 33, 31, 34, 32, 30, 28, 30,
-    32, 30, 28, 26, 28, 26, 24, 22, 24, 26, 22, 20, 22, 24, 22, 20, 18, 16, 14,
-    12, 10,
-  ];
-  const max = Math.max(...bars);
-  const h = 40;
-  const w = 200;
-  const barW = w / bars.length;
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className={className} preserveAspectRatio="none">
-      {bars.map((v, i) => {
-        const barH = (v / max) * h;
-        return (
-          <rect
-            key={i}
-            x={i * barW}
-            y={h - barH}
-            width={barW - 0.5}
-            height={barH}
-            fill="#9cc1ff"
-          />
-        );
-      })}
-    </svg>
-  );
+function formatTickLabel(point: { x: string }, unit: string) {
+  const dt = new Date(point.x.replace(" ", "T"));
+  if (Number.isNaN(dt.getTime())) return point.x;
+  if (unit === "hour") {
+    return dt.toLocaleTimeString(undefined, { hour: "2-digit" });
+  }
+  if (unit === "month") {
+    return dt.toLocaleDateString(undefined, { month: "short" });
+  }
+  if (unit === "year") {
+    return dt.getFullYear().toString();
+  }
+  return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function VisitorBarChart() {
+function VisitorBarChart({ points, unit }: { points: { x: string; y: number }[]; unit: string }) {
   const [hovered, setHovered] = useState<number | null>(null);
-  const max = Math.max(...visitorData.map((d) => d.value), 1);
+  const safePoints = points.length > 0 ? points : [{ x: "—", y: 0 }];
+  const values = safePoints.map((d) => d.y);
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values);
+  const range = Math.max(max - min, 1);
   const barH = 320;
   const containerRef = useRef<HTMLDivElement>(null);
   const inView = useInView(containerRef, { once: true, margin: "-80px" });
+  const labelInterval = Math.max(1, Math.ceil(safePoints.length / 12));
 
   return (
     <div ref={containerRef} className="scrollbar-hidden mt-6 overflow-x-auto">
       <div className="flex min-w-[540px] gap-0 sm:min-w-0">
-        {visitorData.map((d, i) => {
-          const pct = d.value / max;
-          const valH = Math.max(pct * barH, 6);
+        {safePoints.map((d, i) => {
+          const pct = (d.y - min) / range;
+          const valH = pct * barH;
           const isActive = hovered === i;
+          const showLabel = i % labelInterval === 0;
 
           return (
             <div
-              key={d.month}
+              key={`${d.x}-${i}`}
               className="flex flex-1 flex-col items-center gap-2"
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
@@ -474,7 +427,6 @@ function VisitorBarChart() {
                     stiffness: 130,
                     damping: 13,
                     mass: 1.1,
-                    delay: 0.08 * i,
                   }}
                 >
                   <div
@@ -494,13 +446,13 @@ function VisitorBarChart() {
               </div>
 
               <span
-                className={`text-[11px] font-medium tracking-wide transition-colors ${
+                className={`text-[10px] font-medium tracking-wide transition-colors ${
                   isActive
                     ? "text-dash-text-strong"
                     : "text-dash-text-extra-faded"
                 }`}
               >
-                {d.month}
+                {showLabel ? formatTickLabel(d, unit) : ""}
               </span>
             </div>
           );
@@ -510,7 +462,10 @@ function VisitorBarChart() {
   );
 }
 
-function ListCard({ title, subtitle, items, showSeeAll }: { title: string; subtitle?: string; items: { label: string; icon?: string; value: string }[]; showSeeAll?: boolean }) {
+function ListCard({ title, subtitle, items, showSeeAll, collapsedCount = 5 }: { title: string; subtitle?: string; items: { label: string; icon?: string; value: string }[]; showSeeAll?: boolean; collapsedCount?: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const canExpand = showSeeAll && items.length > collapsedCount;
+  const visible = expanded || !canExpand ? items : items.slice(0, collapsedCount);
   return (
     <div className="flex flex-1 flex-col rounded-[4px] border-[0.5px] border-dash-border">
       <div className="flex items-start justify-between gap-3 border-b-[0.5px] border-dash-border px-4 py-3">
@@ -518,11 +473,19 @@ function ListCard({ title, subtitle, items, showSeeAll }: { title: string; subti
           <h3 className="text-sm font-medium text-dash-text-strong">{title}</h3>
           {subtitle && <p className="text-xs font-light text-dash-text-faded">{subtitle}</p>}
         </div>
-        {showSeeAll && <button className="shrink-0 text-xs text-[#4879f8] hover:underline">See all</button>}
+        {canExpand && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="shrink-0 text-xs text-[#4879f8] hover:underline"
+          >
+            {expanded ? "Show less" : "See all"}
+          </button>
+        )}
       </div>
       <div className="flex flex-col">
-        {items.map((item, i) => (
-          <div key={i} className={`flex items-center justify-between px-4 py-2.5 ${i < items.length - 1 ? "border-b-[0.5px] border-dash-border-soft" : ""}`}>
+        {visible.map((item, i) => (
+          <div key={i} className={`flex items-center justify-between px-4 py-2.5 ${i < visible.length - 1 ? "border-b-[0.5px] border-dash-border-soft" : ""}`}>
             <div className="min-w-0 flex items-center gap-2">
               {item.icon && <span className="text-sm">{item.icon}</span>}
               <span className="truncate text-sm font-light text-dash-text-body">{item.label}</span>
@@ -535,18 +498,68 @@ function ListCard({ title, subtitle, items, showSeeAll }: { title: string; subti
   );
 }
 
-const analyticsPeriods = [
-  "Last 7 days",
-  "Last 14 days",
-  "Last 30 days",
-  "Last 90 days",
+type RangePreset = {
+  label: string;
+  durationMs: number;
+  unit: "hour" | "day" | "month" | "year";
+};
+
+const RANGE_PRESETS: RangePreset[] = [
+  { label: "Last 24 hours", durationMs: 24 * 60 * 60 * 1000, unit: "hour" },
+  { label: "Last 7 days", durationMs: 7 * 24 * 60 * 60 * 1000, unit: "hour" },
+  { label: "Last 30 days", durationMs: 30 * 24 * 60 * 60 * 1000, unit: "day" },
+  { label: "Last 12 months", durationMs: 365 * 24 * 60 * 60 * 1000, unit: "month" },
 ];
 
-export function AppAnalytics() {
-  const [visitorTab, setVisitorTab] = useState("Visitors");
-  const [browserTab, setBrowserTab] = useState("Browsers");
-  const [analyticsPeriod, setAnalyticsPeriod] = useState("Last 7 days");
+function browserTimezone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function formatNumber(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+  return value.toLocaleString();
+}
+
+function formatPerf(metric: AnalyticsPerformanceMetric, kind: "ms" | "s" | "cls"): string {
+  if (!metric || metric.samples === 0 || metric.p75 == null) return "—";
+  const v = metric.p75;
+  if (kind === "cls") return v.toFixed(2);
+  if (kind === "s") return `${(v / 1000).toFixed(1)}s`;
+  if (v >= 1000) return `${(v / 1000).toFixed(1)}s`;
+  return `${Math.round(v)}ms`;
+}
+
+function bouncePercent(summary: AnalyticsSummary): string {
+  const visits = summary.visits.value;
+  if (!visits) return "—";
+  const pct = Math.round((summary.bounces.value / visits) * 100);
+  return `${pct}%`;
+}
+
+export function AppAnalytics({
+  initial,
+  projectId,
+}: {
+  initial: AnalyticsPayload;
+  projectId: string;
+}) {
+  const getAnalytics = useServerFn(getAnalyticsServerFn as any) as (args: {
+    data: { projectId: string; startAt: number; endAt: number; unit?: string; timezone?: string };
+  }) => Promise<AnalyticsLoadResult>;
+
+  const [data, setData] = useState<AnalyticsPayload>(initial);
+  const [preset, setPreset] = useState<RangePreset>(RANGE_PRESETS[1]);
+  const [visitorTab, setVisitorTab] = useState<"Visitors" | "Page Views">("Visitors");
+  const [browserTab, setBrowserTab] = useState<"Browsers" | "Devices">("Browsers");
   const [periodOpen, setPeriodOpen] = useState(false);
+  const [installOpen, setInstallOpen] = useState(false);
+  const [refetching, setRefetching] = useState(false);
   const periodRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -559,31 +572,146 @@ export function AppAnalytics() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [periodOpen]);
 
+  const refetch = useCallback(
+    async (nextPreset?: RangePreset) => {
+      const p = nextPreset ?? preset;
+      const endAt = Date.now();
+      const startAt = endAt - p.durationMs;
+      try {
+        const result = await getAnalytics({
+          data: {
+            projectId,
+            startAt,
+            endAt,
+            unit: p.unit,
+            timezone: browserTimezone(),
+          },
+        });
+        if (result.state === "enabled") {
+          setData(result.data);
+        } else if (result.state === "error") {
+          toast.error(result.message);
+        }
+      } catch (error) {
+        toast.error(friendlyAnalyticsError(error).message);
+      }
+    },
+    [getAnalytics, preset, projectId],
+  );
+
+  async function handlePresetChange(next: RangePreset) {
+    if (next.label === preset.label) {
+      setPeriodOpen(false);
+      return;
+    }
+    setPreset(next);
+    setPeriodOpen(false);
+    setRefetching(true);
+    try {
+      await refetch(next);
+    } finally {
+      setRefetching(false);
+    }
+  }
+
+  // Live poll every 60s while the tab is visible.
+  useEffect(() => {
+    let id: number | undefined;
+    function start() {
+      if (id !== undefined) return;
+      id = window.setInterval(() => {
+        if (!document.hidden) void refetch();
+      }, 60_000);
+    }
+    function stop() {
+      if (id !== undefined) {
+        window.clearInterval(id);
+        id = undefined;
+      }
+    }
+    function onVisibility() {
+      if (document.hidden) stop();
+      else start();
+    }
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [refetch]);
+
+  const summary = data.summary;
+  const hasAnyData = summary.pageviews.value > 0;
+  const visitorsRightNow = data.active?.visitors ?? 0;
+  const bounce = bouncePercent(summary);
+  const countriesCount = data.metrics.country.length;
+
+  const chartPoints =
+    visitorTab === "Page Views" ? data.pageviews.pageviews : data.pageviews.sessions;
+
+  const browserOptions = data.metrics.browser;
+  const deviceOptions = data.metrics.device;
+  const activeBreakdown = browserTab === "Browsers" ? browserOptions : deviceOptions;
+
+  const chartLabel =
+    visitorTab === "Page Views" ? "Page views" : "Visitors";
+  const chartTotal =
+    visitorTab === "Page Views" ? summary.pageviews.value : summary.visitors.value;
+
   return (
     <div className="flex flex-col gap-6">
-      <TabHeader title="Web analytics">
-        Track visitor activity, top pages, and traffic sources.{" "}
-        <a href="#" className="text-[#4879f8] underline">
-          Learn more
-        </a>
-      </TabHeader>
+      <div className="flex items-start justify-between gap-4">
+        <TabHeader title="Web analytics">
+          Track visitor activity, top pages, and traffic sources.{" "}
+          <a href="#" className="text-[#4879f8] underline">
+            Learn more
+          </a>
+        </TabHeader>
+        <button
+          type="button"
+          onClick={() => setInstallOpen(true)}
+          className="shrink-0 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg px-3 py-1.5 text-xs font-medium text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
+        >
+          Install snippet
+        </button>
+      </div>
 
+      {!hasAnyData && (
+        <div className="flex flex-col gap-2 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-dash-text-strong">Waiting for first pageview</p>
+            <p className="text-xs font-light text-dash-text-faded">
+              Once you paste the tracking snippet into your site and someone loads a page, data will start showing up here.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setInstallOpen(true)}
+            className="shrink-0 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg px-3 py-1.5 text-xs font-medium text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
+          >
+            Show install snippet
+          </button>
+        </div>
+      )}
+
+      <>
       <div className="flex flex-col gap-6 overflow-hidden rounded-[4px] bg-[#0a1430] px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:pl-7 sm:pr-10 sm:py-7">
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-medium uppercase tracking-[1.5px] text-[#cfe0ff]/70">
             Analytics TLDR:
           </span>
           <p className="text-xs font-light leading-[1.4] text-[#cfe0ff]/50">
-            Quick view summary for what's going on
+            Quick view summary for what&apos;s going on
             <br />
-            with &lsquo;kemdrim.brimble.app&rsquo;.
+            with &lsquo;{data.domain}&rsquo;.
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-6 sm:w-auto sm:flex-nowrap sm:gap-10">
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-2.5">
-              <Archive className="size-6 shrink-0 text-[#cfe0ff]" weight="fill" />
-              <span className="text-[44px] font-light leading-none text-[#cfe0ff]">322</span>
+              <UsersThree className="size-6 shrink-0 text-[#cfe0ff]" weight="duotone" />
+              <span className="text-[44px] font-light leading-none text-[#cfe0ff]">{formatNumber(summary.visitors.value)}</span>
             </div>
             <span className="pl-[34px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">
               Unique Visitors
@@ -591,19 +719,34 @@ export function AppAnalytics() {
           </div>
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-2.5">
-              <Archive className="size-6 shrink-0 text-[#cfe0ff]" weight="fill" />
-              <span className="text-[44px] font-light leading-none text-[#cfe0ff]">21</span>
+              <GlobeHemisphereWest className="size-6 shrink-0 text-[#cfe0ff]" weight="duotone" />
+              <span className="text-[44px] font-light leading-none text-[#cfe0ff]">{countriesCount}</span>
             </div>
             <span className="pl-[34px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">
               Countries
             </span>
           </div>
-          <div className="flex flex-col items-stretch gap-1">
-            <MiniSkyline className="h-10 w-[180px] sm:w-[260px]" />
-            <div className="flex items-center justify-between text-[9px] font-medium uppercase tracking-[0.5px] text-[#cfe0ff]/40">
-              <span>31 Jul 2024</span>
-              <span>31 Jul 2024</span>
+          <div className="flex flex-col items-start gap-1">
+            <div className="flex items-center gap-2.5">
+              <ArrowBendUpLeft className="size-6 shrink-0 text-[#cfe0ff]" weight="duotone" />
+              <span className="text-[44px] font-light leading-none text-[#cfe0ff]">{bounce}</span>
             </div>
+            <span className="pl-[34px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">
+              Bounce rate
+            </span>
+          </div>
+          <div className="flex flex-col items-start gap-1">
+            <div className="flex items-center gap-2.5">
+              <motion.span
+                className="size-2.5 shrink-0 rounded-full bg-[#22c55e]"
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <span className="text-[44px] font-light leading-none text-[#cfe0ff]">{visitorsRightNow}</span>
+            </div>
+            <span className="pl-[22px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">
+              Visitors right now
+            </span>
           </div>
         </div>
       </div>
@@ -611,37 +754,41 @@ export function AppAnalytics() {
       <div className="rounded-[4px] border-[0.5px] border-dash-border p-5">
         <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-light text-dash-text-faded">Site Visitors</p>
-            <span className="text-[32px] font-medium leading-tight tracking-tight text-dash-text-strong">4,900,442</span>
+            <p className="text-sm font-light text-dash-text-faded">{chartLabel}</p>
+            <span className="text-[32px] font-medium leading-tight tracking-tight text-dash-text-strong">
+              {formatNumber(chartTotal)}
+            </span>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
-            <SegmentedToggle options={["Visitors", "Page Views"]} value={visitorTab} onChange={setVisitorTab} />
+            <SegmentedToggle
+              options={["Visitors", "Page Views"]}
+              value={visitorTab}
+              onChange={(v) => setVisitorTab(v as "Visitors" | "Page Views")}
+            />
             <div ref={periodRef} className="relative">
               <button
                 onClick={() => setPeriodOpen(!periodOpen)}
+                disabled={refetching}
                 className="flex w-full items-center justify-between gap-1.5 rounded-[4px] border-[0.5px] border-dash-border px-3 py-1.5 text-xs font-medium text-dash-text-strong sm:w-auto sm:justify-start"
               >
-                {analyticsPeriod}
+                {refetching ? "Loading..." : preset.label}
                 <ChevronDown
                   className={`size-3 transition-transform ${periodOpen ? "rotate-180" : ""}`}
                 />
               </button>
               {periodOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 min-w-[140px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
-                  {analyticsPeriods.map((period) => (
+                <div className="absolute right-0 top-full z-50 mt-1 min-w-[160px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
+                  {RANGE_PRESETS.map((p) => (
                     <button
-                      key={period}
-                      onClick={() => {
-                        setAnalyticsPeriod(period);
-                        setPeriodOpen(false);
-                      }}
+                      key={p.label}
+                      onClick={() => void handlePresetChange(p)}
                       className={`flex w-full px-3 py-2 text-left text-xs transition-colors ${
-                        period === analyticsPeriod
+                        p.label === preset.label
                           ? "font-medium text-[#4879f8]"
                           : "font-light text-dash-text-body hover:bg-dash-bg-elevated"
                       }`}
                     >
-                      {period}
+                      {p.label}
                     </button>
                   ))}
                 </div>
@@ -649,31 +796,125 @@ export function AppAnalytics() {
             </div>
           </div>
         </div>
-        <VisitorBarChart />
+        <VisitorBarChart points={chartPoints} unit={data.range.unit} />
+      </div>
+
+      <VisitorsMap
+        countries={data.metrics.country.map((c) => ({ code: c.x, visitors: c.y }))}
+      />
+
+      <div className="flex flex-col rounded-[4px] border-[0.5px] border-dash-border">
+        <div className="border-b-[0.5px] border-dash-border px-4 py-3">
+          <h3 className="text-sm font-medium text-dash-text-strong">Page performance</h3>
+          <p className="text-xs font-light text-dash-text-faded">Core Web Vitals (p75) over this window</p>
+        </div>
+        <div className="flex flex-col gap-6 px-5 py-5 sm:flex-row sm:items-stretch sm:gap-10">
+          <StatTile label="LCP" value={formatPerf(data.performance.lcp, "ms")} />
+          <StatTile label="CLS" value={formatPerf(data.performance.cls, "cls")} />
+          <StatTile label="INP" value={formatPerf(data.performance.inp, "ms")} />
+        </div>
+        <div className="flex items-center justify-between border-t-[0.5px] border-dash-border-soft px-5 py-3 text-xs">
+          <span className="text-dash-text-faded">Average load time</span>
+          <span className="font-medium text-dash-text-strong">
+            {data.performance.avgLoadTime != null
+              ? `${(data.performance.avgLoadTime / 1000).toFixed(1)}s`
+              : "—"}
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row">
-        <ListCard title="Top pages" subtitle="Most visited pages" showSeeAll items={topPages.map((p) => ({ label: p.path, value: `${p.visitors} Visitors` }))} />
-        <ListCard title="Funnel" subtitle="Where your visitors have come from" items={funnelSources.map((s) => ({ label: s.name, icon: s.icon, value: String(s.visitors) }))} />
+        <ListCard
+          title="Top pages"
+          subtitle="Most visited pages"
+          showSeeAll
+          items={data.metrics.path.map((p) => ({ label: p.x, value: `${formatNumber(p.y)} views` }))}
+        />
+        <ListCard
+          title="Referrers"
+          subtitle="Where your visitors come from"
+          showSeeAll
+          items={data.metrics.referrer.map((r) => ({
+            label: r.x || "Direct",
+            value: formatNumber(r.y),
+          }))}
+        />
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row">
-        <ListCard title="Countries" subtitle="Pages with the highest amount of visitors" showSeeAll items={countries.map((c) => ({ label: c.name, icon: c.flag, value: `${c.visitors} Visitors` }))} />
+        <ListCard
+          title="Countries"
+          subtitle="Visitors by country"
+          showSeeAll
+          items={data.metrics.country.map((c) => ({
+            label: c.x,
+            value: `${formatNumber(c.y)} visitors`,
+          }))}
+        />
         <div className="flex flex-1 flex-col rounded-[4px] border-[0.5px] border-dash-border">
           <div className="flex flex-col gap-2 border-b-[0.5px] border-dash-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-sm font-medium text-dash-text-strong">Browser & Device Information</h3>
-            <SegmentedToggle options={["Browsers", "Devices"]} value={browserTab} onChange={setBrowserTab} />
+            <h3 className="text-sm font-medium text-dash-text-strong">Browser &amp; Device Information</h3>
+            <SegmentedToggle
+              options={["Browsers", "Devices"]}
+              value={browserTab}
+              onChange={(v) => setBrowserTab(v as "Browsers" | "Devices")}
+            />
           </div>
           <div className="flex flex-col">
-            {(browserTab === "Browsers" ? browsers : devices).map((item, i, arr) => (
-              <div key={item.name} className={`flex items-center justify-between px-4 py-2.5 ${i < arr.length - 1 ? "border-b-[0.5px] border-dash-border-soft" : ""}`}>
-                <span className="text-sm font-light text-dash-text-body">{item.name}</span>
-                <span className="text-xs text-dash-text-faded">{item.visitors}</span>
-              </div>
-            ))}
+            {activeBreakdown.length === 0 ? (
+              <div className="px-4 py-6 text-xs text-dash-text-faded">No data yet.</div>
+            ) : (
+              activeBreakdown.map((item, i, arr) => (
+                <div
+                  key={item.x}
+                  className={`flex items-center justify-between px-4 py-2.5 ${i < arr.length - 1 ? "border-b-[0.5px] border-dash-border-soft" : ""}`}
+                >
+                  <span className="text-sm font-light text-dash-text-body">{item.x}</span>
+                  <span className="text-xs text-dash-text-faded">{formatNumber(item.y)}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
+
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <ListCard
+          title="Regions"
+          subtitle="Visitors by region"
+          showSeeAll
+          items={data.metrics.region.map((r) => ({
+            label: r.x,
+            value: `${formatNumber(r.y)} visitors`,
+          }))}
+        />
+        <ListCard
+          title="Cities"
+          subtitle="Visitors by city"
+          showSeeAll
+          items={data.metrics.city.map((c) => ({
+            label: c.x,
+            value: `${formatNumber(c.y)} visitors`,
+          }))}
+        />
+      </div>
+
+      <ListCard
+        title="Custom events"
+        subtitle="Tracked events on your site"
+        showSeeAll
+        items={data.metrics.event.map((e) => ({ label: e.x, value: formatNumber(e.y) }))}
+      />
+
+      <TrafficHeatmap grid={data.trafficByHour} />
+      </>
+
+      <InstallTrackingModal
+        open={installOpen}
+        onOpenChange={setInstallOpen}
+        siteId={data.websiteId}
+        serverSnippet={data.snippet}
+      />
     </div>
   );
 }

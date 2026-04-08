@@ -1,4 +1,5 @@
 import { createActivityLogsApi, type ActivityLogsApi } from "./activity-logs";
+import { createAnalyticsApi, type AnalyticsApi } from "./analytics";
 import { createAuthApi, type AuthApi } from "./auth";
 import { createBandwidthApi, type BandwidthApi } from "./bandwidth";
 import { createBackendClient, type BackendClient, type BackendClientConfig } from "./client";
@@ -22,6 +23,7 @@ import { createTagsApi, type TagsApi } from "./tags";
 import { createWorkspacesApi, type WorkspacesApi } from "./workspaces";
 
 export * from "./activity-logs";
+export * from "./analytics";
 export * from "./auth";
 export * from "./bandwidth";
 export * from "./client";
@@ -49,6 +51,7 @@ export * from "./workspaces";
 export interface BackendApi {
   client: BackendClient;
   activityLogs: ActivityLogsApi;
+  analytics: AnalyticsApi;
   auth: AuthApi;
   bandwidth: BandwidthApi;
   projects: ProjectsApi;
@@ -77,6 +80,7 @@ export function createBackendApi(config: BackendClientConfig): BackendApi {
   return {
     client,
     activityLogs: createActivityLogsApi(client),
+    analytics: createAnalyticsApi(client),
     auth: createAuthApi(client),
     bandwidth: createBandwidthApi(client),
     projects: createProjectsApi(client),
