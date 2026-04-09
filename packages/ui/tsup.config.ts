@@ -7,11 +7,4 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   external: ["react", "react-dom"],
-  noExternal: [
-    "clsx",
-    "class-variance-authority",
-    "tailwind-merge",
-    "lucide-react",
-    "radix-ui",
-  ],
 });
