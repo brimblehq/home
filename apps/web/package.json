@@ -25,10 +25,7 @@
     "motion": "^12.34.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tailwind-merge": "^3.5.0",
-    "tailwindcss": "^4.1.18",
-    "clsx": "^2.1.1",
-    "class-variance-authority": "^0.7.1"
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "^0.3.11",

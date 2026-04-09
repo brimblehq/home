@@ -7,8 +7,9 @@
     "dev:web": "pnpm --filter @brimble/web dev",
     "dev:dashboard": "pnpm --filter @brimble/dashboard dev",
     "build": "pnpm -r build",
-    "build:web": "pnpm --filter @brimble/web build",
-    "build:dashboard": "pnpm --filter @brimble/dashboard build",
+    "build:ui": "pnpm --filter @brimble/ui build",
+    "build:web": "pnpm --filter @brimble/ui build && pnpm --filter @brimble/web build",
+    "build:dashboard": "pnpm --filter @brimble/ui build && pnpm --filter @brimble/dashboard build",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "pnpm lint --fix"
   },
