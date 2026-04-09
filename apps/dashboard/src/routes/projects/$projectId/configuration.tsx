@@ -1487,6 +1487,7 @@ function ConfigurationPage() {
   } = Route.useLoaderData();
   const params = Route.useParams();
   const navigate = useNavigate();
+  const router = useRouter();
   const saveGeneralConfig = useServerFn(
     saveProjectGeneralConfigServerFn as any,
   ) as (args: {
