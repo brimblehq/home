@@ -234,7 +234,6 @@ function EnvAccordionRow({
 
   const canEdit = canEditProjectEnvs(serviceType) && canWrite;
   const canDelete = canDeleteProjectEnv(serviceType) && canWrite;
-  const databaseProject = isDatabaseService(serviceType);
   const disableNameInput = !canEdit || isNonEditableEnvName(row.name);
   const isDirty = name !== row.name || value !== row.value;
 
@@ -1156,7 +1155,7 @@ function EnvironmentPage() {
 
       <hr className="border-dash-border" />
 
-      {envTabSupported && projectEnvironmentId && (
+      {envTabSupported && projectEnvironmentId && !databaseProject && (
         <EnvironmentLevelVarsSection
           environmentId={projectEnvironmentId}
           workspace={workspace}
@@ -1179,17 +1178,19 @@ function EnvironmentPage() {
           )}
 
           <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
-            <div className="flex flex-wrap items-center gap-3 border-b-[0.5px] border-dash-border px-3.5 py-3.5">
-              <div className="flex min-w-[220px] flex-1 items-center gap-2">
-                <Search className="size-5 shrink-0 text-dash-text-extra-faded" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search ENVs created..."
-                  className="w-full bg-transparent text-sm text-dash-text-strong outline-none placeholder:text-dash-text-extra-faded"
-                />
-              </div>
+            <div className={`flex flex-wrap items-center gap-3 border-b-[0.5px] border-dash-border px-3.5 py-3.5 ${databaseProject ? "justify-end" : ""}`}>
+              {!databaseProject && (
+                <div className="flex min-w-[220px] flex-1 items-center gap-2">
+                  <Search className="size-5 shrink-0 text-dash-text-extra-faded" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search ENVs created..."
+                    className="w-full bg-transparent text-sm text-dash-text-strong outline-none placeholder:text-dash-text-extra-faded"
+                  />
+                </div>
+              )}
 
               <button
                 type="button"

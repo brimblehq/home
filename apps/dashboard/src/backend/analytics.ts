@@ -106,6 +106,11 @@ export interface AnalyticsPerformance {
   avgLoadTime: number | null;
 }
 
+export interface AnalyticsDomainMetric {
+  host: string;
+  pageviews: number;
+}
+
 export interface AnalyticsPayload {
   websiteId: string;
   domain: string;
@@ -119,6 +124,8 @@ export interface AnalyticsPayload {
   events: AnalyticsEventEntry[];
   metrics: AnalyticsMetricsBreakdown;
   performance: AnalyticsPerformance;
+  domains: AnalyticsDomainMetric[];
+  filteredHost: string | null;
 }
 
 export interface AnalyticsGetInput {
@@ -128,6 +135,7 @@ export interface AnalyticsGetInput {
   unit?: "hour" | "day" | "month" | "year";
   timezone?: string;
   type?: string;
+  host?: string;
 }
 
 export interface AnalyticsApi {
@@ -169,6 +177,7 @@ export function createAnalyticsApi(client: ApiClient): AnalyticsApi {
       if (input.unit) query.unit = input.unit;
       if (input.timezone) query.timezone = input.timezone;
       if (input.type) query.type = input.type;
+      if (input.host) query.host = input.host;
 
       const response = await client.request(
         `/core/v1/analytics/${encodeURIComponent(input.projectId)}`,

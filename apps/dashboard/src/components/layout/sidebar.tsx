@@ -75,7 +75,7 @@ export function Sidebar({
                     navItemBase,
                     "w-full",
                     isActive
-                      ? "border border-dash-border-soft bg-dash-bg-elevated !text-dash-text-strong dark:border-transparent"
+                      ? "bg-dash-bg-elevated !text-dash-text-strong"
                       : "hover:bg-dash-bg-elevated"
                   )}
                 >

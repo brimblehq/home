@@ -3,6 +3,7 @@ import createGlobe from "cobe";
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { AnimatePresence, motion } from "motion/react";
 import { SegmentedToggle } from "@/components/observability/segmented-toggle";
+import { SimpleTooltip } from "@/components/shared/tooltip";
 import { useTheme } from "@/hooks/use-theme";
 import { Theme } from "@/types/enums";
 
@@ -171,12 +172,14 @@ function FlatMap({ countries }: { countries: CountryVisitor[] }) {
       </ComposableMap>
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg px-2.5 py-1.5 text-xs shadow-[0px_4px_12px_-4px_rgba(0,0,0,0.18)]"
-          style={{ left: tooltip.x, top: tooltip.y - 8 }}
+          className="pointer-events-none absolute z-50 -translate-x-1/2 -translate-y-full rounded-md border border-[#141414] bg-gradient-to-b from-[#434343] to-[#232323] px-2.5 py-1 shadow-[0px_0.6px_0px_rgba(0,0,0,0.1),0px_2px_4px_rgba(0,0,0,0.18),inset_0px_1px_0px_rgba(255,255,255,0.18)]"
+          style={{ left: tooltip.x, top: tooltip.y - 10 }}
         >
-          <div className="font-medium text-dash-text-strong">{tooltip.name}</div>
-          <div className="text-[11px] text-dash-text-faded">
-            {tooltip.visitors} visitor{tooltip.visitors === 1 ? "" : "s"}
+          <div className="flex flex-col gap-0.5 text-xs leading-5 tracking-[-0.019px] text-white">
+            <span className="font-medium">{tooltip.name}</span>
+            <span className="text-[10px] text-white/60">
+              {tooltip.visitors} visitor{tooltip.visitors === 1 ? "" : "s"}
+            </span>
           </div>
         </div>
       )}
@@ -349,17 +352,30 @@ function Globe({ countries }: { countries: CountryVisitor[] }) {
         />
       </div>
       {topCountries.length > 0 && (
-        <div className="pointer-events-none absolute left-4 top-4 flex flex-col gap-1.5 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg/80 px-3 py-2.5 backdrop-blur-sm">
+        <div className="absolute left-4 top-4 flex flex-col gap-1.5 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg/80 px-3 py-2.5 backdrop-blur-sm">
           <span className="text-[9px] font-medium uppercase tracking-[1px] text-dash-text-faded">
             Top countries
           </span>
           {topCountries.slice(0, 6).map((c) => {
             const name = ISO2_TO_NAME[c.code.toUpperCase()] ?? c.code;
             return (
-              <div key={c.code} className="flex items-center justify-between gap-3 text-xs">
-                <span className="text-dash-text-body">{name}</span>
-                <span className="text-dash-text-faded">{c.visitors}</span>
-              </div>
+              <SimpleTooltip
+                key={c.code}
+                side="right"
+                content={
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium">{name}</span>
+                    <span className="text-[10px] text-white/60">
+                      {c.visitors} visitor{c.visitors === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                }
+              >
+                <div className="flex cursor-default items-center justify-between gap-3 text-xs">
+                  <span className="text-dash-text-body">{name}</span>
+                  <span className="text-dash-text-faded">{c.visitors}</span>
+                </div>
+              </SimpleTooltip>
             );
           })}
         </div>

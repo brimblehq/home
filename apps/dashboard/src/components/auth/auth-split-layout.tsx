@@ -1,6 +1,27 @@
-import { type ReactNode, useRef, useEffect } from "react";
+import { type ReactNode, useRef, useEffect, useLayoutEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTheme } from "@/hooks/use-theme";
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+function applyStoredTheme() {
+  if (typeof document === "undefined") return;
+  try {
+    const t = window.localStorage.getItem("theme");
+    const legacy = window.localStorage.getItem("brimble-theme");
+    let mode: string | null = null;
+    if (t === "light" || t === "dark" || t === "system") mode = t;
+    else if (legacy === "light" || legacy === "dark") mode = legacy;
+    const isSystem = mode === "system" || !mode;
+    const isDark =
+      mode === "dark" ||
+      (isSystem && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.classList.toggle("dark", isDark);
+  } catch {
+    // ignore
+  }
+}
 
 /* ─── Brimble Logo (hourglass mark) ─── */
 
@@ -77,6 +98,9 @@ export function AuthSplitLayout({
   footer?: ReactNode;
 }) {
   useTheme();
+  useIsomorphicLayoutEffect(() => {
+    applyStoredTheme();
+  }, []);
   return (
     <div className="flex min-h-dvh items-center justify-center bg-dash-bg px-6 py-10">
       <div className="w-full max-w-[400px]">

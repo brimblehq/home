@@ -1,7 +1,27 @@
 import { useTheme } from "@/hooks/use-theme";
 import { Theme } from "@/types/enums";
+import { SimpleTooltip } from "@/components/shared/tooltip";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const FULL_DAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+function formatHourRange(hour: number): string {
+  const fmt = (h: number) => {
+    const period = h < 12 ? "AM" : "PM";
+    const display = h % 12 === 0 ? 12 : h % 12;
+    return `${display}${period}`;
+  };
+  const next = (hour + 1) % 24;
+  return `${fmt(hour)}–${fmt(next)}`;
+}
 
 function cellColor(value: number, max: number, isDark: boolean) {
   if (max <= 0 || value <= 0) return isDark ? "#1a2230" : "#eef2f7";
@@ -46,14 +66,34 @@ export function TrafficHeatmap({ grid }: { grid: number[][] }) {
               <span className="text-[10px] font-medium text-dash-text-faded">
                 {DAYS[dayIdx]}
               </span>
-              {row.map((value, hourIdx) => (
-                <div
-                  key={hourIdx}
-                  title={`${DAYS[dayIdx]} ${String(hourIdx).padStart(2, "0")}:00 — ${value} pageview${value === 1 ? "" : "s"}`}
-                  className="h-5 rounded-[2px]"
-                  style={{ backgroundColor: cellColor(value, max, isDark) }}
-                />
-              ))}
+              {row.map((value, hourIdx) => {
+                const cell = (
+                  <div
+                    className={`h-5 rounded-[2px] ${value > 0 ? "cursor-default transition-opacity hover:opacity-80" : ""}`}
+                    style={{ backgroundColor: cellColor(value, max, isDark) }}
+                  />
+                );
+                if (value <= 0) {
+                  return <div key={hourIdx}>{cell}</div>;
+                }
+                return (
+                  <SimpleTooltip
+                    key={hourIdx}
+                    content={
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium">
+                          {value.toLocaleString()} pageview{value === 1 ? "" : "s"}
+                        </span>
+                        <span className="text-[10px] text-white/60">
+                          {FULL_DAYS[dayIdx]} · {formatHourRange(hourIdx)}
+                        </span>
+                      </div>
+                    }
+                  >
+                    {cell}
+                  </SimpleTooltip>
+                );
+              })}
             </div>
           ))}
         </div>

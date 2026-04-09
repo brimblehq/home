@@ -1,4 +1,5 @@
 import { Plus, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
 export interface IpWhitelistItem {
   id: string | number;
@@ -52,23 +53,33 @@ export function IpWhitelist({
     <div>
       <label className="mb-1.5 block text-xs text-dash-text-faded">{label}</label>
       <div className="flex flex-col gap-2">
-        {ips.map((ip) => (
-          <div key={ip.id} className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="0.0.0.0/0"
-              value={ip.value}
-              onChange={(e) => onUpdate?.(ip.id, e.target.value)}
-              className={`flex-1 font-family-mono text-[13px] ${inputClassName}`}
-            />
-            <button
-              onClick={() => onRemove?.(ip.id)}
-              className="flex size-7 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:text-dash-text-strong"
+        <AnimatePresence initial={false}>
+          {ips.map((ip) => (
+            <motion.div
+              key={ip.id}
+              layout
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="flex items-center gap-2"
             >
-              <X className="size-3.5" />
-            </button>
-          </div>
-        ))}
+              <input
+                type="text"
+                placeholder="0.0.0.0/0"
+                value={ip.value}
+                onChange={(e) => onUpdate?.(ip.id, e.target.value)}
+                className={`input-base input-focus flex-1 px-3 py-2 font-family-mono text-[13px] text-dash-text-strong placeholder:text-dash-text-extra-faded ${inputClassName}`}
+              />
+              <button
+                onClick={() => onRemove?.(ip.id)}
+                className="flex size-7 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:text-dash-text-strong"
+              >
+                <X className="size-3.5" />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
       <button
         onClick={onAdd}

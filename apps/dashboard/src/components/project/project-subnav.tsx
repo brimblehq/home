@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@brimble/ui";
 import { Link, getRouteApi, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -112,7 +113,9 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   const [redeployOpen, setRedeployOpen] = useState(false);
   const redeployRef = useRef<HTMLDivElement>(null);
   const [overflowOpen, setOverflowOpen] = useState(false);
-  const overflowRef = useRef<HTMLDivElement>(null);
+  const overflowTriggerRef = useRef<HTMLButtonElement>(null);
+  const overflowMenuRef = useRef<HTMLDivElement>(null);
+  const [overflowMenuPos, setOverflowMenuPos] = useState({ top: 0, left: 0 });
   const [deleting, setDeleting] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
   const [refreshingDb, setRefreshingDb] = useState(false);
@@ -129,9 +132,42 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     }
   }, [redeployOpen]);
 
+  const updateOverflowMenuPosition = useCallback(() => {
+    if (!overflowTriggerRef.current) return;
+    const rect = overflowTriggerRef.current.getBoundingClientRect();
+    setOverflowMenuPos({
+      top: rect.bottom + 4,
+      left: rect.left,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!overflowOpen) return;
+
+    updateOverflowMenuPosition();
+    window.addEventListener("resize", updateOverflowMenuPosition, { passive: true });
+    window.addEventListener("scroll", updateOverflowMenuPosition, {
+      capture: true,
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("resize", updateOverflowMenuPosition);
+      window.removeEventListener("scroll", updateOverflowMenuPosition, {
+        capture: true,
+      });
+    };
+  }, [overflowOpen, updateOverflowMenuPosition]);
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+      if (
+        overflowTriggerRef.current?.contains(e.target as Node) ||
+        overflowMenuRef.current?.contains(e.target as Node)
+      ) {
+        return;
+      }
+      if (overflowOpen) {
         setOverflowOpen(false);
       }
     }
@@ -320,7 +356,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     <>
       <div data-subnav className="flex items-center justify-between border-b-[0.5px] border-dash-border">
         {/* Tabs */}
-        <div className="scrollbar-hidden flex min-w-0 flex-1 items-start overflow-x-auto">
+        <div className="scrollbar-hidden flex min-w-0 flex-1 items-start overflow-x-auto md:overflow-visible">
           {visibleTabs.map((tab) => {
             return (
               <Link
@@ -341,53 +377,20 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
             );
           })}
           {overflowTabs.length > 0 && (
-            <div className="relative" ref={overflowRef}>
-              <button
-                type="button"
-                onClick={() => setOverflowOpen((prev) => !prev)}
-                className={cn(
-                  "flex h-14 items-center px-2 transition-colors",
-                  overflowHasActive
-                    ? "border-b border-[#3c6ce7] text-dash-text-strong"
-                    : "text-dash-text-faded hover:text-dash-text-body",
-                )}
-                aria-label="More tabs"
-              >
-                <MoreHorizontal className="size-4" />
-              </button>
-              <AnimatePresence>
-                {overflowOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute left-0 top-full z-50 mt-1 min-w-[220px] origin-top-left overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_4px_12px_-4px_rgba(0,0,0,0.12)]"
-                  >
-                    {overflowTabs.map((tab) => (
-                      <Link
-                        key={tab.label}
-                        to={withWorkspaceQuery({ pathname: tab.tabPath, searchStr }) as any}
-                        preload="intent"
-                        onClick={() => {
-                          haptics.selection();
-                          setOverflowOpen(false);
-                        }}
-                        className={cn(
-                          "flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors",
-                          tab.isActive
-                            ? "bg-dash-bg-elevated text-dash-text-strong"
-                            : "text-dash-text-body hover:bg-dash-bg-elevated",
-                        )}
-                      >
-                        <tab.Icon className="size-4 shrink-0" weight="fill" />
-                        <span className="whitespace-nowrap">{tab.label}</span>
-                      </Link>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <button
+              ref={overflowTriggerRef}
+              type="button"
+              onClick={() => setOverflowOpen((prev) => !prev)}
+              className={cn(
+                "flex h-14 items-center px-2 transition-colors",
+                overflowHasActive
+                  ? "border-b border-[#3c6ce7] text-dash-text-strong"
+                  : "text-dash-text-faded hover:text-dash-text-body",
+              )}
+              aria-label="More tabs"
+            >
+              <MoreHorizontal className="size-4" />
+            </button>
           )}
         </div>
 
@@ -507,6 +510,48 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
           </div>
         </div>
       </div>
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {overflowOpen && overflowTabs.length > 0 && (
+              <motion.div
+                ref={overflowMenuRef}
+                initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  position: "fixed",
+                  top: overflowMenuPos.top,
+                  left: overflowMenuPos.left,
+                }}
+                className="z-[120] min-w-[220px] origin-top-left overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_4px_12px_-4px_rgba(0,0,0,0.12)]"
+              >
+                {overflowTabs.map((tab) => (
+                  <Link
+                    key={tab.label}
+                    to={withWorkspaceQuery({ pathname: tab.tabPath, searchStr }) as any}
+                    preload="intent"
+                    onClick={() => {
+                      haptics.selection();
+                      setOverflowOpen(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors",
+                      tab.isActive
+                        ? "bg-dash-bg-elevated text-dash-text-strong"
+                        : "text-dash-text-body hover:bg-dash-bg-elevated",
+                    )}
+                  >
+                    <tab.Icon className="size-4 shrink-0" weight="fill" />
+                    <span className="whitespace-nowrap">{tab.label}</span>
+                  </Link>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
 
       <WarningModal
         open={deleteOpen}

@@ -35,6 +35,15 @@ import {
   isStaticProject as getIsStaticProject,
   isWebLikeProject,
 } from "@/utils/project-capabilities";
+import { RegionMap } from "@/components/project/region-map";
+import {
+  DbConnectionCard,
+  DbQuickActionsCard,
+} from "@/components/project/db-connection-sidebar";
+import { redeployProjectServerFn } from "@/server/projects/actions";
+import { useServerFn } from "@tanstack/react-start";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { WarningModal } from "@/components/shared/warning-modal";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -128,9 +137,14 @@ export const Route = createFileRoute("/projects/$projectId/")({
 
 function ProjectDetailPage() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [restartingDb, setRestartingDb] = useState(false);
+  const [restartConfirmOpen, setRestartConfirmOpen] = useState(false);
   const haptics = useHaptics();
   const router = useRouter();
   const { openDeploymentDrawer } = useProjectDeploymentLogsDrawer();
+  const redeployProject = useServerFn(redeployProjectServerFn as any) as (args: {
+    data: { projectId: string; workspace?: string };
+  }) => Promise<{ id?: string; message?: string }>;
 
   useEffect(() => {
     function handleDeploymentUpdated() {
@@ -152,6 +166,34 @@ function ProjectDetailPage() {
 
   const projectName = project?.name || projectId;
   const isDatabaseProject = getIsDatabaseProject(project);
+
+  async function handleRestartDb() {
+    if (restartingDb) return;
+    setRestartingDb(true);
+    try {
+      await redeployProject({ data: { projectId } });
+      toast.success("Database restart triggered");
+      router.invalidate();
+    } catch (error: any) {
+      toast.error(
+        typeof error?.message === "string" ? error.message : "Couldn't restart",
+      );
+    } finally {
+      setRestartingDb(false);
+    }
+  }
+  function handleDownloadBackup() {
+    if (!project?.backupUrl) return;
+    const a = document.createElement("a");
+    a.href = project.backupUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.download = `${projectName}-${Date.now().toString(36)}-backup.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
   const isStaticProject = getIsStaticProject(project);
   const isMcpProject = getIsMcpProject(project);
   const showPreviewBanner = isWebLikeProject(project);
@@ -376,10 +418,23 @@ function ProjectDetailPage() {
 
         {/* Meta / deployments cards */}
         <div
-          className={`flex flex-col gap-4 ${isDatabaseProject ? "" : "md:flex-row"}`}
+          className={
+            isDatabaseProject
+              ? "flex flex-col gap-4 lg:grid lg:grid-cols-[300px_1fr] lg:items-start lg:gap-4"
+              : "flex flex-col gap-4 md:flex-row"
+          }
         >
+          {isDatabaseProject ? (
+            <DbConnectionCard
+              connectionUri={project?.connectionUri}
+              isActive={projectStatus === "ACTIVE"}
+            />
+          ) : null}
+
           {/* Project meta card */}
-          <div className="flex flex-1 flex-col overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
+          <div
+            className={`flex flex-1 flex-col overflow-clip rounded-[4px] ${isDatabaseProject ? "" : "border-[0.5px] border-dash-border"}`}
+          >
             <div className="flex h-10 items-center justify-between border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3 text-sm tracking-[-0.02px]">
               <span className="text-dash-text-strong">Project meta</span>
             </div>
@@ -556,9 +611,19 @@ function ProjectDetailPage() {
             </div>
           </div>
 
+          {isDatabaseProject ? (
+            <DbQuickActionsCard
+              hasBackup={Boolean(project?.backupUrl)}
+              canRestart={projectStatus === "ACTIVE"}
+              restarting={restartingDb}
+              onDownloadBackup={handleDownloadBackup}
+              onRestart={() => setRestartConfirmOpen(true)}
+            />
+          ) : null}
+
           {/* Backups card (database projects) */}
           {isDatabaseProject ? (
-            <div className="flex flex-1 flex-col overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
+            <div className="flex flex-1 flex-col overflow-clip rounded-[4px]">
               <div className="flex h-10 items-center justify-between border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3 text-sm tracking-[-0.02px]">
                 <span className="text-dash-text-strong">Manage Backups</span>
               </div>
@@ -627,6 +692,9 @@ function ProjectDetailPage() {
               </div>
             </div>
           ) : null}
+
+          {isDatabaseProject ? <div className="hidden lg:block" /> : null}
+          {isDatabaseProject ? <RegionMap regionText={regionText} /> : null}
 
           {/* Deployments card */}
           {!isDatabaseProject ? (
@@ -826,6 +894,21 @@ function ProjectDetailPage() {
             </table>
           </div>
         </>
+      ) : null}
+
+      {isDatabaseProject ? (
+        <WarningModal
+          open={restartConfirmOpen}
+          onOpenChange={setRestartConfirmOpen}
+          title="Restart this database?"
+          description={`${projectName} will be unavailable for a few moments while it restarts. Active connections will be dropped.`}
+          confirmLabel="Restart database"
+          cancelLabel="Cancel"
+          confirmLoadingLabel="Restarting..."
+          onConfirm={async () => {
+            await handleRestartDb();
+          }}
+        />
       ) : null}
     </div>
   );

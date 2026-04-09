@@ -685,10 +685,11 @@ export function DashboardLayout({
   const sidebarRoutePathname = isWorkspaceOrEnvironmentSwitching
     ? pathname
     : layoutPathname;
-  const isRenderedProjectDetailsRoute = useMemo(
-    () => /^\/projects\/[^/]+(?:\/|$)/.test(sidebarRoutePathname),
-    [sidebarRoutePathname],
-  );
+  const isRenderedProjectDetailsRoute = useMemo(() => {
+    const match = sidebarRoutePathname.match(/^\/projects\/([^/]+)(?:\/|$)/);
+    if (!match) return false;
+    return match[1] !== "new";
+  }, [sidebarRoutePathname]);
   const shouldRenderDesktopSidebar = !isRenderedProjectDetailsRoute;
 
   // Delay skeleton by 150ms so very fast workspace switches don't flash it

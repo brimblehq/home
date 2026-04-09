@@ -3,7 +3,11 @@ import { Check, Copy } from "lucide-react";
 import { Modal, ModalHeader } from "@/components/shared/modal";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
-import type { AnalyticsSnippets, AnalyticsSnippet } from "@/backend/analytics";
+import type {
+  AnalyticsSnippets,
+  AnalyticsSnippet,
+  AnalyticsSnippetLanguage,
+} from "@/backend/analytics";
 
 const HIGHLIGHT_RE = new RegExp(
   [
@@ -57,25 +61,70 @@ const FRAMEWORK_ORDER: (keyof AnalyticsSnippets)[] = [
 ];
 
 function fallbackSnippets(rawSnippet: string | undefined, siteId: string): AnalyticsSnippets {
-  const html: AnalyticsSnippet = {
-    label: "HTML",
-    language: "html",
-    file: "index.html",
-    instructions: "Paste this into the <head> of your index.html.",
-    code:
-      rawSnippet ??
-      `<script async defer\n  src="https://cdn.brimble.io/analytics.js"\n  data-site-id="${siteId}"></script>`,
-  };
+  const baseCode =
+    rawSnippet ??
+    `<script async defer\n  src="https://cdn.brimble.io/analytics.js"\n  data-site-id="${siteId}"></script>`;
+  const make = (
+    label: string,
+    language: AnalyticsSnippetLanguage,
+    file: string,
+    instructions: string,
+    code: string,
+  ): AnalyticsSnippet => ({ label, language, file, instructions, code });
+
   return {
-    html,
-    react: html,
-    nextjsApp: html,
-    nextjsPages: html,
-    vue: html,
-    nuxt: html,
-    svelte: html,
+    html: make(
+      "HTML",
+      "html",
+      "index.html",
+      "Paste this into the <head> of your index.html.",
+      baseCode,
+    ),
+    react: make(
+      "React (Vite / CRA)",
+      "tsx",
+      "src/main.tsx",
+      "Add this script tag to public/index.html or render it from your root component.",
+      baseCode,
+    ),
+    nextjsApp: make(
+      "Next.js (App Router)",
+      "tsx",
+      "app/layout.tsx",
+      "Drop this into your root <head>. Don't use next/script — Brimble Analytics needs to load synchronously.",
+      baseCode,
+    ),
+    nextjsPages: make(
+      "Next.js (Pages Router)",
+      "tsx",
+      "pages/_document.tsx",
+      "Add this inside the <Head /> component of your custom _document.",
+      baseCode,
+    ),
+    vue: make(
+      "Vue (Vite)",
+      "html",
+      "index.html",
+      "Paste this into the <head> of your index.html.",
+      baseCode,
+    ),
+    nuxt: make(
+      "Nuxt",
+      "ts",
+      "nuxt.config.ts",
+      "Add it via app.head.script in nuxt.config.ts.",
+      baseCode,
+    ),
+    svelte: make(
+      "Svelte / SvelteKit",
+      "html",
+      "src/app.html",
+      "Paste this into the <head> of src/app.html.",
+      baseCode,
+    ),
   };
 }
+
 
 export function InstallTrackingModal({
   open,

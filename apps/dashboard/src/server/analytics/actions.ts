@@ -93,6 +93,10 @@ export const getAnalyticsServerFn = createServerFn({ method: "GET" }).handler(
           unit: payload.unit,
           timezone: payload.timezone,
           type: payload.type,
+          host:
+            typeof payload.host === "string" && payload.host.trim().length > 0
+              ? payload.host.trim()
+              : undefined,
         }),
       );
       return { state: "enabled", data: result as AnalyticsPayload };

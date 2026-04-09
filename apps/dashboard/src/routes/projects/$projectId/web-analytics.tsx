@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createFileRoute,
   getRouteApi,
   useRouter,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ChartLineUp } from "@phosphor-icons/react";
@@ -39,6 +40,11 @@ function browserTimezone(): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function parseHostFromSearch(searchStr?: string): string | undefined {
+  const host = new URLSearchParams(searchStr || "").get("host")?.trim();
+  return host || undefined;
 }
 
 function SkeletonShell() {
@@ -236,9 +242,23 @@ function WebAnalyticsPage() {
   const projectId = project?.id ?? "";
   const plan = usePlanGate();
   const cachedPlanSupportsAnalytics = plan.analytics !== false;
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const initialHostFilter = parseHostFromSearch(searchStr);
+  const initialHostRef = useRef<string | undefined>(initialHostFilter);
+
+  useEffect(() => {
+    initialHostRef.current = parseHostFromSearch(searchStr);
+  }, [projectId, searchStr]);
 
   const getAnalytics = useServerFn(getAnalyticsServerFn as any) as (args: {
-    data: { projectId: string; startAt: number; endAt: number; unit?: string; timezone?: string };
+    data: {
+      projectId: string;
+      startAt: number;
+      endAt: number;
+      unit?: string;
+      timezone?: string;
+      host?: string;
+    };
   }) => Promise<AnalyticsLoadResult>;
 
   const [result, setResult] = useState<AnalyticsLoadResult | null>(null);
@@ -256,8 +276,9 @@ function WebAnalyticsPage() {
         projectId,
         startAt,
         endAt,
-        unit: "hour",
+        unit: "day",
         timezone: browserTimezone(),
+        host: initialHostRef.current,
       },
     })
       .then((res) => {

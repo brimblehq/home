@@ -73,7 +73,13 @@ import { usePlanGate } from "@/hooks/use-plan-gate";
 import { useTheme } from "@/hooks/use-theme";
 import { isPushEnabled, setPushEnabled } from "@/hooks/use-push-notification";
 import type { PaymentMethod } from "@/backend/payments";
-import { getSpendingLimitStatusServerFn } from "@/server/payments/actions";
+import {
+  getBillEstimateServerFn,
+  getPaymentInvoicesServerFn,
+  getPaymentMethodsServerFn,
+  getSpendingLimitStatusServerFn,
+  getSubscriptionServerFn,
+} from "@/server/payments/actions";
 import { paymentKeys } from "@/hooks/use-payments";
 import {
   getWorkspaceTeamMembersServerFn,
@@ -2040,6 +2046,7 @@ export function UserProfileDrawer({
   >({});
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const prefetchedBillingScopesRef = useRef<Record<string, true>>({});
   const activeWorkspaceSlug = (() => {
     const params = new URLSearchParams(searchStr || "");
     const workspace = params.get("workspace");
@@ -2123,6 +2130,47 @@ export function UserProfileDrawer({
     }
   }, [activeWorkspaceSlug, getSettingsSnapshot]);
 
+  const prefetchBillingData = useCallback(
+    async (teamId?: string) => {
+      const scopeKey = teamId ? `team:${teamId}` : "personal";
+      if (prefetchedBillingScopesRef.current[scopeKey]) {
+        return;
+      }
+
+      prefetchedBillingScopesRef.current[scopeKey] = true;
+
+      await Promise.allSettled([
+        queryClient.prefetchQuery({
+          queryKey: paymentKeys.methods(),
+          queryFn: () => getPaymentMethodsServerFn(),
+        }),
+        queryClient.prefetchQuery({
+          queryKey: paymentKeys.subscription(),
+          queryFn: () => getSubscriptionServerFn(),
+        }),
+        queryClient.prefetchQuery({
+          queryKey: paymentKeys.estimate(),
+          queryFn: () => getBillEstimateServerFn(),
+        }),
+        queryClient.prefetchQuery({
+          queryKey: paymentKeys.spendingLimitStatus(),
+          queryFn: () => getSpendingLimitStatusServerFn(),
+        }),
+        queryClient.prefetchQuery({
+          queryKey: paymentKeys.invoices(null, teamId),
+          queryFn: () =>
+            getPaymentInvoicesServerFn({
+              data: {
+                cursor: null,
+                ...(teamId ? { team_id: teamId } : {}),
+              },
+            } as any),
+        }),
+      ]);
+    },
+    [queryClient],
+  );
+
   useEffect(() => {
     if (!open) {
       return;
@@ -2133,11 +2181,31 @@ export function UserProfileDrawer({
     }
 
     void refreshSettings();
-    void queryClient.prefetchQuery({
-      queryKey: paymentKeys.spendingLimitStatus(),
-      queryFn: () => getSpendingLimitStatusServerFn(),
-    });
-  }, [open, refreshSettings, snapshot, queryClient]);
+  }, [open, refreshSettings, snapshot]);
+
+  useEffect(() => {
+    if (!open || !canSeeBilling) {
+      return;
+    }
+
+    if (!hasActiveWorkspace) {
+      void prefetchBillingData();
+      return;
+    }
+
+    const teamId = workspaceTeam?.id;
+    if (!teamId) {
+      return;
+    }
+
+    void prefetchBillingData(teamId);
+  }, [
+    canSeeBilling,
+    hasActiveWorkspace,
+    open,
+    prefetchBillingData,
+    workspaceTeam?.id,
+  ]);
 
   useEffect(() => {
     if (!open) return;
