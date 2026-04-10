@@ -685,14 +685,11 @@ export function DashboardLayout({
       next.get("environmentId") !== current.get("environmentId")
     );
   }, [searchStr, resolvedSearchStr]);
-  const sidebarRoutePathname = isWorkspaceOrEnvironmentSwitching
-    ? pathname
-    : layoutPathname;
   const isRenderedProjectDetailsRoute = useMemo(() => {
-    const match = sidebarRoutePathname.match(/^\/projects\/([^/]+)(?:\/|$)/);
+    const match = layoutPathname.match(/^\/projects\/([^/]+)(?:\/|$)/);
     if (!match) return false;
     return match[1] !== "new";
-  }, [sidebarRoutePathname]);
+  }, [layoutPathname]);
   const shouldRenderDesktopSidebar = !isRenderedProjectDetailsRoute;
 
   // Delay skeleton by 150ms so very fast workspace switches don't flash it
@@ -856,29 +853,55 @@ export function DashboardLayout({
   }, [activeSettingsSnapshot?.profile]);
 
   const phIdentify = usePostHog();
-  const lastIdentifiedRef = useRef<{ id: string; email: string; username: string; plan: string | undefined } | null>(null);
+  const lastIdentifiedRef = useRef<{
+    id: string;
+    email: string;
+    username: string;
+    plan: string | undefined;
+  } | null>(null);
 
   useEffect(() => {
     if (!isPostHogEnabled) return;
     if (!phIdentify || !userProfile?.id) return;
 
     const plan = userProfile.subscription?.planType;
-    const current = { id: userProfile.id, email: userProfile.email, username: userProfile.username, plan };
+    const current = {
+      id: userProfile.id,
+      email: userProfile.email,
+      username: userProfile.username,
+      plan,
+    };
     const prev = lastIdentifiedRef.current;
 
-    if (prev && prev.id === current.id && prev.email === current.email && prev.username === current.username && prev.plan === current.plan) {
+    if (
+      prev &&
+      prev.id === current.id &&
+      prev.email === current.email &&
+      prev.username === current.username &&
+      prev.plan === current.plan
+    ) {
       return;
     }
 
     phIdentify.identify(userProfile.id, {
       email: userProfile.email,
       username: userProfile.username,
-      name: [userProfile.firstName, userProfile.lastName].filter(Boolean).join(" "),
+      name: [userProfile.firstName, userProfile.lastName]
+        .filter(Boolean)
+        .join(" "),
       plan,
     });
 
     lastIdentifiedRef.current = current;
-  }, [phIdentify, userProfile?.id, userProfile?.email, userProfile?.username, userProfile?.firstName, userProfile?.lastName, userProfile?.subscription?.planType]);
+  }, [
+    phIdentify,
+    userProfile?.id,
+    userProfile?.email,
+    userProfile?.username,
+    userProfile?.firstName,
+    userProfile?.lastName,
+    userProfile?.subscription?.planType,
+  ]);
 
   const activeWorkspaceTeamMembers =
     currentWorkspace && isKnownWorkspace
