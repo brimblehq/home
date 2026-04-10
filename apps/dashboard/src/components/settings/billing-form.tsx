@@ -597,8 +597,8 @@ function BillForecast({
         )}
       </div>
       {hasOpenInvoice && (
-        <div className="rounded-[4px] bg-[#f5a623]/[0.06] px-3 py-2 dark:bg-[#f5a623]/[0.08]">
-          <p className="text-xs leading-relaxed text-[#b37a10] dark:text-[#f5a623]">
+        <div className="rounded-[6px] bg-[#f5a623]/5 px-3.5 py-3 dark:bg-[#f5a623]/15">
+          <p className="text-sm text-dash-text-body dark:text-dash-text-strong">
             You have an outstanding invoice. Please clear it before your next billing cycle to avoid service interruption.
           </p>
         </div>

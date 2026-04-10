@@ -394,10 +394,9 @@ export const saveProjectGeneralConfigServerFn = createServerFn({
   }
 
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
+  const nameChanged = name !== projectId;
 
-  const body: Record<string, unknown> = {
-    name,
-  };
+  const body: Record<string, unknown> = {};
 
   if (typeof payload?.framework === "string") {
     body.framework = payload.framework;
@@ -447,6 +446,13 @@ export const saveProjectGeneralConfigServerFn = createServerFn({
       if (match?.id) {
         teamId = match.id;
       }
+    }
+
+    if (nameChanged) {
+      await api.projects.redeploy(projectId, {
+        teamId,
+        payload: { name },
+      });
     }
 
     return api.projects.redeploy(projectId, {

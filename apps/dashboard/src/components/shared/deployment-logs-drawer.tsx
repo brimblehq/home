@@ -11,8 +11,10 @@ import {
 } from "lucide-react";
 import { DownloadSimple } from "@phosphor-icons/react";
 import { motion } from "motion/react";
+import { useServerFn } from "@tanstack/react-start";
 import { useHaptics } from "@/hooks/use-haptics";
 import type { DeploymentDrawerLogEntry } from "@/utils/deployment-logs";
+import { downloadDeploymentLogsServerFn } from "@/server/deployments/actions";
 
 interface DeploymentLogsDrawerProps {
   open: boolean;
@@ -22,6 +24,9 @@ interface DeploymentLogsDrawerProps {
   logs?: DeploymentDrawerLogEntry[];
   loading?: boolean;
   emptyMessage?: string;
+  projectId?: string;
+  deploymentId?: string;
+  workspace?: string;
 }
 
 const statusDotColor = {
@@ -97,17 +102,21 @@ function renderLogTextWithLinks(text: string, linkHoverClass = "hover:text-dash-
   });
 }
 
-function downloadLogs(logs: DeploymentDrawerLogEntry[]) {
-  const text = logs
-    .map((l) => `[${l.timestamp}] ${l.message}`)
-    .join("\n");
-  const blob = new Blob([text], { type: "text/plain" });
+function triggerFileDownload(content: string, filename: string) {
+  const blob = new Blob([content], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `deployment-logs-${Date.now()}.txt`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function downloadLogsClientFallback(logs: DeploymentDrawerLogEntry[]) {
+  const text = logs
+    .map((l) => `[${l.timestamp}] ${l.message}`)
+    .join("\n");
+  triggerFileDownload(text, `deployment-logs-${Date.now()}.log`);
 }
 
 export function DeploymentLogsDrawer({
@@ -118,8 +127,14 @@ export function DeploymentLogsDrawer({
   logs = [],
   loading = false,
   emptyMessage = "No logs available for this deployment yet.",
+  projectId,
+  deploymentId,
+  workspace,
 }: DeploymentLogsDrawerProps) {
   const haptics = useHaptics();
+  const downloadFromApi = useServerFn(downloadDeploymentLogsServerFn as any) as (args: {
+    data: { projectId: string; logId: string; workspace?: string };
+  }) => Promise<{ content: string; filename: string }>;
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(
     new Set(),
   );
@@ -316,7 +331,23 @@ export function DeploymentLogsDrawer({
                     </span>
                   </button>
                   <button
-                    onClick={() => downloadLogs(logs)}
+                    onClick={async () => {
+                      if (projectId && deploymentId) {
+                        try {
+                          const result = await downloadFromApi({
+                            data: { projectId, logId: deploymentId, workspace },
+                          });
+                          const filename = result.filename.endsWith(".log")
+                            ? result.filename
+                            : `${result.filename.replace(/\.\w+$/, "")}.log`;
+                          triggerFileDownload(result.content, filename);
+                          return;
+                        } catch {
+                          // fall through to client-side download
+                        }
+                      }
+                      downloadLogsClientFallback(logs);
+                    }}
                     className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                   >
                     <DownloadSimple className="size-4" />

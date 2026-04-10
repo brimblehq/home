@@ -25,6 +25,7 @@ import {
   ShieldAlert,
   HardDrive,
   ArrowUpRight,
+  AlertTriangle,
 } from "lucide-react";
 import { GithubLogo, Cube, Database, CircleNotch } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
@@ -84,6 +85,7 @@ import {
   listAvailableDatabasesServerFn,
   validateDockerImageServerFn,
 } from "@/server/projects/actions";
+import { getHomeOverviewServerFn } from "@/server/overview/actions";
 import type { FrameworkOption } from "@/backend/frameworks";
 import type { Region } from "@/backend/regions";
 import type {
@@ -1272,6 +1274,7 @@ function Phase2DbEngine({
   loading = false,
   regionOptions,
   submitting = false,
+  projectCount = 0,
   onSelect,
   onProvision,
 }: {
@@ -1280,6 +1283,7 @@ function Phase2DbEngine({
   loading?: boolean;
   regionOptions: RegionOption[];
   submitting?: boolean;
+  projectCount?: number;
   onSelect: (engineId: string) => void;
   onProvision: (input: {
     engineId: string;
@@ -1422,6 +1426,7 @@ function Phase2DbEngine({
             engine={selectedEngine}
             regionOptions={regionOptions}
             submitting={submitting}
+            projectCount={projectCount}
             onProvision={(payload) =>
               onProvision({
                 engineId: selectedEngine.id,
@@ -1515,11 +1520,13 @@ function Phase3DatabaseConfigure({
   engine,
   regionOptions,
   submitting = false,
+  projectCount = 0,
   onProvision,
 }: {
   engine: DatabaseEngineOption;
   regionOptions: RegionOption[];
   submitting?: boolean;
+  projectCount?: number;
   onProvision: (input: {
     name: string;
     regionId: string;
@@ -1573,8 +1580,18 @@ function Phase3DatabaseConfigure({
 
   const recommendation = engine.recommendations?.[0]?.compute;
 
-  const { planKey } = usePlanGate();
+  const { planKey, projectLimit } = usePlanGate();
   const pricing = usePricing();
+  const limitReached = projectLimit !== null && projectCount > projectLimit;
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const nextPlanName = useMemo(() => {
+    const currentIdx = pricing.plans.findIndex(
+      (p) => p.id === planKey || p.name.toLowerCase() === planKey,
+    );
+    return currentIdx >= 0 && currentIdx < pricing.plans.length - 1
+      ? pricing.plans[currentIdx + 1].name
+      : undefined;
+  }, [pricing.plans, planKey]);
 
   const costBreakdown = useMemo(
     () =>
@@ -1673,6 +1690,23 @@ function Phase3DatabaseConfigure({
         Configure {engine.name}
       </h3>
 
+      {limitReached && (
+        <div className="mb-4 flex items-center gap-3 rounded-[6px] bg-[#f5a623]/5 px-3.5 py-3 dark:bg-[#f5a623]/15">
+          <AlertTriangle className="size-4 shrink-0 text-[#f5a623]" />
+          <span className="text-sm text-dash-text-body dark:text-dash-text-strong">
+            You've reached your project limit ({projectCount}/{projectLimit}).{" "}
+            <button
+              type="button"
+              onClick={() => setShowUpgradeModal(true)}
+              className="font-medium text-[#4879f8] transition-colors hover:text-[#3060d0]"
+            >
+              Upgrade your plan
+            </button>{" "}
+            to deploy more projects.
+          </span>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4">
         <div>
           <label className="mb-1.5 block text-sm text-dash-text-body">
@@ -1707,7 +1741,7 @@ function Phase3DatabaseConfigure({
           </p>
           <button
             type="button"
-            className="mt-1 text-xs font-medium text-dash-text-strong hover:underline"
+            className="mt-1 text-xs font-medium text-[#4879f8] transition-colors hover:text-[#3060d0]"
             onClick={() => {
               if (typeof recommendation.cpu === "number") {
                 const nextCpuIdx = cpuSteps.indexOf(recommendation.cpu);
@@ -1903,8 +1937,12 @@ function Phase3DatabaseConfigure({
           fullWidth
           loading={submitting}
           loadingLabel="Provisioning database..."
-          disabled={!dbName.trim() || !region || submitting}
+          disabled={!dbName.trim() || !region || submitting || limitReached}
           onClick={() => {
+            if (limitReached) {
+              setShowUpgradeModal(true);
+              return;
+            }
             const hasInvalidIp = !publicAccess
               ? whitelistIps.some(
                   (ip) => ip.value.trim() && !isValidCidr(ip.value),
@@ -1942,6 +1980,13 @@ function Phase3DatabaseConfigure({
           Provision Database
         </GlossyButton>
       </div>
+
+      <ChangePlanModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        currentPlan={planKey}
+        defaultSelectedPlan={nextPlanName}
+      />
     </motion.div>
   );
 }
@@ -2020,16 +2065,35 @@ function Phase3Configure({
       : (sourceName.split(":")[0].split("/").pop() ?? sourceName);
   const lastAppliedSourceRef = useRef<string>("");
 
-  const [projectName, setProjectName] = useState(defaultName);
+  const [projectName, setProjectName] = useState(
+    defaultName.toLowerCase().replace(/[^a-z-]/g, ""),
+  );
+
+  const projectNameError = (() => {
+    if (!projectName.trim()) return null;
+    if (/[^a-z-]/.test(projectName))
+      return "Project name can only contain lowercase letters and hyphens.";
+    return null;
+  })();
+  const hasProjectNameError = projectNameError !== null;
   const [region, setRegion] = useState(regionOptions[0]?.id ?? "");
   const [branch, setBranch] = useState(branchOptions?.[0] ?? "main");
   const [rootDir, setRootDir] = useState("./");
   const [rootDirDrawerOpen, setRootDirDrawerOpen] = useState(false);
   const isGit = isGitSource(sourceType);
   const { planKey, projectLimit } = usePlanGate();
+  const pricing = usePricing();
   const isFreePlan = planKey === "free";
-  const limitReached = projectLimit !== null && projectCount >= projectLimit;
+  const limitReached = projectLimit !== null && projectCount > projectLimit;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const nextPlanName = useMemo(() => {
+    const currentIdx = pricing.plans.findIndex(
+      (p) => p.id === planKey || p.name.toLowerCase() === planKey,
+    );
+    return currentIdx >= 0 && currentIdx < pricing.plans.length - 1
+      ? pricing.plans[currentIdx + 1].name
+      : undefined;
+  }, [pricing.plans, planKey]);
   const serviceTypeOptions = useMemo(
     () => [
       {
@@ -2321,6 +2385,27 @@ function Phase3Configure({
       <h3 className="mb-4 text-sm font-medium text-dash-text-strong">
         Configure Project
       </h3>
+      <p className="mb-4 text-xs text-dash-text-faded">
+        Project limits are counted across all environments in this workspace.
+      </p>
+
+      {limitReached && (
+        <div className="mb-4 flex items-center gap-3 rounded-[6px] bg-[#f5a623]/5 px-3.5 py-3 dark:bg-[#f5a623]/15">
+          <AlertTriangle className="size-4 shrink-0 text-[#f5a623]" />
+          <span className="text-sm text-dash-text-body dark:text-dash-text-strong">
+            You've reached your project limit across this workspace (
+            {projectCount}/{projectLimit}).{" "}
+            <button
+              type="button"
+              onClick={() => setShowUpgradeModal(true)}
+              className="font-medium text-[#4879f8] transition-colors hover:text-[#3060d0]"
+            >
+              Upgrade your plan
+            </button>{" "}
+            to deploy more projects.
+          </span>
+        </div>
+      )}
 
       {/* Project settings */}
       <div className="flex flex-col gap-4">
@@ -2332,9 +2417,28 @@ function Phase3Configure({
             <input
               type="text"
               value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
+              onChange={(e) => setProjectName(e.target.value.toLowerCase())}
               className={inputClass}
+              style={{
+                transition: "box-shadow 0.2s ease",
+                boxShadow: hasProjectNameError
+                  ? "0px 1px 2px rgba(239,47,31,0.3), 0px 0px 0px 1px #ef2f1f"
+                  : undefined,
+              }}
             />
+            <AnimatePresence>
+              {projectNameError && (
+                <motion.span
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15, ease }}
+                  className="mt-1 block text-xs text-[#ef2f1f]"
+                >
+                  {projectNameError}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
           <div>
             <label className="mb-1.5 block text-sm text-dash-text-body">
@@ -2713,8 +2817,19 @@ function Phase3Configure({
             className="sm:min-w-[190px]"
             loading={saving}
             loadingLabel="Saving..."
-            disabled={deploying || saving || !projectName.trim() || !region}
+            disabled={
+              deploying ||
+              saving ||
+              !projectName.trim() ||
+              !region ||
+              limitReached ||
+              hasProjectNameError
+            }
             onClick={() => {
+              if (limitReached) {
+                setShowUpgradeModal(true);
+                return;
+              }
               const deployInput = buildDeployInput();
               if (!deployInput) {
                 return;
@@ -2736,7 +2851,8 @@ function Phase3Configure({
               saving ||
               !projectName.trim() ||
               !region ||
-              limitReached
+              limitReached ||
+              hasProjectNameError
             }
             onClick={() => {
               if (limitReached) {
@@ -2755,26 +2871,11 @@ function Phase3Configure({
           </GlossyButton>
         </div>
 
-        {limitReached && (
-          <div className="mt-3 flex items-center gap-2 rounded-[6px] border border-dash-border bg-dash-bg-elevated px-3.5 py-3 text-sm text-dash-text-faded">
-            <span>
-              You've reached your project limit ({projectCount}/{projectLimit}).{" "}
-              <button
-                type="button"
-                onClick={() => setShowUpgradeModal(true)}
-                className="font-medium text-[#4879f8] transition-colors hover:text-[#3060d0]"
-              >
-                Upgrade your plan
-              </button>{" "}
-              to deploy more projects.
-            </span>
-          </div>
-        )}
-
         <ChangePlanModal
           open={showUpgradeModal}
           onOpenChange={setShowUpgradeModal}
           currentPlan={planKey}
+          defaultSelectedPlan={nextPlanName}
         />
       </div>
 
@@ -2833,9 +2934,8 @@ function NewProjectPage() {
   const { canWrite } = useWorkspaceRole();
   const router = useRouter();
   const { onboardingProjects } = (rootRoute.useLoaderData() ?? {}) as {
-    onboardingProjects?: { items: unknown[] };
+    onboardingProjects?: { items: unknown[]; total?: number };
   };
-  const currentProjectCount = onboardingProjects?.items?.length ?? 0;
   const navigate = useNavigate({ from: "/projects/new" });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const workspace = useMemo(() => {
@@ -2844,8 +2944,37 @@ function NewProjectPage() {
   }, [searchStr]);
   const environmentId = useMemo(() => {
     const params = new URLSearchParams(searchStr || "");
-    return params.get("environmentId")?.trim() || undefined;
+    const raw = params.get("environmentId")?.trim();
+    if (!raw || raw === "all") {
+      return undefined;
+    }
+    return raw;
   }, [searchStr]);
+
+  const [freshProjectCount, setFreshProjectCount] = useState<number | null>(
+    null,
+  );
+  const getOverview = useServerFn(getHomeOverviewServerFn as any) as (args: {
+    data: { workspace?: string };
+  }) => Promise<{ total: { project: number } }>;
+
+  useEffect(() => {
+    let active = true;
+    getOverview({ data: { workspace } })
+      .then((res) => {
+        if (active) setFreshProjectCount(res?.total?.project ?? 0);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [workspace, getOverview]);
+
+  const currentProjectCount =
+    freshProjectCount ??
+    onboardingProjects?.total ??
+    onboardingProjects?.items?.length ??
+    0;
 
   const listFrameworks = useServerFn(
     listFrameworksServerFn as any,
@@ -3626,6 +3755,7 @@ function NewProjectPage() {
                       loading={databaseEnginesLoading}
                       regionOptions={databaseRegionOptions}
                       submitting={provisioningDatabase}
+                      projectCount={currentProjectCount}
                       onSelect={setSourceName}
                       onProvision={(payload) =>
                         handleProvisionDatabase(payload)
@@ -3717,6 +3847,7 @@ function NewProjectPage() {
                       engine={selectedEngine}
                       regionOptions={databaseRegionOptions}
                       submitting={provisioningDatabase}
+                      projectCount={currentProjectCount}
                       onProvision={(payload) =>
                         handleProvisionDatabase({
                           engineId: selectedEngine.id,

@@ -35,7 +35,7 @@ function formatTimestamp(value?: string | null): string {
     return String(value);
   }
 
-  return format(date, "eee dd/MM/yyyy HH:mm:ss").toLowerCase();
+  return format(date, "MMM dd yyyy  HH:mm:ss");
 }
 
 function tryParseEmbeddedLogLine(content: string): {

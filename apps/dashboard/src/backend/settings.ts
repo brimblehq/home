@@ -340,10 +340,8 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
     options?: { subscriptionId?: string },
   ): Promise<SettingsBillingSnapshot> => {
     const subscriptionId = options?.subscriptionId?.trim() || undefined;
-    const [cardsResponse, providersResponse, statsResponse, invoicesResponse, plansResponse] =
+    const [statsResponse, invoicesResponse, plansResponse] =
       await Promise.all([
-        client.request(endpoints.paymentCards, { method: "GET" }),
-        client.request(endpoints.paymentProviders, { method: "GET" }),
         client.request(endpoints.paymentStats, {
           method: "GET",
           query: {
@@ -361,8 +359,8 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
       ]);
 
     return {
-      cards: mapCards(cardsResponse),
-      providers: mapProviders(providersResponse),
+      cards: [],
+      providers: [],
       spending: mapSpendingStats(statsResponse),
       invoices: mapInvoicePage(invoicesResponse, page),
       plans: mapPlans(plansResponse),

@@ -10,7 +10,10 @@ import {
   RotateCw,
   ExternalLink,
   XCircle,
+  Download,
+  Loader2,
 } from "lucide-react";
+import { hapticToast as toast } from "@/utils/haptic-toast";
 import { NumberPagination } from "../../../components/shared/pagination";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
@@ -23,6 +26,7 @@ import {
   listDeploymentsServerFn,
   redeployServerFn,
   cancelDeploymentServerFn,
+  downloadDeploymentLogsServerFn,
 } from "@/server/deployments/actions";
 import type {
   PaginatedDeploymentsResponse,
@@ -207,6 +211,7 @@ function DeploymentMenu({
   const { canWrite } = useWorkspaceRole();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -300,6 +305,37 @@ function DeploymentMenu({
       icon: <RotateCw className="size-3.5" />,
       onClick: handleRedeploy,
       visible: canRedeploy,
+    },
+    {
+      id: "download-logs",
+      label: downloading ? "Downloading…" : "Download logs",
+      icon: downloading ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />,
+      onClick: async () => {
+        if (downloading) return;
+        setDownloading(true);
+        try {
+          const result = await (downloadDeploymentLogsServerFn as unknown as (input: {
+            data: { projectId: string; logId: string; workspace?: string };
+          }) => Promise<{ content: string; filename: string }>)({
+            data: { projectId, logId: deployment.id, workspace },
+          });
+          const blob = new Blob([result.content], { type: "text/plain" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = result.filename.endsWith(".log") ? result.filename : `${result.filename.replace(/\.\w+$/, "")}.log`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          toast.error(
+            error instanceof Error ? error.message : "No log entries found for this deployment",
+          );
+        } finally {
+          setDownloading(false);
+          setOpen(false);
+        }
+      },
+      visible: true,
     },
     {
       id: "view-commit",

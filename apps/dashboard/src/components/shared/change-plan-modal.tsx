@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { Modal, ModalHeader, ModalFooter, ModalCancelButton, ModalContinueButton } from "./modal";
 import { Dropdown } from "./dropdown";
@@ -32,6 +32,12 @@ export function ChangePlanModal({
   const [selectedPlan, setSelectedPlan] = useState(defaultSelectedPlan ?? "");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const pricing = usePricing();
+
+  useEffect(() => {
+    if (open && defaultSelectedPlan) {
+      setSelectedPlan(defaultSelectedPlan);
+    }
+  }, [open, defaultSelectedPlan]);
 
   const { data: paymentMethods = [] } = usePaymentMethods(initialPaymentMethods ?? undefined);
   const { data: subscription } = useSubscription();

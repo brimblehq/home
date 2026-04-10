@@ -50,24 +50,63 @@ function formatBandwidthTotal(value: number | null | undefined) {
 
 function getPlanInfo(planType?: string, isTeamWorkspace?: boolean) {
   if (isTeamWorkspace) {
-    return { label: "TEAM", badgeBg: "bg-[#d4a017]", displayName: "Team", medalIcon: "/icons/medal.svg", nextPlan: null, unlimitedProjects: true };
+    return {
+      label: "TEAM",
+      badgeBg: "bg-[#d4a017]",
+      displayName: "Team",
+      medalIcon: "/icons/medal.svg",
+      nextPlan: null,
+      unlimitedProjects: true,
+    };
   }
 
   const key = (planType ?? "").toUpperCase();
 
   if (key === SUBSCRIPTION_PLAN_TYPE.HackerPlan || key === "HACKER") {
-    return { label: "HACKER", badgeBg: "bg-[#9ca3af]", displayName: "Hacker", medalIcon: "/icons/medal-silver.svg", nextPlan: "Pro", unlimitedProjects: false };
+    return {
+      label: "HACKER",
+      badgeBg: "bg-[#9ca3af]",
+      displayName: "Hacker",
+      medalIcon: "/icons/medal-silver.svg",
+      nextPlan: "Pro",
+      unlimitedProjects: false,
+    };
   }
 
-  if (key === SUBSCRIPTION_PLAN_TYPE.DeveloperPlan || key === "PRO" || key === "PRO_PLAN") {
-    return { label: "PRO", badgeBg: "bg-[#d4a017]", displayName: "Pro", medalIcon: "/icons/medal.svg", nextPlan: null, unlimitedProjects: true };
+  if (
+    key === SUBSCRIPTION_PLAN_TYPE.DeveloperPlan ||
+    key === "PRO" ||
+    key === "PRO_PLAN"
+  ) {
+    return {
+      label: "PRO",
+      badgeBg: "bg-[#d4a017]",
+      displayName: "Pro",
+      medalIcon: "/icons/medal.svg",
+      nextPlan: null,
+      unlimitedProjects: true,
+    };
   }
 
   if (key === SUBSCRIPTION_PLAN_TYPE.TeamPlan || key === "TEAM") {
-    return { label: "TEAM", badgeBg: "bg-[#d4a017]", displayName: "Team", medalIcon: "/icons/medal.svg", nextPlan: null, unlimitedProjects: true };
+    return {
+      label: "TEAM",
+      badgeBg: "bg-[#d4a017]",
+      displayName: "Team",
+      medalIcon: "/icons/medal.svg",
+      nextPlan: null,
+      unlimitedProjects: true,
+    };
   }
 
-  return { label: "FREE", badgeBg: "bg-[#cd7f32]", displayName: "Free", medalIcon: "/icons/medal-bronze.svg", nextPlan: "Hacker", unlimitedProjects: false };
+  return {
+    label: "FREE",
+    badgeBg: "bg-[#cd7f32]",
+    displayName: "Free",
+    medalIcon: "/icons/medal-bronze.svg",
+    nextPlan: "Hacker",
+    unlimitedProjects: false,
+  };
 }
 
 export function StatsRow({
@@ -91,9 +130,13 @@ export function StatsRow({
   const totalProjects = overview?.total?.project ?? 0;
   const bandwidthChartData =
     bandwidth?.results?.map((point) => ({
-      value: typeof point.total === "number" && Number.isFinite(point.total) ? point.total : 0,
+      value:
+        typeof point.total === "number" && Number.isFinite(point.total)
+          ? point.total
+          : 0,
     })) ?? [];
-  const chartData = bandwidthChartData.length > 0 ? bandwidthChartData : [{ value: 0 }];
+  const chartData =
+    bandwidthChartData.length > 0 ? bandwidthChartData : [{ value: 0 }];
   const latestBandwidthTotal =
     bandwidth?.results && bandwidth.results.length > 0
       ? bandwidth.results[bandwidth.results.length - 1]?.total
@@ -128,7 +171,12 @@ export function StatsRow({
           {bandwidthSummaryText}
         </p>
         <div className="mt-auto h-[65px] min-w-0">
-          <ResponsiveContainer width="100%" height={65} minWidth={0} minHeight={1}>
+          <ResponsiveContainer
+            width="100%"
+            height={65}
+            minWidth={0}
+            minHeight={1}
+          >
             <AreaChart
               data={chartData}
               margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
@@ -136,7 +184,10 @@ export function StatsRow({
               <YAxis
                 domain={[
                   0,
-                  (max: number) => (typeof max === "number" && Number.isFinite(max) && max > 0 ? max : 1),
+                  (max: number) =>
+                    typeof max === "number" && Number.isFinite(max) && max > 0
+                      ? max
+                      : 1,
                 ]}
                 hide
               />
@@ -180,7 +231,7 @@ export function StatsRow({
       <div className="flex flex-1 flex-col border-t-[0.5px] border-dash-border lg:border-t-0 lg:border-l-[0.5px]">
         <div className="flex h-[30px] items-center border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-2.5">
           <span className="text-xs tracking-[-0.02px] text-dash-text-strong">
-            Total projects
+            Total projects (per environment)
           </span>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-4 lg:py-0">
@@ -191,11 +242,17 @@ export function StatsRow({
                 <span className="text-dash-text-extra-faded">
                   /
                   <span className="ml-0.5 inline-flex align-middle">
-                    <Infinity className="size-5" weight="light" aria-label="Unlimited" />
+                    <Infinity
+                      className="size-5"
+                      weight="light"
+                      aria-label="Unlimited"
+                    />
                   </span>
                 </span>
               ) : (
-                <span className="text-dash-text-extra-faded">/{specProjectLimit}</span>
+                <span className="text-dash-text-extra-faded">
+                  /{specProjectLimit}
+                </span>
               )}
             </p>
           </div>
@@ -207,10 +264,14 @@ export function StatsRow({
               setChangePlanOpen(true);
             }}
             disabled={!canChangePlan}
-            className={!canChangePlan ? "cursor-default opacity-100" : undefined}
+            className={
+              !canChangePlan ? "cursor-default opacity-100" : undefined
+            }
             aria-disabled={!canChangePlan}
           >
-            {plan.nextPlan ? `Get Brimble ${plan.nextPlan}` : `Brimble ${plan.displayName}`}
+            {plan.nextPlan
+              ? `Get Brimble ${plan.nextPlan}`
+              : `Brimble ${plan.displayName}`}
             <img src={plan.medalIcon} alt="" className="size-4" />
           </DashButton>
         </div>

@@ -100,7 +100,6 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
   staleTime: 300_000,
   preloadStaleTime: 300_000,
   loader: async ({ context }) => {
-    const project = (context as any).project;
     const workspace = (context as any).workspace;
 
     let repo: RepositoryMetadata | null = null;
@@ -516,78 +515,113 @@ function RepoSection({
     data: { projectId: string; workspace?: string };
   }) => Promise<{ message?: string }>;
 
-  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<any>;
-  const listGithubRepos = useServerFn(listGithubReposServerFn as any) as (args: {
+  const listGithubAccounts = useServerFn(
+    listGithubAccountsServerFn as any,
+  ) as () => Promise<any>;
+  const listGithubRepos = useServerFn(
+    listGithubReposServerFn as any,
+  ) as (args: {
     data: { q?: string; installationId?: number | string };
   }) => Promise<any>;
-  const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn as any) as () => Promise<any>;
-  const listGitlabRepos = useServerFn(listGitlabReposServerFn as any) as (args: {
+  const listGitlabAccounts = useServerFn(
+    listGitlabAccountsServerFn as any,
+  ) as () => Promise<any>;
+  const listGitlabRepos = useServerFn(
+    listGitlabReposServerFn as any,
+  ) as (args: {
     data: { q?: string; installationId?: number | string };
   }) => Promise<any>;
-  const listBitbucketAccounts = useServerFn(listBitbucketAccountsServerFn as any) as () => Promise<any>;
-  const listBitbucketRepos = useServerFn(listBitbucketReposServerFn as any) as (args: {
+  const listBitbucketAccounts = useServerFn(
+    listBitbucketAccountsServerFn as any,
+  ) as () => Promise<any>;
+  const listBitbucketRepos = useServerFn(
+    listBitbucketReposServerFn as any,
+  ) as (args: {
     data: { q?: string; installationId?: number | string };
   }) => Promise<any>;
 
   const connectedRepo = project?.repo;
-  const hasRepo = Boolean(connectedRepo?.fullName || connectedRepo?.name);
-  const repoDisplay = connectedRepo?.fullName || connectedRepo?.name || "";
-  const repoGit = connectedRepo?.git || "";
+  const [localConnectedRepo, setLocalConnectedRepo] = useState<any>(
+    connectedRepo ?? null,
+  );
 
-  const [disconnecting, setDisconnecting] = useState(false);
+  useEffect(() => {
+    setLocalConnectedRepo(connectedRepo ?? null);
+  }, [project?.id]);
+
+  const hasRepo = Boolean(
+    localConnectedRepo?.fullName || localConnectedRepo?.name,
+  );
+  const repoDisplay =
+    localConnectedRepo?.fullName || localConnectedRepo?.name || "";
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerProvider, setPickerProvider] = useState<GitProviderId>("github");
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerRepos, setPickerRepos] = useState<GithubRepoListItem[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
-  const [pickerAccounts, setPickerAccounts] = useState<Array<{ id?: string; name?: string; installationId?: number | string }>>([]);
+  const [pickerAccounts, setPickerAccounts] = useState<
+    Array<{ id?: string; name?: string; installationId?: number | string }>
+  >([]);
   const [pickerAccount, setPickerAccount] = useState<string>("");
   const [connecting, setConnecting] = useState<string | null>(null);
 
-  const fetchAccounts = useCallback(async (provider: GitProviderId) => {
-    try {
-      const listAccounts =
-        provider === "github"
-          ? listGithubAccounts
-          : provider === "gitlab"
-            ? listGitlabAccounts
-            : listBitbucketAccounts;
-      const result = await listAccounts();
-      const accounts = result?.accounts || [];
-      setPickerAccounts(accounts);
-      if (accounts.length > 0) {
-        setPickerAccount(String(accounts[0].installationId || accounts[0].id || ""));
+  const fetchAccounts = useCallback(
+    async (provider: GitProviderId) => {
+      try {
+        const listAccounts =
+          provider === "github"
+            ? listGithubAccounts
+            : provider === "gitlab"
+              ? listGitlabAccounts
+              : listBitbucketAccounts;
+        const result = await listAccounts();
+        const accounts = result?.accounts || [];
+        setPickerAccounts(accounts);
+        if (accounts.length > 0) {
+          setPickerAccount(
+            String(accounts[0].installationId || accounts[0].id || ""),
+          );
+        }
+        return accounts;
+      } catch {
+        setPickerAccounts([]);
+        return [];
       }
-      return accounts;
-    } catch {
-      setPickerAccounts([]);
-      return [];
-    }
-  }, [listGithubAccounts, listGitlabAccounts, listBitbucketAccounts]);
+    },
+    [listGithubAccounts, listGitlabAccounts, listBitbucketAccounts],
+  );
 
-  const fetchRepos = useCallback(async (provider: GitProviderId, installationId?: string, search?: string) => {
-    setPickerLoading(true);
-    try {
-      const listRepos =
-        provider === "github"
-          ? listGithubRepos
-          : provider === "gitlab"
-            ? listGitlabRepos
-            : listBitbucketRepos;
-      const result = await listRepos({
-        data: {
-          q: search || undefined,
-          installationId: installationId || undefined,
-        },
-      });
-      setPickerRepos(result?.repositories || []);
-    } catch {
-      setPickerRepos([]);
-    } finally {
-      setPickerLoading(false);
-    }
-  }, [listGithubRepos, listGitlabRepos, listBitbucketRepos]);
+  const fetchRepos = useCallback(
+    async (
+      provider: GitProviderId,
+      installationId?: string,
+      search?: string,
+    ) => {
+      setPickerLoading(true);
+      try {
+        const listRepos =
+          provider === "github"
+            ? listGithubRepos
+            : provider === "gitlab"
+              ? listGitlabRepos
+              : listBitbucketRepos;
+        const result = await listRepos({
+          data: {
+            q: search || undefined,
+            installationId: installationId || undefined,
+          },
+        });
+        setPickerRepos(result?.repositories || []);
+      } catch {
+        setPickerRepos([]);
+      } finally {
+        setPickerLoading(false);
+      }
+    },
+    [listGithubRepos, listGitlabRepos, listBitbucketRepos],
+  );
 
   const openPicker = useCallback(async () => {
     setPickerOpen(true);
@@ -595,74 +629,102 @@ function RepoSection({
     setPickerRepos([]);
     const accounts = await fetchAccounts(pickerProvider);
     if (accounts.length > 0) {
-      const installId = String(accounts[0].installationId || accounts[0].id || "");
+      const installId = String(
+        accounts[0].installationId || accounts[0].id || "",
+      );
       await fetchRepos(pickerProvider, installId);
     }
   }, [fetchAccounts, fetchRepos, pickerProvider]);
 
-  const handleProviderChange = useCallback(async (provider: GitProviderId) => {
-    setPickerProvider(provider);
-    setPickerSearch("");
-    setPickerRepos([]);
-    const accounts = await fetchAccounts(provider);
-    if (accounts.length > 0) {
-      const installId = String(accounts[0].installationId || accounts[0].id || "");
-      await fetchRepos(provider, installId);
-    }
-  }, [fetchAccounts, fetchRepos]);
+  const handleProviderChange = useCallback(
+    async (provider: GitProviderId) => {
+      setPickerProvider(provider);
+      setPickerSearch("");
+      setPickerRepos([]);
+      const accounts = await fetchAccounts(provider);
+      if (accounts.length > 0) {
+        const installId = String(
+          accounts[0].installationId || accounts[0].id || "",
+        );
+        await fetchRepos(provider, installId);
+      }
+    },
+    [fetchAccounts, fetchRepos],
+  );
 
-  const handleAccountChange = useCallback(async (installId: string) => {
-    setPickerAccount(installId);
-    setPickerSearch("");
-    await fetchRepos(pickerProvider, installId);
-  }, [fetchRepos, pickerProvider]);
+  const handleAccountChange = useCallback(
+    async (installId: string) => {
+      setPickerAccount(installId);
+      setPickerSearch("");
+      await fetchRepos(pickerProvider, installId);
+    },
+    [fetchRepos, pickerProvider],
+  );
 
-  const handleSearch = useCallback(async (q: string) => {
-    setPickerSearch(q);
-    await fetchRepos(pickerProvider, pickerAccount, q);
-  }, [fetchRepos, pickerProvider, pickerAccount]);
+  const handleSearch = useCallback(
+    async (q: string) => {
+      setPickerSearch(q);
+      await fetchRepos(pickerProvider, pickerAccount, q);
+    },
+    [fetchRepos, pickerProvider, pickerAccount],
+  );
 
-  const handleConnect = useCallback(async (repo: GithubRepoListItem) => {
-    setConnecting(repo.fullName);
-    try {
-      await linkRepo({
-        data: {
-          projectId: project?.id,
-          workspace,
-          repo: {
-            name: repo.fullName,
-            installationId: repo.installationId as number,
-            git: pickerProvider,
+  const handleConnect = useCallback(
+    async (repo: GithubRepoListItem) => {
+      setConnecting(repo.fullName);
+      try {
+        await linkRepo({
+          data: {
+            projectId: project?.id,
+            workspace,
+            repo: {
+              name: repo.fullName,
+              installationId: repo.installationId as number,
+              git: pickerProvider,
+            },
           },
-        },
-      });
-      haptics.success();
-      toast.success("Repository connected");
-      setPickerOpen(false);
-      onRepoChanged();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to connect repository",
-      );
-    } finally {
-      setConnecting(null);
-    }
-  }, [linkRepo, project?.id, workspace, pickerProvider, haptics, onRepoChanged]);
+        });
+        haptics.success();
+        toast.success("Repository connected");
+        setLocalConnectedRepo({
+          ...(project?.repo || {}),
+          fullName: repo.fullName,
+          name: repo.fullName,
+          installationId: repo.installationId,
+          git: pickerProvider,
+        });
+        setPickerOpen(false);
+        onRepoChanged();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to connect repository",
+        );
+      } finally {
+        setConnecting(null);
+      }
+    },
+    [linkRepo, project?.id, workspace, pickerProvider, haptics, onRepoChanged],
+  );
 
   const handleDisconnect = useCallback(async () => {
-    setDisconnecting(true);
+
     try {
       await unlinkRepo({ data: { projectId: project?.id, workspace } });
       haptics.success();
       toast.success("Repository disconnected");
+      setLocalConnectedRepo(null);
       setConfirmOpen(false);
       onRepoChanged();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to disconnect repository",
+        error instanceof Error
+          ? error.message
+          : "Failed to disconnect repository",
       );
     } finally {
-      setDisconnecting(false);
+
     }
   }, [unlinkRepo, project?.id, workspace, haptics, onRepoChanged]);
 
@@ -711,10 +773,7 @@ function RepoSection({
               </GlossyButton>
             )}
             {canWrite && (
-              <GlossyButton
-                variant="black"
-                onClick={openPicker}
-              >
+              <GlossyButton variant="black" onClick={openPicker}>
                 {hasRepo ? "Switch" : "Connect"}
               </GlossyButton>
             )}
@@ -786,7 +845,13 @@ function RepoSection({
           </div>
 
           {/* Repo list */}
-          <div className="max-h-[320px] overflow-y-auto overflow-clip rounded-[4px] border-[0.5px] border-dash-border" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.1) transparent" }}>
+          <div
+            className="max-h-[320px] overflow-y-auto overflow-clip rounded-[4px] border-[0.5px] border-dash-border"
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: "rgba(255,255,255,0.1) transparent",
+            }}
+          >
             {pickerLoading ? (
               <div className="px-4 py-8 text-center text-sm text-dash-text-faded">
                 Loading repositories…
@@ -823,9 +888,7 @@ function RepoSection({
                     onClick={() => handleConnect(repo)}
                     disabled={connecting !== null}
                   >
-                    {connecting === repo.fullName
-                      ? "Connecting…"
-                      : "Connect"}
+                    {connecting === repo.fullName ? "Connecting…" : "Connect"}
                   </DashButton>
                 </motion.div>
               ))
@@ -1029,6 +1092,7 @@ function GeneralSection({
                       </span>
                       <span className="text-xs text-dash-text-faded">
                         Reuse the previous build cache to speed up redeploys.
+                        Cache clears automatically after 15 days.
                       </span>
                     </div>
                     <ToggleSwitch
@@ -1754,6 +1818,7 @@ function DangerSection({
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
+  const router = useRouter();
   const deleteProject = useServerFn(deleteProjectServerFn as any) as (args: {
     data: { projectId: string; workspace?: string };
   }) => Promise<{ success: boolean }>;
@@ -1816,24 +1881,34 @@ function DangerSection({
         cancelLabel="Cancel"
         confirmDisabled={confirmText !== projectName || deleting}
         onConfirm={async () => {
+          if (deleting) {
+            return;
+          }
+
           setDeleting(true);
+          let deleted = false;
           try {
             await deleteProject({
               data: { projectId, workspace },
             });
             toast.success("Project deleted successfully");
-            router.invalidate();
-            await navigate({
-              to: "/projects",
-              search: workspace ? { workspace } : {},
-            });
+            deleted = true;
           } catch (error) {
             toast.error(
               error instanceof Error
                 ? error.message
                 : "Failed to delete project",
             );
+          } finally {
+            await router.invalidate();
             setDeleting(false);
+          }
+
+          if (deleted) {
+            await navigate({
+              to: "/projects",
+              search: workspace ? { workspace } : {},
+            });
           }
         }}
       >
@@ -2095,7 +2170,8 @@ function ConfigurationPage() {
   const persistentStorageVisible = shouldShowPersistentStorageField(project);
   const buildCacheToggleVisible = shouldShowBuildCacheToggle(project);
   const mcpServersEnabled = useFeatureFlag(FeatureFlags.ENABLE_MCP_SERVERS);
-  const mcpAuthToggleVisible = mcpServersEnabled && shouldShowMcpAuthToggle(project);
+  const mcpAuthToggleVisible =
+    mcpServersEnabled && shouldShowMcpAuthToggle(project);
 
   const sections = allSections.filter((section) => {
     if (databaseProject && section.id === ConfigSection.Build) {

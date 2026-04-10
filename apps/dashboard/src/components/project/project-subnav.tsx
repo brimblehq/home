@@ -1,9 +1,30 @@
-import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@brimble/ui";
-import { Link, getRouteApi, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
+import {
+  Link,
+  getRouteApi,
+  useNavigate,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Star, Share2, Check, Plug, Bolt, ArrowUp, ChevronDown, MoreHorizontal } from "lucide-react";
+import {
+  Star,
+  Share2,
+  Check,
+  Plug,
+  Bolt,
+  ArrowUp,
+  ChevronDown,
+  MoreHorizontal,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
@@ -52,7 +73,11 @@ const baseTabs = [
   { label: "Web analytics", slug: "web-analytics", Icon: Pulse },
   { label: "Domains", slug: "domains", Icon: FileText },
   { label: "Environment", slug: "environment", Icon: LockKey },
-  { label: "Deployment history", slug: "deployment-history", Icon: RocketLaunch },
+  {
+    label: "Deployment history",
+    slug: "deployment-history",
+    Icon: RocketLaunch,
+  },
   { label: "Logs", slug: "logs", Icon: Scroll },
 ];
 const MAX_VISIBLE_SUBNAV_TABS = 5;
@@ -81,7 +106,9 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const router = useRouter();
   const navigate = useNavigate();
-  const redeployProject = useServerFn(redeployProjectServerFn as any) as (args: {
+  const redeployProject = useServerFn(
+    redeployProjectServerFn as any,
+  ) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -94,13 +121,17 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
       workspace?: string;
     };
   }) => Promise<{ success: boolean }>;
-  const backupDatabase = useServerFn(backupDatabaseProjectServerFn as any) as (args: {
+  const backupDatabase = useServerFn(
+    backupDatabaseProjectServerFn as any,
+  ) as (args: {
     data: {
       projectId: string;
       workspace?: string;
     };
   }) => Promise<{ message?: string }>;
-  const refreshDatabase = useServerFn(refreshDatabaseProjectServerFn as any) as (args: {
+  const refreshDatabase = useServerFn(
+    refreshDatabaseProjectServerFn as any,
+  ) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -124,13 +155,17 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (redeployRef.current && !redeployRef.current.contains(e.target as Node)) {
+      if (
+        redeployRef.current &&
+        !redeployRef.current.contains(e.target as Node)
+      ) {
         setRedeployOpen(false);
       }
     }
     if (redeployOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [redeployOpen]);
 
@@ -147,7 +182,9 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     if (!overflowOpen) return;
 
     updateOverflowMenuPosition();
-    window.addEventListener("resize", updateOverflowMenuPosition, { passive: true });
+    window.addEventListener("resize", updateOverflowMenuPosition, {
+      passive: true,
+    });
     window.addEventListener("scroll", updateOverflowMenuPosition, {
       capture: true,
       passive: true,
@@ -176,7 +213,8 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
     if (overflowOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [overflowOpen]);
 
@@ -187,34 +225,54 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   const actualProjectId = parentLoaderData?.project?.id || projectId;
   const projectName = parentLoaderData?.project?.name || projectId;
   const project = parentLoaderData?.project;
-  const workspaceParam = new URLSearchParams(searchStr || "").get("workspace") || undefined;
-  const hasActiveDeployment = useHasActiveDeployment(actualProjectId, workspaceParam);
+  const workspaceParam =
+    new URLSearchParams(searchStr || "").get("workspace") || undefined;
+  const hasActiveDeployment = useHasActiveDeployment(
+    actualProjectId,
+    workspaceParam,
+  );
   const databaseProject = isDatabaseProject(project as any);
   const databaseStatus = String(project?.status || "").toUpperCase();
-  const canOpenDatabaseConnection = databaseProject && databaseStatus === "ACTIVE";
+  const canOpenDatabaseConnection =
+    databaseProject && databaseStatus === "ACTIVE";
 
   const domainsEnabled = useFeatureFlag(FeatureFlags.ENABLE_DOMAINS);
   const deploymentsEnabled = useFeatureFlag(FeatureFlags.ENABLE_DEPLOYMENTS);
   const databasesEnabled = useFeatureFlag(FeatureFlags.ENABLE_DATABASES);
 
   const tabs = baseTabs.filter((tab) => {
-    if (tab.slug === "observability" && !shouldShowProjectObservabilityTab(project as any)) {
+    if (
+      tab.slug === "observability" &&
+      !shouldShowProjectObservabilityTab(project as any)
+    ) {
       return false;
     }
 
-    if (tab.slug === "web-analytics" && !shouldShowProjectWebAnalyticsTab(project as any)) {
+    if (
+      tab.slug === "web-analytics" &&
+      !shouldShowProjectWebAnalyticsTab(project as any)
+    ) {
       return false;
     }
 
-    if (tab.slug === "domains" && (!domainsEnabled || !shouldShowProjectDomainsTab(project as any))) {
+    if (
+      tab.slug === "domains" &&
+      (!domainsEnabled || !shouldShowProjectDomainsTab(project as any))
+    ) {
       return false;
     }
 
-    if (tab.slug === "deployment-history" && (!deploymentsEnabled || !shouldShowDeploymentHistoryTab(project as any))) {
+    if (
+      tab.slug === "deployment-history" &&
+      (!deploymentsEnabled || !shouldShowDeploymentHistoryTab(project as any))
+    ) {
       return false;
     }
 
-    if (tab.slug === "environment" && !shouldShowProjectEnvironmentTab(project as any)) {
+    if (
+      tab.slug === "environment" &&
+      !shouldShowProjectEnvironmentTab(project as any)
+    ) {
       return false;
     }
 
@@ -262,11 +320,12 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
     const params = new URLSearchParams(searchStr || "");
     const workspace = params.get("workspace") || undefined;
+    const toastId = `${actualProjectId}-redeploy-${Date.now()}`;
 
     try {
       setDeploying(true);
       setRedeployOpen(false);
-      toast.loading("Redeploying project...", { id: "redeploy" });
+      toast.loading("Redeploying project...", { id: toastId });
 
       await redeployProject({
         data: {
@@ -277,7 +336,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
       });
 
       toast.success("Redeploy started", {
-        id: "redeploy",
+        id: toastId,
         description: `${projectName} is being redeployed to production.`,
       });
 
@@ -288,9 +347,11 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
       router.invalidate();
     } catch (error: any) {
       toast.error("Failed to redeploy project", {
-        id: "redeploy",
+        id: toastId,
         description:
-          typeof error?.message === "string" ? error.message : "Please try again.",
+          typeof error?.message === "string"
+            ? error.message
+            : "Please try again.",
       });
     } finally {
       setDeploying(false);
@@ -304,10 +365,11 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
     const params = new URLSearchParams(searchStr || "");
     const workspace = params.get("workspace") || undefined;
+    const toastId = `${actualProjectId}-database-backup-${Date.now()}`;
 
     try {
       setBackingUp(true);
-      toast.loading("Starting database backup...", { id: "database-backup" });
+      toast.loading("Starting database backup...", { id: toastId });
       const result = await backupDatabase({
         data: {
           projectId: actualProjectId,
@@ -315,14 +377,17 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
         },
       });
       toast.success("Database backup initiated", {
-        id: "database-backup",
+        id: toastId,
         description: result?.message || "Backup has been queued.",
       });
       router.invalidate();
     } catch (error: any) {
       toast.error("Failed to initiate backup", {
-        id: "database-backup",
-        description: typeof error?.message === "string" ? error.message : "Please try again.",
+        id: toastId,
+        description:
+          typeof error?.message === "string"
+            ? error.message
+            : "Please try again.",
       });
     } finally {
       setBackingUp(false);
@@ -336,10 +401,11 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
     const params = new URLSearchParams(searchStr || "");
     const workspace = params.get("workspace") || undefined;
+    const toastId = `${actualProjectId}-database-refresh-${Date.now()}`;
 
     try {
       setRefreshingDb(true);
-      toast.loading("Applying database update...", { id: "database-refresh" });
+      toast.loading("Applying database update...", { id: toastId });
       const result = await refreshDatabase({
         data: {
           projectId: actualProjectId,
@@ -347,14 +413,17 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
         },
       });
       toast.success("Database update started", {
-        id: "database-refresh",
+        id: toastId,
         description: result?.message || "Updates should be visible shortly.",
       });
       router.invalidate();
     } catch (error: any) {
       toast.error("Failed to update database", {
-        id: "database-refresh",
-        description: typeof error?.message === "string" ? error.message : "Please try again.",
+        id: toastId,
+        description:
+          typeof error?.message === "string"
+            ? error.message
+            : "Please try again.",
       });
     } finally {
       setRefreshingDb(false);
@@ -363,25 +432,47 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <div data-subnav className="flex items-center justify-between border-b-[0.5px] border-dash-border">
+      <div
+        data-subnav
+        className="flex items-center justify-between border-b-[0.5px] border-dash-border"
+      >
         {/* Tabs */}
         <div className="scrollbar-hidden flex min-w-0 flex-1 items-start overflow-x-auto md:overflow-visible">
           {visibleTabs.map((tab) => {
             return (
               <Link
                 key={tab.label}
-                to={withWorkspaceQuery({ pathname: tab.tabPath, searchStr }) as any}
+                to={
+                  withWorkspaceQuery({
+                    pathname: tab.tabPath,
+                    searchStr,
+                  }) as any
+                }
                 preload="intent"
                 onClick={() => haptics.selection()}
                 className={cn(
                   "flex h-14 items-center gap-2 px-2 text-sm tracking-[-0.09px] transition-colors",
                   tab.isActive
                     ? "border-b border-[#3c6ce7] text-dash-text-strong"
-                    : "text-dash-text-faded font-light hover:text-dash-text-body"
+                    : "text-dash-text-faded font-light hover:text-dash-text-body",
                 )}
               >
-                <tab.Icon className={cn("size-4 shrink-0", !tab.isActive && "dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80")} weight="fill" />
-                <span className={cn("whitespace-nowrap md:inline", tab.isActive ? "inline" : "hidden")}>{tab.label}</span>
+                <tab.Icon
+                  className={cn(
+                    "size-4 shrink-0",
+                    !tab.isActive &&
+                      "dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80",
+                  )}
+                  weight="fill"
+                />
+                <span
+                  className={cn(
+                    "whitespace-nowrap md:inline",
+                    tab.isActive ? "inline" : "hidden",
+                  )}
+                >
+                  {tab.label}
+                </span>
               </Link>
             );
           })}
@@ -425,7 +516,11 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                 }}
                 className="hidden items-center gap-1.5 text-sm font-light text-dash-text-body transition-colors hover:text-dash-text-strong disabled:opacity-50 md:flex"
               >
-                {backingUp ? <Spinner size="size-3.5" /> : <Bolt className="size-4" />}
+                {backingUp ? (
+                  <Spinner size="size-3.5" />
+                ) : (
+                  <Bolt className="size-4" />
+                )}
                 <span>{backingUp ? "Starting..." : "Initiate Backup"}</span>
               </button>
               {Boolean(project?.hasUpdates) && (
@@ -436,8 +531,14 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                   }}
                   className="hidden items-center gap-1.5 text-sm font-light text-dash-text-body transition-colors hover:text-dash-text-strong disabled:opacity-50 md:flex"
                 >
-                  {refreshingDb ? <Spinner size="size-3.5" /> : <ArrowUp className="size-4" />}
-                  <span>{refreshingDb ? "Updating..." : "Click to Update"}</span>
+                  {refreshingDb ? (
+                    <Spinner size="size-3.5" />
+                  ) : (
+                    <ArrowUp className="size-4" />
+                  )}
+                  <span>
+                    {refreshingDb ? "Updating..." : "Click to Update"}
+                  </span>
                 </button>
               )}
             </>
@@ -454,7 +555,9 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                 ) : (
                   <RocketLaunch className="size-4 sm:hidden" />
                 )}
-                <span className="hidden sm:inline">{deploying ? "Redeploying..." : "Redeploy"}</span>
+                <span className="hidden sm:inline">
+                  {deploying ? "Redeploying..." : "Redeploy"}
+                </span>
                 <ChevronDown className="hidden size-3.5 sm:block" />
               </button>
               <AnimatePresence>
@@ -474,7 +577,9 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                       Deploy latest commit
                     </button>
                     <button
-                      onClick={() => void handleRedeploy({ logId: project?.log?.id })}
+                      onClick={() =>
+                        void handleRedeploy({ logId: project?.log?.id })
+                      }
                       className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
                     >
                       <ArrowsClockwise className="size-4 shrink-0" />
@@ -508,7 +613,11 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
               }}
               className="text-dash-text-faded hover:text-dash-text-strong transition-colors"
             >
-              {copied ? <Check className="size-4 text-[#28c840]" /> : <Share2 className="size-4" />}
+              {copied ? (
+                <Check className="size-4 text-[#28c840]" />
+              ) : (
+                <Share2 className="size-4" />
+              )}
             </button>
             <button
               onClick={() => {
@@ -542,7 +651,12 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                 {overflowTabs.map((tab) => (
                   <Link
                     key={tab.label}
-                    to={withWorkspaceQuery({ pathname: tab.tabPath, searchStr }) as any}
+                    to={
+                      withWorkspaceQuery({
+                        pathname: tab.tabPath,
+                        searchStr,
+                      }) as any
+                    }
                     preload="intent"
                     onClick={() => {
                       haptics.selection();
@@ -580,10 +694,12 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
           const params = new URLSearchParams(searchStr || "");
           const workspace = params.get("workspace") || undefined;
+          const toastId = `${actualProjectId}-delete-project-${Date.now()}`;
+          let deleted = false;
 
           try {
             setDeleting(true);
-            toast.loading("Deleting project...", { id: "delete-project" });
+            toast.loading("Deleting project...", { id: toastId });
 
             await deleteProject({
               data: {
@@ -593,10 +709,23 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
             });
 
             toast.success(`${projectName} deleted successfully`, {
-              id: "delete-project",
+              id: toastId,
             });
+            deleted = true;
+          } catch (error: any) {
+            toast.error("Failed to delete project", {
+              id: toastId,
+              description:
+                typeof error?.message === "string"
+                  ? error.message
+                  : "Please try again.",
+            });
+          } finally {
             await router.invalidate();
+            setDeleting(false);
+          }
 
+          if (deleted) {
             const nextUrl = withWorkspaceQuery({
               pathname: "/projects",
               searchStr,
@@ -606,21 +735,16 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
               to: nextUrl as any,
               replace: true,
             });
-          } catch (error: any) {
-            toast.error("Failed to delete project", {
-              id: "delete-project",
-              description:
-                typeof error?.message === "string" ? error.message : "Please try again.",
-            });
-            throw error;
-          } finally {
-            setDeleting(false);
           }
         }}
       >
         <div className="flex flex-col gap-2 text-left">
           <label className="text-sm leading-5 text-dash-text-faded">
-            Type <span className="font-medium text-dash-text-strong">{projectName}</span> to confirm
+            Type{" "}
+            <span className="font-medium text-dash-text-strong">
+              {projectName}
+            </span>{" "}
+            to confirm
           </label>
           <input
             type="text"

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { cn } from "@brimble/ui";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
@@ -87,9 +88,16 @@ export function NumberPagination({
   onPageChange,
   maxVisible = 5,
   isLoading = false,
-  loadingPage = null,
+  loadingPage: loadingPageProp = null,
 }: NumberPaginationProps) {
   const haptics = useHaptics();
+  const [clickedPage, setClickedPage] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isLoading) setClickedPage(null);
+  }, [isLoading, currentPage]);
+
+  const loadingPage = loadingPageProp ?? (isLoading ? clickedPage : null);
 
   if (totalPages <= 1) return null;
 
@@ -102,6 +110,7 @@ export function NumberPagination({
       <button
         onClick={() => {
           haptics.selection();
+          setClickedPage(currentPage - 1);
           onPageChange(currentPage - 1);
         }}
         disabled={isFirst || isLoading}
@@ -129,6 +138,7 @@ export function NumberPagination({
             key={page}
             onClick={() => {
               haptics.selection();
+              setClickedPage(page);
               onPageChange(page);
             }}
             disabled={isLoading}
@@ -152,6 +162,7 @@ export function NumberPagination({
       <button
         onClick={() => {
           haptics.selection();
+          setClickedPage(currentPage + 1);
           onPageChange(currentPage + 1);
         }}
         disabled={isLast || isLoading}

@@ -184,4 +184,23 @@ export const listDeploymentRunLogsServerFn = createServerFn({
   };
 });
 
+export const downloadDeploymentLogsServerFn = createServerFn({
+  method: "GET",
+}).handler(async ({ data }) => {
+  const payload = data as
+    | { projectId: string; logId: string; workspace?: string }
+    | undefined;
+
+  const projectId = payload?.projectId?.trim();
+  const logId = payload?.logId?.trim();
+  if (!projectId || !logId) {
+    throw new Error("Project ID and Log ID are required");
+  }
+
+  return withTokenRefresh(async (api) => {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    return api.deployments.downloadLogs(projectId, logId, { teamId });
+  });
+});
+
 export type { PaginatedDeploymentsResponse, DeploymentLog };
