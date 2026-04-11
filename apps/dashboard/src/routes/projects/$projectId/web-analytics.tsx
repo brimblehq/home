@@ -10,6 +10,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChartLineUp } from "@phosphor-icons/react";
 import { TabHeader } from "../../../components/shared/tab-header";
 import { shouldShowProjectWebAnalyticsTab } from "@/utils/project-capabilities";
+import { useFeatureFlag, FeatureFlags } from "@/lib/feature-flags";
 import { AppAnalytics } from "./observability";
 import { AppAnalyticsSkeleton } from "@/components/analytics/analytics-skeleton";
 import { InstallTrackingModal } from "@/components/analytics/install-tracking-modal";
@@ -241,6 +242,7 @@ function ErrorCard({ message }: { message: string }) {
 function WebAnalyticsPage() {
   const { project } = parentRoute.useLoaderData() as { project?: any };
   const projectId = project?.id ?? "";
+  const webAnalyticsEnabled = useFeatureFlag(FeatureFlags.ENABLE_WEB_ANALYTICS);
   const plan = usePlanGate();
   const cachedPlanSupportsAnalytics = plan.analytics !== false;
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
@@ -290,7 +292,7 @@ function WebAnalyticsPage() {
   const loading = analyticsQuery.isLoading;
   const result = analyticsQuery.data ?? null;
 
-  if (!shouldShowProjectWebAnalyticsTab(project)) {
+  if (!webAnalyticsEnabled || !shouldShowProjectWebAnalyticsTab(project)) {
     return (
       <div className="mx-auto flex max-w-[1000px] flex-col gap-4 px-4 py-8 sm:px-0">
         <TabHeader title="Web analytics">

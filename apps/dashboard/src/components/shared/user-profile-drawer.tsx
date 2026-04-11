@@ -76,7 +76,6 @@ import { useTheme } from "@/hooks/use-theme";
 import { isPushEnabled, setPushEnabled } from "@/hooks/use-push-notification";
 import type { PaymentMethod } from "@/backend/payments";
 import {
-  getBillEstimateServerFn,
   getPaymentInvoicesServerFn,
   getPaymentMethodsServerFn,
   getSpendingLimitStatusServerFn,
@@ -2151,10 +2150,6 @@ export function UserProfileDrawer({
           queryFn: () => getSubscriptionServerFn(),
         }),
         queryClient.prefetchQuery({
-          queryKey: paymentKeys.estimate(),
-          queryFn: () => getBillEstimateServerFn(),
-        }),
-        queryClient.prefetchQuery({
           queryKey: paymentKeys.spendingLimitStatus(),
           queryFn: () => getSpendingLimitStatusServerFn(),
         }),
@@ -2186,7 +2181,7 @@ export function UserProfileDrawer({
   }, [open, refreshSettings, snapshot]);
 
   useEffect(() => {
-    if (!open || !canSeeBilling) {
+    if (!canSeeBilling) {
       return;
     }
 
@@ -2204,7 +2199,6 @@ export function UserProfileDrawer({
   }, [
     canSeeBilling,
     hasActiveWorkspace,
-    open,
     prefetchBillingData,
     workspaceTeam?.id,
   ]);

@@ -28,14 +28,6 @@ export const getSubscriptionServerFn = createServerFn({
   });
 });
 
-export const getBillEstimateServerFn = createServerFn({
-  method: "GET",
-}).handler(async () => {
-  return withTokenRefresh(async (api) => {
-    return api.payments.getBillEstimate();
-  });
-});
-
 export const getPaymentInvoicesServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {

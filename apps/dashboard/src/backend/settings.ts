@@ -330,7 +330,7 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
     paymentInitialize: `${config.paymentApiUrl}/payment/initialize/payment`,
     paymentInvoices: `${config.paymentApiUrl}/payment/invoices`,
     paymentStats: `${config.paymentApiUrl}/subscription/stats`,
-    currentSubscription: `${config.paymentApiUrl}/subscriptions/current`,
+    currentSubscription: `${config.paymentApiUrl}/subscription/current-subscription`,
     paymentPlans: "/core/v1/plans",
     disconnectProvider: `${config.authApiUrl}/user/disconnect`,
   } as const;

@@ -10,7 +10,6 @@ import type {
   SubscriptionStats,
   CreateSubscriptionInput,
   SwapPlanInput,
-  BillEstimate,
   InvoicePage,
   PurchaseInput,
   PurchaseResult,
@@ -29,8 +28,6 @@ export type {
   Subscription,
   CreateSubscriptionInput,
   SwapPlanInput,
-  BillEstimate,
-  BillEstimateLineItem,
   Invoice,
   InvoicePage,
   PurchaseInput,
@@ -96,12 +93,29 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
 
     async getSubscription(): Promise<Subscription | null> {
       try {
-        const res = await client.request<any>(`${base}/subscriptions/current`, {
-          method: "GET",
-        });
+        const res = await client.request<any>(
+          `${base}/subscription/current-subscription`,
+          { method: "GET" },
+        );
         const data = unwrapData<any>(res);
-        if (!data || !data.id) return null;
-        return data as Subscription;
+        if (!data) return null;
+
+        const stripeId =
+          typeof data.stripe_id === "string" ? data.stripe_id.trim() : "";
+        const planType =
+          typeof data.plan_type === "string" ? data.plan_type : "";
+
+        if (!stripeId || planType.toLowerCase() === "free") return null;
+
+        return {
+          id: stripeId,
+          plan: planType,
+          status: data.stripe_status as Subscription["status"],
+          current_period_start: data.current_period_start ?? "",
+          current_period_end: data.ends_at ?? "",
+          cancel_at_period_end: Boolean(data.ends_at),
+          payment_method: data.payment_method,
+        };
       } catch {
         return null;
       }
@@ -132,13 +146,6 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
       await client.request(`${base}/subscriptions/cancel`, {
         method: "POST",
       });
-    },
-
-    async getBillEstimate(): Promise<BillEstimate> {
-      const res = await client.request<any>(`${base}/billing/estimate`, {
-        method: "GET",
-      });
-      return unwrapData<BillEstimate>(res);
     },
 
     async listInvoices(input = {}): Promise<InvoicePage> {

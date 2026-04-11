@@ -49,21 +49,6 @@ export interface InvoicePage {
   per_page: number;
 }
 
-/* ── Bill estimate ── */
-
-export interface BillEstimateLineItem {
-  description: string;
-  amount: number;
-  quantity?: number;
-}
-
-export interface BillEstimate {
-  current_usage: number;
-  projected_total: number;
-  line_items: BillEstimateLineItem[];
-  next_billing_date: string;
-}
-
 /* ── Subscription stats (forecasted bill) ── */
 
 export interface SubscriptionStats {
@@ -169,7 +154,6 @@ export interface PaymentsApi {
   createSubscription(input: CreateSubscriptionInput): Promise<Subscription>;
   swapPlan(input: SwapPlanInput): Promise<Subscription>;
   cancelSubscription(): Promise<void>;
-  getBillEstimate(): Promise<BillEstimate>;
   listInvoices(input?: {
     cursor?: string | null;
     per_page?: number;

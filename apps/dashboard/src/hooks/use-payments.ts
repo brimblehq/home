@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getPaymentMethodsServerFn,
   getSubscriptionServerFn,
-  getBillEstimateServerFn,
   getPaymentInvoicesServerFn,
   createSetupIntentServerFn,
   addPaymentMethodServerFn,
@@ -23,7 +22,6 @@ export const paymentKeys = {
   all: ["payments"] as const,
   methods: () => [...paymentKeys.all, "methods"] as const,
   subscription: () => [...paymentKeys.all, "subscription"] as const,
-  estimate: () => [...paymentKeys.all, "estimate"] as const,
   spendingLimitStatus: () => [...paymentKeys.all, "spending-limit-status"] as const,
   invoices: (cursor: string | null, teamId?: string) =>
     [...paymentKeys.all, "invoices", cursor ?? "first", teamId ?? "personal"] as const,
@@ -86,13 +84,6 @@ export function useSubscription() {
   return useQuery({
     queryKey: paymentKeys.subscription(),
     queryFn: () => getSubscriptionServerFn(),
-  });
-}
-
-export function useBillEstimate() {
-  return useQuery({
-    queryKey: paymentKeys.estimate(),
-    queryFn: () => getBillEstimateServerFn(),
   });
 }
 
@@ -163,7 +154,6 @@ export function useCreateSubscription() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: paymentKeys.subscription() });
       void qc.invalidateQueries({ queryKey: paymentKeys.methods() });
-      void qc.invalidateQueries({ queryKey: paymentKeys.estimate() });
     },
   });
 }
@@ -174,7 +164,6 @@ export function useSwapPlan() {
     mutationFn: (targetPlan: string) => swap({ data: { target_plan: targetPlan } }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: paymentKeys.subscription() });
-      void qc.invalidateQueries({ queryKey: paymentKeys.estimate() });
     },
   });
 }
@@ -200,7 +189,6 @@ export function usePurchase() {
     }) =>
       purchase({ data: input }),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: paymentKeys.estimate() });
       void qc.invalidateQueries({ queryKey: [...paymentKeys.all, "invoices"] });
     },
   });
@@ -216,7 +204,6 @@ export function useUpdateSpendingLimit(teamId?: string) {
           })
         : updateLimit({ data: { spending_limit: spendingLimit } }),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: paymentKeys.estimate() });
       void qc.invalidateQueries({ queryKey: paymentKeys.spendingLimitStatus() });
     },
   });

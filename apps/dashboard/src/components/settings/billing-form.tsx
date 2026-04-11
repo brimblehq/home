@@ -19,7 +19,6 @@ import { SimpleTooltip } from "../shared/tooltip";
 import {
   usePaymentMethods,
   useSubscription,
-  useBillEstimate,
   useInvoices,
   useCreateSetupIntent,
   useAddPaymentMethod,
@@ -117,7 +116,6 @@ function BillingFormInner({
 
   const { data: paymentMethods = [], isLoading: isLoadingMethods } = usePaymentMethods(initialPaymentMethods ?? undefined);
   const { data: subscription } = useSubscription();
-  const { data: estimate } = useBillEstimate();
   const { data: spendingLimitStatus } = useSpendingLimitStatus();
   const { data: invoices } = useInvoices(invoiceCursor, teamId, initialInvoices);
   const cancelMutation = useCancelSubscription();
@@ -269,7 +267,7 @@ function BillingFormInner({
       />
 
       {/* ── Usage / Bill estimate ── */}
-      <UsageSection estimate={estimate} spendingLimit={savedSpendingLimit} usage={currentUsage} />
+      <UsageSection spendingLimit={savedSpendingLimit} usage={currentUsage} />
 
       {!hidePaymentMethods && (
         <>
@@ -415,12 +413,6 @@ function BillingFormInner({
               {hasSpendingLimit
                 ? `$${currentUsage.toFixed(2)} used / $${savedSpendingLimit.toFixed(2)} limit`
                 : "No limit set"}
-              {!hasSpendingLimit && estimate?.projected_total !== undefined && (
-                <span className="text-dash-text-faded">
-                  {" "}
-                  / ${estimate.projected_total.toFixed(2)} projected
-                </span>
-              )}
             </p>
             {canEditSpendingLimit ? (
               paymentMethods.length === 0 ? (
@@ -607,18 +599,16 @@ function BillForecast({
   );
 }
 
-/* ── Usage section (bill estimate) ── */
+/* ── Usage section ── */
 
 function UsageSection({
-  estimate,
   spendingLimit,
   usage,
 }: {
-  estimate?: { current_usage: number; projected_total: number; line_items: Array<{ description: string; amount: number }> } | null;
   spendingLimit?: number | null;
   usage?: number;
 }) {
-  const used = usage ?? Number(estimate?.current_usage ?? 0);
+  const used = usage ?? 0;
   const hasSpendingLimit =
     typeof spendingLimit === "number" && Number.isFinite(spendingLimit) && spendingLimit >= 5;
   const limit = hasSpendingLimit ? spendingLimit : null;

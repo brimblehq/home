@@ -239,6 +239,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   const domainsEnabled = useFeatureFlag(FeatureFlags.ENABLE_DOMAINS);
   const deploymentsEnabled = useFeatureFlag(FeatureFlags.ENABLE_DEPLOYMENTS);
   const databasesEnabled = useFeatureFlag(FeatureFlags.ENABLE_DATABASES);
+  const webAnalyticsEnabled = useFeatureFlag(FeatureFlags.ENABLE_WEB_ANALYTICS);
 
   const tabs = baseTabs.filter((tab) => {
     if (
@@ -250,7 +251,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
     if (
       tab.slug === "web-analytics" &&
-      !shouldShowProjectWebAnalyticsTab(project as any)
+      (!webAnalyticsEnabled || !shouldShowProjectWebAnalyticsTab(project as any))
     ) {
       return false;
     }

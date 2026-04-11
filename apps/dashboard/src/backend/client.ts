@@ -201,9 +201,8 @@ export function createBackendClient(
         }
       }
 
+      const requestUrl = buildUrl(path, options?.query);
       try {
-        const requestUrl = buildUrl(path, options?.query);
-
         const response = await http.request<TResponse>({
           url: requestUrl,
           method,
@@ -219,7 +218,12 @@ export function createBackendClient(
         console.error(
           "[backend-client] error response:",
           JSON.stringify(
-            { status: axiosError.response?.status, data: payload },
+            {
+              method,
+              requestUrl,
+              status: axiosError.response?.status,
+              data: payload,
+            },
             null,
             2,
           ),

@@ -11,6 +11,7 @@ export const FeatureFlags = {
   ENABLE_DATABASES: "enable_databases",
   ENABLE_SANDBOX: "enable_sandbox",
   ENABLE_BUCKETS: "enable_buckets",
+  ENABLE_WEB_ANALYTICS: "enable_web_analytics",
 } as const;
 
 export type FeatureFlagKey = (typeof FeatureFlags)[keyof typeof FeatureFlags];
