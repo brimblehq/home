@@ -131,10 +131,7 @@ export function mapApiRequestLogToUiRow(log: ApiRequestLogEntry): UiRequestLogEn
   const date = new Date(isoTimestamp);
   const timestamp = Number.isNaN(date.getTime())
     ? ""
-    : date.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-      });
+    : format(date, "MMM d yyyy HH:mm:ss");
 
   let duration = "—";
   const durationMatch = log.message.match(/(\d+(?:\.\d+)?)\s*ms/i);

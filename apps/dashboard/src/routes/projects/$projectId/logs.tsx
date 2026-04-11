@@ -139,6 +139,27 @@ function highlightMatches(text: string, query: string): React.ReactNode {
   );
 }
 
+/** Small icon-only copy button used inside the request log detail drawer. */
+function CopyValueButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(value);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      aria-label={copied ? "Copied" : "Copy value"}
+      title={copied ? "Copied" : "Copy"}
+      className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-[3px] text-dash-text-faded transition-colors hover:bg-dash-bg hover:text-dash-text-strong"
+    >
+      {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+    </button>
+  );
+}
+
 /** Render a log message with auto-linked URLs and preserved whitespace. */
 function LogMessage({ text, highlight }: { text: string; highlight?: string }) {
   const parts = text.split(urlRe);
@@ -1020,6 +1041,28 @@ function RequestDetailDrawer({
   const rawJson = JSON.stringify(rawData, null, 2);
   const rawLines = rawJson.split("\n");
 
+  let pathnameOnly = log.path;
+  try {
+    pathnameOnly = new URL(log.url).pathname;
+  } catch {
+    /* leave as-is */
+  }
+
+  const queryEntries: Array<[string, string]> = log.query
+    ? Object.entries(log.query)
+    : [];
+  const hasQuery = queryEntries.length > 0;
+
+  function tryPrettyJson(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return null;
+    try {
+      return JSON.stringify(JSON.parse(trimmed), null, 2);
+    } catch {
+      return null;
+    }
+  }
+
   const groups: Array<{
     title: string;
     items: Array<{
@@ -1034,7 +1077,7 @@ function RequestDetailDrawer({
       items: [
         { label: "Host", value: log.host },
         { label: "Method", value: log.method, color: methodColors[log.method] },
-        { label: "Path", value: log.path },
+        { label: "Path", value: pathnameOnly },
         { label: "URL", value: log.url },
       ],
     },
@@ -1087,18 +1130,21 @@ function RequestDetailDrawer({
             className="flex max-h-[60vh] flex-col overflow-clip rounded-t-[4px] border-t-[0.5px] border-[#d9dadd] bg-dash-bg shadow-[0px_-4px_20px_-8px_rgba(0,0,0,0.15)] dark:border-dash-border dark:bg-[#181819]"
           >
             {/* Top bar */}
-            <div className="flex shrink-0 items-center justify-between border-b-[0.5px] border-[#e5e5e5] px-5 py-2.5 dark:border-dash-border">
-              <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b-[0.5px] border-[#e5e5e5] px-5 py-2.5 dark:border-dash-border">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
                 <span
-                  className={`font-logs text-xs font-medium ${methodColors[log.method] ?? "text-dash-text-body"}`}
+                  className={`shrink-0 font-logs text-xs font-medium ${methodColors[log.method] ?? "text-dash-text-body"}`}
                 >
                   {log.method}
                 </span>
-                <span className="font-logs text-xs leading-[1.3] tracking-[-0.0224px] text-dash-text-strong">
+                <span
+                  title={log.path}
+                  className="min-w-0 flex-1 truncate font-logs text-xs leading-[1.3] tracking-[-0.0224px] text-dash-text-strong"
+                >
                   {log.path}
                 </span>
                 <span
-                  className={`flex items-center gap-1 font-logs text-xs ${statusColor(log.status)}`}
+                  className={`flex shrink-0 items-center gap-1 font-logs text-xs ${statusColor(log.status)}`}
                 >
                   <span
                     className={`size-1.5 rounded-full ${statusDot(log.status)}`}
@@ -1142,7 +1188,7 @@ function RequestDetailDrawer({
             </div>
 
             {/* Content */}
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.08)_transparent]">
               {tab === "details" ? (
                 <div className="flex flex-col gap-4 p-5">
                   {/* Request + Response side by side */}
@@ -1150,7 +1196,7 @@ function RequestDetailDrawer({
                     {groups.slice(0, 2).map((group) => (
                       <div
                         key={group.title}
-                        className="rounded-[4px] border-[0.5px] border-dash-border"
+                        className="min-w-0 rounded-[4px] border-[0.5px] border-dash-border"
                       >
                         <div className="border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5 py-2">
                           <span className="font-logs text-[10px] uppercase tracking-widest text-dash-text-faded">
@@ -1161,13 +1207,13 @@ function RequestDetailDrawer({
                           {group.items.map((item, j) => (
                             <div
                               key={item.label}
-                              className={`flex justify-between px-3.5 py-2 ${j < group.items.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
+                              className={`flex items-start justify-between gap-4 px-3.5 py-2 ${j < group.items.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
                             >
-                              <span className="font-logs text-xs text-dash-text-faded">
+                              <span className="shrink-0 font-logs text-[11px] text-dash-text-faded">
                                 {item.label}
                               </span>
                               <span
-                                className={`font-logs text-xs text-right ${item.color ?? "text-dash-text-strong"}`}
+                                className={`min-w-0 break-all text-right font-logs text-[11px] ${item.color ?? "text-dash-text-strong"}`}
                               >
                                 {item.dot && (
                                   <span
@@ -1182,6 +1228,49 @@ function RequestDetailDrawer({
                       </div>
                     ))}
                   </div>
+
+                  {/* Query parameters (full width, only if present) */}
+                  {hasQuery && (
+                    <div className="rounded-[4px] border-[0.5px] border-dash-border">
+                      <div className="border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5 py-2">
+                        <span className="font-logs text-[10px] uppercase tracking-widest text-dash-text-faded">
+                          Query Parameters
+                        </span>
+                      </div>
+                      <div>
+                        {queryEntries.map(([key, value], j) => {
+                          const pretty = tryPrettyJson(value);
+                          const copyValue = pretty ?? value;
+                          return (
+                            <div
+                              key={key}
+                              className={`flex flex-col gap-1.5 px-3.5 py-2.5 ${j < queryEntries.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
+                            >
+                              <span className="font-logs text-[11px] text-dash-text-faded">
+                                {key}
+                              </span>
+                              {pretty ? (
+                                <div className="relative">
+                                  <CopyValueButton value={copyValue} />
+                                  <pre className="whitespace-pre-wrap break-all rounded-[3px] border-[0.5px] border-dash-border bg-dash-bg-elevated p-2 pr-9 font-logs text-[11px] leading-[1.5] text-dash-text-strong">
+                                    {pretty}
+                                  </pre>
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <CopyValueButton value={copyValue} />
+                                  <span className="block break-all rounded-[3px] pr-9 font-logs text-[11px] text-dash-text-strong">
+                                    {value}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Client full width */}
                   <div className="rounded-[4px] border-[0.5px] border-dash-border">
                     <div className="border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5 py-2">
@@ -1193,12 +1282,12 @@ function RequestDetailDrawer({
                       {groups[2].items.map((item, j) => (
                         <div
                           key={item.label}
-                          className={`flex justify-between px-3.5 py-2 ${j < groups[2].items.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
+                          className={`flex items-start justify-between gap-4 px-3.5 py-2 ${j < groups[2].items.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
                         >
-                          <span className="font-logs text-xs text-dash-text-faded">
+                          <span className="shrink-0 font-logs text-[11px] text-dash-text-faded">
                             {item.label}
                           </span>
-                          <span className="font-logs text-xs text-dash-text-strong">
+                          <span className="min-w-0 break-all text-right font-logs text-[11px] text-dash-text-strong">
                             {item.value}
                           </span>
                         </div>
@@ -1227,7 +1316,7 @@ function RequestDetailDrawer({
                         <span className="inline-block w-6 shrink-0 select-none text-right text-dash-text-extra-faded">
                           {i + 1}
                         </span>
-                        <span className="ml-3 whitespace-pre text-dash-text-body">
+                        <span className="ml-3 min-w-0 flex-1 whitespace-pre-wrap break-all text-dash-text-body">
                           <JsonLine text={line} />
                         </span>
                       </div>
@@ -1491,20 +1580,17 @@ function RequestLogs({
       {/* Table */}
       <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
         {/* Table header */}
-        <div className="grid grid-cols-[64px_1fr_60px_80px_100px] items-center gap-2 border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-4 py-2.5">
-          <span className="font-logs text-xs font-medium text-dash-text-faded">
+        <div className="grid grid-cols-[64px_1fr_60px_160px] items-center gap-2 border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-4 py-2.5">
+          <span className="font-logs text-[11px] font-medium text-dash-text-faded">
             Method
           </span>
-          <span className="font-logs text-xs font-medium text-dash-text-faded">
+          <span className="font-logs text-[11px] font-medium text-dash-text-faded">
             Path
           </span>
-          <span className="font-logs text-xs font-medium text-dash-text-faded">
+          <span className="font-logs text-[11px] font-medium text-dash-text-faded">
             Status
           </span>
-          <span className="font-logs text-xs font-medium text-dash-text-faded">
-            Duration
-          </span>
-          <span className="font-logs text-xs font-medium text-dash-text-faded">
+          <span className="font-logs text-[11px] font-medium text-dash-text-faded">
             Time
           </span>
         </div>
@@ -1514,13 +1600,12 @@ function RequestLogs({
           Array.from({ length: 8 }).map((_, i) => (
             <div
               key={`req-skeleton-${i}`}
-              className="grid grid-cols-[64px_1fr_60px_80px_100px] items-center gap-2 border-b-[0.5px] border-dash-border px-4 py-2.5"
+              className="grid grid-cols-[64px_1fr_60px_160px] items-center gap-2 border-b-[0.5px] border-dash-border px-4 py-2.5"
             >
               <div className="h-3.5 w-10 animate-pulse rounded bg-dash-border-soft" />
               <div className="h-3.5 w-2/3 animate-pulse rounded bg-dash-border-soft" />
               <div className="h-3.5 w-8 animate-pulse rounded bg-dash-border-soft" />
-              <div className="h-3.5 w-12 animate-pulse rounded bg-dash-border-soft" />
-              <div className="h-3.5 w-14 animate-pulse rounded bg-dash-border-soft" />
+              <div className="h-3.5 w-24 animate-pulse rounded bg-dash-border-soft" />
             </div>
           ))
         ) : filteredRequestLogs.length > 0 ? (
@@ -1528,25 +1613,22 @@ function RequestLogs({
             <button
               key={i}
               onClick={() => handleRowClick(log)}
-              className="grid w-full grid-cols-[64px_1fr_60px_80px_100px] items-center gap-2 border-b-[0.5px] border-dash-border px-4 py-2.5 text-left transition-colors hover:bg-dash-bg-elevated"
+              className="grid w-full grid-cols-[64px_1fr_60px_160px] items-center gap-2 border-b-[0.5px] border-dash-border px-4 py-2.5 text-left transition-colors hover:bg-dash-bg-elevated"
             >
               <span
-                className={`font-logs text-xs font-medium ${methodColors[log.method] ?? "text-dash-text-body"}`}
+                className={`font-logs text-[11px] font-medium ${methodColors[log.method] ?? "text-dash-text-body"}`}
               >
                 {log.method}
               </span>
-              <span className="truncate font-logs text-sm font-light text-dash-text-strong">
+              <span className="truncate font-logs text-[11px] font-light text-dash-text-strong">
                 {log.path}
               </span>
               <span
-                className={`font-logs text-xs font-medium ${statusColor(log.status)}`}
+                className={`font-logs text-[11px] font-medium ${statusColor(log.status)}`}
               >
                 {log.status}
               </span>
-              <span className="font-logs text-xs font-light text-dash-text-faded">
-                {log.duration}
-              </span>
-              <span className="font-logs text-xs font-light text-dash-text-faded">
+              <span className="font-logs text-[11px] font-light text-dash-text-faded">
                 {log.timestamp}
               </span>
             </button>
@@ -1560,11 +1642,13 @@ function RequestLogs({
         )}
       </div>
 
-      <NumberPagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={(page) => setCurrentPage(page)}
-      />
+      <div className="flex justify-end">
+        <NumberPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
+      </div>
 
       <RequestDetailDrawer
         log={selectedLog}
