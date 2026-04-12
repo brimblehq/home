@@ -79,8 +79,8 @@ export function createTagsApi(client: ApiClient): TagsApi {
         {
           method: "PATCH",
           body: {
-            ...(input.name !== undefined ? { name: input.name } : {}),
-            ...(input.color !== undefined ? { color: input.color } : {}),
+            ...(input.name ? { name: input.name } : {}),
+            ...(input.color ? { color: input.color } : {}),
           },
         },
       );

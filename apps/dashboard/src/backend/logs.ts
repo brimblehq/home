@@ -18,18 +18,21 @@ export interface RequestLogsPage {
   totalLogs: number;
   totalPages: number;
   currentPage: number;
-  hostnames: string[];
-  statuses: string[];
-  methods: string[];
+  hasMore: boolean;
+  nextCursor: string | null;
 }
 
 export interface ListRequestLogsInput {
-  page?: number;
   limit?: number;
-  status?: string;
+  cursor?: string | null;
+  direction?: "backward" | "forward";
+  start?: string;
+  end?: string;
+  statuses?: string;
   methods?: string;
-  hostname?: string;
-  teamId?: string;
+  search?: string;
+  level?: string;
+  sort?: string;
 }
 
 export interface LogTrendPoint {
@@ -161,12 +164,16 @@ export function createLogsApi(client: ApiClient): LogsApi {
         {
           method: "GET",
           query: {
-            page: input?.page,
             limit: input?.limit,
-            status: input?.status,
+            cursor: input?.cursor || undefined,
+            direction: input?.direction,
+            start: input?.start,
+            end: input?.end,
+            statuses: input?.statuses,
             methods: input?.methods,
-            hostname: input?.hostname,
-            teamId: input?.teamId,
+            search: input?.search?.trim() || undefined,
+            level: input?.level,
+            sort: input?.sort,
           },
         },
       );
@@ -175,24 +182,13 @@ export function createLogsApi(client: ApiClient): LogsApi {
       const rawLogs: any[] = Array.isArray(root.logs) ? root.logs : [];
       const items: RequestLogEntry[] = rawLogs.map(mapRequestLogEntry);
 
-      const hostnames = [
-        ...new Set(items.map((item) => item.hostname).filter(Boolean)),
-      ];
-      const statuses = [
-        ...new Set(items.map((item) => String(item.status)).filter(Boolean)),
-      ];
-      const methods = [
-        ...new Set(items.map((item) => item.method).filter(Boolean)),
-      ];
-
       return {
         items,
         totalLogs: Number(root.totalLogs ?? root.total ?? items.length ?? 0),
         totalPages: Number(root.totalPages ?? 1),
         currentPage: Number(root.currentPage ?? 1),
-        hostnames,
-        statuses,
-        methods,
+        hasMore: Boolean(root.hasMore),
+        nextCursor: root.nextCursor ? root.nextCursor : null,
       };
     },
     async getLogTrends(projectId, input) {

@@ -8,12 +8,16 @@ export const listRequestLogsServerFn = createServerFn({
   const payload = data as
     | {
         projectId: string;
-        workspace?: string;
-        page?: number;
         limit?: number;
-        status?: string;
+        cursor?: string | null;
+        direction?: "backward" | "forward";
+        start?: string;
+        end?: string;
+        statuses?: string;
         methods?: string;
-        hostname?: string;
+        search?: string;
+        level?: string;
+        sort?: string;
       }
     | undefined;
 
@@ -23,22 +27,17 @@ export const listRequestLogsServerFn = createServerFn({
   }
 
   return withTokenRefresh(async (api) => {
-    const workspaceSlug = payload?.workspace?.trim().toLowerCase();
-    let teamId: string | undefined;
-
-    if (workspaceSlug) {
-      const teams = await api.workspaces.list();
-      const match = teams.items.find((item) => item.slug === workspaceSlug);
-      teamId = match?.id ?? undefined;
-    }
-
     return api.logs.listRequestLogs(projectId, {
-      page: payload?.page,
       limit: payload?.limit,
-      status: payload?.status,
+      cursor: payload?.cursor,
+      direction: payload?.direction,
+      start: payload?.start,
+      end: payload?.end,
+      statuses: payload?.statuses,
       methods: payload?.methods,
-      hostname: payload?.hostname,
-      teamId,
+      search: payload?.search,
+      level: payload?.level,
+      sort: payload?.sort,
     });
   });
 });
