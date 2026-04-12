@@ -468,7 +468,7 @@ function VisitorBarChart({
 
   return (
     <div ref={containerRef} className="scrollbar-hidden mt-6 overflow-x-auto">
-      <div className="flex min-w-[540px] gap-0 sm:min-w-0">
+      <div className="flex min-w-[320px] gap-0 sm:min-w-[540px] lg:min-w-0">
         {safePoints.map((d, i) => {
           const pct = (d.y - min) / range;
           const valH = pct * barH;
@@ -1036,7 +1036,7 @@ export function AppAnalytics({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
           <TabHeader title="Web analytics | Live">
             Track visitor activity, top pages, and traffic sources.
@@ -1091,7 +1091,7 @@ export function AppAnalytics({
       <div className="flex flex-col gap-6 overflow-hidden rounded-[4px] bg-[#0a1430] px-5 py-6 shadow-lg sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:pl-7 sm:pr-10 sm:py-7">
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-medium uppercase tracking-[1.5px] text-[#cfe0ff]/70">
-            Analytics TLDR:
+            Analytics:
           </span>
           <p className="text-xs font-light leading-[1.4] text-[#cfe0ff]/50">
             Quick view summary for what&apos;s going on
@@ -1099,14 +1099,14 @@ export function AppAnalytics({
             with &lsquo;{data.domain}&rsquo;.
           </p>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-6 sm:w-auto sm:flex-nowrap sm:gap-10">
+        <div className="grid w-full grid-cols-2 gap-4 sm:flex sm:w-auto sm:flex-nowrap sm:gap-10">
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-2.5">
               <UsersThree
                 className="size-6 shrink-0 text-[#cfe0ff]"
                 weight="duotone"
               />
-              <span className="text-[44px] font-light leading-none text-[#cfe0ff]">
+              <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">
                 {formatNumber(summary.visitors.value)}
               </span>
             </div>
@@ -1120,7 +1120,7 @@ export function AppAnalytics({
                 className="size-6 shrink-0 text-[#cfe0ff]"
                 weight="duotone"
               />
-              <span className="text-[44px] font-light leading-none text-[#cfe0ff]">
+              <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">
                 {formatNumber(countriesCount)}
               </span>
             </div>
@@ -1134,7 +1134,7 @@ export function AppAnalytics({
                 className="size-6 shrink-0 text-[#cfe0ff]"
                 weight="duotone"
               />
-              <span className="text-[44px] font-light leading-none text-[#cfe0ff]">
+              <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">
                 {bounce}
               </span>
             </div>
@@ -1153,7 +1153,7 @@ export function AppAnalytics({
                   ease: "easeInOut",
                 }}
               />
-              <span className="text-[44px] font-light leading-none text-[#cfe0ff]">
+              <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">
                 {formatNumber(visitorsRightNow)}
               </span>
             </div>
@@ -1311,7 +1311,7 @@ export function AppAnalytics({
                 Core Web Vitals (p75) over this window
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-x-6 gap-y-5 px-5 py-5 sm:grid-cols-5">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-5 px-5 py-5 sm:grid-cols-3 md:grid-cols-5">
               <StatTile
                 label="LCP"
                 value={formatPerf(data.performance.lcp, "lcp")}

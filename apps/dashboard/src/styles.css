@@ -609,3 +609,11 @@ code {
 .brimble-date-picker .rdp-range-end.rdp-today .rdp-day_button::after {
   background-color: var(--dash-bg);
 }
+
+[class^="PostHogSurvey-"],
+[class*=" PostHogSurvey-"],
+[class*="PostHogSurvey-"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

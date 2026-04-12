@@ -352,7 +352,7 @@ function Globe({ countries }: { countries: CountryVisitor[] }) {
         />
       </div>
       {topCountries.length > 0 && (
-        <div className="absolute left-4 top-4 flex flex-col gap-1.5 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg/80 px-3 py-2.5 backdrop-blur-sm">
+        <div className="absolute left-4 top-4 hidden flex-col gap-1.5 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg/80 px-3 py-2.5 backdrop-blur-sm sm:flex">
           <span className="text-[9px] font-medium uppercase tracking-[1px] text-dash-text-faded">
             Top countries
           </span>
@@ -434,8 +434,7 @@ export function VisitorsMap({ countries = [] }: { countries?: CountryVisitor[] }
         />
       </div>
       <div
-        className="relative flex w-full items-center justify-center overflow-hidden bg-dash-bg-elevated px-4 py-6"
-        style={{ height: 460 }}
+        className="relative flex h-[280px] w-full items-center justify-center overflow-hidden bg-dash-bg-elevated px-4 py-6 sm:h-[460px]"
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div

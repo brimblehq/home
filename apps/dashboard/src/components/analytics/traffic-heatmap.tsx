@@ -44,9 +44,9 @@ export function TrafficHeatmap({ grid }: { grid: number[][] }) {
         </p>
       </div>
       <div className="overflow-x-auto px-4 py-5">
-        <div className="flex min-w-[680px] flex-col gap-1">
+        <div className="flex min-w-[480px] flex-col gap-0.5 sm:min-w-[680px] sm:gap-1">
           {/* Hour column labels */}
-          <div className="grid grid-cols-[40px_repeat(24,1fr)] items-center gap-1">
+          <div className="grid grid-cols-[32px_repeat(24,1fr)] items-center gap-0.5 sm:grid-cols-[40px_repeat(24,1fr)] sm:gap-1">
             <span />
             {Array.from({ length: 24 }).map((_, h) => (
               <span
@@ -61,7 +61,7 @@ export function TrafficHeatmap({ grid }: { grid: number[][] }) {
           {grid.map((row, dayIdx) => (
             <div
               key={dayIdx}
-              className="grid grid-cols-[40px_repeat(24,1fr)] items-center gap-1"
+              className="grid grid-cols-[32px_repeat(24,1fr)] items-center gap-0.5 sm:grid-cols-[40px_repeat(24,1fr)] sm:gap-1"
             >
               <span className="text-[10px] font-medium text-dash-text-faded">
                 {DAYS[dayIdx]}
@@ -69,7 +69,7 @@ export function TrafficHeatmap({ grid }: { grid: number[][] }) {
               {row.map((value, hourIdx) => {
                 const cell = (
                   <div
-                    className={`h-5 rounded-[2px] ${value > 0 ? "cursor-default transition-opacity hover:opacity-80" : ""}`}
+                    className={`h-4 rounded-[2px] sm:h-5 ${value > 0 ? "cursor-default transition-opacity hover:opacity-80" : ""}`}
                     style={{ backgroundColor: cellColor(value, max, isDark) }}
                   />
                 );
