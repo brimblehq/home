@@ -50,6 +50,7 @@ import { getSettingsSidebarSnapshotServerFn } from "@/server/settings/actions";
 import { getWorkspaceTeamMembersServerFn } from "@/server/teams/actions";
 import { usePostHog } from "posthog-js/react";
 import { isPostHogEnabled } from "@/lib/posthog";
+import { useFeatureFlag, FeatureFlags } from "@/lib/feature-flags";
 
 const dashboardQueryClient = new QueryClient({
   defaultOptions: {
@@ -466,7 +467,37 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
     return value || undefined;
   })();
 
-  const allNav = [...mainNav, ...moreNav];
+  const domainsEnabled = useFeatureFlag(FeatureFlags.ENABLE_DOMAINS);
+  const scalingEnabled = useFeatureFlag(FeatureFlags.ENABLE_AUTO_SCALING);
+  const bucketsEnabled = useFeatureFlag(FeatureFlags.ENABLE_BUCKETS);
+  const sandboxEnabled = useFeatureFlag(FeatureFlags.ENABLE_SANDBOX);
+
+  const flagValues: Record<string, boolean> = useMemo(
+    () => ({
+      [FeatureFlags.ENABLE_DOMAINS]: domainsEnabled,
+      [FeatureFlags.ENABLE_AUTO_SCALING]: scalingEnabled,
+      [FeatureFlags.ENABLE_BUCKETS]: bucketsEnabled,
+      [FeatureFlags.ENABLE_SANDBOX]: sandboxEnabled,
+    }),
+    [domainsEnabled, scalingEnabled, bucketsEnabled, sandboxEnabled],
+  );
+
+  const allNav = useMemo(
+    () =>
+      [...mainNav, ...moreNav]
+        .filter((item) => {
+          if ("flag" in item && item.flag && !("comingSoon" in item && item.comingSoon))
+            return flagValues[item.flag] !== false;
+          return true;
+        })
+        .map((item) => {
+          if ("comingSoon" in item && item.comingSoon && "flag" in item && item.flag && isPostHogEnabled && flagValues[item.flag]) {
+            return { ...item, comingSoon: false };
+          }
+          return item;
+        }),
+    [flagValues],
+  );
 
   return (
     <nav className="flex flex-col py-2">

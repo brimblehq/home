@@ -19,7 +19,7 @@ export type FeatureFlagKey = (typeof FeatureFlags)[keyof typeof FeatureFlags];
 export function useFeatureFlag(flag: FeatureFlagKey): boolean {
   const value = useFeatureFlagEnabled(flag);
   if (!isPostHogEnabled) return true;
-  return value !== false;
+  return value === true;
 }
 
 export function FeatureGate({

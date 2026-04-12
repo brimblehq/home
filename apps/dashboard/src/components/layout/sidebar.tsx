@@ -7,6 +7,7 @@ import { Theme } from "../../types/enums";
 import { useHaptics } from "@/hooks/use-haptics";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { useFeatureFlag, FeatureFlags } from "@/lib/feature-flags";
+import { isPostHogEnabled } from "@/lib/posthog";
 
 export const mainNav = [
   { label: "Home", icon: "/icons/home.svg", href: "/" },
@@ -89,7 +90,7 @@ export function Sidebar({
           return true;
         })
         .map((item) => {
-          if (item.comingSoon && item.flag && flagValues[item.flag]) {
+          if (item.comingSoon && item.flag && isPostHogEnabled && flagValues[item.flag]) {
             return { ...item, comingSoon: false };
           }
           return item;
