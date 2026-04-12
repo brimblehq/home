@@ -47,10 +47,12 @@ export const listDeploymentsServerFn = createServerFn({
         workspace?: string;
         page?: number;
         limit?: number;
+        filterBy?: "createdAt" | "startTime" | "endTime" | "status";
         statuses?: string;
         environment?: string;
         start?: string;
         end?: string;
+        search?: string;
       }
     | undefined;
 
@@ -65,10 +67,12 @@ export const listDeploymentsServerFn = createServerFn({
     return api.deployments.list(projectId, {
       page: payload?.page,
       limit: payload?.limit,
+      filterBy: payload?.filterBy,
       statuses: payload?.statuses,
       environment: payload?.environment,
       start: payload?.start,
       end: payload?.end,
+      search: payload?.search,
       teamId,
     });
   });

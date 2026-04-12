@@ -12,6 +12,8 @@ import {
   XCircle,
   Download,
   Loader2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { NumberPagination } from "../../../components/shared/pagination";
@@ -57,41 +59,43 @@ function normalizeMemberRole(member: TeamMember): string {
 
 const PAGE_LIMIT = 10;
 
-export const Route = createFileRoute(
-  "/projects/$projectId/deployment-history",
-)({
-  staleTime: 300_000,
-  preloadStaleTime: 300_000,
-  loader: async ({ context }) => {
-    const project = (context as any).project;
-    const workspace = (context as any).workspace;
+export const Route = createFileRoute("/projects/$projectId/deployment-history")(
+  {
+    staleTime: 300_000,
+    preloadStaleTime: 300_000,
+    loader: async ({ context }) => {
+      const project = (context as any).project;
+      const workspace = (context as any).workspace;
 
-    const range = defaultDeploymentHistoryDateRange();
+      const range = defaultDeploymentHistoryDateRange();
 
-    const result = await (listDeploymentsServerFn as unknown as (input: {
-      data: {
-        projectId: string;
-        workspace?: string;
-        page?: number;
-        limit?: number;
-        start?: string;
-        end?: string;
-      };
-    }) => Promise<PaginatedDeploymentsResponse>)({
-      data: {
-        projectId: project?.id || project?.name,
-        workspace,
-        page: 1,
-        limit: PAGE_LIMIT,
-        start: format(range.from!, "yyyy-MM-dd"),
-        end: format(range.to!, "yyyy-MM-dd"),
-      },
-    });
+      const result = await (
+        listDeploymentsServerFn as unknown as (input: {
+          data: {
+            projectId: string;
+            workspace?: string;
+            page?: number;
+            limit?: number;
+            start?: string;
+            end?: string;
+          };
+        }) => Promise<PaginatedDeploymentsResponse>
+      )({
+        data: {
+          projectId: project?.id || project?.name,
+          workspace,
+          page: 1,
+          limit: PAGE_LIMIT,
+          start: format(range.from!, "yyyy-MM-dd"),
+          end: format(range.to!, "yyyy-MM-dd"),
+        },
+      });
 
-    return { deployments: result, workspace };
+      return { deployments: result, workspace };
+    },
+    component: DeploymentHistoryPage,
   },
-  component: DeploymentHistoryPage,
-});
+);
 
 /* ─── Filter dropdown (reusable) ─── */
 
@@ -225,7 +229,10 @@ function DeploymentMenu({
   useEffect(() => {
     if (!open) return;
     updatePos();
-    window.addEventListener("scroll", updatePos, { capture: true, passive: true });
+    window.addEventListener("scroll", updatePos, {
+      capture: true,
+      passive: true,
+    });
     window.addEventListener("resize", updatePos, { passive: true });
     return () => {
       window.removeEventListener("scroll", updatePos, { capture: true });
@@ -261,9 +268,11 @@ function DeploymentMenu({
   async function handleRedeploy() {
     setLoading(true);
     try {
-      await (redeployServerFn as unknown as (input: {
-        data: { projectId: string; logId: string; workspace?: string };
-      }) => Promise<any>)({
+      await (
+        redeployServerFn as unknown as (input: {
+          data: { projectId: string; logId: string; workspace?: string };
+        }) => Promise<any>
+      )({
         data: { projectId, logId: deployment.id, workspace },
       });
       onRedeployed();
@@ -278,9 +287,11 @@ function DeploymentMenu({
   async function handleCancel() {
     setLoading(true);
     try {
-      await (cancelDeploymentServerFn as unknown as (input: {
-        data: { projectId: string; logId: string; workspace?: string };
-      }) => Promise<any>)({
+      await (
+        cancelDeploymentServerFn as unknown as (input: {
+          data: { projectId: string; logId: string; workspace?: string };
+        }) => Promise<any>
+      )({
         data: { projectId, logId: deployment.id, workspace },
       });
       onRedeployed();
@@ -309,26 +320,36 @@ function DeploymentMenu({
     {
       id: "download-logs",
       label: downloading ? "Downloading…" : "Download logs",
-      icon: downloading ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />,
+      icon: downloading ? (
+        <Loader2 className="size-3.5 animate-spin" />
+      ) : (
+        <Download className="size-3.5" />
+      ),
       onClick: async () => {
         if (downloading) return;
         setDownloading(true);
         try {
-          const result = await (downloadDeploymentLogsServerFn as unknown as (input: {
-            data: { projectId: string; logId: string; workspace?: string };
-          }) => Promise<{ content: string; filename: string }>)({
+          const result = await (
+            downloadDeploymentLogsServerFn as unknown as (input: {
+              data: { projectId: string; logId: string; workspace?: string };
+            }) => Promise<{ content: string; filename: string }>
+          )({
             data: { projectId, logId: deployment.id, workspace },
           });
           const blob = new Blob([result.content], { type: "text/plain" });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = result.filename.endsWith(".log") ? result.filename : `${result.filename.replace(/\.\w+$/, "")}.log`;
+          a.download = result.filename.endsWith(".log")
+            ? result.filename
+            : `${result.filename.replace(/\.\w+$/, "")}.log`;
           a.click();
           URL.revokeObjectURL(url);
         } catch (error) {
           toast.error(
-            error instanceof Error ? error.message : "No log entries found for this deployment",
+            error instanceof Error
+              ? error.message
+              : "No log entries found for this deployment",
           );
         } finally {
           setDownloading(false);
@@ -455,7 +476,11 @@ const TERMINAL_STATUSES = new Set([
   "canceled",
 ]);
 
-function useLiveDuration(startTime?: string, endTime?: string, status?: string) {
+function useLiveDuration(
+  startTime?: string,
+  endTime?: string,
+  status?: string,
+) {
   const normalizedStatus = normalizeDeploymentStatus(status);
   const isLive =
     !!startTime && !endTime && !TERMINAL_STATUSES.has(normalizedStatus);
@@ -470,7 +495,7 @@ function useLiveDuration(startTime?: string, endTime?: string, status?: string) 
   if (!startTime) return "--";
   const start = new Date(startTime);
   if (isNaN(start.getTime())) return "--";
-  const end = endTime ? new Date(endTime) : (isLive ? new Date(now) : new Date());
+  const end = endTime ? new Date(endTime) : isLive ? new Date(now) : new Date();
   if (isNaN(end.getTime())) return "--";
 
   const secs = differenceInSeconds(end, start);
@@ -500,11 +525,27 @@ function DeploymentRow({
   onClick: () => void;
   onRedeployed: () => void;
 }) {
+  const [copied, setCopied] = useState(false);
   const status = normalizeDeploymentStatus(deployment.status);
   const dot = statusColor[status] ?? "bg-dash-text-faded";
   const label = statusLabel[status] ?? deployment.status ?? "";
-  const duration = useLiveDuration(deployment.startTime, deployment.endTime, deployment.status);
+  const duration = useLiveDuration(
+    deployment.startTime,
+    deployment.endTime,
+    deployment.status,
+  );
   const ago = formatDeploymentTimeAgo(deployment.createdAt);
+  const deploymentName = deployment.name || deployment.id;
+
+  const handleCopyName = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      void navigator.clipboard.writeText(deploymentName);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    },
+    [deploymentName],
+  );
 
   return (
     <div
@@ -513,9 +554,24 @@ function DeploymentRow({
     >
       {/* Col 1: Name + environment */}
       <div className="flex w-[280px] shrink-0 flex-col gap-0.5">
-        <span className="truncate text-sm tracking-[-0.084px] text-dash-text-strong">
-          {deployment.name || deployment.id}
-        </span>
+        <div className="flex min-w-0 items-center gap-1">
+          <span className="truncate text-sm tracking-[-0.084px] text-dash-text-strong">
+            {deploymentName}
+          </span>
+          <button
+            type="button"
+            onClick={handleCopyName}
+            aria-label={copied ? "Copied log name" : "Copy log name"}
+            title={copied ? "Copied" : "Copy log name"}
+            className="shrink-0 rounded p-0.5 text-dash-text-extra-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-body"
+          >
+            {copied ? (
+              <Check className="size-3.5" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
+          </button>
+        </div>
         <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
           {deployment.environment || "Production"}
         </span>
@@ -555,7 +611,8 @@ function DeploymentRow({
         <Tooltip
           user={{
             name: deployment.username || "Unknown",
-            role: (deployment.username && memberRoleMap[deployment.username]) || "",
+            role:
+              (deployment.username && memberRoleMap[deployment.username]) || "",
             avatarUrl: deployment.avatar,
           }}
           side="bottom"
@@ -647,7 +704,10 @@ function DeploymentHistoryPage() {
 
   // Seed status map from initial data so first poll doesn't fire false notifications
   useEffect(() => {
-    if (initialData?.items && Object.keys(prevStatusMapRef.current).length === 0) {
+    if (
+      initialData?.items &&
+      Object.keys(prevStatusMapRef.current).length === 0
+    ) {
       const map: Record<string, string> = {};
       for (const item of initialData.items) {
         map[item.id] = normalizeDeploymentStatus(item.status);
@@ -693,27 +753,34 @@ function DeploymentHistoryPage() {
       }
 
       try {
-        const result = await (listDeploymentsServerFn as unknown as (input: {
-          data: {
-            projectId: string;
-            workspace?: string;
-            page?: number;
-            limit?: number;
-            statuses?: string;
-            environment?: string;
-            start?: string;
-            end?: string;
-          };
-        }) => Promise<PaginatedDeploymentsResponse>)({
+        const result = await (
+          listDeploymentsServerFn as unknown as (input: {
+            data: {
+              projectId: string;
+              workspace?: string;
+              page?: number;
+              limit?: number;
+              statuses?: string;
+              environment?: string;
+              start?: string;
+              end?: string;
+              search?: string;
+            };
+          }) => Promise<PaginatedDeploymentsResponse>
+        )({
           data: {
             projectId,
             workspace,
             page,
             limit: PAGE_LIMIT,
             statuses: status !== "All" ? statusFilterMap[status] : undefined,
-            environment: environment !== "All" ? environment.toUpperCase() : undefined,
-            start: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+            environment:
+              environment !== "All" ? environment.toUpperCase() : undefined,
+            start: dateRange?.from
+              ? format(dateRange.from, "yyyy-MM-dd")
+              : undefined,
             end: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+            search: search.trim() || undefined,
           },
         });
 
@@ -752,7 +819,9 @@ function DeploymentHistoryPage() {
                   onClick: () => window.focus(),
                 });
               } else if (FAIL_STATUSES.has(newStatus)) {
-                const label = newStatus.startsWith("cancel") ? "cancelled" : "failed";
+                const label = newStatus.startsWith("cancel")
+                  ? "cancelled"
+                  : "failed";
                 sendNotification({
                   title: "Deployment Failed",
                   body: `${projectName} (${env}) deployment ${label}.`,
@@ -782,7 +851,16 @@ function DeploymentHistoryPage() {
         }
       }
     },
-    [projectId, workspace, environment, status, dateRange, projectName, sendNotification],
+    [
+      projectId,
+      workspace,
+      environment,
+      status,
+      dateRange,
+      search,
+      projectName,
+      sendNotification,
+    ],
   );
 
   useEffect(() => {
@@ -800,14 +878,21 @@ function DeploymentHistoryPage() {
   // Re-fetch when filters change
   useEffect(() => {
     void fetchDeployments(1);
-  }, [environment, status, dateRange]);
+  }, [environment, status, dateRange, search]);
 
   useEffect(() => {
     function handleDeploymentUpdated() {
       void fetchDeployments(currentPage, { silent: true });
     }
-    window.addEventListener("brimble:deployment-updated", handleDeploymentUpdated);
-    return () => window.removeEventListener("brimble:deployment-updated", handleDeploymentUpdated);
+    window.addEventListener(
+      "brimble:deployment-updated",
+      handleDeploymentUpdated,
+    );
+    return () =>
+      window.removeEventListener(
+        "brimble:deployment-updated",
+        handleDeploymentUpdated,
+      );
   }, [fetchDeployments, currentPage]);
 
   useEffect(() => {
@@ -820,7 +905,8 @@ function DeploymentHistoryPage() {
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
   useEffect(() => {
@@ -839,16 +925,7 @@ function DeploymentHistoryPage() {
     void fetchDeployments(page);
   }
 
-  // Client-side search filter (within the current page)
-  const filtered = (deployments?.items ?? []).filter((d) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      (d.name?.toLowerCase().includes(q)) ||
-      (d.branch?.toLowerCase().includes(q)) ||
-      (d.message?.toLowerCase().includes(q))
-    );
-  });
+  const filtered = deployments?.items ?? [];
 
   const hasInProgressDeployment = useMemo(
     () =>
@@ -965,7 +1042,14 @@ function DeploymentHistoryPage() {
         />
         <FilterSelect
           label="Status"
-          options={["All", "Successful", "Failed", "In Progress", "Pending", "Cancelled"]}
+          options={[
+            "All",
+            "Successful",
+            "Failed",
+            "In Progress",
+            "Pending",
+            "Cancelled",
+          ]}
           value={status}
           onChange={setStatus}
           icon={<StatusDotsIcon />}
@@ -1021,7 +1105,6 @@ function DeploymentHistoryPage() {
           />
         </div>
       )}
-
     </div>
   );
 }

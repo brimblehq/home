@@ -28,10 +28,12 @@ export interface PaginatedDeploymentsResponse {
 export interface ListDeploymentsInput {
   page?: number;
   limit?: number;
+  filterBy?: "createdAt" | "startTime" | "endTime" | "status";
   statuses?: string;
   environment?: string;
   start?: string;
   end?: string;
+  search?: string;
   teamId?: string;
 }
 
@@ -80,16 +82,18 @@ export function createDeploymentsApi(client: ApiClient): DeploymentsApi {
   return {
     async list(projectId, input) {
       const response = await client.request<any>(
-        `/core/v1/logs/${encodeURIComponent(projectId)}`,
+        `/core/v1/logs/search/${encodeURIComponent(projectId)}`,
         {
           method: "GET",
           query: {
             page: input?.page,
             limit: input?.limit,
+            filterBy: input?.filterBy,
             statuses: input?.statuses,
             environment: input?.environment,
             start: input?.start,
             end: input?.end,
+            search: input?.search?.trim() || undefined,
             teamId: input?.teamId,
           },
         },
