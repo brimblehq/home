@@ -584,6 +584,11 @@ function ScalingPage() {
   }
 
   async function handleSave(values: ScalingFormValues) {
+    if (!canWrite) {
+      toast.error("You don't have permission to manage scaling in this workspace.");
+      return;
+    }
+
     try {
       setSaving(true);
       const isEdit = Boolean(values.id);
@@ -629,6 +634,11 @@ function ScalingPage() {
   }
 
   async function handleToggle(group: UiScalingGroup, nextActive: boolean) {
+    if (!canWrite) {
+      toast.error("You don't have permission to manage scaling in this workspace.");
+      return;
+    }
+
     setTogglingIds((prev) => ({ ...prev, [group.id]: true }));
 
     setRows((prev) =>
@@ -681,6 +691,12 @@ function ScalingPage() {
   }
 
   async function confirmDelete() {
+    if (!canWrite) {
+      setDeleteTarget(null);
+      toast.error("You don't have permission to manage scaling in this workspace.");
+      return;
+    }
+
     if (!deleteTarget) {
       return;
     }

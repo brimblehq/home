@@ -184,7 +184,7 @@ function EmailStep({
           onChange={(e) => onEmailChange(e.target.value)}
           autoFocus
           inputMode="email"
-          autoComplete={passkeyEnabled ? "username webauthn" : "username"}
+          autoComplete="off"
         />
 
         <button

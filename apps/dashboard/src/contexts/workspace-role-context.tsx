@@ -12,11 +12,11 @@ interface WorkspaceRoleValue {
 
 const defaultValue: WorkspaceRoleValue = {
   role: null,
-  isViewer: false,
-  canWrite: true,
-  canManageMembers: true,
-  canEditWorkspace: true,
-  canSeeBilling: true,
+  isViewer: true,
+  canWrite: false,
+  canManageMembers: false,
+  canEditWorkspace: false,
+  canSeeBilling: false,
 };
 
 const WorkspaceRoleContext = createContext<WorkspaceRoleValue>(defaultValue);

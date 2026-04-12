@@ -8,7 +8,12 @@ export function normalizeMemberRole(member: TeamMember): WorkspaceRole {
   if (role.includes("admin")) return "Administrator";
   if (role.includes("creator") || role.includes("owner")) return "Creator";
   if (role.includes("viewer")) return "Viewer";
-  return "Member";
+  if (role.includes("member")) return "Member";
+  return "Viewer";
+}
+
+export function canWorkspaceRoleWrite(role: WorkspaceRole | null): boolean {
+  return role === "Creator" || role === "Administrator" || role === "Member";
 }
 
 export function resolveCurrentWorkspaceRole(

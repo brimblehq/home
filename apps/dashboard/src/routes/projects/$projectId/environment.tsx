@@ -887,6 +887,11 @@ function EnvironmentPage() {
   }
 
   async function handleRedeploy(logId?: string) {
+    if (!canWrite) {
+      toast.error("You don't have permission to update this project's environment.");
+      return;
+    }
+
     if (!projectId) {
       return;
     }
@@ -927,6 +932,11 @@ function EnvironmentPage() {
   }
 
   async function handleSaveDraftRows() {
+    if (!canWrite) {
+      toast.error("You don't have permission to update this project's environment.");
+      return;
+    }
+
     if (!projectId || savingDraftRows) {
       return;
     }
@@ -1045,6 +1055,11 @@ function EnvironmentPage() {
   }
 
   async function saveRawEditor() {
+    if (!canWrite) {
+      toast.error("You don't have permission to update this project's environment.");
+      return;
+    }
+
     if (!projectId || savingRaw || databaseProject) {
       return;
     }

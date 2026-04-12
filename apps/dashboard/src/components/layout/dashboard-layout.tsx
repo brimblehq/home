@@ -38,7 +38,10 @@ import type { Pricing } from "@/types/pricing";
 import { PricingProvider } from "@/contexts/pricing-context";
 import { PlanTypeProvider } from "@/contexts/plan-type-context";
 import { WorkspaceRoleProvider } from "@/contexts/workspace-role-context";
-import { resolveCurrentWorkspaceRole } from "@/utils/workspace-role";
+import {
+  canWorkspaceRoleWrite,
+  resolveCurrentWorkspaceRole,
+} from "@/utils/workspace-role";
 import { ProfileDrawerProvider } from "@/contexts/profile-drawer-context";
 import { DEFAULT_PRICING } from "@/utils/default-pricing";
 import { ProfileTab, Theme } from "../../types/enums";
@@ -1093,11 +1096,12 @@ export function DashboardLayout({
           userProfile?.email,
         )
       : null;
-    const isViewer = role === "Viewer";
+    const isViewer = inWorkspace && role === "Viewer";
+    const canWrite = !inWorkspace || canWorkspaceRoleWrite(role);
     return {
       role,
       isViewer,
-      canWrite: !isViewer,
+      canWrite,
       canManageMembers:
         !inWorkspace || role === "Creator" || role === "Administrator",
       canEditWorkspace:

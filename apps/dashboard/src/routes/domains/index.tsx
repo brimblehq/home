@@ -371,6 +371,11 @@ function DomainsPage() {
   }
 
   async function handleAddDomain(projectId: string, domainUrl: string) {
+    if (!canWrite) {
+      toast.error("You don't have permission to manage domains in this workspace.");
+      return;
+    }
+
     const inlineError = validateDomain(domainUrl);
     if (inlineError) {
       toast.error(inlineError.message);
@@ -408,6 +413,10 @@ function DomainsPage() {
     projectId?: string;
     redirect: { url: string; status: number } | null;
   }) {
+    if (!canWrite) {
+      throw new Error("You don't have permission to manage domains in this workspace.");
+    }
+
     if (!input.domain.id) {
       throw new Error("Domain id is missing");
     }
@@ -457,6 +466,10 @@ function DomainsPage() {
   }
 
   async function handleDeleteDomain(domain: Domain) {
+    if (!canWrite) {
+      throw new Error("You don't have permission to manage domains in this workspace.");
+    }
+
     if (!domain.id) {
       throw new Error("Domain id is missing");
     }
