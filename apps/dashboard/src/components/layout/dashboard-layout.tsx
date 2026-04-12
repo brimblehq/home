@@ -686,10 +686,12 @@ export function DashboardLayout({
     );
   }, [searchStr, resolvedSearchStr]);
   const isRenderedProjectDetailsRoute = useMemo(() => {
-    const match = layoutPathname.match(/^\/projects\/([^/]+)(?:\/|$)/);
+    // Use the same pathname source as the route-transition skeleton.
+    // This keeps sidebar visibility stable during workspace/environment switches.
+    const match = pathname.match(/^\/projects\/([^/]+)(?:\/|$)/);
     if (!match) return false;
     return match[1] !== "new";
-  }, [layoutPathname]);
+  }, [pathname]);
   const shouldRenderDesktopSidebar = !isRenderedProjectDetailsRoute;
 
   // Delay skeleton by 150ms so very fast workspace switches don't flash it
