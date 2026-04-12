@@ -199,13 +199,13 @@ function DeploymentMenu({
   deployment,
   projectId,
   workspace,
-  projectStatus,
+  hasInProgressDeployment,
   onRedeployed,
 }: {
   deployment: DeploymentLog;
   projectId: string;
   workspace?: string;
-  projectStatus?: string;
+  hasInProgressDeployment?: boolean;
   onRedeployed: () => void;
 }) {
   const { canWrite } = useWorkspaceRole();
@@ -247,11 +247,11 @@ function DeploymentMenu({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  const status = deployment.status?.toLowerCase();
-  const isInProgress = status === "inprogress" || status === "building";
+  const status = normalizeDeploymentStatus(deployment.status);
+  const isInProgress = status === "inprogress";
   const isPending = status === "pending" || status === "queued";
   const isActive = status === "active" || status === "ready";
-  const projectInProgress = projectStatus?.toLowerCase() === "inprogress";
+  const projectInProgress = Boolean(hasInProgressDeployment);
 
   const canRedeploy = canWrite && !isInProgress && !projectInProgress;
   const canCancel = canWrite && (isInProgress || isPending);
@@ -437,12 +437,28 @@ function DeploymentMenu({
 
 /* ─── Deployment row ─── */
 
+function normalizeDeploymentStatus(status?: string): string {
+  return status?.trim().toLowerCase() ?? "";
+}
+
 const TERMINAL_STATUSES = new Set([
-  "active", "ready", "successful", "failed", "cancelled", "canceled",
+  "active",
+  "ready",
+  "successful",
+  "succeeded",
+  "completed",
+  "complete",
+  "failed",
+  "error",
+  "errored",
+  "cancelled",
+  "canceled",
 ]);
 
 function useLiveDuration(startTime?: string, endTime?: string, status?: string) {
-  const isLive = !!startTime && !endTime && !TERMINAL_STATUSES.has(status?.toLowerCase() ?? "");
+  const normalizedStatus = normalizeDeploymentStatus(status);
+  const isLive =
+    !!startTime && !endTime && !TERMINAL_STATUSES.has(normalizedStatus);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -471,7 +487,7 @@ function DeploymentRow({
   deployment,
   projectId,
   workspace,
-  projectStatus,
+  hasInProgressDeployment,
   memberRoleMap,
   onClick,
   onRedeployed,
@@ -479,12 +495,12 @@ function DeploymentRow({
   deployment: DeploymentLog;
   projectId: string;
   workspace?: string;
-  projectStatus?: string;
+  hasInProgressDeployment?: boolean;
   memberRoleMap: Record<string, string>;
   onClick: () => void;
   onRedeployed: () => void;
 }) {
-  const status = deployment.status?.toLowerCase() ?? "";
+  const status = normalizeDeploymentStatus(deployment.status);
   const dot = statusColor[status] ?? "bg-dash-text-faded";
   const label = statusLabel[status] ?? deployment.status ?? "";
   const duration = useLiveDuration(deployment.startTime, deployment.endTime, deployment.status);
@@ -558,7 +574,7 @@ function DeploymentRow({
           deployment={deployment}
           projectId={projectId}
           workspace={workspace}
-          projectStatus={projectStatus}
+          hasInProgressDeployment={hasInProgressDeployment}
           onRedeployed={onRedeployed}
         />
       </div>
@@ -634,7 +650,7 @@ function DeploymentHistoryPage() {
     if (initialData?.items && Object.keys(prevStatusMapRef.current).length === 0) {
       const map: Record<string, string> = {};
       for (const item of initialData.items) {
-        map[item.id] = item.status?.toLowerCase() ?? "";
+        map[item.id] = normalizeDeploymentStatus(item.status);
       }
       prevStatusMapRef.current = map;
     }
@@ -703,11 +719,24 @@ function DeploymentHistoryPage() {
 
         // Detect status transitions on silent polls for push notifications
         if (silent && result?.items) {
-          const SUCCESS_STATUSES = new Set(["active", "ready", "successful"]);
-          const FAIL_STATUSES = new Set(["failed", "cancelled", "canceled"]);
+          const SUCCESS_STATUSES = new Set([
+            "active",
+            "ready",
+            "successful",
+            "succeeded",
+            "completed",
+            "complete",
+          ]);
+          const FAIL_STATUSES = new Set([
+            "failed",
+            "error",
+            "errored",
+            "cancelled",
+            "canceled",
+          ]);
 
           for (const item of result.items) {
-            const newStatus = item.status?.toLowerCase() ?? "";
+            const newStatus = normalizeDeploymentStatus(item.status);
             const prevStatus = prevStatusMapRef.current[item.id];
 
             if (
@@ -738,7 +767,7 @@ function DeploymentHistoryPage() {
         if (result?.items) {
           const nextMap: Record<string, string> = {};
           for (const item of result.items) {
-            nextMap[item.id] = item.status?.toLowerCase() ?? "";
+            nextMap[item.id] = normalizeDeploymentStatus(item.status);
           }
           prevStatusMapRef.current = nextMap;
         }
@@ -820,6 +849,15 @@ function DeploymentHistoryPage() {
       (d.message?.toLowerCase().includes(q))
     );
   });
+
+  const hasInProgressDeployment = useMemo(
+    () =>
+      (deployments?.items ?? []).some((item) => {
+        const status = normalizeDeploymentStatus(item.status);
+        return status === "inprogress";
+      }),
+    [deployments?.items],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -954,7 +992,7 @@ function DeploymentHistoryPage() {
               deployment={deployment}
               projectId={projectId}
               workspace={workspace}
-              projectStatus={project?.status}
+              hasInProgressDeployment={hasInProgressDeployment}
               memberRoleMap={memberRoleMap}
               onClick={() => {
                 openDeploymentDrawer(deployment);

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { listDeploymentsServerFn } from "@/server/deployments/actions";
 import type { PaginatedDeploymentsResponse } from "@/backend/deployments";
 
-const ACTIVE_STATUSES = new Set(["inprogress", "building", "pending", "queued"]);
+const ACTIVE_STATUSES = new Set(["inprogress", "pending", "queued"]);
 const POLL_INTERVAL = 5000;
 
 export function useHasActiveDeployment(
@@ -35,7 +35,7 @@ export function useHasActiveDeployment(
 
       const active =
         result?.items?.some((item) =>
-          ACTIVE_STATUSES.has(item.status?.toLowerCase() ?? ""),
+          ACTIVE_STATUSES.has(item.status?.trim().toLowerCase() ?? ""),
         ) ?? false;
 
       if (active !== hasActiveRef.current) {

@@ -673,9 +673,7 @@ export function DashboardLayout({
   const resolvedSearchStr = useRouterState({
     select: (s) => s.resolvedLocation?.searchStr ?? s.location.searchStr,
   });
-  // Only show skeleton when switching workspaces or environments — never for
-  // normal tab navigation. TanStack Router keeps the previous page visible
-  // until the new route resolves, so a skeleton on every tab switch is redundant.
+
   const isWorkspaceOrEnvironmentSwitching = useMemo(() => {
     const next = new URLSearchParams(searchStr || "");
     const current = new URLSearchParams(resolvedSearchStr || "");
@@ -686,15 +684,12 @@ export function DashboardLayout({
     );
   }, [searchStr, resolvedSearchStr]);
   const isRenderedProjectDetailsRoute = useMemo(() => {
-    // Use the same pathname source as the route-transition skeleton.
-    // This keeps sidebar visibility stable during workspace/environment switches.
     const match = pathname.match(/^\/projects\/([^/]+)(?:\/|$)/);
     if (!match) return false;
     return match[1] !== "new";
   }, [pathname]);
   const shouldRenderDesktopSidebar = !isRenderedProjectDetailsRoute;
 
-  // Delay skeleton by 150ms so very fast workspace switches don't flash it
   const [shouldShowRouteSkeleton, setShouldShowRouteSkeleton] = useState(false);
 
   useEffect(() => {

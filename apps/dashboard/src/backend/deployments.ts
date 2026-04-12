@@ -62,7 +62,7 @@ function mapDeploymentLog(log: any): DeploymentLog {
   return {
     id: log.id ?? log._id,
     name: log.name ?? "",
-    status: (log.status ?? "").toLowerCase(),
+    status: String(log.status ?? "").trim().toLowerCase(),
     branch: log.branch,
     message: log.message,
     commitLink: log.commitLink ?? log.commit_link,

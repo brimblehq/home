@@ -1469,12 +1469,8 @@ function RequestLogs({
         setRequestLogs(items);
         setNextCursor(result?.nextCursor ?? null);
         setHasMore(Boolean(result?.hasMore));
-      } catch (error) {
-        let message = "Failed to load request logs.";
-        if (error instanceof Error && error.message.trim()) {
-          message = error.message;
-        }
-        setRequestLogsError(message);
+      } catch {
+        setRequestLogsError("Something went wrong while loading your request logs. Please try again in a moment.");
         setRequestLogs([]);
       } finally {
         setRequestLogsLoading(false);
@@ -1669,9 +1665,14 @@ function RequestLogs({
             </button>
           ))
         ) : (
-          <div className="flex h-32 items-center justify-center">
-            <span className="text-sm text-dash-text-faded">
-              {requestLogsError || "No requests matching your filters"}
+          <div className="flex h-32 flex-col items-center justify-center gap-1 px-6 text-center">
+            <span className="text-sm font-medium text-dash-text-strong">
+              {requestLogsError ? "Couldn't load logs" : "No requests found"}
+            </span>
+            <span className="text-[13px] text-dash-text-faded">
+              {requestLogsError
+                ? "Something went wrong on our end. Try again in a moment."
+                : "Try adjusting your filters or widening the date range."}
             </span>
           </div>
         )}
