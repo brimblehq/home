@@ -5,16 +5,16 @@ import trainStation from "@/assets/images/train-station.svg";
 
 const addons = [
   {
-    name: "Vue.js",
-    icon: "/images/icons8-vue.js.svg",
-    bg: "#2b6a50",
+    name: "Vite",
+    icon: "/images/icons8-vite.svg",
+    bg: "#312e81",
     position: { right: "10%", top: "-3%" },
     iconStyle: { marginTop: "-2px" },
   },
   {
-    name: "Angular",
-    icon: "/images/icons8-angular.svg",
-    bg: "#9a0022",
+    name: "Next.js",
+    icon: "/images/icons8-nextjs.svg",
+    bg: "#111827",
     position: { left: "2%", top: "24%" },
   },
   {

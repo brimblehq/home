@@ -40,7 +40,7 @@ export const Route = createRootRoute({
       },
       {
         name: 'theme-color',
-        content: '#ffffff',
+        content: '#1a1c1e',
       },
     ],
     links: [
@@ -92,7 +92,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-C20V2W5JW0" />
         <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-C20V2W5JW0');` }} />
-        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('brimble-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}})()` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('brimble-theme');if(t!=='light'){document.documentElement.classList.add('dark')}})()` }} />
       </head>
       <body>
         {children}
