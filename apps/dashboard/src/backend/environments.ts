@@ -4,6 +4,7 @@ import { asRecord, asString, pickBoolean, pickString } from "./normalize";
 
 export interface ProjectEnvironmentVariable {
   id: string;
+  envId?: string;
   name: string;
   value: string;
   environment?: string;
@@ -115,10 +116,44 @@ function unwrapData<T = any>(payload: any): T {
   return payload as T;
 }
 
+function shouldDebugEnvironments(): boolean {
+  if (process.env.DEBUG_ENVS === "1") return true;
+  return process.env.NODE_ENV !== "production";
+}
+
 function mapEnvVariable(item: any): ProjectEnvironmentVariable {
   const row = asRecord(item) ?? {};
   const userValue = row.user;
   const userRecord = asRecord(userValue);
+  const nestedEnvironment = asRecord(row.environment);
+  const nestedVariable = asRecord(row.variable);
+
+  const name =
+    asString(row.name) ??
+    asString(nestedVariable?.name) ??
+    "";
+
+  const value =
+    asString(row.value) ??
+    asString(nestedVariable?.value) ??
+    "";
+
+  const environment =
+    pickString(row, "environment", "deployment") ??
+    pickString(nestedEnvironment, "name", "slug");
+
+  const envId =
+    pickString(
+      row,
+      "_id",
+      "id",
+      "envId",
+      "env_id",
+    );
+  const id = String(
+    envId ??
+    `${name}:${environment ?? "default"}:${asString(row.createdAt) ?? ""}`,
+  );
 
   const user =
     asString(userValue) ??
@@ -131,15 +166,16 @@ function mapEnvVariable(item: any): ProjectEnvironmentVariable {
   const isSystem = pickBoolean(row, "is_system", "isSystem") ?? false;
 
   return {
-    id: String(row._id ?? row.id ?? `${row.name ?? ""}-${row.environment ?? ""}`),
-    name: String(row.name ?? ""),
-    value: String(row.value ?? ""),
-    environment: pickString(row, "environment", "deployment"),
+    id,
+    envId,
+    name,
+    value,
+    environment,
     user,
     avatar,
     isSystem,
-    createdAt: asString(row.createdAt),
-    updatedAt: asString(row.updatedAt),
+    createdAt: asString(row.createdAt) ?? asString(nestedVariable?.createdAt),
+    updatedAt: asString(row.updatedAt) ?? asString(nestedVariable?.updatedAt),
   };
 }
 
@@ -153,8 +189,21 @@ function mapSnapshot(payload: any): ProjectEnvironmentSnapshot {
         ? data
         : [];
 
+  const mappedEnvs = rootEnvs
+    .map(mapEnvVariable)
+    .filter((env: ProjectEnvironmentVariable) => env.name);
+
+  if (shouldDebugEnvironments()) {
+    const invalidRows = mappedEnvs
+      .map((env, index) => ({ env, raw: rootEnvs[index] }))
+      .filter((entry) => !entry.env.envId);
+    if (invalidRows.length > 0) {
+      console.debug("[envs.get] rows missing envId", invalidRows);
+    }
+  }
+
   return {
-    envs: rootEnvs.map(mapEnvVariable).filter((env) => env.name),
+    envs: mappedEnvs,
     deployId: pickString(asRecord(data), "deployId", "deploy_id"),
   };
 }
@@ -364,7 +413,28 @@ export function createProjectEnvironmentsApi(client: ApiClient): ProjectEnvironm
         ? `${basePath}/${encodeURIComponent(projectId)}/${encodeURIComponent(target)}`
         : `${basePath}/${encodeURIComponent(projectId)}`;
       const response = await client.request(path, { method: "GET" });
-      return mapSnapshot(response);
+      if (shouldDebugEnvironments()) {
+        console.debug("[envs.get] raw backend response", {
+          projectId,
+          target: target ?? null,
+          path,
+          response,
+        });
+      }
+      const snapshot = mapSnapshot(response);
+      if (shouldDebugEnvironments()) {
+        console.debug("[envs.get] mapped snapshot", {
+          projectId,
+          target: target ?? null,
+          envs: snapshot.envs.map((env) => ({
+            id: env.id,
+            envId: env.envId ?? null,
+            name: env.name,
+            environment: env.environment ?? null,
+          })),
+        });
+      }
+      return snapshot;
     },
     async listTargets(projectId) {
       const response = await client.request(
@@ -428,6 +498,9 @@ export function createProjectEnvironmentsApi(client: ApiClient): ProjectEnvironm
       return { success: true };
     },
     async remove(projectId, envId) {
+      if (shouldDebugEnvironments()) {
+        console.debug("[envs.remove] deleting env", { projectId, envId });
+      }
       await client.request(
         `${basePath}/${encodeURIComponent(projectId)}/${encodeURIComponent(envId)}`,
         { method: "DELETE" },
