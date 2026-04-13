@@ -5,10 +5,10 @@ type Theme = "light" | "dark";
 const STORAGE_KEY = "brimble-theme";
 
 function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === "dark" || stored === "light") return stored;
-  return "dark";
+  return "light";
 }
 
 export function useTheme() {
