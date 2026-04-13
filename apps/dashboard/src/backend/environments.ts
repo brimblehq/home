@@ -116,11 +116,6 @@ function unwrapData<T = any>(payload: any): T {
   return payload as T;
 }
 
-function shouldDebugEnvironments(): boolean {
-  if (process.env.DEBUG_ENVS === "1") return true;
-  return process.env.NODE_ENV !== "production";
-}
-
 function mapEnvVariable(item: any): ProjectEnvironmentVariable {
   const row = asRecord(item) ?? {};
   const userValue = row.user;
@@ -192,15 +187,6 @@ function mapSnapshot(payload: any): ProjectEnvironmentSnapshot {
   const mappedEnvs = rootEnvs
     .map(mapEnvVariable)
     .filter((env: ProjectEnvironmentVariable) => env.name);
-
-  if (shouldDebugEnvironments()) {
-    const invalidRows = mappedEnvs
-      .map((env, index) => ({ env, raw: rootEnvs[index] }))
-      .filter((entry) => !entry.env.envId);
-    if (invalidRows.length > 0) {
-      console.debug("[envs.get] rows missing envId", invalidRows);
-    }
-  }
 
   return {
     envs: mappedEnvs,
@@ -413,28 +399,7 @@ export function createProjectEnvironmentsApi(client: ApiClient): ProjectEnvironm
         ? `${basePath}/${encodeURIComponent(projectId)}/${encodeURIComponent(target)}`
         : `${basePath}/${encodeURIComponent(projectId)}`;
       const response = await client.request(path, { method: "GET" });
-      if (shouldDebugEnvironments()) {
-        console.debug("[envs.get] raw backend response", {
-          projectId,
-          target: target ?? null,
-          path,
-          response,
-        });
-      }
-      const snapshot = mapSnapshot(response);
-      if (shouldDebugEnvironments()) {
-        console.debug("[envs.get] mapped snapshot", {
-          projectId,
-          target: target ?? null,
-          envs: snapshot.envs.map((env) => ({
-            id: env.id,
-            envId: env.envId ?? null,
-            name: env.name,
-            environment: env.environment ?? null,
-          })),
-        });
-      }
-      return snapshot;
+      return mapSnapshot(response);
     },
     async listTargets(projectId) {
       const response = await client.request(
@@ -498,9 +463,6 @@ export function createProjectEnvironmentsApi(client: ApiClient): ProjectEnvironm
       return { success: true };
     },
     async remove(projectId, envId) {
-      if (shouldDebugEnvironments()) {
-        console.debug("[envs.remove] deleting env", { projectId, envId });
-      }
       await client.request(
         `${basePath}/${encodeURIComponent(projectId)}/${encodeURIComponent(envId)}`,
         { method: "DELETE" },
