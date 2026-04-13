@@ -61,28 +61,30 @@ export function Hero() {
     <>
       <section className="bg-brimble-surface transition-colors duration-300 px-6 pb-16 pt-10">
         <div className="mx-auto flex max-w-[720px] flex-col items-start gap-4">
-          <motion.div
-            className="h-[300px] w-[300px] md:h-[400px] md:w-[400px] bg-brimble-surface bg-contain bg-bottom bg-no-repeat [background-blend-mode:multiply] dark:bg-[#dddad7] dark:invert dark:opacity-85"
-            style={{ backgroundImage: `url(${beeHero})` }}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              y: [0, -8, 0],
-            }}
-            transition={{
-              opacity: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
-              scale: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
-              y: {
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 0.8,
-              },
-            }}
-            role="img"
-            aria-hidden="true"
-          />
+          <div className="my-[60px] flex w-full justify-center">
+            <motion.div
+              className="h-[300px] w-[300px] md:h-[400px] md:w-[400px] bg-brimble-surface bg-contain bg-bottom bg-no-repeat [background-blend-mode:multiply] dark:bg-[#dddad7] dark:invert dark:opacity-85"
+              style={{ backgroundImage: `url(${beeHero})` }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: [0, -8, 0],
+              }}
+              transition={{
+                opacity: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
+                scale: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
+                y: {
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.8,
+                },
+              }}
+              role="img"
+              aria-hidden="true"
+            />
+          </div>
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-4">
               <motion.h1

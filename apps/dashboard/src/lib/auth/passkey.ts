@@ -31,8 +31,12 @@ export async function runAuthentication(
   options: Record<string, unknown>,
   useBrowserAutofill = false,
 ) {
+  const optionsJSON = normalizeAuthenticationOptions(
+    options,
+    useBrowserAutofill,
+  );
   return startAuthentication({
-    optionsJSON: options as any,
+    optionsJSON: optionsJSON as any,
     useBrowserAutofill,
   });
 }
@@ -59,9 +63,27 @@ export function guessDeviceName(): string {
 }
 
 export function passkeyErrorMessage(error: unknown): string {
-  if (!(error instanceof Error)) return "Passkey operation failed. Try again.";
+  if (!(error instanceof Error))
+    return "Passkey operation failed. Please try again.";
   const msg = error.message || "";
   const lower = msg.toLowerCase();
+  const name = getErrorName(error);
+  const causeName = getErrorName((error as any).cause);
+
+  if (
+    name === "NotAllowedError" ||
+    causeName === "NotAllowedError" ||
+    lower.includes("notallowederror") ||
+    lower.includes("not allowed") ||
+    lower.includes("timed out") ||
+    lower.includes("timeout") ||
+    lower.includes("cancelled") ||
+    lower.includes("canceled") ||
+    lower.includes("abort")
+  ) {
+    return "Passkey request was canceled.";
+  }
+
   if (lower.includes("user verification")) {
     return "Use Touch ID or your device PIN to continue.";
   }
@@ -80,14 +102,63 @@ export function passkeyErrorMessage(error: unknown): string {
   if (lower.includes("too many requests")) {
     return "Too many attempts — please wait a moment and try again.";
   }
-  if (lower.includes("notallowed")) {
-    return "Passkey prompt was cancelled.";
-  }
   if (lower.includes("rp id") && lower.includes("invalid")) {
     return "Passkeys aren't configured for this site yet. Please try again later or contact support.";
   }
   if (lower.includes("securityerror") || lower.includes("relying party")) {
     return "Passkeys aren't configured for this site yet. Please try again later or contact support.";
   }
-  return msg;
+  return "Passkey operation failed. Please try again.";
+}
+
+function getErrorName(value: unknown): string {
+  if (!value || typeof value !== "object") return "";
+  const maybeName = (value as { name?: unknown }).name;
+  return typeof maybeName === "string" ? maybeName : "";
+}
+
+function normalizeAuthenticationOptions(
+  options: Record<string, unknown>,
+  useBrowserAutofill: boolean,
+): Record<string, unknown> {
+  const normalized: Record<string, unknown> = { ...options };
+
+  const rawAllowCredentials = normalized.allowCredentials;
+  if (Array.isArray(rawAllowCredentials)) {
+    normalized.allowCredentials = rawAllowCredentials.map((entry) => {
+      if (!entry || typeof entry !== "object") return entry;
+
+      const descriptor: Record<string, unknown> = {
+        ...(entry as Record<string, unknown>),
+      };
+      const rawTransports = Array.isArray(descriptor.transports)
+        ? descriptor.transports
+        : [];
+      const transports = rawTransports
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.toLowerCase());
+
+      if (transports.includes("internal")) {
+        descriptor.transports = transports.filter(
+          (value) => value !== "hybrid",
+        );
+      }
+
+      return descriptor;
+    });
+  }
+
+  if (!useBrowserAutofill) {
+    const existingHints = Array.isArray(normalized.hints)
+      ? normalized.hints.filter(
+          (value): value is string => typeof value === "string",
+        )
+      : [];
+    const dedupedHints = ["client-device", ...existingHints].filter(
+      (hint, index, all) => all.indexOf(hint) === index,
+    );
+    normalized.hints = dedupedHints;
+  }
+
+  return normalized;
 }
