@@ -42,6 +42,10 @@ export interface EffectiveEnvironmentVariable {
   source: "inherited" | "own";
   sourceEnvironment?: string;
   inheritable?: boolean;
+  user?: string;
+  avatar?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface EnvironmentVariableInput {
@@ -181,6 +185,10 @@ function mapEffectiveEnvironmentVariable(item: any): EffectiveEnvironmentVariabl
     source,
     sourceEnvironment: asString(row.sourceEnvironment) ?? undefined,
     inheritable: pickBoolean(row, "inheritable") ?? undefined,
+    user: pickString(row, "user") ?? undefined,
+    avatar: pickString(row, "avatar") ?? undefined,
+    createdAt: asString(row.createdAt) ?? undefined,
+    updatedAt: asString(row.updatedAt) ?? undefined,
   };
 }
 

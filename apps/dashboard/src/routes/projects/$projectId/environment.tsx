@@ -67,6 +67,24 @@ type MergedEnvRow = ProjectEnvironmentVariable & {
   meta: EnvRowMeta;
 };
 
+function getEnvActivityLabel(input: {
+  authoredAtLabel: string;
+  isShared?: boolean;
+  sharedSource?: SharedSource;
+}): string {
+  const { authoredAtLabel, isShared, sharedSource } = input;
+  if (authoredAtLabel !== "Unknown") {
+    return authoredAtLabel;
+  }
+  if (!isShared) {
+    return "Unknown";
+  }
+  if (sharedSource === "inherited") {
+    return "Inherited variable";
+  }
+  return "Shared variable";
+}
+
 type LoaderData = {
   initialTarget: string;
   initialSnapshot: ProjectEnvironmentSnapshot;
@@ -272,8 +290,14 @@ function EnvAccordionRow({
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [sharedToggle, setSharedToggle] = useState(isShared ?? false);
-  const authorName = row.isSystem ? "system" : row.user || "unknown";
-  const authorDisplayName = row.isSystem ? "System" : row.user || "Unknown";
+  const authorName = row.isSystem ? "system" : row.user || (isShared ? "Environment" : "unknown");
+  const authorDisplayName = row.isSystem ? "System" : row.user || (isShared ? "Environment" : "Unknown");
+  const authoredAtLabel = formatEnvRowRelativeTime(row.createdAt, row.updatedAt);
+  const activityLabel = getEnvActivityLabel({
+    authoredAtLabel,
+    isShared,
+    sharedSource,
+  });
 
   useEffect(() => {
     setName(row.name);
@@ -525,7 +549,7 @@ function EnvAccordionRow({
                 }}
               >
                 <span className="text-xs text-dash-text-faded">
-                  {authorName} · {formatEnvRowRelativeTime(row.createdAt, row.updatedAt)}
+                  {authorName} · {activityLabel}
                 </span>
               </Tooltip>
               {isShared && sharedSource === "inherited" && (
@@ -923,6 +947,10 @@ function EnvironmentPage() {
       id: v.id ?? `shared:${v.name}`,
       name: v.name,
       value: v.value,
+      user: v.user || (v.source === "inherited" ? (v.sourceEnvironment ?? "Environment") : "Environment"),
+      avatar: v.avatar,
+      createdAt: v.createdAt,
+      updatedAt: v.updatedAt,
       meta: {
         isShared: true,
         encrypted: false,
