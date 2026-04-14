@@ -57,21 +57,17 @@ export const Route = createFileRoute("/")({
   loader: async ({ deps }) => {
     const workspace = deps.workspace;
     const [environments, persistedEnvironmentId, mcpTemplatesResult, frameworksList] = await Promise.all([
-      (
-        listProjectEnvironmentsServerFn as unknown as (input: {
-          data?: { workspace?: string };
-        }) => Promise<Array<{ _id: string; isDefault?: boolean }>>
-      )({
+      (listProjectEnvironmentsServerFn as unknown as (input: {
+        data?: { workspace?: string };
+      }) => Promise<Array<{ _id: string; isDefault?: boolean }>>)({
         data: { workspace },
       }).catch(() => []),
       (getActiveEnvironmentPreferenceServerFn as unknown as (input: { data?: { workspace?: string } }) => Promise<string | null>)({
         data: { workspace },
       }).catch(() => null),
-      (
-        listRecommendedMcpTemplatesServerFn as unknown as (input: {
-          data?: { limit?: number; category?: string; officialOnly?: boolean; shuffle?: boolean };
-        }) => Promise<McpServerListResult>
-      )({
+      (listRecommendedMcpTemplatesServerFn as unknown as (input: {
+        data?: { limit?: number; category?: string; officialOnly?: boolean; shuffle?: boolean };
+      }) => Promise<McpServerListResult>)({
         data: { limit: 3, category: "development", officialOnly: true, shuffle: true },
       }).catch(() => ({ servers: [], pagination: {} }) as McpServerListResult),
       (listFrameworksServerFn as unknown as () => Promise<FrameworkOption[]>)().catch(() => [] as FrameworkOption[]),
@@ -83,23 +79,19 @@ export const Route = createFileRoute("/")({
     });
 
     const [projectsResult, overviewResult, bandwidthResult] = await Promise.all([
-      (
-        listHomeProjectsServerFn as unknown as (input: {
-          data: { workspace?: string; environmentId?: string };
-        }) => Promise<ApiListResponse<BackendProject>>
-      )({
+      (listHomeProjectsServerFn as unknown as (input: {
+        data: { workspace?: string; environmentId?: string };
+      }) => Promise<ApiListResponse<BackendProject>>)({
         data: { workspace, environmentId },
       }),
-      (getHomeOverviewServerFn as unknown as (input: { data: { workspace?: string; environmentId?: string } }) => Promise<OverviewSummary>)(
-        {
-          data: { workspace, environmentId },
-        },
-      ),
-      (
-        getHomeBandwidthServerFn as unknown as (input: {
-          data: { workspace?: string; environmentId?: string };
-        }) => Promise<BandwidthSummary>
-      )({
+      (getHomeOverviewServerFn as unknown as (input: {
+        data: { workspace?: string; environmentId?: string };
+      }) => Promise<OverviewSummary>)({
+        data: { workspace, environmentId },
+      }),
+      (getHomeBandwidthServerFn as unknown as (input: {
+        data: { workspace?: string; environmentId?: string };
+      }) => Promise<BandwidthSummary>)({
         data: { workspace, environmentId },
       }).catch(() => ({ results: [], total: 0 }) as BandwidthSummary),
     ]);

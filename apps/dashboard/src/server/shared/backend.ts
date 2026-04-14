@@ -18,6 +18,58 @@ function getErrorMeta(error: any) {
   };
 }
 
+function decodeJwtPayload(accessToken: string): Record<string, unknown> | null {
+  const [, payloadPart] = accessToken.split(".");
+  if (!payloadPart) {
+    return null;
+  }
+
+  try {
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const payloadJson =
+      typeof Buffer !== "undefined" ? Buffer.from(padded, "base64").toString("utf8") : globalThis.atob?.(padded) ?? null;
+    if (!payloadJson) {
+      return null;
+    }
+
+    const parsed = JSON.parse(payloadJson);
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function getJwtExpiryMs(accessToken: string): number | null {
+  const payload = decodeJwtPayload(accessToken);
+  const expClaim = payload?.exp;
+
+  if (typeof expClaim === "number" && Number.isFinite(expClaim)) {
+    return expClaim * 1000;
+  }
+
+  if (typeof expClaim === "string") {
+    const asNumber = Number(expClaim);
+    if (Number.isFinite(asNumber)) {
+      return asNumber * 1000;
+    }
+  }
+
+  return null;
+}
+
+function isTokenExpiringSoon(accessToken: string, skewMs = 30_000): boolean {
+  const expiryMs = getJwtExpiryMs(accessToken);
+  if (!expiryMs) {
+    return false;
+  }
+  return expiryMs <= Date.now() + skewMs;
+}
+
 const activeRefreshPromises = new Map<string, Promise<AuthSession>>();
 const recentRefreshSessions = new Map<string, { session: AuthSession; expiresAt: number }>();
 const RECENT_REFRESH_TTL_MS = 30_000;
@@ -231,8 +283,39 @@ export async function withTokenRefresh<T>(fn: (api: BackendApi) => Promise<T>): 
 }
 
 async function withTokenRefreshImpl<T>(fn: (api: BackendApi) => Promise<T>): Promise<T> {
-  const accessToken = getServerAccessToken();
-  const refreshToken = getServerRefreshToken();
+  let accessToken = getServerAccessToken();
+  let refreshToken = getServerRefreshToken();
+
+  if (refreshToken) {
+    const recentSession = getRecentRefreshSession(refreshToken);
+    if (recentSession?.accessToken) {
+      authLogger.info("withTokenRefresh using recent session before request", {
+        refreshTokenFp: tokenFingerprint(refreshToken),
+        nextAccessTokenFp: tokenFingerprint(recentSession.accessToken),
+        nextRefreshTokenFp: tokenFingerprint(recentSession.refreshToken),
+      });
+
+      setServerAuthCookies(recentSession);
+      const recentApi = createBackendApi({
+        baseUrl: config.apiUrl,
+        getAccessToken: () => recentSession.accessToken ?? null,
+        defaultHeaders: getClientHeaders(),
+      });
+
+      try {
+        return await fn(recentApi);
+      } catch (error: any) {
+        if (error?.status !== 401) {
+          throw error;
+        }
+
+        authLogger.warn("withTokenRefresh recent session request returned 401", {
+          hasRefreshToken: true,
+          ...getErrorMeta(error),
+        });
+      }
+    }
+  }
 
   if (!accessToken && refreshToken) {
     authLogger.info("withTokenRefresh bootstrap refresh start", {
@@ -265,6 +348,42 @@ async function withTokenRefreshImpl<T>(fn: (api: BackendApi) => Promise<T>): Pro
         hasRefreshToken: true,
       });
       throw error;
+    }
+  }
+
+  accessToken = getServerAccessToken();
+  refreshToken = getServerRefreshToken();
+
+  if (accessToken && refreshToken && isTokenExpiringSoon(accessToken)) {
+    authLogger.info("withTokenRefresh preflight refresh start", {
+      hasAccessToken: true,
+      hasRefreshToken: true,
+      accessTokenFp: tokenFingerprint(accessToken),
+      refreshTokenFp: tokenFingerprint(refreshToken),
+    });
+
+    try {
+      const session = await refreshServerSession(refreshToken);
+      if (session?.accessToken) {
+        authLogger.info("withTokenRefresh preflight refresh success", {
+          hasNewAccessToken: true,
+          hasNewRefreshToken: Boolean(session.refreshToken),
+          userId: session.user?.id ?? null,
+        });
+
+        const freshApi = createBackendApi({
+          baseUrl: config.apiUrl,
+          getAccessToken: () => session.accessToken ?? null,
+          defaultHeaders: getClientHeaders(),
+        });
+
+        return await fn(freshApi);
+      }
+    } catch (error: any) {
+      authLogger.warn("withTokenRefresh preflight refresh failed", {
+        hasRefreshToken: true,
+        ...getErrorMeta(error),
+      });
     }
   }
 

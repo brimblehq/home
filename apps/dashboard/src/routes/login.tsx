@@ -310,7 +310,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function validateEmailInput(value: string): string | null {
   const trimmed = value.trim();
   if (!trimmed) {
-    return "Enter your work email to continue.";
+    return "Enter your email to continue.";
   }
   if (!EMAIL_PATTERN.test(trimmed)) {
     return "Enter a valid email address.";
@@ -319,17 +319,11 @@ function validateEmailInput(value: string): string | null {
 }
 
 function getLastAuthMethod(): AuthMethod | null {
-  try {
-    return localStorage.getItem(AUTH_METHOD_KEY) as AuthMethod | null;
-  } catch {
-    return null;
-  }
+  return localStorage.getItem(AUTH_METHOD_KEY) as AuthMethod | null;
 }
 
 function saveLastAuthMethod(method: AuthMethod) {
-  try {
-    localStorage.setItem(AUTH_METHOD_KEY, method);
-  } catch {}
+  localStorage.setItem(AUTH_METHOD_KEY, method);
 }
 
 function LoginPage() {
@@ -411,19 +405,22 @@ function LoginPage() {
     }
   }
 
-  const runPasskeyVerify = useCallback(async (challengeToken: string, credential: unknown) => {
-    const response = await verifyPasskeyAuth({
-      data: {
-        challengeToken,
-        credential,
-        geo: await getClientGeo(),
-      },
-    });
-    saveLastAuthMethod("email");
-    toast.success(`Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`);
-    invalidateSessionCache();
-    window.location.replace(getNextUrl());
-  }, [verifyPasskeyAuth]);
+  const runPasskeyVerify = useCallback(
+    async (challengeToken: string, credential: unknown) => {
+      const response = await verifyPasskeyAuth({
+        data: {
+          challengeToken,
+          credential,
+          geo: await getClientGeo(),
+        },
+      });
+      saveLastAuthMethod("email");
+      toast.success(`Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`);
+      invalidateSessionCache();
+      window.location.replace(getNextUrl());
+    },
+    [verifyPasskeyAuth],
+  );
 
   async function handlePasskeySignIn() {
     if (passkeyLoading || loading) return;

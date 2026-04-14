@@ -128,7 +128,7 @@ export function StatsRow({
     bandwidth?.results?.map((point) => ({
       value: typeof point.total === "number" && Number.isFinite(point.total) ? point.total : 0,
     })) ?? [];
-  const chartData = bandwidthChartData.length > 0 ? bandwidthChartData : [{ value: 0 }];
+  const hasBandwidthChartData = bandwidthChartData.length >= 2;
   const latestBandwidthTotal =
     bandwidth?.results && bandwidth.results.length > 0 ? bandwidth.results[bandwidth.results.length - 1]?.total : undefined;
   const bandwidthSummaryText = formatBandwidthTotal(latestBandwidthTotal);
@@ -157,20 +157,22 @@ export function StatsRow({
         </div>
         <p className="px-2 pt-2 pb-3 text-xs uppercase tracking-[-0.02px] text-[#ff9b01]">{bandwidthSummaryText}</p>
         <div className="mt-auto h-[65px] min-w-0">
-          <ResponsiveContainer width="100%" height={65} minWidth={0} minHeight={1}>
-            <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-              <YAxis domain={[0, (max: number) => (typeof max === "number" && Number.isFinite(max) && max > 0 ? max : 1)]} hide />
-              <Area
-                type="linear"
-                dataKey="value"
-                stroke="#ff9b00"
-                strokeWidth={1}
-                fill="rgba(255,155,0,0.30)"
-                baseValue={0}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          {hasBandwidthChartData && (
+            <ResponsiveContainer width="100%" height={65} minWidth={0} minHeight={1}>
+              <AreaChart data={bandwidthChartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                <YAxis domain={[0, (max: number) => (typeof max === "number" && Number.isFinite(max) && max > 0 ? max : 1)]} hide />
+                <Area
+                  type="linear"
+                  dataKey="value"
+                  stroke="#ff9b00"
+                  strokeWidth={1}
+                  fill="rgba(255,155,0,0.30)"
+                  baseValue={0}
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Theme } from "../types/enums";
 
 const listeners = new Set<() => void>();
@@ -32,7 +32,10 @@ function getStoredThemeMode(): Theme {
   return Theme.System;
 }
 
-function resolveEffectiveTheme(mode: Theme): Theme.Light | Theme.Dark {
+function resolveEffectiveTheme(
+  mode: Theme,
+  options: { allowSystemMatchMedia: boolean } = { allowSystemMatchMedia: true },
+): Theme.Light | Theme.Dark {
   if (mode === Theme.Dark) {
     return Theme.Dark;
   }
@@ -41,7 +44,7 @@ function resolveEffectiveTheme(mode: Theme): Theme.Light | Theme.Dark {
     return Theme.Light;
   }
 
-  if (typeof window !== "undefined" && window.matchMedia(DARK_MEDIA_QUERY).matches) {
+  if (options.allowSystemMatchMedia && typeof window !== "undefined" && window.matchMedia(DARK_MEDIA_QUERY).matches) {
     return Theme.Dark;
   }
 
@@ -100,7 +103,12 @@ function subscribe(cb: () => void) {
 
 export function useTheme() {
   const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const theme = useMemo(() => resolveEffectiveTheme(mode), [mode]);
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const theme = useMemo(() => resolveEffectiveTheme(mode, { allowSystemMatchMedia: hasHydrated }), [mode, hasHydrated]);
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   useEffect(() => {
     applyTheme(mode);

@@ -215,11 +215,13 @@ export function createBackendClient(config: BackendClientConfig): BackendClient 
       } catch (error) {
         const axiosError = error as AxiosError<any>;
         const payload = axiosError.response?.data;
-        backendClientLogger.error(
+        const status = axiosError.response?.status;
+        const logLevel: "warn" | "error" = status === 401 ? "warn" : "error";
+        backendClientLogger[logLevel](
           {
             method,
             requestUrl,
-            status: axiosError.response?.status,
+            status,
             data: payload,
           },
           "Backend client request failed",
