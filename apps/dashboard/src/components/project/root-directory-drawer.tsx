@@ -5,6 +5,28 @@ import { ArrowLeft, ChevronRight, GitBranch, Loader2 } from "lucide-react";
 import type { RepositoryDirectoryEntry, RepositoryFrameworkDefaults } from "@/backend/repositories";
 import { getGithubRootDirServerFn, getGitlabRootDirServerFn } from "@/server/repositories/actions";
 
+const HTTP_STATUS_PREFIX = /^\[HTTP (\d{3})\]\s*/;
+
+function getHttpStatus(error: unknown): number | undefined {
+  const err = error as { status?: unknown; message?: unknown } | null;
+  if (typeof err?.status === "number") return err.status;
+  if (typeof err?.message === "string") {
+    const match = err.message.match(HTTP_STATUS_PREFIX);
+    if (match) return Number(match[1]);
+  }
+  return undefined;
+}
+
+function getDirectoryLoadErrorMessage(error: unknown, provider: "github" | "gitlab" | "bitbucket"): string {
+  const status = getHttpStatus(error);
+  if (status === 404) {
+    return provider === "github"
+      ? "Connect your GitHub account to Brimble before browsing repositories."
+      : "Connect your account to Brimble before browsing repositories.";
+  }
+  return "We couldn't fetch directories right now. Please try again in a moment.";
+}
+
 function DrawerShell({
   open,
   onOpenChange,
@@ -315,7 +337,7 @@ export function RootDirectoryDrawer({
         }
         setEntries([]);
         setActiveFramework(undefined);
-        setError(err?.message || "Failed to load directories");
+        setError(getDirectoryLoadErrorMessage(err, provider));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -328,7 +350,7 @@ export function RootDirectoryDrawer({
     return () => {
       cancelled = true;
     };
-  }, [open, repoName, installationId, branch, currentPath, getRootDir]);
+  }, [open, repoName, installationId, branch, currentPath, getRootDir, provider]);
 
   function handleGoBack() {
     if (!currentPath || currentPath === "./" || currentPath === ".") {

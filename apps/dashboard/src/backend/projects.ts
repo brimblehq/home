@@ -34,6 +34,7 @@ export interface Project {
   buildCommand?: string;
   startCommand?: string;
   outputDirectory?: string;
+  watchPaths?: string[];
   diskSize?: number;
   volumeMount?: string;
   whiteListedIps?: string[];
@@ -282,6 +283,13 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       whiteListedIps = row.whiteListedIps.filter((ip: unknown) => typeof ip === "string").map((ip: string) => ip);
     }
 
+    let watchPaths: string[] | undefined;
+    if (Array.isArray(row.watchPaths)) {
+      watchPaths = row.watchPaths
+        .filter((path: unknown): path is string => typeof path === "string" && path.trim().length > 0)
+        .map((path: string) => path);
+    }
+
     let autoscalingGroup: Project["autoscalingGroup"] = null;
     if (row.autoscalingGroup && typeof row.autoscalingGroup === "object") {
       const autoscalingGroupRecord = asRecord(row.autoscalingGroup) ?? {};
@@ -391,6 +399,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       buildCommand: pickString(row, "buildCommand"),
       startCommand: pickString(row, "startCommand"),
       outputDirectory: pickString(row, "outputDirectory"),
+      watchPaths,
       diskSize: pickNumber(row, "diskSize"),
       volumeMount: pickString(row, "volumeMount"),
       whiteListedIps,

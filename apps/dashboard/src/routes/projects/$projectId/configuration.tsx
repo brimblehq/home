@@ -3,7 +3,7 @@ import { IpWhitelist } from "@/components/shared/ip-whitelist";
 import { createFileRoute, getRouteApi, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
-import { GearSix, Hammer, Cpu, Warning, DatabaseIcon, MagnifyingGlass, GithubLogo } from "@phosphor-icons/react";
+import { GearSix, Hammer, Cpu, Warning, DatabaseIcon, MagnifyingGlass, GithubLogo, X } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
@@ -60,7 +60,11 @@ import {
   listGitlabReposServerFn,
   listBitbucketAccountsServerFn,
   listBitbucketReposServerFn,
+  getGithubRootDirServerFn,
+  getGitlabRootDirServerFn,
+  getBitbucketRootDirServerFn,
 } from "@/server/repositories/actions";
+import type { RepositoryDirectoryEntry, RepositoryRootDirResult } from "@/backend/repositories";
 import type { GithubRepoListItem } from "@/backend/repositories";
 import { generalConfigSchema, databaseConfigSchema, resourcesConfigSchema } from "@/utils/configuration-schemas";
 import type { GeneralConfigValues, DatabaseConfigValues, ResourcesConfigValues } from "@/utils/configuration-schemas";
@@ -217,6 +221,22 @@ const ease = [0.16, 1, 0.3, 1] as const;
 const inputClass = "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 const PERSISTENT_STORAGE_PRICE_PER_GB = 0.25;
+
+const COMMON_WATCH_PATTERNS = ["/**", "package.json", "pnpm-lock.yaml", "yarn.lock", "package-lock.json"];
+
+function deriveWatchPathSuggestions(entries: RepositoryDirectoryEntry[]): string[] {
+  const out = new Set<string>();
+  for (const entry of entries) {
+    if (!entry?.path) continue;
+    if (entry.type === "dir") {
+      out.add(`/${entry.path}/**`);
+    } else if (entry.type === "file") {
+      out.add(`/${entry.path}`);
+    }
+  }
+  for (const pattern of COMMON_WATCH_PATTERNS) out.add(pattern);
+  return Array.from(out).sort();
+}
 
 function normalizeStorageValue(value: unknown, fallback = 1): number {
   const parsed = typeof value === "number" ? value : Number(value);
@@ -947,6 +967,7 @@ interface BuildInitialValues {
   preStartCommand: string;
   dockerImage: string;
   outputDirectory: string;
+  watchPaths: string[];
 }
 
 function BuildSection({
@@ -956,6 +977,8 @@ function BuildSection({
   showHealthCheck = true,
   showDockerSourceFields = false,
   showOutputDirectory = false,
+  showWatchPaths = false,
+  watchPathSuggestions = [],
   canWrite = true,
 }: {
   initialValues: BuildInitialValues;
@@ -964,6 +987,8 @@ function BuildSection({
   showHealthCheck?: boolean;
   showDockerSourceFields?: boolean;
   showOutputDirectory?: boolean;
+  showWatchPaths?: boolean;
+  watchPathSuggestions?: string[];
   canWrite?: boolean;
 }) {
   const [values, setValues] = useState(initialValues);
@@ -979,7 +1004,12 @@ function BuildSection({
     initialValues.preStartCommand,
     initialValues.dockerImage,
     initialValues.outputDirectory,
+    initialValues.watchPaths,
   ]);
+
+  const watchPathsChanged =
+    values.watchPaths.length !== initialValues.watchPaths.length ||
+    values.watchPaths.some((p, i) => p !== initialValues.watchPaths[i]);
 
   const dirty =
     values.installCommand !== initialValues.installCommand ||
@@ -988,7 +1018,22 @@ function BuildSection({
     values.healthCheckPath !== initialValues.healthCheckPath ||
     values.preStartCommand !== initialValues.preStartCommand ||
     values.dockerImage !== initialValues.dockerImage ||
-    values.outputDirectory !== initialValues.outputDirectory;
+    values.outputDirectory !== initialValues.outputDirectory ||
+    watchPathsChanged;
+
+  const availableWatchPathOptions = watchPathSuggestions
+    .filter((p) => !values.watchPaths.includes(p))
+    .map((p) => ({ id: p, label: p }));
+
+  function addWatchPath(path: string) {
+    const trimmed = path.trim();
+    if (!trimmed || values.watchPaths.includes(trimmed)) return;
+    setValues((v) => ({ ...v, watchPaths: [...v.watchPaths, trimmed] }));
+  }
+
+  function removeWatchPath(path: string) {
+    setValues((v) => ({ ...v, watchPaths: v.watchPaths.filter((p) => p !== path) }));
+  }
 
   async function handleSave() {
     if (!dirty || saving) return;
@@ -1111,6 +1156,52 @@ function BuildSection({
           />
           <p className="mt-1 text-xs text-dash-text-faded">Health check endpoint to monitor your application's status</p>
         </div>
+      )}
+
+      {showWatchPaths && (
+        <>
+          <hr className="border-dash-border" />
+          <div className="flex flex-col gap-1.5 px-4 py-4">
+            <label className="text-sm font-medium text-dash-text-strong">Watch paths</label>
+            <p className="text-xs text-dash-text-faded">
+              Only redeploy when changes land in one of these paths. Supports glob patterns like <code className="font-mono text-[11px]">/src/**</code>.
+            </p>
+            {values.watchPaths.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-2">
+                {values.watchPaths.map((path) => (
+                  <span
+                    key={path}
+                    className="inline-flex items-center gap-1 rounded-full bg-dash-bg-elevated px-2 py-1 font-mono text-xs text-dash-text-strong"
+                  >
+                    {path}
+                    {canWrite && (
+                      <button
+                        type="button"
+                        onClick={() => removeWatchPath(path)}
+                        className="flex size-3.5 items-center justify-center rounded-full text-dash-text-faded hover:bg-dash-border hover:text-dash-text-strong"
+                        aria-label={`Remove ${path}`}
+                      >
+                        <X size={10} weight="bold" />
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+            {canWrite && (
+              <div className="mt-1">
+                <Dropdown
+                  value=""
+                  options={availableWatchPathOptions}
+                  onChange={(id) => addWatchPath(id)}
+                  placeholder="Add pattern e.g. /src/**"
+                  searchable
+                  searchPlaceholder="Search or type a path…"
+                />
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {!showHealthCheck && !showCommands && !showDockerSourceFields && (
@@ -1637,6 +1728,7 @@ function ConfigurationPage() {
       healthCheckPath?: string;
       preStartCommand?: string;
       outputDirectory?: string;
+      watchPaths?: string[];
     };
   }) => Promise<{ message?: string }>;
   const [activeSection, setActiveSection] = useState<ConfigSection>(ConfigSection.General);
@@ -1661,6 +1753,65 @@ function ConfigurationPage() {
     setRepoMetadata(repo ?? null);
   }, [repo]);
 
+  const getGithubRootDir = useServerFn(getGithubRootDirServerFn as any) as (args: {
+    data: { repoName: string; branch: string; installationId?: number | string; path?: string };
+  }) => Promise<RepositoryRootDirResult>;
+  const getGitlabRootDir = useServerFn(getGitlabRootDirServerFn as any) as (args: {
+    data: { repoName: string; branch: string; installationId?: number | string; path?: string };
+  }) => Promise<RepositoryRootDirResult>;
+  const getBitbucketRootDir = useServerFn(getBitbucketRootDirServerFn as any) as (args: {
+    data: { repoName: string; branch: string; installationId?: number | string; path?: string };
+  }) => Promise<RepositoryRootDirResult>;
+
+  const [watchPathSuggestions, setWatchPathSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    const repoName = project?.repo?.name;
+    const branch = project?.repo?.branch;
+    const provider = (project?.repo?.git as string | undefined)?.toLowerCase();
+    const installationId = project?.repo?.installationId;
+    if (!repoName || !branch || !provider) {
+      setWatchPathSuggestions([]);
+      return;
+    }
+
+    let cancelled = false;
+    const input = { repoName, branch, installationId };
+
+    const fetchers: Record<string, () => Promise<RepositoryRootDirResult>> = {
+      github: () => getGithubRootDir({ data: input }),
+      gitlab: () => getGitlabRootDir({ data: input }),
+      bitbucket: () => getBitbucketRootDir({ data: input }),
+    };
+
+    const fetcherKey = Object.keys(fetchers).find((key) => provider.includes(key));
+    if (!fetcherKey) {
+      setWatchPathSuggestions([]);
+      return;
+    }
+
+    fetchers[fetcherKey]()
+      .then((result) => {
+        if (cancelled) return;
+        setWatchPathSuggestions(deriveWatchPathSuggestions(result.rootDir ?? []));
+      })
+      .catch(() => {
+        if (!cancelled) setWatchPathSuggestions([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    project?.repo?.name,
+    project?.repo?.branch,
+    project?.repo?.git,
+    project?.repo?.installationId,
+    getGithubRootDir,
+    getGitlabRootDir,
+    getBitbucketRootDir,
+  ]);
+
   // General section initial values
   const currentRegionId = project?.specs?.region?.id ?? project?.specs?.region?._id ?? "";
 
@@ -1683,6 +1834,7 @@ function ConfigurationPage() {
     preStartCommand: project?.preStartCommand || "",
     dockerImage: project?.repo?.name || "",
     outputDirectory: project?.outputDirectory || "",
+    watchPaths: Array.isArray(project?.watchPaths) ? project.watchPaths : [],
   };
 
   // Database section initial values
@@ -1886,6 +2038,7 @@ function ConfigurationPage() {
           healthCheckPath: values.healthCheckPath,
           preStartCommand: values.preStartCommand,
           outputDirectory: values.outputDirectory,
+          watchPaths: values.watchPaths,
         },
       });
       markDeploymentHistoryForRefresh({
@@ -2074,6 +2227,8 @@ function ConfigurationPage() {
                   showHealthCheck={healthCheckVisible}
                   showDockerSourceFields={dockerSourceFieldsVisible}
                   showOutputDirectory={sourceFieldsVisible && !noBuildFramework}
+                  showWatchPaths={Boolean(project?.repo?.name)}
+                  watchPathSuggestions={watchPathSuggestions}
                   canWrite={canWrite}
                 />
               )}

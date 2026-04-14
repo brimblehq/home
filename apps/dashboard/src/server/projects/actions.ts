@@ -464,6 +464,7 @@ export const saveProjectBuildConfigServerFn = createServerFn({
         preStartCommand?: string;
         dockerImage?: string;
         outputDirectory?: string;
+        watchPaths?: string[];
       }
     | undefined;
 
@@ -493,6 +494,9 @@ export const saveProjectBuildConfigServerFn = createServerFn({
   }
   if (typeof payload?.outputDirectory === "string") {
     body.outputDirectory = payload.outputDirectory;
+  }
+  if (Array.isArray(payload?.watchPaths)) {
+    body.watchPaths = payload.watchPaths.map((p) => p.trim()).filter((p) => p.length > 0);
   }
 
   return withTokenRefresh(async (api) => {

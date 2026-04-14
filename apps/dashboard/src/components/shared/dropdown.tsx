@@ -52,7 +52,8 @@ export function Dropdown({
   const triggerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const MENU_MAX_HEIGHT = 200;
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, placement: "bottom" as "bottom" | "top" });
   const safeOptions = Array.isArray(options) ? options : [];
   const isObject = safeOptions.length > 0 && typeof safeOptions[0] === "object";
   const menuWidth = pos.width > 0 ? pos.width : 240;
@@ -62,7 +63,15 @@ export function Dropdown({
   const updatePos = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const flipAbove = spaceBelow < MENU_MAX_HEIGHT + 8 && spaceAbove > spaceBelow;
+    setPos({
+      top: flipAbove ? rect.top - MENU_MAX_HEIGHT - 4 : rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      placement: flipAbove ? "top" : "bottom",
+    });
   }, []);
 
   useLayoutEffect(() => {
@@ -187,9 +196,9 @@ export function Dropdown({
               <motion.div
                 ref={menuRef}
                 data-dropdown-menu
-                initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                initial={{ opacity: 0, y: pos.placement === "top" ? 4 : -4, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                exit={{ opacity: 0, y: pos.placement === "top" ? 4 : -4, scale: 0.98 }}
                 transition={{ duration: 0.2, ease }}
                 style={{
                   position: "fixed",
