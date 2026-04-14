@@ -60,9 +60,7 @@ export const inviteWorkspaceTeamMembersServerFn = createServerFn({
     | undefined;
 
   const members = Array.isArray(payload?.members)
-    ? payload.members
-      .map((value) => (typeof value === "string" ? value.trim() : ""))
-      .filter(Boolean)
+    ? payload.members.map((value) => (typeof value === "string" ? value.trim() : "")).filter(Boolean)
     : [];
 
   if (!members.length) {
@@ -171,9 +169,7 @@ export const updateMemberEnvironmentsServerFn = createServerFn({
     throw new Error("Member ID is required");
   }
 
-  const projectEnvironments = Array.isArray(payload?.project_environments)
-    ? payload.project_environments
-    : undefined;
+  const projectEnvironments = Array.isArray(payload?.project_environments) ? payload.project_environments : undefined;
 
   return withTokenRefresh(async (api) => {
     const { teamId } = await resolveWorkspaceTeam(api, payload?.workspace);

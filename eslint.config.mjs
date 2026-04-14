@@ -6,13 +6,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/.tanstack/**",
-      "**/*.gen.ts",
-      "**/coverage/**",
-    ],
+    ignores: ["**/node_modules/**", "**/dist/**", "**/.tanstack/**", "**/*.gen.ts", "**/coverage/**"],
   },
   {
     files: ["**/*.{js,mjs,cjs,ts,tsx}"],
@@ -47,10 +41,7 @@ export default tseslint.config(
   {
     files: ["apps/*/src/**/*.{ts,tsx}"],
     rules: {
-      "react-refresh/only-export-components": [
-        "warn",
-        { allowConstantExport: true },
-      ],
+      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
     },
-  }
+  },
 );

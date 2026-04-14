@@ -41,11 +41,7 @@ interface NumberPaginationProps {
   loadingPage?: number | null;
 }
 
-function getPageRange(
-  current: number,
-  total: number,
-  max: number,
-): (number | "ellipsis")[] {
+function getPageRange(current: number, total: number, max: number): (number | "ellipsis")[] {
   if (total <= max) {
     return Array.from({ length: total }, (_, i) => i + 1);
   }
@@ -126,11 +122,7 @@ export function NumberPagination({
 
       {pages.map((page, i) =>
         page === "ellipsis" ? (
-          <span
-            key={`ellipsis-${i}`}
-            className="flex size-8 items-center justify-center text-sm text-dash-text-faded"
-            aria-hidden
-          >
+          <span key={`ellipsis-${i}`} className="flex size-8 items-center justify-center text-sm text-dash-text-faded" aria-hidden>
             &hellip;
           </span>
         ) : (
@@ -150,11 +142,7 @@ export function NumberPagination({
                 : "text-dash-text-faded hover:bg-dash-bg-elevated"
             } disabled:opacity-70`}
           >
-            {isLoading && loadingPage === page ? (
-              <Spinner size="size-4" className="text-dash-text-faded" />
-            ) : (
-              page
-            )}
+            {isLoading && loadingPage === page ? <Spinner size="size-4" className="text-dash-text-faded" /> : page}
           </button>
         ),
       )}
@@ -194,14 +182,7 @@ interface CursorPaginationProps {
   showLabels?: boolean;
 }
 
-export function CursorPagination({
-  hasNextPage,
-  hasPrevPage,
-  onNext,
-  onPrev,
-  label,
-  showLabels = false,
-}: CursorPaginationProps) {
+export function CursorPagination({ hasNextPage, hasPrevPage, onNext, onPrev, label, showLabels = false }: CursorPaginationProps) {
   const haptics = useHaptics();
 
   if (!hasNextPage && !hasPrevPage) return null;
@@ -217,20 +198,14 @@ export function CursorPagination({
         }}
         disabled={!hasPrevPage}
         aria-label="Previous page"
-        className={cn(
-          btnOutline,
-          showLabels ? "h-8 gap-1.5 px-3" : "size-8",
-          !hasPrevPage && btnDisabled,
-        )}
+        className={cn(btnOutline, showLabels ? "h-8 gap-1.5 px-3" : "size-8", !hasPrevPage && btnDisabled)}
       >
         <ChevronLeft className="size-4" />
         {showLabels && "Previous"}
       </motion.button>
 
       {/* Center label */}
-      {label && (
-        <span className="text-sm text-dash-text-faded">{label}</span>
-      )}
+      {label && <span className="text-sm text-dash-text-faded">{label}</span>}
 
       {/* Next */}
       <motion.button
@@ -241,11 +216,7 @@ export function CursorPagination({
         }}
         disabled={!hasNextPage}
         aria-label="Next page"
-        className={cn(
-          btnOutline,
-          showLabels ? "h-8 gap-1.5 px-3" : "size-8",
-          !hasNextPage && btnDisabled,
-        )}
+        className={cn(btnOutline, showLabels ? "h-8 gap-1.5 px-3" : "size-8", !hasNextPage && btnDisabled)}
       >
         {showLabels && "Next"}
         <ChevronRight className="size-4" />

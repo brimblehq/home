@@ -47,9 +47,7 @@ export function StatusChip({ status, className }: StatusChipProps) {
       )}
     >
       <span className="size-1.5 rounded-full bg-white" />
-      <span className="text-[8px] font-medium tracking-[-0.01px] text-white">
-        {normalized}
-      </span>
+      <span className="text-[8px] font-medium tracking-[-0.01px] text-white">{normalized}</span>
     </div>
   );
 }

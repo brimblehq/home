@@ -18,11 +18,7 @@ export interface OverviewSummary {
 }
 
 export interface OverviewApi {
-  get(input?: {
-    teamId?: string;
-    environmentId?: string;
-    useEnvironmentHeader?: boolean;
-  }): Promise<OverviewSummary>;
+  get(input?: { teamId?: string; environmentId?: string; useEnvironmentHeader?: boolean }): Promise<OverviewSummary>;
 }
 
 export function createOverviewApi(client: ApiClient): OverviewApi {
@@ -48,8 +44,7 @@ export function createOverviewApi(client: ApiClient): OverviewApi {
       const totals = root?.total ?? root ?? {};
       const deploymentBuildTime = root?.deploymentBuildTime ?? {};
 
-      const parseSeconds = (value: unknown): number | null =>
-        typeof value === "number" && Number.isFinite(value) ? value : null;
+      const parseSeconds = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null);
 
       return {
         total: {

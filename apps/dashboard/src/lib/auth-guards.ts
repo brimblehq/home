@@ -1,11 +1,6 @@
 import { redirect } from "@tanstack/react-router";
 import { getCurrentSessionServerFn, refreshSessionServerFn } from "@/server/auth/actions";
-import {
-  clearSessionCache,
-  hasAccessTokenCookie,
-  isSessionRecentlyVerified,
-  markSessionVerified,
-} from "./auth-cache";
+import { clearSessionCache, hasAccessTokenCookie, isSessionRecentlyVerified, markSessionVerified } from "./auth-cache";
 
 const publicRoutes = new Set<string>(["/login", "/signup", "/2fa"]);
 
@@ -33,15 +28,8 @@ export async function enforceRouteAuth(pathname: string, search?: string) {
     return { session: true };
   }
 
-  if (
-    isPublicRoute &&
-    !isTwoFactorRoute &&
-    hasAccessTokenCookie() &&
-    isSessionRecentlyVerified()
-  ) {
-    const nextParam = new URLSearchParams(
-      search?.startsWith("?") ? search : `?${search || ""}`,
-    ).get("next");
+  if (isPublicRoute && !isTwoFactorRoute && hasAccessTokenCookie() && isSessionRecentlyVerified()) {
+    const nextParam = new URLSearchParams(search?.startsWith("?") ? search : `?${search || ""}`).get("next");
     throw redirect({ to: nextParam || "/" });
   }
 

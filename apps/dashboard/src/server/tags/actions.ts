@@ -123,9 +123,7 @@ export const toggleTagAssignmentServerFn = createServerFn({
 
   tagsLogger.debug("toggleAssignment:start", { tagId, projectId });
   try {
-    const result = await withTokenRefresh((api) =>
-      api.tags.toggleAssignment({ tagId, projectId }),
-    );
+    const result = await withTokenRefresh((api) => api.tags.toggleAssignment({ tagId, projectId }));
     tagsLogger.debug("toggleAssignment:result", {
       tagId,
       projectId,

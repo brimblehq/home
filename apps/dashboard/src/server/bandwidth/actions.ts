@@ -23,4 +23,3 @@ export const getHomeBandwidthServerFn = createServerFn({
     return api.bandwidth.get({ teamId, environmentId: environmentId || undefined }) as Promise<BandwidthSummary>;
   });
 });
-

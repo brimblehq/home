@@ -1,14 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Drawer } from "vaul";
-import {
-  Clock,
-  ChevronRight,
-  ChevronsDownUp,
-  ChevronsDown,
-  X,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+import { Clock, ChevronRight, ChevronsDownUp, ChevronsDown, X, CheckCircle2, XCircle } from "lucide-react";
 import { DownloadSimple } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { useServerFn } from "@tanstack/react-start";
@@ -36,8 +28,7 @@ const statusDotColor = {
 } as const;
 
 const urlPattern = /(https?:\/\/[^\s]+)/g;
-const errorPattern =
-  /\b(error|failed|failure|fatal|panic|exception|timed out|timeout|context canceled|cancelled)\b/i;
+const errorPattern = /\b(error|failed|failure|fatal|panic|exception|timed out|timeout|context canceled|cancelled)\b/i;
 const warningPattern = /\bwarning|deprecated\b/i;
 
 function getLogLineTone(message: string): "error" | "warning" | "default" {
@@ -113,9 +104,7 @@ function triggerFileDownload(content: string, filename: string) {
 }
 
 function downloadLogsClientFallback(logs: DeploymentDrawerLogEntry[]) {
-  const text = logs
-    .map((l) => `[${l.timestamp}] ${l.message}`)
-    .join("\n");
+  const text = logs.map((l) => `[${l.timestamp}] ${l.message}`).join("\n");
   triggerFileDownload(text, `deployment-logs-${Date.now()}.log`);
 }
 
@@ -135,9 +124,7 @@ export function DeploymentLogsDrawer({
   const downloadFromApi = useServerFn(downloadDeploymentLogsServerFn as any) as (args: {
     data: { projectId: string; logId: string; workspace?: string };
   }) => Promise<{ content: string; filename: string }>;
-  const [collapsedSections, setCollapsedSections] = useState<Set<number>>(
-    new Set(),
-  );
+  const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set());
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -161,9 +148,7 @@ export function DeploymentLogsDrawer({
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [autoScroll, open, logs, collapsedSections]);
 
-  const successCount = logs.filter(
-    (l) => l.type === "section" && l.status === "success",
-  ).length;
+  const successCount = logs.filter((l) => l.type === "section" && l.status === "success").length;
   const errorCount = logs.filter((l) => {
     if (l.type === "section" && l.status === "error") {
       return true;
@@ -239,9 +224,7 @@ export function DeploymentLogsDrawer({
       currentSectionIndex = i;
       visibleRows.push({ log, index: i });
     } else {
-      const isCollapsed =
-        currentSectionIndex !== null &&
-        collapsedSections.has(currentSectionIndex);
+      const isCollapsed = currentSectionIndex !== null && collapsedSections.has(currentSectionIndex);
       if (!isCollapsed) {
         visibleRows.push({ log, index: i });
       }
@@ -265,12 +248,7 @@ export function DeploymentLogsDrawer({
   }
 
   return (
-    <Drawer.Root
-      open={open}
-      onOpenChange={onOpenChange}
-      direction="bottom"
-      modal={false}
-    >
+    <Drawer.Root open={open} onOpenChange={onOpenChange} direction="bottom" modal={false}>
       <Drawer.Portal>
         <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 flex flex-col outline-none">
           <motion.div
@@ -289,9 +267,7 @@ export function DeploymentLogsDrawer({
             <div className="flex shrink-0 items-center justify-between border-b-[0.5px] border-[#e5e5e5] px-5 pb-3.5 dark:border-dash-border">
               <div className="flex items-center gap-2">
                 <Clock className="size-4 text-dash-text-faded" />
-                <span className="text-sm leading-[1.3] tracking-[-0.0224px] text-dash-text-strong">
-                  Run History
-                </span>
+                <span className="text-sm leading-[1.3] tracking-[-0.0224px] text-dash-text-strong">Run History</span>
               </div>
 
               <div className="flex flex-1 items-center justify-end gap-6">
@@ -299,17 +275,13 @@ export function DeploymentLogsDrawer({
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-0.5 p-0.5">
                     <CheckCircle2 className="size-3 text-[#13d282]" />
-                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">
-                      [{successCount}]
-                    </span>
+                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">[{successCount}]</span>
                   </div>
                   <div className="flex items-center gap-0.5 p-0.5">
                     <span className="flex size-3 items-center justify-center rounded-full bg-[#fc391e]">
                       <X className="size-[5px] text-white" strokeWidth={3} />
                     </span>
-                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">
-                      [{errorCount}]
-                    </span>
+                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-faded">[{errorCount}]</span>
                   </div>
                 </div>
 
@@ -326,9 +298,7 @@ export function DeploymentLogsDrawer({
                     className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                   >
                     <ChevronsDown className="size-4" />
-                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">
-                      Bottom
-                    </span>
+                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">Bottom</span>
                   </button>
                   <button
                     onClick={async () => {
@@ -351,27 +321,21 @@ export function DeploymentLogsDrawer({
                     className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                   >
                     <DownloadSimple className="size-4" />
-                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">
-                      Download
-                    </span>
+                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">Download</span>
                   </button>
                   <button
                     onClick={collapseAll}
                     className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                   >
                     <ChevronsDownUp className="size-4" />
-                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">
-                      Collapse
-                    </span>
+                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">Collapse</span>
                   </button>
                   <button
                     onClick={() => onOpenChange(false)}
                     className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
                   >
                     <X className="size-4" />
-                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">
-                      Close
-                    </span>
+                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">Close</span>
                   </button>
                 </div>
               </div>
@@ -387,10 +351,7 @@ export function DeploymentLogsDrawer({
                 <tbody>
                   {loading ? (
                     Array.from({ length: 10 }).map((_, index) => (
-                      <tr
-                        key={`skeleton-${index}`}
-                        className="border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]"
-                      >
+                      <tr key={`skeleton-${index}`} className="border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]">
                         <td className="align-top">
                           <div className="flex items-center gap-3 py-2.5 pl-5 pr-2">
                             <div className="h-3.5 w-3.5 animate-pulse rounded bg-dash-border-soft" />
@@ -406,106 +367,92 @@ export function DeploymentLogsDrawer({
                     ))
                   ) : visibleRows.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={2}
-                        className="px-5 py-8 text-center text-sm text-dash-text-faded"
-                      >
+                      <td colSpan={2} className="px-5 py-8 text-center text-sm text-dash-text-faded">
                         {emptyMessage}
                       </td>
                     </tr>
                   ) : (
                     visibleRows.map(({ log, index }) => {
-                    const isSection = log.type === "section";
-                    const isCollapsed = collapsedSections.has(index);
-                    const canCollapse = isSection ? sectionHasChildren(index) : false;
-                    const detailTone = getLogLineTone(log.message);
-                    const detailClasses = getDetailToneClasses(detailTone);
+                      const isSection = log.type === "section";
+                      const isCollapsed = collapsedSections.has(index);
+                      const canCollapse = isSection ? sectionHasChildren(index) : false;
+                      const detailTone = getLogLineTone(log.message);
+                      const detailClasses = getDetailToneClasses(detailTone);
 
-                    let rowClassName =
-                      "border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]";
-                    if (!isSection && detailClasses.row) {
-                      rowClassName = `${rowClassName} ${detailClasses.row}`;
-                    }
+                      let rowClassName = "border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]";
+                      if (!isSection && detailClasses.row) {
+                        rowClassName = `${rowClassName} ${detailClasses.row}`;
+                      }
 
-                    return (
-                      <tr
-                        key={index}
-                        className={rowClassName}
-                      >
-                        <td className="align-top">
-                          {isSection ? (
-                            <button
-                              onClick={() => {
-                                if (!canCollapse) {
-                                  copyLogLine(log, index);
-                                  return;
-                                }
+                      return (
+                        <tr key={index} className={rowClassName}>
+                          <td className="align-top">
+                            {isSection ? (
+                              <button
+                                onClick={() => {
+                                  if (!canCollapse) {
+                                    copyLogLine(log, index);
+                                    return;
+                                  }
 
-                                toggleSection(index);
-                              }}
-                              onDoubleClick={() => copyLogLine(log, index)}
-                              className="flex w-full items-center gap-3 py-2.5 pl-5 pr-2 text-left transition-colors hover:bg-dash-bg-elevated"
-                            >
-                              {canCollapse ? (
-                                <ChevronRight
-                                  className={`size-3.5 shrink-0 text-dash-text-faded transition-transform duration-150 ${
-                                    !isCollapsed ? "rotate-90" : ""
-                                  }`}
-                                />
-                              ) : (
-                                <span className="size-3.5 shrink-0" />
-                              )}
-                              {log.status === "success" && (
-                                <CheckCircle2 className="size-3.5 shrink-0 text-[#13d282]" />
-                              )}
-                              {log.status === "error" && (
-                                <XCircle className="size-3.5 shrink-0 text-[#fc391e]" />
-                              )}
-                              <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-strong">
-                                {renderLogTextWithLinks(log.message)}
-                              </span>
-                              {copiedRowIndex === index && (
-                                <span className="ml-auto shrink-0 font-logs text-[10px] uppercase tracking-wider text-[#13d282]">
-                                  Copied
-                                </span>
-                              )}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => copyLogLine(log, index)}
-                              className="flex w-full items-start gap-3 py-2.5 pl-12 pr-2 text-left transition-colors hover:bg-dash-bg-elevated"
-                            >
-                              <span
-                                className={`flex-1 whitespace-pre-wrap font-logs text-xs leading-[1.4] tracking-[-0.01px] ${detailClasses.text}`}
+                                  toggleSection(index);
+                                }}
+                                onDoubleClick={() => copyLogLine(log, index)}
+                                className="flex w-full items-center gap-3 py-2.5 pl-5 pr-2 text-left transition-colors hover:bg-dash-bg-elevated"
                               >
-                                {renderLogTextWithLinks(log.message, detailClasses.link)}
-                              </span>
-                              {copiedRowIndex === index && (
-                                <span className="shrink-0 font-logs text-[10px] uppercase tracking-wider text-[#13d282]">
-                                  Copied
+                                {canCollapse ? (
+                                  <ChevronRight
+                                    className={`size-3.5 shrink-0 text-dash-text-faded transition-transform duration-150 ${
+                                      !isCollapsed ? "rotate-90" : ""
+                                    }`}
+                                  />
+                                ) : (
+                                  <span className="size-3.5 shrink-0" />
+                                )}
+                                {log.status === "success" && <CheckCircle2 className="size-3.5 shrink-0 text-[#13d282]" />}
+                                {log.status === "error" && <XCircle className="size-3.5 shrink-0 text-[#fc391e]" />}
+                                <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-strong">
+                                  {renderLogTextWithLinks(log.message)}
                                 </span>
-                              )}
-                            </button>
-                          )}
-                        </td>
+                                {copiedRowIndex === index && (
+                                  <span className="ml-auto shrink-0 font-logs text-[10px] uppercase tracking-wider text-[#13d282]">
+                                    Copied
+                                  </span>
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => copyLogLine(log, index)}
+                                className="flex w-full items-start gap-3 py-2.5 pl-12 pr-2 text-left transition-colors hover:bg-dash-bg-elevated"
+                              >
+                                <span
+                                  className={`flex-1 whitespace-pre-wrap font-logs text-xs leading-[1.4] tracking-[-0.01px] ${detailClasses.text}`}
+                                >
+                                  {renderLogTextWithLinks(log.message, detailClasses.link)}
+                                </span>
+                                {copiedRowIndex === index && (
+                                  <span className="shrink-0 font-logs text-[10px] uppercase tracking-wider text-[#13d282]">Copied</span>
+                                )}
+                              </button>
+                            )}
+                          </td>
 
-                        <td className="w-[100px] border-l-[0.5px] border-[#e5e5e5] align-top dark:border-[#2a2a2b] sm:w-[200px]">
-                          <div className="whitespace-nowrap py-2.5 pl-4 pr-3">
-                            <span
-                              className={`font-logs text-xs leading-[1.4] tracking-[-0.01px] ${
-                                isSection
-                                  ? "text-dash-text-strong"
-                                  : detailClasses.timestamp
-                              }`}
-                            >
-                              {log.timestamp}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }))}
+                          <td className="w-[100px] border-l-[0.5px] border-[#e5e5e5] align-top dark:border-[#2a2a2b] sm:w-[200px]">
+                            <div className="whitespace-nowrap py-2.5 pl-4 pr-3">
+                              <span
+                                className={`font-logs text-xs leading-[1.4] tracking-[-0.01px] ${
+                                  isSection ? "text-dash-text-strong" : detailClasses.timestamp
+                                }`}
+                              >
+                                {log.timestamp}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -514,13 +461,9 @@ export function DeploymentLogsDrawer({
             <div className="flex shrink-0 items-center border-t-[0.5px] border-[#e5e5e5] px-5 py-3.5 dark:border-dash-border">
               <div className="flex items-center gap-2">
                 <span className="flex size-4 items-center justify-center">
-                  <span
-                    className={`size-1.5 rounded-full ${statusDotColor[status]}`}
-                  />
+                  <span className={`size-1.5 rounded-full ${statusDotColor[status]}`} />
                 </span>
-                <span className="text-sm leading-[1.3] tracking-[-0.0224px] text-dash-text-strong">
-                  {environment} environment
-                </span>
+                <span className="text-sm leading-[1.3] tracking-[-0.0224px] text-dash-text-strong">{environment} environment</span>
               </div>
             </div>
           </motion.div>

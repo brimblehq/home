@@ -16,11 +16,7 @@ export function canWorkspaceRoleWrite(role: WorkspaceRole | null): boolean {
   return role === "Creator" || role === "Administrator" || role === "Member";
 }
 
-export function resolveCurrentWorkspaceRole(
-  team: TeamDetails | null,
-  userId?: string,
-  email?: string,
-): WorkspaceRole | null {
+export function resolveCurrentWorkspaceRole(team: TeamDetails | null, userId?: string, email?: string): WorkspaceRole | null {
   if (!team?.members?.length) return null;
   const me = team.members.find((m) => {
     const mUid = m.userId?.trim();

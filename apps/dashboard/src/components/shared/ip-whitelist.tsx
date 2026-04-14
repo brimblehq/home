@@ -81,17 +81,12 @@ export function IpWhitelist({
           ))}
         </AnimatePresence>
       </div>
-      <button
-        onClick={onAdd}
-        className="mt-2 flex items-center gap-1.5 text-sm text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
-      >
+      <button onClick={onAdd} className="mt-2 flex items-center gap-1.5 text-sm text-[#4879f8] transition-colors hover:text-[#3a6ae6]">
         <Plus className="size-3.5" />
         Add IP address
       </button>
       {ips.length === 0 && (
-        <p className="mt-2 text-xs text-dash-text-extra-faded">
-          No IPs whitelisted. Only Brimble internal services will have access.
-        </p>
+        <p className="mt-2 text-xs text-dash-text-extra-faded">No IPs whitelisted. Only Brimble internal services will have access.</p>
       )}
     </div>
   );

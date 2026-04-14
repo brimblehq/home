@@ -5,10 +5,7 @@ import type { PaginatedDeploymentsResponse } from "@/backend/deployments";
 const ACTIVE_STATUSES = new Set(["inprogress", "pending", "queued"]);
 const POLL_INTERVAL = 5000;
 
-export function useHasActiveDeployment(
-  projectId: string | undefined,
-  workspace?: string,
-): boolean {
+export function useHasActiveDeployment(projectId: string | undefined, workspace?: string): boolean {
   const [hasActive, setHasActive] = useState(false);
   const hasActiveRef = useRef(false);
 
@@ -19,13 +16,15 @@ export function useHasActiveDeployment(
     }
 
     try {
-      const result = await (listDeploymentsServerFn as unknown as (input: {
-        data: {
-          projectId: string;
-          workspace?: string;
-          limit?: number;
-        };
-      }) => Promise<PaginatedDeploymentsResponse>)({
+      const result = await (
+        listDeploymentsServerFn as unknown as (input: {
+          data: {
+            projectId: string;
+            workspace?: string;
+            limit?: number;
+          };
+        }) => Promise<PaginatedDeploymentsResponse>
+      )({
         data: {
           projectId,
           workspace,
@@ -33,10 +32,7 @@ export function useHasActiveDeployment(
         },
       });
 
-      const active =
-        result?.items?.some((item) =>
-          ACTIVE_STATUSES.has(item.status?.trim().toLowerCase() ?? ""),
-        ) ?? false;
+      const active = result?.items?.some((item) => ACTIVE_STATUSES.has(item.status?.trim().toLowerCase() ?? "")) ?? false;
 
       if (active !== hasActiveRef.current) {
         hasActiveRef.current = active;

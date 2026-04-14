@@ -1,14 +1,6 @@
 import type { ApiClient, ApiListResponse } from "./types";
 import { notImplemented } from "./utils";
-import {
-  asNonEmptyString,
-  asRecord,
-  asString,
-  pickBoolean,
-  pickNonEmptyString,
-  pickNumber,
-  pickString,
-} from "./normalize";
+import { asNonEmptyString, asRecord, asString, pickBoolean, pickNonEmptyString, pickNumber, pickString } from "./normalize";
 
 export interface Project {
   id: string;
@@ -194,14 +186,8 @@ export interface ProjectsApi {
       payload?: Record<string, unknown>;
     },
   ): Promise<{ id?: string; message?: string }>;
-  databaseBackup(
-    projectId: string,
-    input?: { teamId?: string },
-  ): Promise<{ message?: string }>;
-  databaseRefresh(
-    projectId: string,
-    input?: { teamId?: string },
-  ): Promise<{ message?: string }>;
+  databaseBackup(projectId: string, input?: { teamId?: string }): Promise<{ message?: string }>;
+  databaseRefresh(projectId: string, input?: { teamId?: string }): Promise<{ message?: string }>;
   updateDatabaseConfig(
     projectId: string,
     input: {
@@ -229,10 +215,7 @@ export interface ProjectsApi {
       teamId?: string;
     },
   ): Promise<{ message?: string }>;
-  unlinkRepo(
-    projectId: string,
-    input?: { teamId?: string },
-  ): Promise<{ message?: string }>;
+  unlinkRepo(projectId: string, input?: { teamId?: string }): Promise<{ message?: string }>;
 }
 
 export interface PaginatedProjectsResponse extends ApiListResponse<Project> {
@@ -272,9 +255,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
     const passwordEnabled = pickBoolean(row, "passwordEnabled", "password_enabled");
     const domain = pickNonEmptyString(row, "domain");
     const previewUrl = pickString(row, "previewUrl", "url");
-    const gitLink =
-      pickNonEmptyString(row, "gitLink") ??
-      pickNonEmptyString(repoRecord, "url", "html_url");
+    const gitLink = pickNonEmptyString(row, "gitLink") ?? pickNonEmptyString(repoRecord, "url", "html_url");
     const statusCode = pickNumber(row, "statusCode", "status_code");
     const connectionUri = pickNonEmptyString(row, "connectionUri", "connection_uri");
 
@@ -298,9 +279,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
 
     let whiteListedIps: string[] | undefined;
     if (Array.isArray(row.whiteListedIps)) {
-      whiteListedIps = row.whiteListedIps
-        .filter((ip: unknown) => typeof ip === "string")
-        .map((ip: string) => ip);
+      whiteListedIps = row.whiteListedIps.filter((ip: unknown) => typeof ip === "string").map((ip: string) => ip);
     }
 
     let autoscalingGroup: Project["autoscalingGroup"] = null;
@@ -346,12 +325,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
             .filter((allocation: any) => allocation && typeof allocation === "object")
             .map((allocation: any) => {
               const rawId = allocation?.ID ?? allocation?.id;
-              const id =
-                rawId && typeof rawId === "object" && rawId.$oid
-                  ? String(rawId.$oid)
-                  : rawId != null
-                    ? String(rawId)
-                    : undefined;
+              const id = rawId && typeof rawId === "object" && rawId.$oid ? String(rawId.$oid) : rawId != null ? String(rawId) : undefined;
 
               const container =
                 typeof allocation?.Container === "string"
@@ -366,10 +340,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
         : [];
 
       job = {
-        commonContainer:
-          typeof project.job.commonContainer === "string"
-            ? project.job.commonContainer
-            : undefined,
+        commonContainer: typeof project.job.commonContainer === "string" ? project.job.commonContainer : undefined,
         allocations,
       };
     }
@@ -392,21 +363,8 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
         .trim()
         .toLowerCase()
         .replace(/\s+/g, "-"),
-      projectEnvironmentId:
-        pickString(
-          row,
-          "projectEnvironmentId",
-          "project_environment_id",
-          "environmentId",
-          "environment_id",
-        ) ?? null,
-      inheritEnvironmentVars:
-        pickBoolean(
-          row,
-          "inheritEnvironmentVars",
-          "inherit_environment_vars",
-          "inheritEnvVars",
-        ) ?? undefined,
+      projectEnvironmentId: pickString(row, "projectEnvironmentId", "project_environment_id", "environmentId", "environment_id") ?? null,
+      inheritEnvironmentVars: pickBoolean(row, "inheritEnvironmentVars", "inherit_environment_vars", "inheritEnvVars") ?? undefined,
       logId: pickString(row, "logId", "logID"),
       screenshot: pickNonEmptyString(row, "screenshot"),
       framework: asString(row.framework),
@@ -414,10 +372,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       updatedAt: asString(row.updatedAt),
       status: asString(row.status),
       region,
-      serviceType:
-        asString(row.serviceType) ??
-        asString(row.service_type) ??
-        asString(row.type),
+      serviceType: asString(row.serviceType) ?? asString(row.service_type) ?? asString(row.type),
       authEnabled,
       buildCacheEnabled,
       hasUpdates,
@@ -460,14 +415,15 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
             branch: asString(repoRecord.branch),
             git: asString(repoRecord.git),
             installationId:
-              (typeof repoRecord.installationId === "string" ||
-                typeof repoRecord.installationId === "number")
+              typeof repoRecord.installationId === "string" || typeof repoRecord.installationId === "number"
                 ? repoRecord.installationId
                 : undefined,
           }
         : undefined,
       tags,
-      log: asRecord(row.log) ? { id: asString(asRecord(row.log)?.id) || asString(asRecord(row.log)?._id), message: asString(asRecord(row.log)?.message) } : undefined,
+      log: asRecord(row.log)
+        ? { id: asString(asRecord(row.log)?.id) || asString(asRecord(row.log)?._id), message: asString(asRecord(row.log)?.message) }
+        : undefined,
       job,
     };
   }
@@ -477,10 +433,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       const environmentId = input?.environmentId?.trim() || undefined;
       const response = await client.request<any>(listEndpoint, {
         method: "GET",
-        headers:
-          input?.useEnvironmentHeader && environmentId
-            ? { "x-brimble-environment": environmentId }
-            : undefined,
+        headers: input?.useEnvironmentHeader && environmentId ? { "x-brimble-environment": environmentId } : undefined,
         query: {
           q: input?.q,
           serviceType: input?.serviceType,
@@ -494,11 +447,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
-      const rawProjects = Array.isArray(root?.projects)
-        ? root.projects
-        : Array.isArray(root)
-          ? root
-          : [];
+      const rawProjects = Array.isArray(root?.projects) ? root.projects : Array.isArray(root) ? root : [];
 
       const rootRecord = asRecord(root);
       const total = pickNumber(rootRecord, "total", "count", "overallTotalProjects") ?? rawProjects.length;
@@ -541,19 +490,14 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       return mapProject(root);
     },
     async getScreenshot(projectId) {
-      const response = await client.request<any>(
-        `${listEndpoint}/${encodeURIComponent(projectId)}/screenshot`,
-        {
-          method: "GET",
-        },
-      );
+      const response = await client.request<any>(`${listEndpoint}/${encodeURIComponent(projectId)}/screenshot`, {
+        method: "GET",
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? null;
       const rootRecord = asRecord(root);
 
-      const screenshotUrl =
-        asNonEmptyString(root) ??
-        pickNonEmptyString(rootRecord, "screenshot", "url");
+      const screenshotUrl = asNonEmptyString(root) ?? pickNonEmptyString(rootRecord, "screenshot", "url");
       if (screenshotUrl) {
         return screenshotUrl;
       }
@@ -561,18 +505,15 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       return null;
     },
     async redeploy(projectId, input) {
-      const response = await client.request<any>(
-        `${listEndpoint}/${encodeURIComponent(projectId)}/redeploy`,
-        {
-          method: "POST",
-          body: {
-            ...(input?.payload || {}),
-            logId: input?.logId,
-            startOnly: input?.startOnly,
-          },
-          query: { teamId: input?.teamId },
+      const response = await client.request<any>(`${listEndpoint}/${encodeURIComponent(projectId)}/redeploy`, {
+        method: "POST",
+        body: {
+          ...(input?.payload || {}),
+          logId: input?.logId,
+          startOnly: input?.startOnly,
         },
-      );
+        query: { teamId: input?.teamId },
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rootRecord = asRecord(root);
@@ -617,21 +558,18 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       };
     },
     async updateDatabaseConfig(projectId, input) {
-      const response = await client.request<any>(
-        `/core/v1/projects/database/${encodeURIComponent(projectId)}`,
-        {
-          method: "PUT",
-          query: {
-            teamId: input?.teamId,
-          },
-          body: {
-            name: input.name,
-            password: input.password,
-            configurations: input.configurations ?? null,
-            whitelistedIps: input.whitelistedIps ?? [],
-          },
+      const response = await client.request<any>(`/core/v1/projects/database/${encodeURIComponent(projectId)}`, {
+        method: "PUT",
+        query: {
+          teamId: input?.teamId,
         },
-      );
+        body: {
+          name: input.name,
+          password: input.password,
+          configurations: input.configurations ?? null,
+          whitelistedIps: input.whitelistedIps ?? [],
+        },
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rootRecord = asRecord(root);
@@ -684,11 +622,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       const rootRecord = asRecord(root);
       const nestedData = asRecord(rootRecord?.data);
 
-      return (
-        pickBoolean(rootRecord, "valid", "isValid", "success") ??
-        pickBoolean(nestedData, "valid", "isValid", "success") ??
-        false
-      );
+      return pickBoolean(rootRecord, "valid", "isValid", "success") ?? pickBoolean(nestedData, "valid", "isValid", "success") ?? false;
     },
     async listAvailableDatabases() {
       const response = await client.request<any>("/core/v1/projects/available-databases", {
@@ -724,20 +658,19 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
             : [];
 
           const recommendations = Array.isArray(row.recommendations)
-            ? row.recommendations
-                .map((rec) => {
-                  const recRow = asRecord(rec) ?? {};
-                  const computeRow = asRecord(recRow.compute);
-                  return {
-                    compute: computeRow
-                      ? {
-                          memory: pickNumber(computeRow, "memory"),
-                          cpu: pickNumber(computeRow, "cpu"),
-                          storage: pickNumber(computeRow, "storage"),
-                        }
-                      : undefined,
-                  };
-                })
+            ? row.recommendations.map((rec) => {
+                const recRow = asRecord(rec) ?? {};
+                const computeRow = asRecord(recRow.compute);
+                return {
+                  compute: computeRow
+                    ? {
+                        memory: pickNumber(computeRow, "memory"),
+                        cpu: pickNumber(computeRow, "cpu"),
+                        storage: pickNumber(computeRow, "storage"),
+                      }
+                    : undefined,
+                };
+              })
             : [];
 
           return {
@@ -780,31 +713,24 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       };
     },
     async updateEnvironment(projectId, input) {
-      const response = await client.request<any>(
-        `${listEndpoint}/${encodeURIComponent(projectId)}/environment`,
-        {
-          method: "PATCH",
-          query: {
-            teamId: input.teamId,
-          },
-          body: {
-            environmentId: input.environmentId,
-            inheritEnvVars: input.inheritEnvVars,
-          },
+      const response = await client.request<any>(`${listEndpoint}/${encodeURIComponent(projectId)}/environment`, {
+        method: "PATCH",
+        query: {
+          teamId: input.teamId,
         },
-      );
+        body: {
+          environmentId: input.environmentId,
+          inheritEnvVars: input.inheritEnvVars,
+        },
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rootRecord = asRecord(root) ?? {};
 
       return {
         id: pickString(rootRecord, "id", "_id") ?? projectId,
-        environmentId:
-          pickString(rootRecord, "environmentId", "environment_id") ??
-          input.environmentId,
-        inheritEnvVars:
-          pickBoolean(rootRecord, "inheritEnvVars", "inherit_environment_vars") ??
-          Boolean(input.inheritEnvVars),
+        environmentId: pickString(rootRecord, "environmentId", "environment_id") ?? input.environmentId,
+        inheritEnvVars: pickBoolean(rootRecord, "inheritEnvVars", "inherit_environment_vars") ?? Boolean(input.inheritEnvVars),
       };
     },
     update: () => notImplemented<Project>("projects", "update"),
@@ -814,26 +740,20 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       });
     },
     async linkRepo(projectId, input) {
-      const response = await client.request<any>(
-        `${listEndpoint}/link/${encodeURIComponent(projectId)}`,
-        {
-          method: "POST",
-          body: { type: "repo", repo: input.repo },
-          query: { teamId: input.teamId },
-        },
-      );
+      const response = await client.request<any>(`${listEndpoint}/link/${encodeURIComponent(projectId)}`, {
+        method: "POST",
+        body: { type: "repo", repo: input.repo },
+        query: { teamId: input.teamId },
+      });
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       return { message: pickString(asRecord(root), "message") };
     },
     async unlinkRepo(projectId, input) {
-      const response = await client.request<any>(
-        `${listEndpoint}/unlink/${encodeURIComponent(projectId)}`,
-        {
-          method: "POST",
-          body: { type: "repo" },
-          query: { teamId: input?.teamId },
-        },
-      );
+      const response = await client.request<any>(`${listEndpoint}/unlink/${encodeURIComponent(projectId)}`, {
+        method: "POST",
+        body: { type: "repo" },
+        query: { teamId: input?.teamId },
+      });
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       return { message: pickString(asRecord(root), "message") };
     },

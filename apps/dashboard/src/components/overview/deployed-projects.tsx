@@ -10,11 +10,7 @@ function getCreateCardSpan(projectCount: number) {
 
   return [
     smRemaining >= 2 ? "sm:col-span-2" : "",
-    lgRemaining >= 3
-      ? "lg:col-span-3"
-      : lgRemaining >= 2
-        ? "lg:col-span-2"
-        : "lg:col-span-1",
+    lgRemaining >= 3 ? "lg:col-span-3" : lgRemaining >= 2 ? "lg:col-span-2" : "lg:col-span-1",
   ]
     .filter(Boolean)
     .join(" ");
@@ -38,9 +34,7 @@ export function DeployedProjects({
 
   return (
     <div className="mb-8">
-      <PageHeader title="Deployed projects">
-        {usageCopy}
-      </PageHeader>
+      <PageHeader title="Deployed projects">{usageCopy}</PageHeader>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {projects.map((project, i) => (

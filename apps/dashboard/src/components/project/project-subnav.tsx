@@ -1,30 +1,9 @@
-import {
-  useState,
-  useRef,
-  useEffect,
-  useLayoutEffect,
-  useCallback,
-} from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@brimble/ui";
-import {
-  Link,
-  getRouteApi,
-  useNavigate,
-  useRouter,
-  useRouterState,
-} from "@tanstack/react-router";
+import { Link, getRouteApi, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  Star,
-  Share2,
-  Check,
-  Plug,
-  Bolt,
-  ArrowUp,
-  ChevronDown,
-  MoreHorizontal,
-} from "lucide-react";
+import { Star, Share2, Check, Plug, Bolt, ArrowUp, ChevronDown, MoreHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
@@ -106,9 +85,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const router = useRouter();
   const navigate = useNavigate();
-  const redeployProject = useServerFn(
-    redeployProjectServerFn as any,
-  ) as (args: {
+  const redeployProject = useServerFn(redeployProjectServerFn as any) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -121,17 +98,13 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
       workspace?: string;
     };
   }) => Promise<{ success: boolean }>;
-  const backupDatabase = useServerFn(
-    backupDatabaseProjectServerFn as any,
-  ) as (args: {
+  const backupDatabase = useServerFn(backupDatabaseProjectServerFn as any) as (args: {
     data: {
       projectId: string;
       workspace?: string;
     };
   }) => Promise<{ message?: string }>;
-  const refreshDatabase = useServerFn(
-    refreshDatabaseProjectServerFn as any,
-  ) as (args: {
+  const refreshDatabase = useServerFn(refreshDatabaseProjectServerFn as any) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -155,17 +128,13 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        redeployRef.current &&
-        !redeployRef.current.contains(e.target as Node)
-      ) {
+      if (redeployRef.current && !redeployRef.current.contains(e.target as Node)) {
         setRedeployOpen(false);
       }
     }
     if (redeployOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [redeployOpen]);
 
@@ -200,10 +169,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        overflowTriggerRef.current?.contains(e.target as Node) ||
-        overflowMenuRef.current?.contains(e.target as Node)
-      ) {
+      if (overflowTriggerRef.current?.contains(e.target as Node) || overflowMenuRef.current?.contains(e.target as Node)) {
         return;
       }
       if (overflowOpen) {
@@ -213,8 +179,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
     if (overflowOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [overflowOpen]);
 
@@ -225,16 +190,11 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   const actualProjectId = parentLoaderData?.project?.id || projectId;
   const projectName = parentLoaderData?.project?.name || projectId;
   const project = parentLoaderData?.project;
-  const workspaceParam =
-    new URLSearchParams(searchStr || "").get("workspace") || undefined;
-  const hasActiveDeployment = useHasActiveDeployment(
-    actualProjectId,
-    workspaceParam,
-  );
+  const workspaceParam = new URLSearchParams(searchStr || "").get("workspace") || undefined;
+  const hasActiveDeployment = useHasActiveDeployment(actualProjectId, workspaceParam);
   const databaseProject = isDatabaseProject(project as any);
   const databaseStatus = String(project?.status || "").toUpperCase();
-  const canOpenDatabaseConnection =
-    databaseProject && databaseStatus === "ACTIVE";
+  const canOpenDatabaseConnection = databaseProject && databaseStatus === "ACTIVE";
 
   const domainsEnabled = useFeatureFlag(FeatureFlags.ENABLE_DOMAINS);
   const deploymentsEnabled = useFeatureFlag(FeatureFlags.ENABLE_DEPLOYMENTS);
@@ -242,38 +202,23 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   const webAnalyticsEnabled = useFeatureFlag(FeatureFlags.ENABLE_WEB_ANALYTICS);
 
   const tabs = baseTabs.filter((tab) => {
-    if (
-      tab.slug === "observability" &&
-      !shouldShowProjectObservabilityTab(project as any)
-    ) {
+    if (tab.slug === "observability" && !shouldShowProjectObservabilityTab(project as any)) {
       return false;
     }
 
-    if (
-      tab.slug === "web-analytics" &&
-      (!webAnalyticsEnabled || !shouldShowProjectWebAnalyticsTab(project as any))
-    ) {
+    if (tab.slug === "web-analytics" && (!webAnalyticsEnabled || !shouldShowProjectWebAnalyticsTab(project as any))) {
       return false;
     }
 
-    if (
-      tab.slug === "domains" &&
-      (!domainsEnabled || !shouldShowProjectDomainsTab(project as any))
-    ) {
+    if (tab.slug === "domains" && (!domainsEnabled || !shouldShowProjectDomainsTab(project as any))) {
       return false;
     }
 
-    if (
-      tab.slug === "deployment-history" &&
-      (!deploymentsEnabled || !shouldShowDeploymentHistoryTab(project as any))
-    ) {
+    if (tab.slug === "deployment-history" && (!deploymentsEnabled || !shouldShowDeploymentHistoryTab(project as any))) {
       return false;
     }
 
-    if (
-      tab.slug === "environment" &&
-      !shouldShowProjectEnvironmentTab(project as any)
-    ) {
+    if (tab.slug === "environment" && !shouldShowProjectEnvironmentTab(project as any)) {
       return false;
     }
 
@@ -284,13 +229,10 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     return true;
   });
   const tabsWithPath = tabs.map((tab) => {
-    const tabPath = tab.slug
-      ? `/projects/${projectId}/${tab.slug}`
-      : `/projects/${projectId}`;
+    const tabPath = tab.slug ? `/projects/${projectId}/${tab.slug}` : `/projects/${projectId}`;
     const isActive = tab.slug
       ? pathname === tabPath || pathname === `${tabPath}/`
-      : pathname === `/projects/${projectId}` ||
-        pathname === `/projects/${projectId}/`;
+      : pathname === `/projects/${projectId}` || pathname === `/projects/${projectId}/`;
 
     return {
       ...tab,
@@ -349,10 +291,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     } catch (error: any) {
       toast.error("Failed to redeploy project", {
         id: toastId,
-        description:
-          typeof error?.message === "string"
-            ? error.message
-            : "Please try again.",
+        description: typeof error?.message === "string" ? error.message : "Please try again.",
       });
     } finally {
       setDeploying(false);
@@ -385,10 +324,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     } catch (error: any) {
       toast.error("Failed to initiate backup", {
         id: toastId,
-        description:
-          typeof error?.message === "string"
-            ? error.message
-            : "Please try again.",
+        description: typeof error?.message === "string" ? error.message : "Please try again.",
       });
     } finally {
       setBackingUp(false);
@@ -421,10 +357,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     } catch (error: any) {
       toast.error("Failed to update database", {
         id: toastId,
-        description:
-          typeof error?.message === "string"
-            ? error.message
-            : "Please try again.",
+        description: typeof error?.message === "string" ? error.message : "Please try again.",
       });
     } finally {
       setRefreshingDb(false);
@@ -433,10 +366,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <div
-        data-subnav
-        className="flex items-center justify-between border-b-[0.5px] border-dash-border"
-      >
+      <div data-subnav className="flex items-center justify-between border-b-[0.5px] border-dash-border">
         {/* Tabs */}
         <div className="scrollbar-hidden flex min-w-0 flex-1 items-start overflow-x-auto md:overflow-visible">
           {visibleTabs.map((tab) => {
@@ -461,19 +391,11 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                 <tab.Icon
                   className={cn(
                     "size-4 shrink-0",
-                    !tab.isActive &&
-                      "dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80",
+                    !tab.isActive && "dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80",
                   )}
                   weight="fill"
                 />
-                <span
-                  className={cn(
-                    "whitespace-nowrap md:inline",
-                    tab.isActive ? "inline" : "hidden",
-                  )}
-                >
-                  {tab.label}
-                </span>
+                <span className={cn("whitespace-nowrap md:inline", tab.isActive ? "inline" : "hidden")}>{tab.label}</span>
               </Link>
             );
           })}
@@ -484,16 +406,12 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
               onClick={() => setOverflowOpen((prev) => !prev)}
               className={cn(
                 "relative flex h-14 items-center px-2 transition-colors",
-                overflowHasActive
-                  ? "border-b border-[#3c6ce7] text-dash-text-strong"
-                  : "text-dash-text-faded hover:text-dash-text-body",
+                overflowHasActive ? "border-b border-[#3c6ce7] text-dash-text-strong" : "text-dash-text-faded hover:text-dash-text-body",
               )}
               aria-label="More tabs"
             >
               <MoreHorizontal className="size-4" />
-              {hasActiveDeployment && (
-                <span className="absolute right-1 top-3.5 size-2 rounded-full bg-[#fc391e]" />
-              )}
+              {hasActiveDeployment && <span className="absolute right-1 top-3.5 size-2 rounded-full bg-[#fc391e]" />}
             </button>
           )}
         </div>
@@ -517,11 +435,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                 }}
                 className="hidden items-center gap-1.5 text-sm font-light text-dash-text-body transition-colors hover:text-dash-text-strong disabled:opacity-50 md:flex"
               >
-                {backingUp ? (
-                  <Spinner size="size-3.5" />
-                ) : (
-                  <Bolt className="size-4" />
-                )}
+                {backingUp ? <Spinner size="size-3.5" /> : <Bolt className="size-4" />}
                 <span>{backingUp ? "Starting..." : "Initiate Backup"}</span>
               </button>
               {Boolean(project?.hasUpdates) && (
@@ -532,14 +446,8 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                   }}
                   className="hidden items-center gap-1.5 text-sm font-light text-dash-text-body transition-colors hover:text-dash-text-strong disabled:opacity-50 md:flex"
                 >
-                  {refreshingDb ? (
-                    <Spinner size="size-3.5" />
-                  ) : (
-                    <ArrowUp className="size-4" />
-                  )}
-                  <span>
-                    {refreshingDb ? "Updating..." : "Click to Update"}
-                  </span>
+                  {refreshingDb ? <Spinner size="size-3.5" /> : <ArrowUp className="size-4" />}
+                  <span>{refreshingDb ? "Updating..." : "Click to Update"}</span>
                 </button>
               )}
             </>
@@ -551,14 +459,8 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                 onClick={() => setRedeployOpen((v) => !v)}
                 className="flex items-center gap-1.5 text-sm font-light text-dash-text-body transition-colors hover:text-dash-text-strong disabled:opacity-50"
               >
-                {deploying ? (
-                  <Spinner size="size-3.5" />
-                ) : (
-                  <RocketLaunch className="size-4 sm:hidden" />
-                )}
-                <span className="hidden sm:inline">
-                  {deploying ? "Redeploying..." : "Redeploy"}
-                </span>
+                {deploying ? <Spinner size="size-3.5" /> : <RocketLaunch className="size-4 sm:hidden" />}
+                <span className="hidden sm:inline">{deploying ? "Redeploying..." : "Redeploy"}</span>
                 <ChevronDown className="hidden size-3.5 sm:block" />
               </button>
               <AnimatePresence>
@@ -578,9 +480,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                       Deploy latest commit
                     </button>
                     <button
-                      onClick={() =>
-                        void handleRedeploy({ logId: project?.log?.id })
-                      }
+                      onClick={() => void handleRedeploy({ logId: project?.log?.id })}
                       className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
                     >
                       <ArrowsClockwise className="size-4 shrink-0" />
@@ -614,11 +514,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
               }}
               className="text-dash-text-faded hover:text-dash-text-strong transition-colors"
             >
-              {copied ? (
-                <Check className="size-4 text-[#28c840]" />
-              ) : (
-                <Share2 className="size-4" />
-              )}
+              {copied ? <Check className="size-4 text-[#28c840]" /> : <Share2 className="size-4" />}
             </button>
             <button
               onClick={() => {
@@ -665,9 +561,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                     }}
                     className={cn(
                       "flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors",
-                      tab.isActive
-                        ? "bg-dash-bg-elevated text-dash-text-strong"
-                        : "text-dash-text-body hover:bg-dash-bg-elevated",
+                      tab.isActive ? "bg-dash-bg-elevated text-dash-text-strong" : "text-dash-text-body hover:bg-dash-bg-elevated",
                     )}
                   >
                     <tab.Icon className="size-4 shrink-0" weight="fill" />
@@ -716,10 +610,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
           } catch (error: any) {
             toast.error("Failed to delete project", {
               id: toastId,
-              description:
-                typeof error?.message === "string"
-                  ? error.message
-                  : "Please try again.",
+              description: typeof error?.message === "string" ? error.message : "Please try again.",
             });
           } finally {
             await router.invalidate();
@@ -741,11 +632,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
       >
         <div className="flex flex-col gap-2 text-left">
           <label className="text-sm leading-5 text-dash-text-faded">
-            Type{" "}
-            <span className="font-medium text-dash-text-strong">
-              {projectName}
-            </span>{" "}
-            to confirm
+            Type <span className="font-medium text-dash-text-strong">{projectName}</span> to confirm
           </label>
           <input
             type="text"

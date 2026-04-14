@@ -5,12 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 import { Dropdown, type DropdownOption } from "../shared/dropdown";
-import {
-  Modal,
-  ModalCancelButton,
-  ModalFooter,
-  ModalHeader,
-} from "../shared/modal";
+import { Modal, ModalCancelButton, ModalFooter, ModalHeader } from "../shared/modal";
 import { decryptDatabaseConnectionUriServerFn } from "@/server/projects/actions";
 import { maskSecretWithAsterisks } from "@/utils/dashboard";
 
@@ -30,14 +25,7 @@ interface ParsedConnection {
   database: string;
 }
 
-type StackKey =
-  | "nextjs"
-  | "node"
-  | "python"
-  | "go"
-  | "php"
-  | "java"
-  | "rust";
+type StackKey = "nextjs" | "node" | "python" | "go" | "php" | "java" | "rust";
 type StackGuide = {
   file: string;
   install: string;
@@ -852,12 +840,7 @@ function buildStackGuide(stack: StackKey, kind: DatabaseKind, envVar: string): S
   return buildNodeGuide(kind, envVar);
 }
 
-export function DatabaseConnectionModal({
-  open,
-  onOpenChange,
-  connectionUri,
-  isActive,
-}: DatabaseConnectionModalProps) {
+export function DatabaseConnectionModal({ open, onOpenChange, connectionUri, isActive }: DatabaseConnectionModalProps) {
   const haptics = useHaptics();
   const decryptConnectionUri = useServerFn(decryptDatabaseConnectionUriServerFn as any) as (args: {
     data: { encryptedConnectionUri: string };
@@ -883,9 +866,7 @@ export function DatabaseConnectionModal({
     if (!parsed) return "";
     return buildParamsText(parsed, showPassword);
   }, [parsed, showPassword]);
-  const guideSnippet = guideTab === "env"
-    ? envSnippetValue
-    : (activeGuide?.code || "Snippet unavailable.");
+  const guideSnippet = guideTab === "env" ? envSnippetValue : activeGuide?.code || "Snippet unavailable.";
 
   const ensureDecrypted = useCallback(async (): Promise<string> => {
     if (!connectionUri) {
@@ -987,10 +968,7 @@ export function DatabaseConnectionModal({
       const kind = resolveDatabaseKind(p.protocol);
       const nextEnvVar = connectionEnvVar(kind);
       const guide = buildStackGuide(selectedStack, kind, nextEnvVar);
-      const value =
-        guideTab === "env"
-          ? buildCopyableParams(p)
-          : guide.code;
+      const value = guideTab === "env" ? buildCopyableParams(p) : guide.code;
 
       await navigator.clipboard.writeText(value);
       haptics.light();
@@ -1021,27 +999,20 @@ export function DatabaseConnectionModal({
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} width={700}>
-      <ModalHeader
-        title="Database Connection"
-        description="Copy your connection details below."
-      />
+      <ModalHeader title="Database Connection" description="Copy your connection details below." />
 
       <div className="flex flex-col gap-5 px-6 py-5">
-        {!isActive && (
-          <p className="text-xs text-dash-text-faded">
-            Connection details are available when the database is active.
-          </p>
-        )}
+        {!isActive && <p className="text-xs text-dash-text-faded">Connection details are available when the database is active.</p>}
 
         {/* Full URI */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-[0.08em] text-dash-text-faded">
-              Connection URI
-            </span>
+            <span className="text-xs uppercase tracking-[0.08em] text-dash-text-faded">Connection URI</span>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => { void handleRevealToggle(); }}
+                onClick={() => {
+                  void handleRevealToggle();
+                }}
                 disabled={!connectionUri || decryptingUri}
                 className="flex items-center gap-1 text-xs text-dash-text-faded transition-colors hover:text-dash-text-strong disabled:opacity-40"
               >
@@ -1055,15 +1026,13 @@ export function DatabaseConnectionModal({
                 <span>{decryptingUri ? "Preparing connection details..." : revealed ? "Hide" : "Reveal"}</span>
               </button>
               <button
-                onClick={() => { void handleCopyUri(); }}
+                onClick={() => {
+                  void handleCopyUri();
+                }}
                 disabled={!connectionUri || decryptingUri}
                 className="flex items-center gap-1 text-xs text-dash-text-faded transition-colors hover:text-dash-text-strong disabled:opacity-40"
               >
-                {uriCopied ? (
-                  <Check className="size-3 text-[#13d282]" />
-                ) : (
-                  <Copy className="size-3" />
-                )}
+                {uriCopied ? <Check className="size-3 text-[#13d282]" /> : <Copy className="size-3" />}
                 <span>{uriCopied ? "Copied" : "Copy"}</span>
               </button>
             </div>
@@ -1093,9 +1062,7 @@ export function DatabaseConnectionModal({
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-xs uppercase tracking-[0.08em] text-dash-text-faded">
-                  Connection Guide
-                </span>
+                <span className="text-xs uppercase tracking-[0.08em] text-dash-text-faded">Connection Guide</span>
                 <div className="w-full sm:w-[240px]">
                   <Dropdown
                     value={selectedStack}
@@ -1110,36 +1077,25 @@ export function DatabaseConnectionModal({
 
               <div className="mt-1 mb-1.5 flex items-center justify-between gap-3 px-0.5 py-2 text-xs text-dash-text-faded">
                 <div className="min-w-0">
-                  <span className="font-medium text-dash-text-body">
-                    Install:
-                  </span>{" "}
-                  <code className="font-family-mono text-[11px] text-dash-text-body">
-                    {activeGuide?.install}
-                  </code>
+                  <span className="font-medium text-dash-text-body">Install:</span>{" "}
+                  <code className="font-family-mono text-[11px] text-dash-text-body">{activeGuide?.install}</code>
                   {activeGuide?.file ? (
                     <>
                       {" "}
-                      <span className="text-dash-text-extra-faded">|</span>{" "}
-                      <span className="font-medium text-dash-text-body">
-                        File:
-                      </span>{" "}
-                      <code className="font-family-mono text-[11px] text-dash-text-body">
-                        {activeGuide.file}
-                      </code>
+                      <span className="text-dash-text-extra-faded">|</span> <span className="font-medium text-dash-text-body">File:</span>{" "}
+                      <code className="font-family-mono text-[11px] text-dash-text-body">{activeGuide.file}</code>
                     </>
                   ) : null}
                 </div>
                 <button
                   type="button"
-                  onClick={() => { void handleCopyInstall(); }}
+                  onClick={() => {
+                    void handleCopyInstall();
+                  }}
                   className="shrink-0 text-dash-text-faded transition-colors hover:text-dash-text-strong"
                   aria-label="Copy install command"
                 >
-                  {installCopied ? (
-                    <Check className="size-3.5 text-[#13d282]" />
-                  ) : (
-                    <Copy className="size-3.5" />
-                  )}
+                  {installCopied ? <Check className="size-3.5 text-[#13d282]" /> : <Copy className="size-3.5" />}
                 </button>
               </div>
 
@@ -1149,9 +1105,7 @@ export function DatabaseConnectionModal({
                     type="button"
                     onClick={() => setGuideTab("code")}
                     className={`rounded-[3px] px-2.5 py-1 text-xs font-medium transition-colors ${
-                      guideTab === "code"
-                        ? "bg-dash-bg-elevated text-dash-text-strong"
-                        : "text-dash-text-faded hover:text-dash-text-body"
+                      guideTab === "code" ? "bg-dash-bg-elevated text-dash-text-strong" : "text-dash-text-faded hover:text-dash-text-body"
                     }`}
                   >
                     {activeGuide?.file || "Code"}
@@ -1160,9 +1114,7 @@ export function DatabaseConnectionModal({
                     type="button"
                     onClick={() => setGuideTab("env")}
                     className={`rounded-[3px] px-2.5 py-1 text-xs font-medium transition-colors ${
-                      guideTab === "env"
-                        ? "bg-dash-bg-elevated text-dash-text-strong"
-                        : "text-dash-text-faded hover:text-dash-text-body"
+                      guideTab === "env" ? "bg-dash-bg-elevated text-dash-text-strong" : "text-dash-text-faded hover:text-dash-text-body"
                     }`}
                   >
                     .env
@@ -1180,14 +1132,12 @@ export function DatabaseConnectionModal({
                     </button>
                   )}
                   <button
-                    onClick={() => { void handleCopyGuide(); }}
+                    onClick={() => {
+                      void handleCopyGuide();
+                    }}
                     className="flex items-center gap-1 text-xs text-dash-text-faded transition-colors hover:text-dash-text-strong"
                   >
-                    {guideCopied ? (
-                      <Check className="size-3 text-[#13d282]" />
-                    ) : (
-                      <Copy className="size-3" />
-                    )}
+                    {guideCopied ? <Check className="size-3 text-[#13d282]" /> : <Copy className="size-3" />}
                     <span>{guideCopied ? "Copied" : "Copy snippet"}</span>
                   </button>
                 </div>
@@ -1209,9 +1159,7 @@ export function DatabaseConnectionModal({
                   >
                     <code>
                       {highlight(guideSnippet).map((tok, i) => (
-                        <Fragment key={i}>
-                          {tok.cls ? <span className={tok.cls}>{tok.text}</span> : tok.text}
-                        </Fragment>
+                        <Fragment key={i}>{tok.cls ? <span className={tok.cls}>{tok.text}</span> : tok.text}</Fragment>
                       ))}
                     </code>
                   </motion.pre>
@@ -1254,11 +1202,7 @@ function ConnectionGuideSkeleton() {
       <div className="overflow-hidden rounded-[6px] bg-[#222528] p-4">
         <div className="space-y-2">
           {[100, 80, 92, 70, 86, 60, 95, 75].map((w, i) => (
-            <div
-              key={i}
-              className="h-3 animate-pulse rounded bg-white/10"
-              style={{ width: `${w}%` }}
-            />
+            <div key={i} className="h-3 animate-pulse rounded bg-white/10" style={{ width: `${w}%` }} />
           ))}
         </div>
       </div>

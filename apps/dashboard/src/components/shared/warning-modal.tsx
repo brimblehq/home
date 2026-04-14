@@ -46,12 +46,8 @@ export function WarningModal({
           <TriangleAlert className="size-5 text-[#ef2f1f]" />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Dialog.Title className="text-base font-medium leading-[1.4] tracking-[-0.096px] text-dash-text-strong">
-            {title}
-          </Dialog.Title>
-          <Dialog.Description className="text-sm leading-5 text-dash-text-faded">
-            {description}
-          </Dialog.Description>
+          <Dialog.Title className="text-base font-medium leading-[1.4] tracking-[-0.096px] text-dash-text-strong">{title}</Dialog.Title>
+          <Dialog.Description className="text-sm leading-5 text-dash-text-faded">{description}</Dialog.Description>
         </div>
         {children && <div className="w-full pt-1">{children}</div>}
       </div>

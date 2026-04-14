@@ -93,17 +93,12 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
 
     async getSubscription(): Promise<Subscription | null> {
       try {
-        const res = await client.request<any>(
-          `${base}/subscription/current-subscription`,
-          { method: "GET" },
-        );
+        const res = await client.request<any>(`${base}/subscription/current-subscription`, { method: "GET" });
         const data = unwrapData<any>(res);
         if (!data) return null;
 
-        const stripeId =
-          typeof data.stripe_id === "string" ? data.stripe_id.trim() : "";
-        const planType =
-          typeof data.plan_type === "string" ? data.plan_type : "";
+        const stripeId = typeof data.stripe_id === "string" ? data.stripe_id.trim() : "";
+        const planType = typeof data.plan_type === "string" ? data.plan_type : "";
 
         if (!stripeId || planType.toLowerCase() === "free") return null;
 
@@ -159,42 +154,24 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
         },
       });
       const data = unwrapData<any>(res);
-      const rawInvoices = Array.isArray(data?.invoices)
-        ? data.invoices
-        : Array.isArray(data)
-          ? data
-          : [];
+      const rawInvoices = Array.isArray(data?.invoices) ? data.invoices : Array.isArray(data) ? data : [];
 
       const items = rawInvoices.map((invoice: any) => ({
         id: String(invoice?.id ?? ""),
-        number:
-          typeof invoice?.number === "string" ? invoice.number : undefined,
+        number: typeof invoice?.number === "string" ? invoice.number : undefined,
         total: typeof invoice?.total === "string" ? invoice.total : undefined,
         status: String(invoice?.status ?? "open") as InvoicePage["items"][number]["status"],
         date: typeof invoice?.date === "string" ? invoice.date : "",
-        invoice_pdf:
-          typeof invoice?.invoice_pdf === "string"
-            ? invoice.invoice_pdf
-            : undefined,
-        hosted_invoice_url:
-          typeof invoice?.hosted_invoice_url === "string"
-            ? invoice.hosted_invoice_url
-            : undefined,
-        source:
-          invoice?.source === "subscription" || invoice?.source === "purchase"
-            ? invoice.source
-            : undefined,
+        invoice_pdf: typeof invoice?.invoice_pdf === "string" ? invoice.invoice_pdf : undefined,
+        hosted_invoice_url: typeof invoice?.hosted_invoice_url === "string" ? invoice.hosted_invoice_url : undefined,
+        source: invoice?.source === "subscription" || invoice?.source === "purchase" ? invoice.source : undefined,
         type: typeof invoice?.type === "string" ? invoice.type : undefined,
       }));
 
       return {
         items,
-        next_cursor:
-          typeof data?.next_cursor === "string" ? data.next_cursor : null,
-        previous_cursor:
-          typeof data?.previous_cursor === "string"
-            ? data.previous_cursor
-            : null,
+        next_cursor: typeof data?.next_cursor === "string" ? data.next_cursor : null,
+        previous_cursor: typeof data?.previous_cursor === "string" ? data.previous_cursor : null,
         has_more: Boolean(data?.has_more),
         per_page: Number(data?.per_page ?? perPage),
       };
@@ -214,20 +191,12 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
         const data = unwrapData<any>(res);
         return {
           status: "success",
-          message:
-            typeof res?.message === "string"
-              ? res.message
-              : "Payment processed successfully",
+          message: typeof res?.message === "string" ? res.message : "Payment processed successfully",
           reference: String(data?.reference ?? ""),
-          transaction_status: String(
-            data?.status ?? "SUCCESSFUL",
-          ) as PurchaseResult["transaction_status"],
+          transaction_status: String(data?.status ?? "SUCCESSFUL") as PurchaseResult["transaction_status"],
           amount: Number(data?.amount ?? input.amount ?? 0),
           type: String(data?.type ?? input.type),
-          metadata:
-            data && typeof data?.metadata === "object" && !Array.isArray(data.metadata)
-              ? data.metadata
-              : {},
+          metadata: data && typeof data?.metadata === "object" && !Array.isArray(data.metadata) ? data.metadata : {},
         };
       } catch (error) {
         if (!(error instanceof BackendApiError) || error.status !== 402) {
@@ -241,17 +210,11 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
           status: "pending",
           message: error.message || "Payment requires confirmation",
           reference: String(data?.reference ?? ""),
-          transaction_status: String(
-            data?.status ?? "PENDING",
-          ) as PurchaseResult["transaction_status"],
+          transaction_status: String(data?.status ?? "PENDING") as PurchaseResult["transaction_status"],
           amount: Number(data?.amount ?? input.amount ?? 0),
           type: String(data?.type ?? input.type),
-          metadata:
-            data && typeof data?.metadata === "object" && !Array.isArray(data.metadata)
-              ? data.metadata
-              : {},
-          client_secret:
-            typeof data?.client_secret === "string" ? data.client_secret : undefined,
+          metadata: data && typeof data?.metadata === "object" && !Array.isArray(data.metadata) ? data.metadata : {},
+          client_secret: typeof data?.client_secret === "string" ? data.client_secret : undefined,
         };
       }
     },
@@ -268,10 +231,7 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
         status: String(data?.status ?? "PROCESSING") as VerifyTransactionResult["status"],
         amount: Number(data?.amount ?? 0),
         type: String(data?.type ?? ""),
-        metadata:
-          data && typeof data?.metadata === "object" && !Array.isArray(data.metadata)
-            ? data.metadata
-            : {},
+        metadata: data && typeof data?.metadata === "object" && !Array.isArray(data.metadata) ? data.metadata : {},
       };
     },
 
@@ -282,16 +242,11 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
       });
     },
 
-    async updateTeamSpendingLimit(
-      input: UpdateTeamSpendingLimitInput,
-    ): Promise<void> {
-      await client.request(
-        `${base}/payment/spending-limit/team/${encodeURIComponent(input.team_id)}`,
-        {
-          method: "PUT",
-          body: { spending_limit: input.spending_limit },
-        },
-      );
+    async updateTeamSpendingLimit(input: UpdateTeamSpendingLimitInput): Promise<void> {
+      await client.request(`${base}/payment/spending-limit/team/${encodeURIComponent(input.team_id)}`, {
+        method: "PUT",
+        body: { spending_limit: input.spending_limit },
+      });
     },
 
     async updateTeamSubscription(input: UpdateTeamSubscriptionInput): Promise<void> {

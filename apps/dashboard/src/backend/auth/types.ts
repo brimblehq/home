@@ -48,9 +48,7 @@ export interface VerifyEmailCodeSession {
   session: AuthSession;
 }
 
-export type VerifyEmailCodeResult =
-  | VerifyEmailCodeSession
-  | VerifyEmailCodeChallenge;
+export type VerifyEmailCodeResult = VerifyEmailCodeSession | VerifyEmailCodeChallenge;
 
 export interface ConfirmDeleteAccountInput {
   accessCode: string | number;
@@ -147,16 +145,12 @@ export interface AuthApi {
   login(input: LoginInput): Promise<void>;
   signup(input: SignupInput): Promise<void>;
   verifyEmailCode(input: VerifyEmailCodeInput): Promise<VerifyEmailCodeResult>;
-  verifyTwoFactorChallenge(
-    input: VerifyTwoFactorChallengeInput,
-  ): Promise<AuthSession>;
+  verifyTwoFactorChallenge(input: VerifyTwoFactorChallengeInput): Promise<AuthSession>;
   getTwoFactorStatus(): Promise<TwoFactorStatus>;
   startTwoFactorSetup(): Promise<TwoFactorSetup>;
   verifyTwoFactorSetup(input: TwoFactorCodeInput): Promise<void>;
   disableTwoFactor(input: TwoFactorCodeInput): Promise<void>;
-  regenerateTwoFactorRecoveryCodes(
-    input: TwoFactorCodeInput,
-  ): Promise<string[]>;
+  regenerateTwoFactorRecoveryCodes(input: TwoFactorCodeInput): Promise<string[]>;
   resendCode(email: string): Promise<void>;
   requestDeleteAccountCode(turnstileToken?: string): Promise<void>;
   confirmDeleteAccount(input: ConfirmDeleteAccountInput): Promise<void>;

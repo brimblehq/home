@@ -1,11 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  Marker,
-  ZoomableGroup,
-} from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 import { Plus, Minus } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { Theme } from "@/types/enums";
@@ -108,11 +102,7 @@ export function RegionMap({ regionText }: { regionText: string }) {
                   geographies.map((geo) => {
                     const name = geo.properties?.name as string | undefined;
                     const isActive = !!activeCountry && name === activeCountry;
-                    const fill = isActive
-                      ? "#006fff"
-                      : isDark
-                        ? "#243049"
-                        : "#dde3ee";
+                    const fill = isActive ? "#006fff" : isDark ? "#243049" : "#dde3ee";
                     return (
                       <Geography
                         key={geo.rsmKey}
@@ -146,14 +136,7 @@ export function RegionMap({ regionText }: { regionText: string }) {
                 <Marker coordinates={marker.coords}>
                   <circle r={5 / Math.sqrt(zoom)} fill="#006fff" stroke="#ffffff" strokeWidth={1.5 / Math.sqrt(zoom)} />
                   <g transform={`translate(0, ${-14 / Math.sqrt(zoom)}) scale(${1 / Math.sqrt(zoom)})`}>
-                    <rect
-                      x={-marker.label.length * 3.4}
-                      y={-12}
-                      width={marker.label.length * 6.8}
-                      height={16}
-                      rx={3}
-                      fill="#006fff"
-                    />
+                    <rect x={-marker.label.length * 3.4} y={-12} width={marker.label.length * 6.8} height={16} rx={3} fill="#006fff" />
                     <text
                       textAnchor="middle"
                       y={0}

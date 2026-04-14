@@ -16,14 +16,8 @@ export function PageHeader({ title, children, image }: PageHeaderProps) {
         </div>
       )}
       <div>
-        <h2 className="text-base font-medium tracking-[-0.03px] text-dash-text-strong">
-          {title}
-        </h2>
-        {children && (
-          <p className="mt-2 max-w-[560px] text-sm font-light leading-[1.3] text-dash-text-extra-faded">
-            {children}
-          </p>
-        )}
+        <h2 className="text-base font-medium tracking-[-0.03px] text-dash-text-strong">{title}</h2>
+        {children && <p className="mt-2 max-w-[560px] text-sm font-light leading-[1.3] text-dash-text-extra-faded">{children}</p>}
       </div>
     </div>
   );

@@ -18,9 +18,7 @@ export function Socials() {
         transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
       >
         <div className="flex flex-col gap-2">
-          <p className="font-mono text-xs uppercase tracking-[1.2px] text-brimble-black/50 dark:text-white/55">
-            Community
-          </p>
+          <p className="font-mono text-xs uppercase tracking-[1.2px] text-brimble-black/50 dark:text-white/55">Community</p>
           <h3 className="font-heading text-[34px] leading-[38px] tracking-[-0.46px] text-brimble-black dark:text-white">
             {siteConfig.socials.heading}
           </h3>

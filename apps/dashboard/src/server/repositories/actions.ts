@@ -39,9 +39,7 @@ export const getGithubRepoServerFn = createServerFn({
 export const getGithubInstallUrlServerFn = createServerFn({
   method: "GET",
 }).handler(async () => {
-  return withTokenRefresh((api) =>
-    api.repositories.getGithubInstallUrl(),
-  ) as Promise<GithubInstallUrlResult>;
+  return withTokenRefresh((api) => api.repositories.getGithubInstallUrl()) as Promise<GithubInstallUrlResult>;
 });
 
 export const getGitlabConnectUrlServerFn = createServerFn({
@@ -58,9 +56,7 @@ export const getGitlabConnectUrlServerFn = createServerFn({
 export const listGithubAccountsServerFn = createServerFn({
   method: "GET",
 }).handler(async () => {
-  return withTokenRefresh((api) =>
-    api.repositories.listGithubAccounts(),
-  ) as Promise<GithubAccountsResult>;
+  return withTokenRefresh((api) => api.repositories.listGithubAccounts()) as Promise<GithubAccountsResult>;
 });
 
 export const listGithubReposServerFn = createServerFn({
@@ -118,9 +114,7 @@ export const getGithubRootDirServerFn = createServerFn({
 export const listGitlabAccountsServerFn = createServerFn({
   method: "GET",
 }).handler(async () => {
-  return withTokenRefresh((api) =>
-    api.repositories.listGitlabAccounts(),
-  ) as Promise<GitlabAccountsResult>;
+  return withTokenRefresh((api) => api.repositories.listGitlabAccounts()) as Promise<GitlabAccountsResult>;
 });
 
 export const listGitlabReposServerFn = createServerFn({
@@ -211,9 +205,7 @@ export const getBitbucketConnectUrlServerFn = createServerFn({
 export const listBitbucketAccountsServerFn = createServerFn({
   method: "GET",
 }).handler(async () => {
-  return withTokenRefresh((api) =>
-    api.repositories.listBitbucketAccounts(),
-  ) as Promise<BitbucketAccountsResult>;
+  return withTokenRefresh((api) => api.repositories.listBitbucketAccounts()) as Promise<BitbucketAccountsResult>;
 });
 
 export const listBitbucketReposServerFn = createServerFn({

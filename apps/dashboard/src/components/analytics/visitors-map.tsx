@@ -100,11 +100,7 @@ function FlatMap({ countries }: { countries: CountryVisitor[] }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div
-      ref={wrapperRef}
-      className="relative flex h-full w-full items-center justify-center"
-      onMouseLeave={() => setTooltip(null)}
-    >
+    <div ref={wrapperRef} className="relative flex h-full w-full items-center justify-center" onMouseLeave={() => setTooltip(null)}>
       <ComposableMap
         projection="geoMercator"
         projectionConfig={{ scale: 145, center: [0, 25] }}
@@ -353,9 +349,7 @@ function Globe({ countries }: { countries: CountryVisitor[] }) {
       </div>
       {topCountries.length > 0 && (
         <div className="absolute left-4 top-4 hidden flex-col gap-1.5 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg/80 px-3 py-2.5 backdrop-blur-sm sm:flex">
-          <span className="text-[9px] font-medium uppercase tracking-[1px] text-dash-text-faded">
-            Top countries
-          </span>
+          <span className="text-[9px] font-medium uppercase tracking-[1px] text-dash-text-faded">Top countries</span>
           {topCountries.slice(0, 6).map((c) => {
             const name = ISO2_TO_NAME[c.code.toUpperCase()] ?? c.code;
             return (
@@ -422,20 +416,12 @@ export function VisitorsMap({ countries = [] }: { countries?: CountryVisitor[] }
         <div>
           <h3 className="text-sm font-medium text-dash-text-strong">Where your visitors are</h3>
           <p className="text-xs font-light text-dash-text-faded">
-            {mode === "Map"
-              ? "Geographic distribution over the last 7 days"
-              : "Drag to rotate · last 7 days"}
+            {mode === "Map" ? "Geographic distribution over the last 7 days" : "Drag to rotate · last 7 days"}
           </p>
         </div>
-        <SegmentedToggle
-          options={["Map", "Globe"]}
-          value={mode}
-          onChange={(v) => setMode(v as "Map" | "Globe")}
-        />
+        <SegmentedToggle options={["Map", "Globe"]} value={mode} onChange={(v) => setMode(v as "Map" | "Globe")} />
       </div>
-      <div
-        className="relative flex h-[280px] w-full items-center justify-center overflow-hidden bg-dash-bg-elevated px-4 py-6 sm:h-[460px]"
-      >
+      <div className="relative flex h-[280px] w-full items-center justify-center overflow-hidden bg-dash-bg-elevated px-4 py-6 sm:h-[460px]">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={mode}

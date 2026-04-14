@@ -32,12 +32,7 @@ import { WarningModal } from "./warning-modal";
 import { GlossyButton } from "./glossy-button";
 import { OtpInput } from "../auth/auth-split-layout";
 import { Turnstile } from "@marsidev/react-turnstile";
-import {
-  CheckCircle,
-  XCircle,
-  TreeStructure,
-  CopySimple,
-} from "@phosphor-icons/react";
+import { CheckCircle, XCircle, TreeStructure, CopySimple } from "@phosphor-icons/react";
 import {
   confirmDeleteAccountServerFn,
   getTwoFactorStatusServerFn,
@@ -48,10 +43,7 @@ import type { TwoFactorStatus } from "@/backend/auth/types";
 import { listActivityLogsServerFn } from "@/server/activity-logs/actions";
 import { listProjectEnvironmentsServerFn } from "@/server/environments/actions";
 import type { ProjectEnvironment } from "@/backend/environments";
-import type {
-  ActivityLogsResponse,
-  ActivityLogGroup,
-} from "@/backend/activity-logs";
+import type { ActivityLogsResponse, ActivityLogGroup } from "@/backend/activity-logs";
 import {
   createSettingsApiKeyServerFn,
   decryptSettingsApiKeyServerFn,
@@ -101,21 +93,10 @@ import {
   listGitlabAccountsServerFn,
 } from "@/server/repositories/actions";
 import config from "@/config";
-import type {
-  SettingsSidebarSnapshot,
-  SettingsWebhookGroup as ServerWebhookGroup,
-} from "@/backend/settings";
-import type {
-  TeamDetails,
-  TeamMember,
-  TeamOwnershipTransfer,
-} from "@/backend/teams";
+import type { SettingsSidebarSnapshot, SettingsWebhookGroup as ServerWebhookGroup } from "@/backend/settings";
+import type { TeamDetails, TeamMember, TeamOwnershipTransfer } from "@/backend/teams";
 import { normalizeMemberRole as normalizeRole } from "@/utils/workspace-role";
-import {
-  mapSettingsSnapshotToDrawerProfile,
-  maskSecretWithAsterisks,
-  type DrawerUserProfile,
-} from "@/utils/dashboard";
+import { mapSettingsSnapshotToDrawerProfile, maskSecretWithAsterisks, type DrawerUserProfile } from "@/utils/dashboard";
 import { formatUsdMonthly } from "@/utils/billing";
 import { usePricing } from "@/contexts/pricing-context";
 import { ProfileTab, Theme } from "../../types/enums";
@@ -208,21 +189,15 @@ function ActivitySessionForm({
   initialData?: ActivityLogsResponse | null;
   enabled?: boolean;
 }) {
-  const getActivityLogs = useServerFn(
-    listActivityLogsServerFn as any,
-  ) as (args: {
+  const getActivityLogs = useServerFn(listActivityLogsServerFn as any) as (args: {
     data: { workspace?: string; page?: number; limit?: number };
   }) => Promise<ActivityLogsResponse>;
 
-  const [groups, setGroups] = useState<ActivityLogGroup[]>(
-    initialData?.logs ?? [],
-  );
+  const [groups, setGroups] = useState<ActivityLogGroup[]>(initialData?.logs ?? []);
   const [isLoading, setIsLoading] = useState(!initialData && enabled);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(
-    initialData?.pagination.totalPages ?? 0,
-  );
+  const [totalPages, setTotalPages] = useState(initialData?.pagination.totalPages ?? 0);
 
   const getActivityLogsRef = useRef(getActivityLogs);
   getActivityLogsRef.current = getActivityLogs;
@@ -267,36 +242,22 @@ function ActivitySessionForm({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="text-sm font-medium text-dash-text-strong">
-          User activity sessions
-        </p>
-        <p className="text-xs text-dash-text-faded">
-          Recent account actions across authentication, projects, and domains.
-        </p>
+        <p className="text-sm font-medium text-dash-text-strong">User activity sessions</p>
+        <p className="text-xs text-dash-text-faded">Recent account actions across authentication, projects, and domains.</p>
       </div>
 
-      {isLoading && (
-        <div className="py-6 text-sm text-dash-text-faded">
-          Loading activity...
-        </div>
-      )}
+      {isLoading && <div className="py-6 text-sm text-dash-text-faded">Loading activity...</div>}
 
       {error && <div className="py-6 text-sm text-red-500">{error}</div>}
 
-      {!isLoading && !error && !hasItems && (
-        <div className="py-6 text-sm text-dash-text-faded">
-          No activity captured yet.
-        </div>
-      )}
+      {!isLoading && !error && !hasItems && <div className="py-6 text-sm text-dash-text-faded">No activity captured yet.</div>}
 
       {!isLoading && !error && hasItems && (
         <>
           {groups.map((group) =>
             group.items.length === 0 ? null : (
               <div key={group.label} className="flex flex-col">
-                <p className="mb-2 text-xs font-medium text-dash-text-faded">
-                  {group.label}
-                </p>
+                <p className="mb-2 text-xs font-medium text-dash-text-faded">{group.label}</p>
                 <div className="flex flex-col">
                   {group.items.map((item, index) => (
                     <div
@@ -307,31 +268,19 @@ function ActivitySessionForm({
                       )}
                     >
                       {item.status === "success" ? (
-                        <CheckCircle
-                          weight="fill"
-                          className="size-5 shrink-0 text-green-500"
-                        />
+                        <CheckCircle weight="fill" className="size-5 shrink-0 text-green-500" />
                       ) : (
-                        <XCircle
-                          weight="fill"
-                          className="size-5 shrink-0 text-red-500"
-                        />
+                        <XCircle weight="fill" className="size-5 shrink-0 text-red-500" />
                       )}
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium leading-5 text-dash-text-strong">
-                          {item.description}
-                        </p>
+                        <p className="truncate text-sm font-medium leading-5 text-dash-text-strong">{item.description}</p>
                         <p className="mt-1 text-xs text-dash-text-faded">
                           {item.context}
                           {item.user_agent ? ` \u2022 ${item.user_agent}` : ""}
-                          {item.ip_address
-                            ? ` \u2022 IP ${item.ip_address}`
-                            : ""}
+                          {item.ip_address ? ` \u2022 IP ${item.ip_address}` : ""}
                         </p>
                       </div>
-                      <span className="text-xs text-dash-text-extra-faded">
-                        {formatActivityTime(item.created_at)}
-                      </span>
+                      <span className="text-xs text-dash-text-extra-faded">{formatActivityTime(item.created_at)}</span>
                     </div>
                   ))}
                 </div>
@@ -378,26 +327,10 @@ function CopyButton({ text }: { text: string }) {
   }
 
   return (
-    <button
-      onClick={handleCopy}
-      className="shrink-0 text-dash-text-faded transition-colors hover:text-dash-text-strong"
-      title="Copy"
-    >
+    <button onClick={handleCopy} className="shrink-0 text-dash-text-faded transition-colors hover:text-dash-text-strong" title="Copy">
       {copied ? (
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-          className="text-[#34d399]"
-        >
-          <path
-            d="M3 8.5L6.5 12L13 4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#34d399]">
+          <path d="M3 8.5L6.5 12L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ) : (
         <Copy className="size-4" />
@@ -426,19 +359,12 @@ function ProfileForm({
 }: {
   profile: UserProfile;
   projectCount?: number;
-  onSave?: (data: {
-    firstName: string;
-    lastName: string;
-    username: string;
-    avatarUrl?: string;
-  }) => void | Promise<void>;
+  onSave?: (data: { firstName: string; lastName: string; username: string; avatarUrl?: string }) => void | Promise<void>;
   onBuildsChange?: (enabled: boolean) => Promise<void> | void;
   onHapticsChange?: (enabled: boolean) => Promise<void> | void;
   onCreateApiKey?: () => Promise<string | undefined> | string | undefined;
   onResetApiKey?: () => Promise<string | undefined> | string | undefined;
-  onDecryptApiKey?: (
-    encryptedApiKey: string,
-  ) => Promise<string | null | undefined>;
+  onDecryptApiKey?: (encryptedApiKey: string) => Promise<string | null | undefined>;
   gitConnections: { id: string; name: string; connected: boolean }[];
   onDisconnectGitProvider?: (providerId: string) => Promise<void> | void;
   onConnectGitProvider?: (providerId: string) => void;
@@ -451,30 +377,20 @@ function ProfileForm({
   const [firstName, setFirstName] = useState(profile.firstName);
   const [lastName, setLastName] = useState(profile.lastName);
   const [username, setUsername] = useState(profile.username);
-  const [buildsEnabled, setBuildsEnabled] = useState(
-    profile.buildsEnabled ?? true,
-  );
-  const [hapticsEnabledLocal, setHapticsEnabledLocal] = useState(
-    profile.haptics !== false,
-  );
+  const [buildsEnabled, setBuildsEnabled] = useState(profile.buildsEnabled ?? true);
+  const [hapticsEnabledLocal, setHapticsEnabledLocal] = useState(profile.haptics !== false);
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl ?? "");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isAltPressed, setIsAltPressed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isTextDirty =
-    firstName !== profile.firstName ||
-    lastName !== profile.lastName ||
-    username !== profile.username;
+  const isTextDirty = firstName !== profile.firstName || lastName !== profile.lastName || username !== profile.username;
   const isAvatarDirty = avatarUrl !== (profile.avatarUrl ?? "");
   const isDirty = isTextDirty || isAvatarDirty;
 
-  const inputClass =
-    "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+  const inputClass = "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
   const normalizedPlanType = (profile.subscriptionPlanType ?? "").toUpperCase();
-  const isFreePlan =
-    !normalizedPlanType ||
-    normalizedPlanType === SUBSCRIPTION_PLAN_TYPE.FreePlan;
+  const isFreePlan = !normalizedPlanType || normalizedPlanType === SUBSCRIPTION_PLAN_TYPE.FreePlan;
 
   function handleSave() {
     void onSave?.({
@@ -490,12 +406,7 @@ function ProfileForm({
     setLastName(profile.lastName);
     setUsername(profile.username);
     setAvatarUrl(profile.avatarUrl ?? "");
-  }, [
-    profile.avatarUrl,
-    profile.firstName,
-    profile.lastName,
-    profile.username,
-  ]);
+  }, [profile.avatarUrl, profile.firstName, profile.lastName, profile.username]);
 
   useEffect(() => {
     setBuildsEnabled(profile.buildsEnabled ?? true);
@@ -531,9 +442,7 @@ function ProfileForm({
     };
   }, []);
 
-  async function handleAvatarFileChange(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
+  async function handleAvatarFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -562,9 +471,7 @@ function ProfileForm({
         toast.error("Upload succeeded but no image URL was returned.");
       }
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to upload image",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
     } finally {
       setIsUploadingAvatar(false);
       if (event.target) {
@@ -573,13 +480,11 @@ function ProfileForm({
     }
   }
 
-  const avatarSeed =
-    profile.username || profile.firstName || profile.email || "user";
+  const avatarSeed = profile.username || profile.firstName || profile.email || "user";
   const hasCustomAvatar = Boolean(avatarUrl);
 
   function handleAvatarButtonClick(event: React.MouseEvent<HTMLButtonElement>) {
-    const useAlternateAction =
-      hasCustomAvatar && (event.altKey || isAltPressed);
+    const useAlternateAction = hasCustomAvatar && (event.altKey || isAltPressed);
 
     if (useAlternateAction) {
       setAvatarUrl("");
@@ -590,8 +495,7 @@ function ProfileForm({
     fileInputRef.current?.click();
   }
 
-  const avatarSrc =
-    avatarUrl || `https://avatar.vercel.sh/${encodeURIComponent(avatarSeed)}`;
+  const avatarSrc = avatarUrl || `https://avatar.vercel.sh/${encodeURIComponent(avatarSeed)}`;
 
   return (
     <div className="flex max-w-[488px] flex-col gap-8">
@@ -605,12 +509,7 @@ function ProfileForm({
           onChange={handleAvatarFileChange}
         />
         <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-dash-border-soft bg-dash-bg-elevated">
-          <Avatar
-            src={avatarSrc}
-            fallbackSeed={avatarSeed}
-            alt="Profile avatar"
-            className="h-full w-full object-cover"
-          />
+          <Avatar src={avatarSrc} fallbackSeed={avatarSeed} alt="Profile avatar" className="h-full w-full object-cover" />
           {isUploadingAvatar && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/35">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/80 border-t-transparent" />
@@ -623,17 +522,11 @@ function ProfileForm({
             disabled={isUploadingAvatar || Boolean(isSaving)}
             className="flex h-[34px] w-fit items-center rounded-[4px] border border-dash-border bg-dash-bg px-3.5 text-sm font-medium text-dash-text-strong shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-50"
           >
-            {isUploadingAvatar
-              ? "Uploading..."
-              : hasCustomAvatar && isAltPressed
-                ? "Remove photo"
-                : "Upload photo"}
+            {isUploadingAvatar ? "Uploading..." : hasCustomAvatar && isAltPressed ? "Remove photo" : "Upload photo"}
           </button>
           {hasCustomAvatar && (
             <span className="text-sm text-dash-text-faded">
-              {isAltPressed
-                ? `Release Option "⌥" to upload photo`
-                : `Hold Option "⌥" to remove photo`}
+              {isAltPressed ? `Release Option "⌥" to upload photo` : `Hold Option "⌥" to remove photo`}
             </span>
           )}
         </div>
@@ -645,54 +538,26 @@ function ProfileForm({
       <div className="flex flex-col gap-4">
         <div className="flex gap-3.5">
           <div className="flex flex-1 flex-col gap-1.5">
-            <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-              First name
-            </label>
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className={inputClass}
-            />
+            <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">First name</label>
+            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputClass} />
           </div>
           <div className="flex flex-1 flex-col gap-1.5">
-            <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-              Last name
-            </label>
-            <input
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              className={inputClass}
-            />
+            <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Last name</label>
+            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputClass} />
           </div>
         </div>
 
         {/* Username */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-            Username
-          </label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className={inputClass}
-          />
+          <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Username</label>
+          <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className={inputClass} />
         </div>
 
         {/* Unique ID */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-            Unique ID
-          </label>
+          <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Unique ID</label>
           <div className="relative">
-            <input
-              type="text"
-              value={profile.uniqueId}
-              readOnly
-              className={cn(inputClass, "pr-10 text-dash-text-faded")}
-            />
+            <input type="text" value={profile.uniqueId} readOnly className={cn(inputClass, "pr-10 text-dash-text-faded")} />
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <CopyButton text={profile.uniqueId} />
             </div>
@@ -716,12 +581,8 @@ function ProfileForm({
       {/* Builds toggle */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-            Builds
-          </span>
-          <span className="text-sm leading-5 text-dash-text-faded">
-            Enable or disable builds for your projects
-          </span>
+          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Builds</span>
+          <span className="text-sm leading-5 text-dash-text-faded">Enable or disable builds for your projects</span>
         </div>
         <Toggle
           checked={buildsEnabled}
@@ -742,12 +603,8 @@ function ProfileForm({
       {/* Haptics toggle */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-            Haptics
-          </span>
-          <span className="text-sm leading-5 text-dash-text-faded">
-            Sound and vibration feedback on interactions
-          </span>
+          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Haptics</span>
+          <span className="text-sm leading-5 text-dash-text-faded">Sound and vibration feedback on interactions</span>
         </div>
         <Toggle
           checked={hapticsEnabledLocal}
@@ -813,11 +670,7 @@ function DangerZone({
   const haptics = useHaptics();
   const { theme } = useTheme();
   const normalizedProjectCount =
-    typeof projectCount === "number" &&
-    Number.isFinite(projectCount) &&
-    projectCount > 0
-      ? Math.floor(projectCount)
-      : 0;
+    typeof projectCount === "number" && Number.isFinite(projectCount) && projectCount > 0 ? Math.floor(projectCount) : 0;
   const hasRemainingProjects = normalizedProjectCount > 0;
   const projectsLabel = normalizedProjectCount === 1 ? "project" : "projects";
   const [disconnectProvider, setDisconnectProvider] = useState<{
@@ -835,10 +688,7 @@ function DangerZone({
   useEffect(() => {
     if (!gitMenuOpen) return;
     function handleClick(e: MouseEvent) {
-      if (
-        gitMenuRef.current &&
-        !gitMenuRef.current.contains(e.target as Node)
-      ) {
+      if (gitMenuRef.current && !gitMenuRef.current.contains(e.target as Node)) {
         setGitMenuOpen(false);
       }
     }
@@ -859,20 +709,14 @@ function DangerZone({
   return (
     <>
       <div className="flex flex-col gap-1">
-        <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-          Danger zone
-        </span>
-        <span className="text-sm leading-5 text-dash-text-faded">
-          Irreversible actions for your account
-        </span>
+        <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Danger zone</span>
+        <span className="text-sm leading-5 text-dash-text-faded">Irreversible actions for your account</span>
       </div>
 
       {/* Git providers */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium text-dash-text-strong">
-            Git providers
-          </span>
+          <span className="text-sm font-medium text-dash-text-strong">Git providers</span>
           <span className="text-xs text-dash-text-faded">
             {connectedProviders.length > 0
               ? `Connected: ${connectedProviders.map((p) => p.name).join(", ")}`
@@ -884,10 +728,7 @@ function DangerZone({
             variant={connectedProviders.length > 0 ? "red" : "black"}
             onClick={() => {
               haptics.selection();
-              if (
-                connectedProviders.length === 1 &&
-                disconnectedProviders.length === 0
-              ) {
+              if (connectedProviders.length === 1 && disconnectedProviders.length === 0) {
                 setDisconnectProvider(connectedProviders[0]);
               } else {
                 setGitMenuOpen((prev) => !prev);
@@ -941,12 +782,8 @@ function DangerZone({
       {/* Delete account */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium text-dash-text-strong">
-            Delete account
-          </span>
-          <span className="text-xs text-dash-text-faded">
-            Permanently delete your account and all associated data.
-          </span>
+          <span className="text-sm font-medium text-dash-text-strong">Delete account</span>
+          <span className="text-xs text-dash-text-faded">Permanently delete your account and all associated data.</span>
         </div>
         <GlossyButton variant="red" onClick={() => setDeleteOpen(true)}>
           Delete
@@ -973,11 +810,7 @@ function DangerZone({
       >
         <div className="flex flex-col gap-2 text-left">
           <label className="text-sm leading-5 text-dash-text-faded">
-            Type{" "}
-            <span className="font-medium text-dash-text-strong">
-              DISCONNECT
-            </span>{" "}
-            to confirm
+            Type <span className="font-medium text-dash-text-strong">DISCONNECT</span> to confirm
           </label>
           <input
             type="text"
@@ -1001,31 +834,15 @@ function DangerZone({
             setDeleteOtpError(null);
           }
         }}
-        title={
-          deleteStep === "confirm"
-            ? "Delete your account?"
-            : "Verify account deletion"
-        }
+        title={deleteStep === "confirm" ? "Delete your account?" : "Verify account deletion"}
         description={
           deleteStep === "confirm"
             ? "This action cannot be undone. All projects, deployments, domains, environment variables, and billing data will be permanently deleted."
             : "We sent a 6-digit verification code to your account email. Enter it to continue."
         }
-        confirmLabel={
-          deleteStep === "confirm"
-            ? "Send verification code"
-            : "Delete my account"
-        }
-        confirmLoadingLabel={
-          deleteStep === "confirm" ? "Sending code..." : "Deleting account..."
-        }
-        confirmDisabled={
-          hasRemainingProjects
-            ? true
-            : deleteStep === "confirm"
-              ? !turnstileToken
-              : deleteOtp.length < 6
-        }
+        confirmLabel={deleteStep === "confirm" ? "Send verification code" : "Delete my account"}
+        confirmLoadingLabel={deleteStep === "confirm" ? "Sending code..." : "Deleting account..."}
+        confirmDisabled={hasRemainingProjects ? true : deleteStep === "confirm" ? !turnstileToken : deleteOtp.length < 6}
         closeOnConfirm={deleteStep === "otp"}
         onConfirm={async () => {
           if (hasRemainingProjects) {
@@ -1056,11 +873,7 @@ function DangerZone({
             try {
               await onVerifyDeleteAccountOtp(deleteOtp);
             } catch (error) {
-              setDeleteOtpError(
-                error instanceof Error
-                  ? error.message
-                  : "Invalid verification code",
-              );
+              setDeleteOtpError(error instanceof Error ? error.message : "Invalid verification code");
               throw error;
             }
           }
@@ -1068,9 +881,7 @@ function DangerZone({
         }}
       >
         <div className="flex flex-col gap-2 text-left">
-          <div
-            className={`flex items-start rounded-[8px] bg-dash-bg-elevated px-3 py-2.5 ${hasRemainingProjects ? "" : "gap-2.5"}`}
-          >
+          <div className={`flex items-start rounded-[8px] bg-dash-bg-elevated px-3 py-2.5 ${hasRemainingProjects ? "" : "gap-2.5"}`}>
             {!hasRemainingProjects ? (
               <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-[#ef2f1f]/10">
                 <TriangleAlert className="size-2.5 text-[#ef2f1f]" />
@@ -1078,9 +889,7 @@ function DangerZone({
             ) : null}
             <div className="min-w-0">
               <p className="text-xs font-semibold leading-5 text-dash-text-strong">
-                {hasRemainingProjects
-                  ? `You still have ${normalizedProjectCount} ${projectsLabel}.`
-                  : "This action is permanent."}
+                {hasRemainingProjects ? `You still have ${normalizedProjectCount} ${projectsLabel}.` : "This action is permanent."}
               </p>
               <p className="text-xs leading-5 text-dash-text-faded">
                 {hasRemainingProjects
@@ -1093,9 +902,7 @@ function DangerZone({
             <>
               {hasRemainingProjects ? null : (
                 <>
-                  <label className="text-sm leading-5 text-dash-text-faded">
-                    Complete the verification to continue
-                  </label>
+                  <label className="text-sm leading-5 text-dash-text-faded">Complete the verification to continue</label>
                   <div className="rounded-[10px] bg-dash-bg-elevated/70 p-2.5">
                     <div className="mx-auto w-full max-w-[360px]">
                       <div className="relative min-h-[65px]">
@@ -1111,13 +918,9 @@ function DangerZone({
                         <Turnstile
                           key={`delete-account-turnstile-${theme}`}
                           siteKey={config.turnstileSiteKey}
-                          className={cn(
-                            "w-full transition-opacity duration-200",
-                            isTurnstileReady ? "opacity-100" : "opacity-0",
-                          )}
+                          className={cn("w-full transition-opacity duration-200", isTurnstileReady ? "opacity-100" : "opacity-0")}
                           options={{
-                            theme:
-                              theme === Theme.Dark ? Theme.Dark : Theme.Light,
+                            theme: theme === Theme.Dark ? Theme.Dark : Theme.Light,
                             size: "flexible",
                           }}
                           onWidgetLoad={() => setIsTurnstileReady(true)}
@@ -1130,18 +933,14 @@ function DangerZone({
                         />
                       </div>
                     </div>
-                    <p className="mt-2 text-[11px] leading-4 text-dash-text-extra-faded">
-                      Security check powered by Cloudflare.
-                    </p>
+                    <p className="mt-2 text-[11px] leading-4 text-dash-text-extra-faded">Security check powered by Cloudflare.</p>
                   </div>
                 </>
               )}
             </>
           ) : (
             <>
-              <label className="text-sm leading-5 text-dash-text-faded">
-                Enter verification code
-              </label>
+              <label className="text-sm leading-5 text-dash-text-faded">Enter verification code</label>
               <div className="flex justify-center">
                 <OtpInput
                   value={deleteOtp}
@@ -1155,9 +954,7 @@ function DangerZone({
                   error={Boolean(deleteOtpError)}
                 />
               </div>
-              {deleteOtpError ? (
-                <p className="text-xs text-[#ef2f1f]">{deleteOtpError}</p>
-              ) : null}
+              {deleteOtpError ? <p className="text-xs text-[#ef2f1f]">{deleteOtpError}</p> : null}
               <button
                 type="button"
                 onClick={async () => {
@@ -1169,11 +966,7 @@ function DangerZone({
                       toast.success("Verification code resent");
                     }
                   } catch (error) {
-                    setDeleteOtpError(
-                      error instanceof Error
-                        ? error.message
-                        : "Failed to resend verification code",
-                    );
+                    setDeleteOtpError(error instanceof Error ? error.message : "Failed to resend verification code");
                   }
                 }}
                 className="self-start text-xs font-medium text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
@@ -1210,8 +1003,7 @@ function ApiKeySection({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDecrypting, setIsDecrypting] = useState(false);
 
-  const inputClass =
-    "w-full input-base px-3 py-2.5 text-sm leading-6 text-dash-text-strong";
+  const inputClass = "w-full input-base px-3 py-2.5 text-sm leading-6 text-dash-text-strong";
 
   useEffect(() => {
     setEncryptedApiKey(initialApiKey ?? "");
@@ -1234,9 +1026,7 @@ function ApiKeySection({
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-1">
-        <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-          API key
-        </span>
+        <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">API key</span>
         <span className="text-sm leading-5 text-dash-text-faded">
           {isFreePlan ? (
             <>
@@ -1264,10 +1054,7 @@ function ApiKeySection({
                 type="text"
                 value={displayValue}
                 readOnly
-                className={cn(
-                  inputClass,
-                  "pr-20 font-mono text-[13px] text-dash-text-faded",
-                )}
+                className={cn(inputClass, "pr-20 font-mono text-[13px] text-dash-text-faded")}
               />
               <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
                 <button
@@ -1302,20 +1089,12 @@ function ApiKeySection({
                   className="shrink-0 rounded-[4px] p-1 text-dash-text-faded transition-colors hover:text-dash-text-strong"
                   title={revealed ? "Hide" : "Reveal"}
                 >
-                  {revealed ? (
-                    <EyeOff className="size-3.5" />
-                  ) : (
-                    <Eye className="size-3.5" />
-                  )}
+                  {revealed ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                 </button>
                 {decryptedApiKey ? (
                   <CopyButton text={decryptedApiKey} />
                 ) : (
-                  <button
-                    disabled
-                    className="shrink-0 rounded-[4px] p-1 text-dash-text-extra-faded"
-                    title="Reveal key to copy"
-                  >
+                  <button disabled className="shrink-0 rounded-[4px] p-1 text-dash-text-extra-faded" title="Reveal key to copy">
                     <Copy className="size-4" />
                   </button>
                 )}
@@ -1342,9 +1121,7 @@ function ApiKeySection({
             onConfirm={async () => {
               setIsSubmitting(true);
               try {
-                const nextKey = encryptedApiKey
-                  ? await onReset?.()
-                  : await onCreate?.();
+                const nextKey = encryptedApiKey ? await onReset?.() : await onCreate?.();
                 if (nextKey) {
                   setEncryptedApiKey(nextKey);
                   setDecryptedApiKey(null);
@@ -1370,11 +1147,7 @@ function WorkspaceProfileForm({
 }: {
   team: TeamDetails;
   canEdit?: boolean;
-  onSave?: (data: {
-    name: string;
-    description?: string;
-    avatarUrl?: string;
-  }) => void | Promise<void>;
+  onSave?: (data: { name: string; description?: string; avatarUrl?: string }) => void | Promise<void>;
   onBuildsChange?: (enabled: boolean) => Promise<void> | void;
   isSaving?: boolean;
 }) {
@@ -1382,18 +1155,12 @@ function WorkspaceProfileForm({
   const [description, setDescription] = useState(team.description || "");
   const [avatarUrl, setAvatarUrl] = useState(team.avatarUrl || "");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [buildsEnabled, setBuildsEnabled] = useState(
-    !(team.buildDisabled ?? false),
-  );
+  const [buildsEnabled, setBuildsEnabled] = useState(!(team.buildDisabled ?? false));
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isDirty =
-    name !== (team.name || "") ||
-    description !== (team.description || "") ||
-    avatarUrl !== (team.avatarUrl || "");
+  const isDirty = name !== (team.name || "") || description !== (team.description || "") || avatarUrl !== (team.avatarUrl || "");
 
-  const inputClass =
-    "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+  const inputClass = "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
   useEffect(() => {
     setName(team.name || "");
@@ -1405,9 +1172,7 @@ function WorkspaceProfileForm({
     setBuildsEnabled(!(team.buildDisabled ?? false));
   }, [team.buildDisabled]);
 
-  async function handleAvatarFileChange(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
+  async function handleAvatarFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -1436,9 +1201,7 @@ function WorkspaceProfileForm({
         toast.error("Upload succeeded but no image URL was returned.");
       }
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to upload image",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
     } finally {
       setIsUploadingAvatar(false);
       if (event.target) {
@@ -1456,8 +1219,7 @@ function WorkspaceProfileForm({
   }
 
   const avatarSeed = team.name || "workspace";
-  const avatarSrc =
-    avatarUrl || `https://avatar.vercel.sh/${encodeURIComponent(avatarSeed)}`;
+  const avatarSrc = avatarUrl || `https://avatar.vercel.sh/${encodeURIComponent(avatarSeed)}`;
 
   return (
     <div className="flex max-w-[488px] flex-col gap-8">
@@ -1470,12 +1232,7 @@ function WorkspaceProfileForm({
           onChange={handleAvatarFileChange}
         />
         <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-dash-border-soft bg-dash-bg-elevated">
-          <Avatar
-            src={avatarSrc}
-            fallbackSeed={avatarSeed}
-            alt="Workspace avatar"
-            className="h-full w-full object-cover"
-          />
+          <Avatar src={avatarSrc} fallbackSeed={avatarSeed} alt="Workspace avatar" className="h-full w-full object-cover" />
           {isUploadingAvatar && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/35">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/80 border-t-transparent" />
@@ -1498,34 +1255,24 @@ function WorkspaceProfileForm({
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-            Workspace name
-          </label>
+          <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Workspace name</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={!canEdit}
-            className={cn(
-              inputClass,
-              !canEdit && "opacity-60 cursor-not-allowed",
-            )}
+            className={cn(inputClass, !canEdit && "opacity-60 cursor-not-allowed")}
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-            Workspace description
-          </label>
+          <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Workspace description</label>
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={!canEdit}
-            className={cn(
-              inputClass,
-              !canEdit && "opacity-60 cursor-not-allowed",
-            )}
+            className={cn(inputClass, !canEdit && "opacity-60 cursor-not-allowed")}
           />
         </div>
       </div>
@@ -1545,13 +1292,9 @@ function WorkspaceProfileForm({
       <hr className="border-dash-border-soft" />
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-          Workspace ID
-        </label>
+        <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Workspace ID</label>
         <div className="flex items-center rounded-[6px] border border-dash-border bg-dash-bg-elevated px-3 py-2.5">
-          <span className="flex-1 truncate text-sm text-dash-text-strong">
-            {team.id}
-          </span>
+          <span className="flex-1 truncate text-sm text-dash-text-strong">{team.id}</span>
           <CopyButton text={team.id} />
         </div>
       </div>
@@ -1564,12 +1307,8 @@ function WorkspaceProfileForm({
 
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-            Builds
-          </span>
-          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            Enable or disable builds for this workspace.
-          </span>
+          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Builds</span>
+          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">Enable or disable builds for this workspace.</span>
         </div>
         {canEdit ? (
           <Toggle
@@ -1584,11 +1323,7 @@ function WorkspaceProfileForm({
             }}
           />
         ) : (
-          <SimpleTooltip
-            content="Only Creators and Administrators can change this setting"
-            side="left"
-            delayDuration={100}
-          >
+          <SimpleTooltip content="Only Creators and Administrators can change this setting" side="left" delayDuration={100}>
             <span>
               <Toggle checked={buildsEnabled} onChange={() => {}} disabled />
             </span>
@@ -1623,9 +1358,7 @@ function ProfileNavSidebar({
   if (!showMembersTab) hiddenTabs.add(ProfileTab.Members);
   if (!showBillingTab) hiddenTabs.add(ProfileTab.Billing);
   if (!showSecurityTab) hiddenTabs.add(ProfileTab.Security);
-  const accountNavItems = accountNav.filter(
-    (item) => !hiddenTabs.has(item.key),
-  );
+  const accountNavItems = accountNav.filter((item) => !hiddenTabs.has(item.key));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSections, setMobileSections] = useState({
     account: true,
@@ -1651,14 +1384,9 @@ function ProfileNavSidebar({
               className="flex items-center justify-between rounded-[8px] px-3.5 py-2 text-left md:hidden"
               aria-expanded={mobileSections.account}
             >
-              <span className="text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">
-                Account
-              </span>
+              <span className="text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">Account</span>
               <ChevronDown
-                className={cn(
-                  "size-4 text-dash-text-faded transition-transform md:hidden",
-                  mobileSections.account && "rotate-180",
-                )}
+                className={cn("size-4 text-dash-text-faded transition-transform md:hidden", mobileSections.account && "rotate-180")}
               />
             </button>
             <div className="md:hidden">
@@ -1708,9 +1436,7 @@ function ProfileNavSidebar({
                   }}
                   className={cn(
                     navItemBase,
-                    activeTab === item.key
-                      ? "bg-dash-bg-elevated text-dash-text-strong"
-                      : "text-dash-text-body hover:bg-dash-bg-elevated",
+                    activeTab === item.key ? "bg-dash-bg-elevated text-dash-text-strong" : "text-dash-text-body hover:bg-dash-bg-elevated",
                   )}
                 >
                   {item.label}
@@ -1726,14 +1452,9 @@ function ProfileNavSidebar({
               className="flex items-center justify-between rounded-[8px] px-3.5 py-2 text-left md:hidden"
               aria-expanded={mobileSections.reachUs}
             >
-              <span className="text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">
-                Reach Us
-              </span>
+              <span className="text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">Reach Us</span>
               <ChevronDown
-                className={cn(
-                  "size-4 text-dash-text-faded transition-transform md:hidden",
-                  mobileSections.reachUs && "rotate-180",
-                )}
+                className={cn("size-4 text-dash-text-faded transition-transform md:hidden", mobileSections.reachUs && "rotate-180")}
               />
             </button>
             <div className="md:hidden">
@@ -1753,10 +1474,7 @@ function ProfileNavSidebar({
                           href={item.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={cn(
-                            navItemBase,
-                            "text-dash-text-body hover:bg-dash-bg-elevated",
-                          )}
+                          className={cn(navItemBase, "text-dash-text-body hover:bg-dash-bg-elevated")}
                         >
                           <span className="text-sm">{item.emoji}</span>
                           {item.label}
@@ -1777,10 +1495,7 @@ function ProfileNavSidebar({
                   href={item.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(
-                    navItemBase,
-                    "text-dash-text-body hover:bg-dash-bg-elevated",
-                  )}
+                  className={cn(navItemBase, "text-dash-text-body hover:bg-dash-bg-elevated")}
                 >
                   <span className="text-sm">{item.emoji}</span>
                   {item.label}
@@ -1796,14 +1511,9 @@ function ProfileNavSidebar({
               className="flex items-center justify-between rounded-[8px] px-3.5 py-2 text-left md:hidden"
               aria-expanded={mobileSections.about}
             >
-              <span className="text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">
-                About
-              </span>
+              <span className="text-[11px] font-medium uppercase leading-[11px] tracking-[-0.11px] text-dash-text-faded">About</span>
               <ChevronDown
-                className={cn(
-                  "size-4 text-dash-text-faded transition-transform md:hidden",
-                  mobileSections.about && "rotate-180",
-                )}
+                className={cn("size-4 text-dash-text-faded transition-transform md:hidden", mobileSections.about && "rotate-180")}
               />
             </button>
             <div className="md:hidden">
@@ -1818,13 +1528,7 @@ function ProfileNavSidebar({
                   >
                     <div className="flex flex-col gap-2">
                       {aboutNav.map((item) => (
-                        <button
-                          key={item.label}
-                          className={cn(
-                            navItemBase,
-                            "text-dash-text-body hover:bg-dash-bg-elevated",
-                          )}
-                        >
+                        <button key={item.label} className={cn(navItemBase, "text-dash-text-body hover:bg-dash-bg-elevated")}>
                           <span className="text-sm">{item.emoji}</span>
                           {item.label}
                         </button>
@@ -1839,13 +1543,7 @@ function ProfileNavSidebar({
             </span>
             <div className="hidden md:flex md:flex-col md:gap-2">
               {aboutNav.map((item) => (
-                <button
-                  key={`desktop-${item.label}`}
-                  className={cn(
-                    navItemBase,
-                    "text-dash-text-body hover:bg-dash-bg-elevated",
-                  )}
-                >
+                <button key={`desktop-${item.label}`} className={cn(navItemBase, "text-dash-text-body hover:bg-dash-bg-elevated")}>
                   <span className="text-sm">{item.emoji}</span>
                   {item.label}
                 </button>
@@ -1860,10 +1558,7 @@ function ProfileNavSidebar({
               void onSignOut?.();
             }}
             disabled={isSigningOut}
-            className={cn(
-              navItemBase,
-              "shrink-0 text-dash-text-body hover:bg-dash-bg-elevated",
-            )}
+            className={cn(navItemBase, "shrink-0 text-dash-text-body hover:bg-dash-bg-elevated")}
           >
             <span className="text-sm">⛳️</span>
             {isSigningOut ? "Signing out..." : "Sign out"}
@@ -1890,18 +1585,11 @@ function ProfileNavSidebar({
         aria-expanded={mobileMenuOpen}
       >
         <span>Menu</span>
-        <ChevronDown
-          className={cn(
-            "size-4 text-dash-text-faded transition-transform",
-            mobileMenuOpen && "rotate-180",
-          )}
-        />
+        <ChevronDown className={cn("size-4 text-dash-text-faded transition-transform", mobileMenuOpen && "rotate-180")} />
       </button>
 
       <div className="hidden flex-1 flex-col px-4 md:flex md:max-h-none md:gap-0 md:px-0 md:pl-[120px] md:pr-3">
-        <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
-          {renderNavSections()}
-        </div>
+        <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">{renderNavSections()}</div>
       </div>
 
       <AnimatePresence initial={false}>
@@ -1913,9 +1601,7 @@ function ProfileNavSidebar({
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden px-4 md:hidden"
           >
-            <div className="scrollbar-hidden max-h-[42vh] overflow-y-auto pt-3">
-              {renderNavSections()}
-            </div>
+            <div className="scrollbar-hidden max-h-[42vh] overflow-y-auto pt-3">{renderNavSections()}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1943,9 +1629,7 @@ export function UserProfileDrawer({
   initialPaymentMethods?: PaymentMethod[] | null;
   initialInvoices?: any;
   initialActivityLogs?: ActivityLogsResponse | null;
-  initialSubscriptionStats?:
-    | import("@/backend/payments").SubscriptionStats
-    | null;
+  initialSubscriptionStats?: import("@/backend/payments").SubscriptionStats | null;
   initialProjectEnvironments?: ProjectEnvironment[] | null;
   projectCount?: number;
   requestedTab?: ProfileTab;
@@ -1953,17 +1637,13 @@ export function UserProfileDrawer({
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const queryClient = useQueryClient();
 
-  const getSettingsSnapshot = useServerFn(
-    getSettingsSidebarSnapshotServerFn as any,
-  ) as (args?: {
+  const getSettingsSnapshot = useServerFn(getSettingsSidebarSnapshotServerFn as any) as (args?: {
     data?: { workspace?: string };
   }) => Promise<SettingsSidebarSnapshot>;
-  const getWorkspaceTeamMembers = useServerFn(
-    getWorkspaceTeamMembersServerFn as any,
-  ) as (args: { data: { workspace: string } }) => Promise<TeamDetails>;
-  const updateWorkspaceTeamProfile = useServerFn(
-    updateWorkspaceTeamProfileServerFn as any,
-  ) as (args: {
+  const getWorkspaceTeamMembers = useServerFn(getWorkspaceTeamMembersServerFn as any) as (args: {
+    data: { workspace: string };
+  }) => Promise<TeamDetails>;
+  const updateWorkspaceTeamProfile = useServerFn(updateWorkspaceTeamProfileServerFn as any) as (args: {
     data: {
       workspace: string;
       name: string;
@@ -1971,9 +1651,7 @@ export function UserProfileDrawer({
       avatarUrl?: string;
     };
   }) => Promise<{ ok: true }>;
-  const updateProfile = useServerFn(
-    updateSettingsProfileServerFn as any,
-  ) as (args: {
+  const updateProfile = useServerFn(updateSettingsProfileServerFn as any) as (args: {
     data: {
       firstName: string;
       lastName: string;
@@ -1981,57 +1659,44 @@ export function UserProfileDrawer({
       avatarUrl?: string;
     };
   }) => Promise<SettingsSidebarSnapshot["profile"]>;
-  const requestEmailVerification = useServerFn(
-    requestSettingsEmailVerificationServerFn as any,
-  ) as (args: { data: { email: string } }) => Promise<{ ok: true }>;
-  const updateNotifications = useServerFn(
-    updateSettingsNotificationsServerFn as any,
-  ) as (args: {
+  const requestEmailVerification = useServerFn(requestSettingsEmailVerificationServerFn as any) as (args: {
+    data: { email: string };
+  }) => Promise<{ ok: true }>;
+  const updateNotifications = useServerFn(updateSettingsNotificationsServerFn as any) as (args: {
     data: { email: boolean; mute: boolean };
   }) => Promise<{ ok: true }>;
-  const updateBuilds = useServerFn(
-    updateSettingsBuildsServerFn as any,
-  ) as (args: {
+  const updateBuilds = useServerFn(updateSettingsBuildsServerFn as any) as (args: {
     data: { buildDisabled: boolean; workspace?: string };
   }) => Promise<{ ok: true }>;
-  const updateHaptics = useServerFn(
-    updateSettingsHapticsServerFn as any,
-  ) as (args: { data: { haptics: boolean } }) => Promise<{ ok: true }>;
+  const updateHaptics = useServerFn(updateSettingsHapticsServerFn as any) as (args: {
+    data: { haptics: boolean };
+  }) => Promise<{ ok: true }>;
   const createApiKey = useServerFn(createSettingsApiKeyServerFn);
   const resetApiKey = useServerFn(resetSettingsApiKeyServerFn);
-  const disconnectGitProvider = useServerFn(
-    disconnectGitProviderServerFn as any,
-  ) as (args: { data: { provider: string } }) => Promise<{ ok: true }>;
+  const disconnectGitProvider = useServerFn(disconnectGitProviderServerFn as any) as (args: {
+    data: { provider: string };
+  }) => Promise<{ ok: true }>;
   const listGithubAccounts = useServerFn(listGithubAccountsServerFn);
-  const getGithubInstallUrl = useServerFn(
-    getGithubInstallUrlServerFn as any,
-  ) as () => Promise<{ url: string }>;
-  const getGitlabConnectUrl = useServerFn(
-    getGitlabConnectUrlServerFn as any,
-  ) as (args: { data?: { device?: string } }) => Promise<{ url: string }>;
-  const getBitbucketConnectUrl = useServerFn(
-    getBitbucketConnectUrlServerFn as any,
-  ) as (args: { data?: { device?: string } }) => Promise<{ url: string }>;
+  const getGithubInstallUrl = useServerFn(getGithubInstallUrlServerFn as any) as () => Promise<{ url: string }>;
+  const getGitlabConnectUrl = useServerFn(getGitlabConnectUrlServerFn as any) as (args: {
+    data?: { device?: string };
+  }) => Promise<{ url: string }>;
+  const getBitbucketConnectUrl = useServerFn(getBitbucketConnectUrlServerFn as any) as (args: {
+    data?: { device?: string };
+  }) => Promise<{ url: string }>;
   const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn);
   const listBitbucketAccounts = useServerFn(listBitbucketAccountsServerFn);
-  const [gitConnectionStatus, setGitConnectionStatus] = useState<
-    Record<string, boolean | null>
-  >({
+  const [gitConnectionStatus, setGitConnectionStatus] = useState<Record<string, boolean | null>>({
     github: null,
     gitlab: null,
     bitbucket: null,
   });
-  const getTwoFactorStatus = useServerFn(
-    getTwoFactorStatusServerFn as any,
-  ) as () => Promise<TwoFactorStatus>;
-  const [twoFactorStatus, setTwoFactorStatus] =
-    useState<TwoFactorStatus | null>(null);
-  const decryptApiKey = useServerFn(
-    decryptSettingsApiKeyServerFn as any,
-  ) as (args: { data: { encryptedApiKey: string } }) => Promise<string | null>;
-  const updateWebhooks = useServerFn(
-    updateSettingsWebhooksServerFn as any,
-  ) as (args: {
+  const getTwoFactorStatus = useServerFn(getTwoFactorStatusServerFn as any) as () => Promise<TwoFactorStatus>;
+  const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatus | null>(null);
+  const decryptApiKey = useServerFn(decryptSettingsApiKeyServerFn as any) as (args: {
+    data: { encryptedApiKey: string };
+  }) => Promise<string | null>;
+  const updateWebhooks = useServerFn(updateSettingsWebhooksServerFn as any) as (args: {
     data: {
       webhookUrl: string | null;
       discordUrl: string | null;
@@ -2039,26 +1704,20 @@ export function UserProfileDrawer({
       events: string[];
     };
   }) => Promise<SettingsSidebarSnapshot["webhooks"]>;
-  const testWebhook = useServerFn(
-    testSettingsWebhookServerFn as any,
-  ) as (args: {
+  const testWebhook = useServerFn(testSettingsWebhookServerFn as any) as (args: {
     data: { url: string; type: "discord" | "slack" | "custom" };
   }) => Promise<{ ok: true }>;
-  const requestDeleteAccountOtp = useServerFn(
-    requestDeleteAccountOtpServerFn as any,
-  ) as (args: { data: { turnstileToken?: string } }) => Promise<{ ok: true }>;
-  const confirmDeleteAccount = useServerFn(
-    confirmDeleteAccountServerFn as any,
-  ) as (args: { data: { accessCode: string } }) => Promise<{ ok: true }>;
+  const requestDeleteAccountOtp = useServerFn(requestDeleteAccountOtpServerFn as any) as (args: {
+    data: { turnstileToken?: string };
+  }) => Promise<{ ok: true }>;
+  const confirmDeleteAccount = useServerFn(confirmDeleteAccountServerFn as any) as (args: {
+    data: { accessCode: string };
+  }) => Promise<{ ok: true }>;
   const [activeTab, setActiveTab] = useState<ProfileTab>(ProfileTab.Profile);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [snapshot, setSnapshot] = useState<SettingsSidebarSnapshot | null>(
-    initialSnapshot,
-  );
-  const [workspaceTeamMembersCache, setWorkspaceTeamMembersCache] = useState<
-    Record<string, TeamDetails>
-  >({});
+  const [snapshot, setSnapshot] = useState<SettingsSidebarSnapshot | null>(initialSnapshot);
+  const [workspaceTeamMembersCache, setWorkspaceTeamMembersCache] = useState<Record<string, TeamDetails>>({});
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const prefetchedBillingScopesRef = useRef<Record<string, true>>({});
@@ -2070,9 +1729,7 @@ export function UserProfileDrawer({
   })();
   const settingsScopeKey = activeWorkspaceSlug ?? "__personal__";
   const hasActiveWorkspace = Boolean(activeWorkspaceSlug);
-  const workspaceTeam = activeWorkspaceSlug
-    ? (workspaceTeamMembersCache[activeWorkspaceSlug] ?? null)
-    : null;
+  const workspaceTeam = activeWorkspaceSlug ? (workspaceTeamMembersCache[activeWorkspaceSlug] ?? null) : null;
 
   const profile = mapSettingsSnapshotToDrawerProfile(snapshot);
 
@@ -2088,14 +1745,8 @@ export function UserProfileDrawer({
     });
     return me ? normalizeMemberRole(me) : null;
   })();
-  const canEditWorkspace =
-    !hasActiveWorkspace ||
-    currentWorkspaceRole === "Creator" ||
-    currentWorkspaceRole === "Administrator";
-  const canSeeBilling = !hasActiveWorkspace
-    ? true
-    : currentWorkspaceRole === "Creator" ||
-      currentWorkspaceRole === "Administrator";
+  const canEditWorkspace = !hasActiveWorkspace || currentWorkspaceRole === "Creator" || currentWorkspaceRole === "Administrator";
+  const canSeeBilling = !hasActiveWorkspace ? true : currentWorkspaceRole === "Creator" || currentWorkspaceRole === "Administrator";
 
   useEffect(() => {
     setSnapshot(initialSnapshot ?? null);
@@ -2137,8 +1788,7 @@ export function UserProfileDrawer({
       } as any);
       setSnapshot(nextSnapshot);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to load settings";
+      const message = error instanceof Error ? error.message : "Failed to load settings";
       setSettingsError(message);
     } finally {
       setIsLoadingSettings(false);
@@ -2210,12 +1860,7 @@ export function UserProfileDrawer({
     }
 
     void prefetchBillingData(teamId);
-  }, [
-    canSeeBilling,
-    hasActiveWorkspace,
-    prefetchBillingData,
-    workspaceTeam?.id,
-  ]);
+  }, [canSeeBilling, hasActiveWorkspace, prefetchBillingData, workspaceTeam?.id]);
 
   useEffect(() => {
     if (!open) return;
@@ -2231,9 +1876,7 @@ export function UserProfileDrawer({
         check
           .fn()
           .then((result) => {
-            const accounts = Array.isArray(result)
-              ? result
-              : (result?.accounts ?? []);
+            const accounts = Array.isArray(result) ? result : (result?.accounts ?? []);
             setGitConnectionStatus((prev) => ({
               ...prev,
               [check.id]: accounts.length > 0,
@@ -2251,10 +1894,7 @@ export function UserProfileDrawer({
     refreshGitStatuses();
 
     const handleConnectionChanged = () => refreshGitStatuses();
-    window.addEventListener(
-      "brimble:git-connection-changed",
-      handleConnectionChanged,
-    );
+    window.addEventListener("brimble:git-connection-changed", handleConnectionChanged);
 
     if (!twoFactorStatus) {
       getTwoFactorStatus()
@@ -2263,10 +1903,7 @@ export function UserProfileDrawer({
     }
 
     return () => {
-      window.removeEventListener(
-        "brimble:git-connection-changed",
-        handleConnectionChanged,
-      );
+      window.removeEventListener("brimble:git-connection-changed", handleConnectionChanged);
     };
   }, [open]);
 
@@ -2351,13 +1988,7 @@ export function UserProfileDrawer({
   }
 
   return (
-    <Drawer.Root
-      direction="right"
-      open={open}
-      onOpenChange={onOpenChange}
-      noBodyStyles
-      modal
-    >
+    <Drawer.Root direction="right" open={open} onOpenChange={onOpenChange} noBodyStyles modal>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]" />
         <Drawer.Content
@@ -2400,63 +2031,26 @@ export function UserProfileDrawer({
               activeTab !== ProfileTab.Members &&
               activeTab !== ProfileTab.ActivitySession &&
               !(activeTab === ProfileTab.Profile && hasActiveWorkspace) ? (
-                <div className="text-sm text-dash-text-faded">
-                  Loading settings…
-                </div>
+                <div className="text-sm text-dash-text-faded">Loading settings…</div>
               ) : null}
-              {activeTab === ProfileTab.Profile &&
-                hasActiveWorkspace &&
-                workspaceTeam && (
-                  <WorkspaceProfileForm
-                    team={workspaceTeam}
-                    canEdit={canEditWorkspace}
-                    isSaving={isSavingProfile}
-                    onSave={async (data) => {
-                      if (!activeWorkspaceSlug) {
-                        return;
-                      }
+              {activeTab === ProfileTab.Profile && hasActiveWorkspace && workspaceTeam && (
+                <WorkspaceProfileForm
+                  team={workspaceTeam}
+                  canEdit={canEditWorkspace}
+                  isSaving={isSavingProfile}
+                  onSave={async (data) => {
+                    if (!activeWorkspaceSlug) {
+                      return;
+                    }
 
-                      setIsSavingProfile(true);
-                      try {
-                        await updateWorkspaceTeamProfile({
-                          data: {
-                            workspace: activeWorkspaceSlug,
-                            name: data.name,
-                            description: data.description,
-                            avatarUrl: data.avatarUrl,
-                          },
-                        });
-
-                        setWorkspaceTeamMembersCache((prev) => ({
-                          ...prev,
-                          [activeWorkspaceSlug]: {
-                            ...workspaceTeam,
-                            name: data.name,
-                            description: data.description || "",
-                            avatarUrl: data.avatarUrl,
-                          },
-                        }));
-
-                        toast.success("Workspace profile updated");
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to update workspace profile",
-                        );
-                      } finally {
-                        setIsSavingProfile(false);
-                      }
-                    }}
-                    onBuildsChange={async (enabled) => {
-                      if (!activeWorkspaceSlug) {
-                        return;
-                      }
-
-                      await updateBuilds({
+                    setIsSavingProfile(true);
+                    try {
+                      await updateWorkspaceTeamProfile({
                         data: {
                           workspace: activeWorkspaceSlug,
-                          buildDisabled: !enabled,
+                          name: data.name,
+                          description: data.description,
+                          avatarUrl: data.avatarUrl,
                         },
                       });
 
@@ -2464,30 +2058,122 @@ export function UserProfileDrawer({
                         ...prev,
                         [activeWorkspaceSlug]: {
                           ...workspaceTeam,
-                          buildDisabled: !enabled,
+                          name: data.name,
+                          description: data.description || "",
+                          avatarUrl: data.avatarUrl,
                         },
                       }));
-                    }}
-                  />
-                )}
-              {activeTab === ProfileTab.Profile &&
-                hasActiveWorkspace &&
-                !workspaceTeam && (
-                  <div className="text-sm text-dash-text-faded">
-                    Loading workspace profile…
-                  </div>
-                )}
-              {activeTab === ProfileTab.Profile &&
-                !hasActiveWorkspace &&
-                profile && (
-                  <ProfileForm
-                    profile={profile}
-                    projectCount={projectCount}
-                    isSaving={isSavingProfile}
-                    onSave={async (data) => {
-                      setIsSavingProfile(true);
-                      try {
-                        const updated = await updateProfile({ data });
+
+                      toast.success("Workspace profile updated");
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to update workspace profile");
+                    } finally {
+                      setIsSavingProfile(false);
+                    }
+                  }}
+                  onBuildsChange={async (enabled) => {
+                    if (!activeWorkspaceSlug) {
+                      return;
+                    }
+
+                    await updateBuilds({
+                      data: {
+                        workspace: activeWorkspaceSlug,
+                        buildDisabled: !enabled,
+                      },
+                    });
+
+                    setWorkspaceTeamMembersCache((prev) => ({
+                      ...prev,
+                      [activeWorkspaceSlug]: {
+                        ...workspaceTeam,
+                        buildDisabled: !enabled,
+                      },
+                    }));
+                  }}
+                />
+              )}
+              {activeTab === ProfileTab.Profile && hasActiveWorkspace && !workspaceTeam && (
+                <div className="text-sm text-dash-text-faded">Loading workspace profile…</div>
+              )}
+              {activeTab === ProfileTab.Profile && !hasActiveWorkspace && profile && (
+                <ProfileForm
+                  profile={profile}
+                  projectCount={projectCount}
+                  isSaving={isSavingProfile}
+                  onSave={async (data) => {
+                    setIsSavingProfile(true);
+                    try {
+                      const updated = await updateProfile({ data });
+                      setSnapshot((prev) => {
+                        if (!prev) {
+                          return prev;
+                        }
+
+                        return {
+                          ...prev,
+                          profile: {
+                            ...prev.profile,
+                            firstName: updated.firstName,
+                            lastName: updated.lastName,
+                            username: updated.username,
+                            avatarUrl: updated.avatarUrl,
+                          },
+                        };
+                      });
+                      toast.success("Profile updated");
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to update profile");
+                    } finally {
+                      setIsSavingProfile(false);
+                    }
+                  }}
+                  onBuildsChange={async (enabled) => {
+                    try {
+                      await updateBuilds({
+                        data: { buildDisabled: !enabled },
+                      });
+                      setSnapshot((prev) => {
+                        if (!prev) {
+                          return prev;
+                        }
+
+                        return {
+                          ...prev,
+                          profile: {
+                            ...prev.profile,
+                            buildDisabled: !enabled,
+                          },
+                        };
+                      });
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to update build settings");
+                      throw error;
+                    }
+                  }}
+                  onHapticsChange={async (enabled) => {
+                    try {
+                      await updateHaptics({
+                        data: { haptics: enabled },
+                      });
+                      setSnapshot((prev) => {
+                        if (!prev) return prev;
+                        return {
+                          ...prev,
+                          profile: { ...prev.profile, haptics: enabled },
+                        };
+                      });
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to update haptics settings");
+                      throw error;
+                    }
+                  }}
+                  onCreateApiKey={async () => {
+                    try {
+                      const result = await createApiKey();
+                      const apiKeyValue = result.apiKey;
+
+                      if (apiKeyValue) {
                         setSnapshot((prev) => {
                           if (!prev) {
                             return prev;
@@ -2497,29 +2183,25 @@ export function UserProfileDrawer({
                             ...prev,
                             profile: {
                               ...prev.profile,
-                              firstName: updated.firstName,
-                              lastName: updated.lastName,
-                              username: updated.username,
-                              avatarUrl: updated.avatarUrl,
+                              apiKey: apiKeyValue,
                             },
                           };
                         });
-                        toast.success("Profile updated");
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to update profile",
-                        );
-                      } finally {
-                        setIsSavingProfile(false);
+                        toast.success("API key created");
                       }
-                    }}
-                    onBuildsChange={async (enabled) => {
-                      try {
-                        await updateBuilds({
-                          data: { buildDisabled: !enabled },
-                        });
+
+                      return apiKeyValue;
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to create API key");
+                      return undefined;
+                    }
+                  }}
+                  onResetApiKey={async () => {
+                    try {
+                      const result = await resetApiKey();
+                      const apiKeyValue = result.apiKey;
+
+                      if (apiKeyValue) {
                         setSnapshot((prev) => {
                           if (!prev) {
                             return prev;
@@ -2529,341 +2211,184 @@ export function UserProfileDrawer({
                             ...prev,
                             profile: {
                               ...prev.profile,
-                              buildDisabled: !enabled,
+                              apiKey: apiKeyValue,
                             },
                           };
                         });
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to update build settings",
-                        );
-                        throw error;
+                        toast.success("API key reset");
                       }
-                    }}
-                    onHapticsChange={async (enabled) => {
-                      try {
-                        await updateHaptics({
-                          data: { haptics: enabled },
-                        });
-                        setSnapshot((prev) => {
-                          if (!prev) return prev;
-                          return {
-                            ...prev,
-                            profile: { ...prev.profile, haptics: enabled },
-                          };
-                        });
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to update haptics settings",
-                        );
-                        throw error;
-                      }
-                    }}
-                    onCreateApiKey={async () => {
-                      try {
-                        const result = await createApiKey();
-                        const apiKeyValue = result.apiKey;
 
-                        if (apiKeyValue) {
-                          setSnapshot((prev) => {
-                            if (!prev) {
-                              return prev;
+                      return apiKeyValue;
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to reset API key");
+                      return undefined;
+                    }
+                  }}
+                  onDecryptApiKey={async (encryptedApiKey) => {
+                    try {
+                      return await decryptApiKey({
+                        data: { encryptedApiKey },
+                      });
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to decrypt API key");
+                      return null;
+                    }
+                  }}
+                  gitConnections={[
+                    {
+                      id: "github",
+                      name: "GitHub",
+                      connected: gitConnectionStatus.github ?? false,
+                    },
+                    {
+                      id: "gitlab",
+                      name: "GitLab",
+                      connected: gitConnectionStatus.gitlab ?? false,
+                    },
+                    {
+                      id: "bitbucket",
+                      name: "Bitbucket",
+                      connected: gitConnectionStatus.bitbucket ?? false,
+                    },
+                  ]}
+                  onDisconnectGitProvider={async (providerId) => {
+                    try {
+                      await disconnectGitProvider({
+                        data: { provider: providerId as any },
+                      });
+                      setGitConnectionStatus((prev) => ({
+                        ...prev,
+                        [providerId]: false,
+                      }));
+                      window.dispatchEvent(new Event("brimble:git-connection-changed"));
+                      toast.success(`${providerId.charAt(0).toUpperCase() + providerId.slice(1)} disconnected successfully`);
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : `Failed to disconnect ${providerId}`);
+                    }
+                  }}
+                  onConnectGitProvider={async (providerId) => {
+                    try {
+                      const connectFns: Record<string, () => Promise<{ url: string }>> = {
+                        github: () => getGithubInstallUrl(),
+                        gitlab: () =>
+                          getGitlabConnectUrl({
+                            data: {
+                              device: window.sessionStorage.getItem("brimble.oauth.device_id") ?? undefined,
+                            },
+                          }),
+                        bitbucket: () =>
+                          getBitbucketConnectUrl({
+                            data: {
+                              device: window.sessionStorage.getItem("brimble.oauth.device_id") ?? undefined,
+                            },
+                          }),
+                      };
+                      const getFn = connectFns[providerId];
+                      if (!getFn) {
+                        toast.error(`${providerId} connection is not available yet.`);
+                        return;
+                      }
+                      const result = await getFn();
+                      const url = result?.url?.trim();
+                      if (!url) throw new Error(`Could not start ${providerId} connection.`);
+
+                      const popup = window.open(url, "_blank", "width=900,height=760");
+                      if (!popup) {
+                        toast.error("Popup blocked. Please allow popups and try again.");
+                        return;
+                      }
+
+                      toast.success(`Complete the ${providerId} authorization in the popup, then refresh.`);
+                      setGitConnectionStatus((prev) => ({
+                        ...prev,
+                        [providerId]: null,
+                      }));
+
+                      const checkFns: Record<string, () => Promise<any>> = {
+                        github: listGithubAccounts,
+                        gitlab: listGitlabAccounts,
+                        bitbucket: listBitbucketAccounts,
+                      };
+                      const checkFn = checkFns[providerId];
+                      if (checkFn) {
+                        const interval = window.setInterval(async () => {
+                          try {
+                            const accounts = await checkFn();
+                            const items = Array.isArray(accounts) ? accounts : (accounts?.accounts ?? []);
+                            if (items.length > 0) {
+                              setGitConnectionStatus((prev) => ({
+                                ...prev,
+                                [providerId]: true,
+                              }));
+                              window.clearInterval(interval);
+                              window.dispatchEvent(new Event("brimble:git-connection-changed"));
+                              toast.success(`${providerId.charAt(0).toUpperCase() + providerId.slice(1)} connected successfully`);
                             }
-
-                            return {
-                              ...prev,
-                              profile: {
-                                ...prev.profile,
-                                apiKey: apiKeyValue,
-                              },
-                            };
+                          } catch {}
+                        }, 3000);
+                        window.setTimeout(() => {
+                          window.clearInterval(interval);
+                          setGitConnectionStatus((prev) => {
+                            if (prev[providerId] === null) return { ...prev, [providerId]: false };
+                            return prev;
                           });
-                          toast.success("API key created");
-                        }
-
-                        return apiKeyValue;
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to create API key",
-                        );
-                        return undefined;
+                        }, 90_000);
                       }
-                    }}
-                    onResetApiKey={async () => {
-                      try {
-                        const result = await resetApiKey();
-                        const apiKeyValue = result.apiKey;
-
-                        if (apiKeyValue) {
-                          setSnapshot((prev) => {
-                            if (!prev) {
-                              return prev;
-                            }
-
-                            return {
-                              ...prev,
-                              profile: {
-                                ...prev.profile,
-                                apiKey: apiKeyValue,
-                              },
-                            };
-                          });
-                          toast.success("API key reset");
-                        }
-
-                        return apiKeyValue;
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to reset API key",
-                        );
-                        return undefined;
-                      }
-                    }}
-                    onDecryptApiKey={async (encryptedApiKey) => {
-                      try {
-                        return await decryptApiKey({
-                          data: { encryptedApiKey },
-                        });
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to decrypt API key",
-                        );
-                        return null;
-                      }
-                    }}
-                    gitConnections={[
-                      {
-                        id: "github",
-                        name: "GitHub",
-                        connected: gitConnectionStatus.github ?? false,
-                      },
-                      {
-                        id: "gitlab",
-                        name: "GitLab",
-                        connected: gitConnectionStatus.gitlab ?? false,
-                      },
-                      {
-                        id: "bitbucket",
-                        name: "Bitbucket",
-                        connected: gitConnectionStatus.bitbucket ?? false,
-                      },
-                    ]}
-                    onDisconnectGitProvider={async (providerId) => {
-                      try {
-                        await disconnectGitProvider({
-                          data: { provider: providerId as any },
-                        });
-                        setGitConnectionStatus((prev) => ({
-                          ...prev,
-                          [providerId]: false,
-                        }));
-                        window.dispatchEvent(
-                          new Event("brimble:git-connection-changed"),
-                        );
-                        toast.success(
-                          `${providerId.charAt(0).toUpperCase() + providerId.slice(1)} disconnected successfully`,
-                        );
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : `Failed to disconnect ${providerId}`,
-                        );
-                      }
-                    }}
-                    onConnectGitProvider={async (providerId) => {
-                      try {
-                        const connectFns: Record<
-                          string,
-                          () => Promise<{ url: string }>
-                        > = {
-                          github: () => getGithubInstallUrl(),
-                          gitlab: () =>
-                            getGitlabConnectUrl({
-                              data: {
-                                device:
-                                  window.sessionStorage.getItem(
-                                    "brimble.oauth.device_id",
-                                  ) ?? undefined,
-                              },
-                            }),
-                          bitbucket: () =>
-                            getBitbucketConnectUrl({
-                              data: {
-                                device:
-                                  window.sessionStorage.getItem(
-                                    "brimble.oauth.device_id",
-                                  ) ?? undefined,
-                              },
-                            }),
-                        };
-                        const getFn = connectFns[providerId];
-                        if (!getFn) {
-                          toast.error(
-                            `${providerId} connection is not available yet.`,
-                          );
-                          return;
-                        }
-                        const result = await getFn();
-                        const url = result?.url?.trim();
-                        if (!url)
-                          throw new Error(
-                            `Could not start ${providerId} connection.`,
-                          );
-
-                        const popup = window.open(
-                          url,
-                          "_blank",
-                          "width=900,height=760",
-                        );
-                        if (!popup) {
-                          toast.error(
-                            "Popup blocked. Please allow popups and try again.",
-                          );
-                          return;
-                        }
-
-                        toast.success(
-                          `Complete the ${providerId} authorization in the popup, then refresh.`,
-                        );
-                        setGitConnectionStatus((prev) => ({
-                          ...prev,
-                          [providerId]: null,
-                        }));
-
-                        const checkFns: Record<string, () => Promise<any>> = {
-                          github: listGithubAccounts,
-                          gitlab: listGitlabAccounts,
-                          bitbucket: listBitbucketAccounts,
-                        };
-                        const checkFn = checkFns[providerId];
-                        if (checkFn) {
-                          const interval = window.setInterval(async () => {
-                            try {
-                              const accounts = await checkFn();
-                              const items = Array.isArray(accounts)
-                                ? accounts
-                                : (accounts?.accounts ?? []);
-                              if (items.length > 0) {
-                                setGitConnectionStatus((prev) => ({
-                                  ...prev,
-                                  [providerId]: true,
-                                }));
-                                window.clearInterval(interval);
-                                window.dispatchEvent(
-                                  new Event("brimble:git-connection-changed"),
-                                );
-                                toast.success(
-                                  `${providerId.charAt(0).toUpperCase() + providerId.slice(1)} connected successfully`,
-                                );
-                              }
-                            } catch {}
-                          }, 3000);
-                          window.setTimeout(() => {
-                            window.clearInterval(interval);
-                            setGitConnectionStatus((prev) => {
-                              if (prev[providerId] === null)
-                                return { ...prev, [providerId]: false };
-                              return prev;
-                            });
-                          }, 90_000);
-                        }
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : `Could not open ${providerId} connection.`,
-                        );
-                      }
-                    }}
-                    onRequestDeleteAccountOtp={async (turnstileToken) => {
-                      try {
-                        await requestDeleteAccountOtp({
-                          data: { turnstileToken },
-                        });
-                        toast.success("Verification code sent to your email");
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to send verification code",
-                        );
-                        throw error;
-                      }
-                    }}
-                    onVerifyDeleteAccountOtp={async (code) => {
-                      const accessCode = code.trim();
-                      if (!/^\d{6}$/.test(accessCode)) {
-                        throw new Error("Enter a valid 6-digit code");
-                      }
-                      try {
-                        await confirmDeleteAccount({
-                          data: { accessCode },
-                        });
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Failed to delete account",
-                        );
-                        throw error;
-                      }
-                    }}
-                    onDeleteAccount={async () => {
-                      posthog.reset();
-                      invalidateSessionCache();
-                      window.location.href = "/";
-                    }}
-                    onOpenBilling={() => {
-                      setActiveTab(ProfileTab.Billing);
-                    }}
-                  />
-                )}
-              {activeTab === ProfileTab.Profile &&
-                !hasActiveWorkspace &&
-                !profile &&
-                !isLoadingSettings && (
-                  <div className="text-sm text-dash-text-faded">
-                    Profile settings are unavailable right now.
-                  </div>
-                )}
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : `Could not open ${providerId} connection.`);
+                    }
+                  }}
+                  onRequestDeleteAccountOtp={async (turnstileToken) => {
+                    try {
+                      await requestDeleteAccountOtp({
+                        data: { turnstileToken },
+                      });
+                      toast.success("Verification code sent to your email");
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to send verification code");
+                      throw error;
+                    }
+                  }}
+                  onVerifyDeleteAccountOtp={async (code) => {
+                    const accessCode = code.trim();
+                    if (!/^\d{6}$/.test(accessCode)) {
+                      throw new Error("Enter a valid 6-digit code");
+                    }
+                    try {
+                      await confirmDeleteAccount({
+                        data: { accessCode },
+                      });
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to delete account");
+                      throw error;
+                    }
+                  }}
+                  onDeleteAccount={async () => {
+                    posthog.reset();
+                    invalidateSessionCache();
+                    window.location.href = "/";
+                  }}
+                  onOpenBilling={() => {
+                    setActiveTab(ProfileTab.Billing);
+                  }}
+                />
+              )}
+              {activeTab === ProfileTab.Profile && !hasActiveWorkspace && !profile && !isLoadingSettings && (
+                <div className="text-sm text-dash-text-faded">Profile settings are unavailable right now.</div>
+              )}
               {open && (
                 <div
-                  className={cn(
-                    activeTab === ProfileTab.ActivitySession
-                      ? "block"
-                      : "hidden",
-                  )}
+                  className={cn(activeTab === ProfileTab.ActivitySession ? "block" : "hidden")}
                   aria-hidden={activeTab !== ProfileTab.ActivitySession}
                 >
-                  <ActivitySessionForm
-                    workspace={activeWorkspaceSlug}
-                    initialData={initialActivityLogs}
-                    enabled={open}
-                  />
+                  <ActivitySessionForm workspace={activeWorkspaceSlug} initialData={initialActivityLogs} enabled={open} />
                 </div>
               )}
               {activeTab === ProfileTab.Members && activeWorkspaceSlug && (
                 <MembersForm
                   workspace={activeWorkspaceSlug}
-                  initialTeam={
-                    workspaceTeamMembersCache[activeWorkspaceSlug] ?? null
-                  }
-                  currentUser={
-                    profile
-                      ? { uniqueId: profile.uniqueId, email: profile.email }
-                      : null
-                  }
+                  initialTeam={workspaceTeamMembersCache[activeWorkspaceSlug] ?? null}
+                  currentUser={profile ? { uniqueId: profile.uniqueId, email: profile.email } : null}
                   showBillingInfo={canSeeBilling}
                   initialEnvironments={initialProjectEnvironments}
                 />
@@ -2880,11 +2405,7 @@ export function UserProfileDrawer({
                       await testWebhook({ data: { url, type } });
                       toast.success("Test webhook sent successfully");
                     } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to send test webhook",
-                      );
+                      toast.error(error instanceof Error ? error.message : "Failed to send test webhook");
                     }
                   }}
                   onSave={async (data) => {
@@ -2925,77 +2446,54 @@ export function UserProfileDrawer({
 
                       toast.success("Notification settings saved");
                     } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to save notification settings",
-                      );
+                      toast.error(error instanceof Error ? error.message : "Failed to save notification settings");
                     }
                   }}
                 />
               )}
-              {activeTab === ProfileTab.Notifications &&
-                !profile &&
-                !isLoadingSettings && (
-                  <div className="text-sm text-dash-text-faded">
-                    Notification settings are unavailable right now.
-                  </div>
-                )}
-              {activeTab === ProfileTab.Billing &&
-                profile &&
-                hasActiveWorkspace &&
-                !workspaceTeam && (
-                  <div className="text-sm text-dash-text-faded">
-                    Loading workspace billing…
-                  </div>
-                )}
-              {activeTab === ProfileTab.Billing &&
-                profile &&
-                (!hasActiveWorkspace || workspaceTeam) && (
-                  <BillingForm
-                    key={`billing-${settingsScopeKey}`}
-                    profile={profile}
-                    initialPaymentMethods={initialPaymentMethods}
-                    initialInvoices={
-                      hasActiveWorkspace ? undefined : initialInvoices
+              {activeTab === ProfileTab.Notifications && !profile && !isLoadingSettings && (
+                <div className="text-sm text-dash-text-faded">Notification settings are unavailable right now.</div>
+              )}
+              {activeTab === ProfileTab.Billing && profile && hasActiveWorkspace && !workspaceTeam && (
+                <div className="text-sm text-dash-text-faded">Loading workspace billing…</div>
+              )}
+              {activeTab === ProfileTab.Billing && profile && (!hasActiveWorkspace || workspaceTeam) && (
+                <BillingForm
+                  key={`billing-${settingsScopeKey}`}
+                  profile={profile}
+                  initialPaymentMethods={initialPaymentMethods}
+                  initialInvoices={hasActiveWorkspace ? undefined : initialInvoices}
+                  initialSpendingStats={snapshot?.billing.spending}
+                  initialSubscriptionStats={initialSubscriptionStats}
+                  hidePaymentMethods={hasActiveWorkspace}
+                  hideCurrentPlan={hasActiveWorkspace}
+                  teamId={hasActiveWorkspace ? workspaceTeam?.id : undefined}
+                  workspaceTeam={hasActiveWorkspace ? workspaceTeam : undefined}
+                  onSpendingLimitSaved={async () => {
+                    await refreshSettings();
+
+                    if (!activeWorkspaceSlug) {
+                      return;
                     }
-                    initialSpendingStats={snapshot?.billing.spending}
-                    initialSubscriptionStats={initialSubscriptionStats}
-                    hidePaymentMethods={hasActiveWorkspace}
-                    hideCurrentPlan={hasActiveWorkspace}
-                    teamId={hasActiveWorkspace ? workspaceTeam?.id : undefined}
-                    workspaceTeam={
-                      hasActiveWorkspace ? workspaceTeam : undefined
+
+                    try {
+                      const nextTeam = await getWorkspaceTeamMembers({
+                        data: { workspace: activeWorkspaceSlug },
+                      });
+
+                      setWorkspaceTeamMembersCache((prev) => ({
+                        ...prev,
+                        [activeWorkspaceSlug]: nextTeam,
+                      }));
+                    } catch {
+                      // Keep the current cached team state if refresh fails.
                     }
-                    onSpendingLimitSaved={async () => {
-                      await refreshSettings();
-
-                      if (!activeWorkspaceSlug) {
-                        return;
-                      }
-
-                      try {
-                        const nextTeam = await getWorkspaceTeamMembers({
-                          data: { workspace: activeWorkspaceSlug },
-                        });
-
-                        setWorkspaceTeamMembersCache((prev) => ({
-                          ...prev,
-                          [activeWorkspaceSlug]: nextTeam,
-                        }));
-                      } catch {
-                        // Keep the current cached team state if refresh fails.
-                      }
-                    }}
-                  />
-                )}
-              {activeTab === ProfileTab.Billing &&
-                !profile &&
-                !isLoadingSettings && (
-                  <div className="text-sm text-dash-text-faded">
-                    Billing settings are unavailable right now.
-                  </div>
-                )}
+                  }}
+                />
+              )}
+              {activeTab === ProfileTab.Billing && !profile && !isLoadingSettings && (
+                <div className="text-sm text-dash-text-faded">Billing settings are unavailable right now.</div>
+              )}
               {activeTab === ProfileTab.Security && (
                 <SecurityForm
                   email={profile?.email ?? ""}
@@ -3007,11 +2505,7 @@ export function UserProfileDrawer({
                       await requestEmailVerification({ data: { email } });
                       toast.success("Verification email sent");
                     } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to send verification email",
-                      );
+                      toast.error(error instanceof Error ? error.message : "Failed to send verification email");
                     }
                   }}
                 />
@@ -3024,15 +2518,7 @@ export function UserProfileDrawer({
   );
 }
 
-function Toggle({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  disabled?: boolean;
-}) {
+function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean }) {
   const haptics = useHaptics();
   return (
     <button
@@ -3073,12 +2559,8 @@ function NotificationRow({
   return (
     <div className="flex items-center justify-between">
       <div className="flex flex-col gap-1">
-        <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-          {title}
-        </span>
-        <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-          {description}
-        </span>
+        <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">{title}</span>
+        <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">{description}</span>
       </div>
       <Toggle checked={checked} onChange={onChange} />
     </div>
@@ -3289,19 +2771,12 @@ function toEventGroupKey(title: string): string {
   return title.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
-function normalizeServerWebhookGroups(
-  groups?: ServerWebhookGroup[] | null,
-): EventGroup[] {
+function normalizeServerWebhookGroups(groups?: ServerWebhookGroup[] | null): EventGroup[] {
   if (!Array.isArray(groups)) {
     return [];
   }
 
-  const fallbackIconsByTitle = new Map(
-    fallbackEventGroups.map((group) => [
-      group.title.trim().toLowerCase(),
-      group.icon,
-    ]),
-  );
+  const fallbackIconsByTitle = new Map(fallbackEventGroups.map((group) => [group.title.trim().toLowerCase(), group.icon]));
 
   return groups
     .map((group) => {
@@ -3341,29 +2816,17 @@ function normalizeServerWebhookGroups(
     .filter((group): group is EventGroup => group !== null);
 }
 
-function hasWildcardEventEnabled(
-  groups?: ServerWebhookGroup[] | null,
-): boolean {
+function hasWildcardEventEnabled(groups?: ServerWebhookGroup[] | null): boolean {
   if (!Array.isArray(groups)) {
     return false;
   }
 
   return groups.some((group) =>
-    Array.isArray(group?.events)
-      ? group.events.some((event) => event?.key === "*" && event?.enabled)
-      : false,
+    Array.isArray(group?.events) ? group.events.some((event) => event?.key === "*" && event?.enabled) : false,
   );
 }
 
-function Checkbox({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
+function Checkbox({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
       type="button"
@@ -3373,27 +2836,11 @@ function Checkbox({
       onClick={() => onChange(!checked)}
       className={`flex size-[14px] shrink-0 items-center justify-center rounded-[3px] border shadow-[0px_1px_2px_rgba(3,7,18,0.12),0px_0px_0px_1px_rgba(3,7,18,0.08)] transition-colors ${
         disabled ? "cursor-not-allowed opacity-50" : ""
-      } ${
-        checked
-          ? "border-[#4879f8] bg-[#4879f8]"
-          : "border-transparent bg-dash-bg dark:border-white/20 dark:bg-transparent"
-      }`}
+      } ${checked ? "border-[#4879f8] bg-[#4879f8]" : "border-transparent bg-dash-bg dark:border-white/20 dark:bg-transparent"}`}
     >
       {checked && (
-        <svg
-          width="8"
-          height="6"
-          viewBox="0 0 8 6"
-          fill="none"
-          className="text-white"
-        >
-          <path
-            d="M1 3L3 5L7 1"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+        <svg width="8" height="6" viewBox="0 0 8 6" fill="none" className="text-white">
+          <path d="M1 3L3 5L7 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )}
     </button>
@@ -3419,9 +2866,7 @@ function EventGroupCard({
   onEventToggle: (key: string, v: boolean) => void;
   disabled?: boolean;
 }) {
-  const checkedCount = group.events.filter(
-    (e) => groupEnabled && (eventStates[e.key] ?? false),
-  ).length;
+  const checkedCount = group.events.filter((e) => groupEnabled && (eventStates[e.key] ?? false)).length;
 
   return (
     <div className="flex flex-col">
@@ -3442,19 +2887,13 @@ function EventGroupCard({
           {group.icon ? (
             <img src={group.icon} alt="" className="size-3.5" />
           ) : (
-            <span className="text-[10px] font-semibold text-[#f5a623]">
-              {group.title.slice(0, 1)}
-            </span>
+            <span className="text-[10px] font-semibold text-[#f5a623]">{group.title.slice(0, 1)}</span>
           )}
         </div>
-        <span className="flex-1 text-sm font-normal leading-5 text-dash-text-strong">
-          {group.title}
-        </span>
+        <span className="flex-1 text-sm font-normal leading-5 text-dash-text-strong">{group.title}</span>
         {!expanded ? (
           <span className="text-xs text-dash-text-faded">
-            {checkedCount === group.events.length
-              ? `${group.events.length} events`
-              : `${checkedCount} of ${group.events.length}`}
+            {checkedCount === group.events.length ? `${group.events.length} events` : `${checkedCount} of ${group.events.length}`}
           </span>
         ) : (
           <span
@@ -3462,10 +2901,7 @@ function EventGroupCard({
               e.stopPropagation();
               if (!disabled) onGroupToggle(!groupEnabled);
             }}
-            className={cn(
-              "text-xs text-[#4879f8] hover:underline",
-              disabled && "pointer-events-none opacity-50",
-            )}
+            className={cn("text-xs text-[#4879f8] hover:underline", disabled && "pointer-events-none opacity-50")}
           >
             {groupEnabled ? "Deselect all" : "Select all"}
           </span>
@@ -3490,19 +2926,14 @@ function EventGroupCard({
                 <label
                   key={event.key}
                   title={event.description}
-                  className={cn(
-                    "flex items-center gap-2",
-                    disabled ? "cursor-not-allowed" : "cursor-pointer",
-                  )}
+                  className={cn("flex items-center gap-2", disabled ? "cursor-not-allowed" : "cursor-pointer")}
                 >
                   <Checkbox
                     checked={groupEnabled && (eventStates[event.key] ?? false)}
                     onChange={(v) => onEventToggle(event.key, v)}
                     disabled={disabled}
                   />
-                  <span className="text-sm font-light text-dash-text-body">
-                    {event.title}
-                  </span>
+                  <span className="text-sm font-light text-dash-text-body">{event.title}</span>
                 </label>
               ))}
             </div>
@@ -3513,10 +2944,7 @@ function EventGroupCard({
   );
 }
 
-function isValidWebhookUrl(
-  value: string,
-  type: "discord" | "slack" | "custom",
-): boolean {
+function isValidWebhookUrl(value: string, type: "discord" | "slack" | "custom"): boolean {
   const trimmed = value.trim();
   if (!trimmed) return true;
 
@@ -3531,15 +2959,10 @@ function isValidWebhookUrl(
 
   const host = parsed.hostname.toLowerCase();
   if (type === "discord") {
-    return (
-      (host === "discord.com" || host === "discordapp.com") &&
-      parsed.pathname.startsWith("/api/webhooks/")
-    );
+    return (host === "discord.com" || host === "discordapp.com") && parsed.pathname.startsWith("/api/webhooks/");
   }
   if (type === "slack") {
-    return (
-      host === "hooks.slack.com" && parsed.pathname.startsWith("/services/")
-    );
+    return host === "hooks.slack.com" && parsed.pathname.startsWith("/services/");
   }
   return true;
 }
@@ -3561,10 +2984,7 @@ function NotificationsForm({
     slackUrl: string;
     groups: ServerWebhookGroup[];
   };
-  onTestWebhook?: (
-    url: string,
-    type: "discord" | "slack" | "custom",
-  ) => Promise<void> | void;
+  onTestWebhook?: (url: string, type: "discord" | "slack" | "custom") => Promise<void> | void;
   onSave?: (data: {
     emailNotifications: boolean;
     mute: boolean;
@@ -3574,9 +2994,7 @@ function NotificationsForm({
     events: string[];
   }) => Promise<void> | void;
 }) {
-  const [emailNotifs, setEmailNotifs] = useState(
-    profile.notifications?.email ?? false,
-  );
+  const [emailNotifs, setEmailNotifs] = useState(profile.notifications?.email ?? false);
   const [pushNotifs, setPushNotifs] = useState(() => isPushEnabled());
   const isMuted = profile.notifications?.mute ?? false;
   const [discordUrl, setDiscordUrl] = useState(webhooks?.discordUrl ?? "");
@@ -3606,16 +3024,11 @@ function NotificationsForm({
     } else {
       setPushNotifs(false);
       setPushEnabled(false, workspace);
-      toast.error(
-        "Notifications blocked by your browser. Enable them in your browser's site settings.",
-      );
+      toast.error("Notifications blocked by your browser. Enable them in your browser's site settings.");
     }
   }
 
-  async function handleTestWebhook(
-    url: string,
-    type: "discord" | "slack" | "custom",
-  ) {
+  async function handleTestWebhook(url: string, type: "discord" | "slack" | "custom") {
     if (!url.trim()) return;
     setTestingWebhook(type);
     try {
@@ -3631,28 +3044,16 @@ function NotificationsForm({
   const [eventToggles, setEventToggles] = useState<Record<string, boolean>>({});
   const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null);
 
-  const normalizedServerGroups = useMemo(
-    () => normalizeServerWebhookGroups(webhooks?.groups),
-    [webhooks?.groups],
-  );
-  const groupsForUi: EventGroup[] =
-    normalizedServerGroups.length > 0
-      ? normalizedServerGroups
-      : fallbackEventGroups;
-  const wildcardEventEnabled = useMemo(
-    () => hasWildcardEventEnabled(webhooks?.groups),
-    [webhooks?.groups],
-  );
+  const normalizedServerGroups = useMemo(() => normalizeServerWebhookGroups(webhooks?.groups), [webhooks?.groups]);
+  const groupsForUi: EventGroup[] = normalizedServerGroups.length > 0 ? normalizedServerGroups : fallbackEventGroups;
+  const wildcardEventEnabled = useMemo(() => hasWildcardEventEnabled(webhooks?.groups), [webhooks?.groups]);
 
   useEffect(() => {
     setEmailNotifs(profile.notifications?.email ?? false);
   }, [profile.notifications?.email]);
 
   useEffect(() => {
-    if (
-      expandedGroupKey &&
-      !groupsForUi.some((group) => group.key === expandedGroupKey)
-    ) {
+    if (expandedGroupKey && !groupsForUi.some((group) => group.key === expandedGroupKey)) {
       setExpandedGroupKey(null);
     }
   }, [expandedGroupKey, groupsForUi]);
@@ -3687,9 +3088,7 @@ function NotificationsForm({
       let allEnabled = group.events.length > 0;
 
       for (const event of group.events) {
-        const enabled = wildcardEventEnabled
-          ? true
-          : (serverEventStates.get(event.key) ?? false);
+        const enabled = wildcardEventEnabled ? true : (serverEventStates.get(event.key) ?? false);
         nextEvents[event.key] = enabled;
         if (!enabled) {
           allEnabled = false;
@@ -3753,8 +3152,7 @@ function NotificationsForm({
     setAllEvents(false);
   }, [enabledCount, totalCount]);
 
-  const inputClass =
-    "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+  const inputClass = "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
   const { webhookEnabled } = usePlanGate(profile.subscriptionPlanType ?? "");
   const webhooksFeatureEnabled = useFeatureFlag(FeatureFlags.ENABLE_WEBHOOKS);
@@ -3772,21 +3170,13 @@ function NotificationsForm({
             <img src="/icons/bell.svg" alt="" className="size-12" />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-              Push notifications
-            </span>
+            <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Push notifications</span>
             <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-              {isMuted
-                ? "Unmute notifications to enable browser alerts"
-                : "Get browser alerts when your deployments finish"}
+              {isMuted ? "Unmute notifications to enable browser alerts" : "Get browser alerts when your deployments finish"}
             </span>
           </div>
         </div>
-        <Toggle
-          checked={pushNotifs && !isMuted}
-          onChange={handlePushToggle}
-          disabled={isMuted}
-        />
+        <Toggle checked={pushNotifs && !isMuted} onChange={handlePushToggle} disabled={isMuted} />
       </div>
 
       {/* Email notifications */}
@@ -3796,9 +3186,7 @@ function NotificationsForm({
             <img src="/icons/email-settings.svg" alt="" className="size-12" />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-              Email notifications
-            </span>
+            <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Email notifications</span>
             <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
               Get alerts sent directly to your email address
             </span>
@@ -3813,9 +3201,7 @@ function NotificationsForm({
           {/* Webhook URLs */}
           <div className="flex max-w-[488px] flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-                Discord webhook URL
-              </label>
+              <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Discord webhook URL</label>
               <div className="flex items-center gap-2">
                 <input
                   type="url"
@@ -3828,18 +3214,12 @@ function NotificationsForm({
                     inputClass,
                     "flex-1",
                     !canEdit && "opacity-60 cursor-not-allowed",
-                    !discordUrlValid &&
-                      "!shadow-[0px_1px_2px_rgba(239,68,68,0.2),0px_0px_0px_1px_#ef4444]",
+                    !discordUrlValid && "!shadow-[0px_1px_2px_rgba(239,68,68,0.2),0px_0px_0px_1px_#ef4444]",
                   )}
                 />
                 <button
                   onClick={() => handleTestWebhook(discordUrl, "discord")}
-                  disabled={
-                    !canEdit ||
-                    !discordUrl.trim() ||
-                    !discordUrlValid ||
-                    testingWebhook === "discord"
-                  }
+                  disabled={!canEdit || !discordUrl.trim() || !discordUrlValid || testingWebhook === "discord"}
                   className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
                 >
                   <Send className="size-3.5" />
@@ -3847,16 +3227,11 @@ function NotificationsForm({
                 </button>
               </div>
               {!discordUrlValid && (
-                <p className="text-xs text-red-500">
-                  Must be a Discord webhook URL
-                  (https://discord.com/api/webhooks/...)
-                </p>
+                <p className="text-xs text-red-500">Must be a Discord webhook URL (https://discord.com/api/webhooks/...)</p>
               )}
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-                Slack webhook URL
-              </label>
+              <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Slack webhook URL</label>
               <div className="flex items-center gap-2">
                 <input
                   type="url"
@@ -3869,35 +3244,22 @@ function NotificationsForm({
                     inputClass,
                     "flex-1",
                     !canEdit && "opacity-60 cursor-not-allowed",
-                    !slackUrlValid &&
-                      "!shadow-[0px_1px_2px_rgba(239,68,68,0.2),0px_0px_0px_1px_#ef4444]",
+                    !slackUrlValid && "!shadow-[0px_1px_2px_rgba(239,68,68,0.2),0px_0px_0px_1px_#ef4444]",
                   )}
                 />
                 <button
                   onClick={() => handleTestWebhook(slackUrl, "slack")}
-                  disabled={
-                    !canEdit ||
-                    !slackUrl.trim() ||
-                    !slackUrlValid ||
-                    testingWebhook === "slack"
-                  }
+                  disabled={!canEdit || !slackUrl.trim() || !slackUrlValid || testingWebhook === "slack"}
                   className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
                 >
                   <Send className="size-3.5" />
                   {testingWebhook === "slack" ? "Sending..." : "Test"}
                 </button>
               </div>
-              {!slackUrlValid && (
-                <p className="text-xs text-red-500">
-                  Must be a Slack webhook URL
-                  (https://hooks.slack.com/services/...)
-                </p>
-              )}
+              {!slackUrlValid && <p className="text-xs text-red-500">Must be a Slack webhook URL (https://hooks.slack.com/services/...)</p>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-                Custom webhook URL
-              </label>
+              <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Custom webhook URL</label>
               <div className="flex items-center gap-2">
                 <input
                   type="url"
@@ -3910,29 +3272,19 @@ function NotificationsForm({
                     inputClass,
                     "flex-1",
                     !canEdit && "opacity-60 cursor-not-allowed",
-                    !webhookUrlValid &&
-                      "!shadow-[0px_1px_2px_rgba(239,68,68,0.2),0px_0px_0px_1px_#ef4444]",
+                    !webhookUrlValid && "!shadow-[0px_1px_2px_rgba(239,68,68,0.2),0px_0px_0px_1px_#ef4444]",
                   )}
                 />
                 <button
                   onClick={() => handleTestWebhook(webhookUrl, "custom")}
-                  disabled={
-                    !canEdit ||
-                    !webhookUrl.trim() ||
-                    !webhookUrlValid ||
-                    testingWebhook === "custom"
-                  }
+                  disabled={!canEdit || !webhookUrl.trim() || !webhookUrlValid || testingWebhook === "custom"}
                   className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated disabled:pointer-events-none disabled:opacity-40"
                 >
                   <Send className="size-3.5" />
                   {testingWebhook === "custom" ? "Sending..." : "Test"}
                 </button>
               </div>
-              {!webhookUrlValid && (
-                <p className="text-xs text-red-500">
-                  Must be a valid https:// URL
-                </p>
-              )}
+              {!webhookUrlValid && <p className="text-xs text-red-500">Must be a valid https:// URL</p>}
             </div>
           </div>
 
@@ -3942,31 +3294,19 @@ function NotificationsForm({
           <div className="flex max-w-[488px] flex-col gap-2">
             {/* Section header */}
             <div className="flex items-center justify-between pb-1">
-              <span className="text-sm font-medium leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                Event Notifications
-              </span>
+              <span className="text-sm font-medium leading-5 tracking-[-0.0224px] text-dash-text-strong">Event Notifications</span>
               <span className="text-[13px] text-dash-text-faded">
-                {enabledCount === totalCount
-                  ? "All events enabled"
-                  : `${enabledCount} of ${totalCount} enabled`}
+                {enabledCount === totalCount ? "All events enabled" : `${enabledCount} of ${totalCount} enabled`}
               </span>
             </div>
 
             {/* All Events */}
             <div className="flex items-center py-2">
               <div className="flex items-center gap-2.5">
-                <Checkbox
-                  checked={allEvents}
-                  onChange={handleAllEventsToggle}
-                  disabled={!canEdit}
-                />
+                <Checkbox checked={allEvents} onChange={handleAllEventsToggle} disabled={!canEdit} />
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium leading-5 text-dash-text-strong">
-                    All Events
-                  </span>
-                  <span className="text-[13px] leading-5 text-dash-text-faded">
-                    Subscribe to all current and future events
-                  </span>
+                  <span className="text-sm font-medium leading-5 text-dash-text-strong">All Events</span>
+                  <span className="text-[13px] leading-5 text-dash-text-faded">Subscribe to all current and future events</span>
                 </div>
               </div>
             </div>
@@ -3980,18 +3320,14 @@ function NotificationsForm({
                   <EventGroupCard
                     group={group}
                     expanded={expandedGroupKey === group.key}
-                    onExpandedChange={(next) =>
-                      setExpandedGroupKey(next ? group.key : null)
-                    }
+                    onExpandedChange={(next) => setExpandedGroupKey(next ? group.key : null)}
                     groupEnabled={groupToggles[group.key] ?? false}
                     onGroupToggle={(v) => handleGroupToggle(group.key, v)}
                     eventStates={eventToggles}
                     onEventToggle={handleEventToggle}
                     disabled={!canEdit}
                   />
-                  {i < groupsForUi.length - 1 && (
-                    <hr className="border-dash-border-soft" />
-                  )}
+                  {i < groupsForUi.length - 1 && <hr className="border-dash-border-soft" />}
                 </div>
               ))}
             </div>
@@ -4086,13 +3422,11 @@ function formatRelativeInviteTime(input?: string) {
   const diffMinutes = Math.max(1, Math.floor(diffMs / 60_000));
   if (diffMinutes < 60) return `${diffMinutes} min ago`;
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24)
-    return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 30) return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
   const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths < 12)
-    return `${diffMonths} month${diffMonths === 1 ? "" : "s"} ago`;
+  if (diffMonths < 12) return `${diffMonths} month${diffMonths === 1 ? "" : "s"} ago`;
   const diffYears = Math.floor(diffMonths / 12);
   return `${diffYears} year${diffYears === 1 ? "" : "s"} ago`;
 }
@@ -4103,10 +3437,7 @@ function mapActiveMembers(team?: TeamDetails | null): Member[] {
   return team.members
     .filter((member) => member.accepted !== false)
     .map((member) => {
-      const name =
-        [member.firstName, member.lastName].filter(Boolean).join(" ").trim() ||
-        member.username ||
-        member.email;
+      const name = [member.firstName, member.lastName].filter(Boolean).join(" ").trim() || member.username || member.email;
       const role = normalizeMemberRole(member);
       return {
         id: member.id,
@@ -4129,9 +3460,7 @@ function mapPendingInvites(team?: TeamDetails | null): PendingInvite[] {
       id: member.id,
       email: member.email,
       role: normalizeMemberRole(member),
-      sentAt: formatRelativeInviteTime(
-        member.invitedAt ?? member.createdAt ?? member.updatedAt,
-      ),
+      sentAt: formatRelativeInviteTime(member.invitedAt ?? member.createdAt ?? member.updatedAt),
     }));
 }
 
@@ -4241,9 +3570,7 @@ function MemberActionMenu({
           )}
           {canRemove && (
             <>
-              {(canChangeRole || hasEnvironments) && (
-                <hr className="my-1 border-dash-border-soft" />
-              )}
+              {(canChangeRole || hasEnvironments) && <hr className="my-1 border-dash-border-soft" />}
               <button
                 onClick={() => {
                   setOpen(false);
@@ -4264,21 +3591,15 @@ function MemberActionMenu({
       {open && subMenu === "role" && (
         <div className="absolute right-0 top-full z-50 mt-1 w-[220px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
           <div className="flex items-center gap-2 px-3 py-1.5">
-            <button
-              onClick={() => setSubMenu(null)}
-              className="text-dash-text-faded transition-colors hover:text-dash-text-strong"
-            >
+            <button onClick={() => setSubMenu(null)} className="text-dash-text-faded transition-colors hover:text-dash-text-strong">
               <ArrowLeft className="size-3.5" />
             </button>
-            <span className="text-xs font-medium text-dash-text-faded">
-              Select role
-            </span>
+            <span className="text-xs font-medium text-dash-text-faded">Select role</span>
           </div>
           <hr className="my-1 border-dash-border-soft" />
           {ASSIGNABLE_ROLES.map((role) => {
             const isCurrentRole = member.role === role.label;
-            const isUpdatingRole =
-              pendingRole === role.value && roleChangeInFlight;
+            const isUpdatingRole = pendingRole === role.value && roleChangeInFlight;
             return (
               <button
                 key={role.value}
@@ -4287,10 +3608,7 @@ function MemberActionMenu({
                   if (isCurrentRole || roleChangeInFlight) return;
                   setPendingRole(role.value);
                   try {
-                    const didUpdateRole = await onChangeRole?.(
-                      member,
-                      role.value,
-                    );
+                    const didUpdateRole = await onChangeRole?.(member, role.value);
                     if (didUpdateRole !== false) {
                       setOpen(false);
                       setSubMenu(null);
@@ -4305,14 +3623,8 @@ function MemberActionMenu({
               >
                 <span className="flex items-center gap-2 text-sm text-dash-text-body">
                   {role.label}
-                  {isUpdatingRole && (
-                    <span className="size-3 animate-spin rounded-full border border-current border-t-transparent" />
-                  )}
-                  {isCurrentRole && (
-                    <span className="text-[10px] text-dash-text-extra-faded">
-                      Current
-                    </span>
-                  )}
+                  {isUpdatingRole && <span className="size-3 animate-spin rounded-full border border-current border-t-transparent" />}
+                  {isCurrentRole && <span className="text-[10px] text-dash-text-extra-faded">Current</span>}
                 </span>
                 <span className="text-[11px] leading-tight text-dash-text-extra-faded">
                   {isUpdatingRole ? "Updating role..." : role.description}
@@ -4327,15 +3639,10 @@ function MemberActionMenu({
       {open && subMenu === "env" && environments && (
         <div className="absolute right-0 top-full z-50 mt-1 w-[220px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
           <div className="flex items-center gap-2 px-3 py-1.5">
-            <button
-              onClick={() => setSubMenu(null)}
-              className="text-dash-text-faded transition-colors hover:text-dash-text-strong"
-            >
+            <button onClick={() => setSubMenu(null)} className="text-dash-text-faded transition-colors hover:text-dash-text-strong">
               <ArrowLeft className="size-3.5" />
             </button>
-            <span className="text-xs font-medium text-dash-text-faded">
-              Environment access
-            </span>
+            <span className="text-xs font-medium text-dash-text-faded">Environment access</span>
           </div>
           <hr className="my-1 border-dash-border-soft" />
           {environments.map((env) => {
@@ -4361,13 +3668,7 @@ function MemberActionMenu({
                     <span className="size-2.5 animate-spin rounded-full border-[1.5px] border-dash-text-faded border-t-transparent" />
                   ) : checked ? (
                     <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path
-                        d="M1 4L3.5 6.5L9 1"
-                        stroke="white"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
+                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   ) : null}
                 </span>
@@ -4396,32 +3697,22 @@ function MembersForm({
 }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const pricing = usePricing();
-  const getTeamMembers = useServerFn(
-    getWorkspaceTeamMembersServerFn as any,
-  ) as (args: { data: { workspace: string } }) => Promise<TeamDetails>;
-  const inviteTeamMembers = useServerFn(
-    inviteWorkspaceTeamMembersServerFn as any,
-  ) as (args: {
+  const getTeamMembers = useServerFn(getWorkspaceTeamMembersServerFn as any) as (args: {
+    data: { workspace: string };
+  }) => Promise<TeamDetails>;
+  const inviteTeamMembers = useServerFn(inviteWorkspaceTeamMembersServerFn as any) as (args: {
     data: { workspace: string; members: string[] };
   }) => Promise<{ ok: true }>;
-  const resendInvite = useServerFn(
-    resendWorkspaceTeamInviteServerFn as any,
-  ) as (args: {
+  const resendInvite = useServerFn(resendWorkspaceTeamInviteServerFn as any) as (args: {
     data: { workspace: string; email: string };
   }) => Promise<{ ok: true }>;
-  const removeTeamMember = useServerFn(
-    removeWorkspaceTeamMemberServerFn as any,
-  ) as (args: {
+  const removeTeamMember = useServerFn(removeWorkspaceTeamMemberServerFn as any) as (args: {
     data: { workspace: string; memberId: string };
   }) => Promise<{ ok: true }>;
-  const changeMemberRole = useServerFn(
-    updateMemberRoleServerFn as any,
-  ) as (args: {
+  const changeMemberRole = useServerFn(updateMemberRoleServerFn as any) as (args: {
     data: { workspace: string; memberId: string; role: string };
   }) => Promise<{ ok: true }>;
-  const transferOwnership = useServerFn(
-    transferOwnershipServerFn as any,
-  ) as (args: {
+  const transferOwnership = useServerFn(transferOwnershipServerFn as any) as (args: {
     data: { workspace: string; memberId: string };
   }) => Promise<TeamOwnershipTransfer>;
 
@@ -4429,12 +3720,8 @@ function MembersForm({
   const [isLoadingMembers, setIsLoadingMembers] = useState(!initialTeam);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
-  const [busyMemberAction, setBusyMemberAction] = useState<
-    "resend" | "revoke" | "remove" | "role" | null
-  >(null);
-  const [environments, setEnvironments] = useState<ProjectEnvironment[]>(
-    initialEnvironments ?? [],
-  );
+  const [busyMemberAction, setBusyMemberAction] = useState<"resend" | "revoke" | "remove" | "role" | null>(null);
+  const [environments, setEnvironments] = useState<ProjectEnvironment[]>(initialEnvironments ?? []);
   const [envAccess, setEnvAccess] = useState<Record<string, Set<string>>>({});
   const [envBusyKey, setEnvBusyKey] = useState<string | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -4442,9 +3729,7 @@ function MembersForm({
   const [transferConfirmText, setTransferConfirmText] = useState("");
   const [transferring, setTransferring] = useState(false);
 
-  const updateMemberEnvs = useServerFn(
-    updateMemberEnvironmentsServerFn as any,
-  ) as (args: {
+  const updateMemberEnvs = useServerFn(updateMemberEnvironmentsServerFn as any) as (args: {
     data: {
       workspace: string;
       memberId: string;
@@ -4452,9 +3737,7 @@ function MembersForm({
     };
   }) => Promise<{ ok: true }>;
 
-  const getEnvironments = useServerFn(
-    listProjectEnvironmentsServerFn as any,
-  ) as (args: {
+  const getEnvironments = useServerFn(listProjectEnvironmentsServerFn as any) as (args: {
     data: { workspace?: string };
   }) => Promise<ProjectEnvironment[]>;
 
@@ -4506,11 +3789,7 @@ function MembersForm({
       if (reverted.has(envId)) reverted.delete(envId);
       else reverted.add(envId);
       setEnvAccess((prev) => ({ ...prev, [memberId]: reverted }));
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to update environment access",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to update environment access");
     } finally {
       setEnvBusyKey(null);
     }
@@ -4533,11 +3812,8 @@ function MembersForm({
     const currentEmail = currentUser?.email?.trim().toLowerCase();
     return Boolean(currentEmail && memberEmail === currentEmail);
   });
-  const currentUserRole = currentUserTeamMember
-    ? normalizeMemberRole(currentUserTeamMember)
-    : null;
-  const canManageMembers =
-    currentUserRole === "Creator" || currentUserRole === "Administrator";
+  const currentUserRole = currentUserTeamMember ? normalizeMemberRole(currentUserTeamMember) : null;
+  const canManageMembers = currentUserRole === "Creator" || currentUserRole === "Administrator";
 
   const refreshMembers = async (options?: { silent?: boolean }) => {
     if (!options?.silent) {
@@ -4549,9 +3825,7 @@ function MembersForm({
       const nextTeam = await getTeamMembers({ data: { workspace } });
       setTeam(nextTeam);
     } catch (error) {
-      setMembersError(
-        error instanceof Error ? error.message : "Failed to load team members",
-      );
+      setMembersError(error instanceof Error ? error.message : "Failed to load team members");
     } finally {
       if (!options?.silent) {
         setIsLoadingMembers(false);
@@ -4571,22 +3845,14 @@ function MembersForm({
       {/* Invite button */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-            Workspace members
-          </span>
-          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            Manage who has access to this workspace
-          </span>
+          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Workspace members</span>
+          <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">Manage who has access to this workspace</span>
         </div>
         <GlossyButton
           onClick={() => setInviteOpen(true)}
           className="px-5"
           disabled={!canManageMembers}
-          title={
-            !canManageMembers
-              ? "Only workspace creators and administrators can invite members"
-              : undefined
-          }
+          title={!canManageMembers ? "Only workspace creators and administrators can invite members" : undefined}
         >
           Invite
         </GlossyButton>
@@ -4596,9 +3862,7 @@ function MembersForm({
 
       {/* Members list */}
       {membersError ? (
-        <div className="rounded-[6px] border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-500">
-          {membersError}
-        </div>
+        <div className="rounded-[6px] border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-500">{membersError}</div>
       ) : null}
       {isLoadingMembers ? (
         <div className="flex flex-col gap-4">
@@ -4606,19 +3870,10 @@ function MembersForm({
             <div key={i} className="flex items-center gap-3">
               <div className="size-8 shrink-0 animate-pulse rounded-full bg-dash-bg-elevated" />
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <div
-                  className="h-3.5 w-28 animate-pulse rounded bg-dash-bg-elevated"
-                  style={{ animationDelay: `${i * 100}ms` }}
-                />
-                <div
-                  className="h-3 w-40 animate-pulse rounded bg-dash-bg-elevated"
-                  style={{ animationDelay: `${i * 100 + 50}ms` }}
-                />
+                <div className="h-3.5 w-28 animate-pulse rounded bg-dash-bg-elevated" style={{ animationDelay: `${i * 100}ms` }} />
+                <div className="h-3 w-40 animate-pulse rounded bg-dash-bg-elevated" style={{ animationDelay: `${i * 100 + 50}ms` }} />
               </div>
-              <div
-                className="h-5 w-16 animate-pulse rounded-full bg-dash-bg-elevated"
-                style={{ animationDelay: `${i * 100 + 100}ms` }}
-              />
+              <div className="h-5 w-16 animate-pulse rounded-full bg-dash-bg-elevated" style={{ animationDelay: `${i * 100 + 100}ms` }} />
             </div>
           ))}
         </div>
@@ -4627,13 +3882,9 @@ function MembersForm({
           {members.map((member) => {
             const currentEmail = currentUser?.email?.trim().toLowerCase() ?? "";
             const isSelf =
-              (member.userId &&
-                currentUser?.uniqueId &&
-                member.userId === currentUser.uniqueId) ||
-              (currentEmail.length > 0 &&
-                member.email.trim().toLowerCase() === currentEmail);
-            const canManageTarget =
-              canManageMembers && !isSelf && member.role !== "Creator";
+              (member.userId && currentUser?.uniqueId && member.userId === currentUser.uniqueId) ||
+              (currentEmail.length > 0 && member.email.trim().toLowerCase() === currentEmail);
+            const canManageTarget = canManageMembers && !isSelf && member.role !== "Creator";
 
             const memberEnvs = envAccess[member.id] ?? new Set<string>();
 
@@ -4648,13 +3899,9 @@ function MembersForm({
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
                     {member.name}
-                    {isSelf ? (
-                      <span className="text-dash-text-faded"> - You</span>
-                    ) : null}
+                    {isSelf ? <span className="text-dash-text-faded"> - You</span> : null}
                   </span>
-                  <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                    {member.email}
-                  </span>
+                  <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">{member.email}</span>
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
@@ -4665,21 +3912,13 @@ function MembersForm({
                 </span>
                 <MemberActionMenu
                   member={member}
-                  removing={
-                    busyMemberId === member.id && busyMemberAction === "remove"
-                  }
-                  changingRole={
-                    busyMemberId === member.id && busyMemberAction === "role"
-                  }
+                  removing={busyMemberId === member.id && busyMemberAction === "remove"}
+                  changingRole={busyMemberId === member.id && busyMemberAction === "role"}
                   canChangeRole={canManageTarget}
                   canRemove={canManageTarget}
                   environments={canManageTarget ? environments : undefined}
                   memberEnvIds={memberEnvs}
-                  envBusyId={
-                    envBusyKey?.startsWith(`${member.id}:`)
-                      ? envBusyKey.split(":")[1]
-                      : null
-                  }
+                  envBusyId={envBusyKey?.startsWith(`${member.id}:`) ? envBusyKey.split(":")[1] : null}
                   onToggleEnv={toggleEnvAccess}
                   onChangeRole={async (target, role) => {
                     try {
@@ -4692,11 +3931,7 @@ function MembersForm({
                       await refreshMembers();
                       return true;
                     } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to update role",
-                      );
+                      toast.error(error instanceof Error ? error.message : "Failed to update role");
                       return false;
                     } finally {
                       setBusyMemberId(null);
@@ -4713,11 +3948,7 @@ function MembersForm({
                       toast.success("Member removed");
                       await refreshMembers();
                     } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to remove member",
-                      );
+                      toast.error(error instanceof Error ? error.message : "Failed to remove member");
                     } finally {
                       setBusyMemberId(null);
                       setBusyMemberAction(null);
@@ -4727,11 +3958,7 @@ function MembersForm({
               </div>
             );
           })}
-          {!members.length && (
-            <div className="text-sm text-dash-text-faded">
-              No workspace members found.
-            </div>
-          )}
+          {!members.length && <div className="text-sm text-dash-text-faded">No workspace members found.</div>}
         </div>
       )}
 
@@ -4740,27 +3967,17 @@ function MembersForm({
         <>
           <hr className="-ml-8 border-dash-border-soft" />
           <div className="flex flex-col gap-4">
-            <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-              Pending invitations
-            </span>
+            <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Pending invitations</span>
             {pendingInvites.map((invite) => (
               <div key={invite.id} className="flex items-center gap-3">
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-dash-bg-elevated">
-                  <span className="text-xs text-dash-text-extra-faded">
-                    {invite.email[0].toUpperCase()}
-                  </span>
+                  <span className="text-xs text-dash-text-extra-faded">{invite.email[0].toUpperCase()}</span>
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                    {invite.email}
-                  </span>
-                  <span className="text-xs leading-4 text-dash-text-extra-faded">
-                    Sent {invite.sentAt}
-                  </span>
+                  <span className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">{invite.email}</span>
+                  <span className="text-xs leading-4 text-dash-text-extra-faded">Sent {invite.sentAt}</span>
                 </div>
-                <span className="shrink-0 rounded-full bg-[#f5a623]/10 px-2.5 py-0.5 text-[11px] font-medium text-[#f5a623]">
-                  Pending
-                </span>
+                <span className="shrink-0 rounded-full bg-[#f5a623]/10 px-2.5 py-0.5 text-[11px] font-medium text-[#f5a623]">Pending</span>
                 <div className="flex shrink-0 items-center gap-2">
                   {canManageMembers && (
                     <button
@@ -4774,11 +3991,7 @@ function MembersForm({
                           toast.success("Invitation resent");
                           await refreshMembers();
                         } catch (error) {
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : "Failed to resend invite",
-                          );
+                          toast.error(error instanceof Error ? error.message : "Failed to resend invite");
                         } finally {
                           setBusyMemberId(null);
                           setBusyMemberAction(null);
@@ -4787,14 +4000,10 @@ function MembersForm({
                       disabled={busyMemberId === invite.id}
                       className="inline-flex items-center gap-1 text-xs text-[#4879f8] transition-colors hover:text-[#3a6ae6] disabled:opacity-50"
                     >
-                      {busyMemberId === invite.id &&
-                        busyMemberAction === "resend" && (
-                          <span className="size-2.5 animate-spin rounded-full border border-current border-t-transparent" />
-                        )}
-                      {busyMemberId === invite.id &&
-                      busyMemberAction === "resend"
-                        ? "Resending..."
-                        : "Resend"}
+                      {busyMemberId === invite.id && busyMemberAction === "resend" && (
+                        <span className="size-2.5 animate-spin rounded-full border border-current border-t-transparent" />
+                      )}
+                      {busyMemberId === invite.id && busyMemberAction === "resend" ? "Resending..." : "Resend"}
                     </button>
                   )}
                   {canManageMembers && (
@@ -4809,11 +4018,7 @@ function MembersForm({
                           toast.success("Invitation revoked");
                           await refreshMembers();
                         } catch (error) {
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : "Failed to revoke invitation",
-                          );
+                          toast.error(error instanceof Error ? error.message : "Failed to revoke invitation");
                         } finally {
                           setBusyMemberId(null);
                           setBusyMemberAction(null);
@@ -4822,14 +4027,10 @@ function MembersForm({
                       disabled={busyMemberId === invite.id}
                       className="inline-flex items-center gap-1 text-xs text-dash-text-faded transition-colors hover:text-red-500 disabled:opacity-50"
                     >
-                      {busyMemberId === invite.id &&
-                        busyMemberAction === "revoke" && (
-                          <span className="size-2.5 animate-spin rounded-full border border-current border-t-transparent" />
-                        )}
-                      {busyMemberId === invite.id &&
-                      busyMemberAction === "revoke"
-                        ? "Revoking..."
-                        : "Revoke"}
+                      {busyMemberId === invite.id && busyMemberAction === "revoke" && (
+                        <span className="size-2.5 animate-spin rounded-full border border-current border-t-transparent" />
+                      )}
+                      {busyMemberId === invite.id && busyMemberAction === "revoke" ? "Revoking..." : "Revoke"}
                     </button>
                   )}
                 </div>
@@ -4849,31 +4050,25 @@ function MembersForm({
         return (
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-[2px]">
-              <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                Seat usage
-              </span>
+              <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Seat usage</span>
               <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
                 {memberCount} of {configuredSeats} included seats used
               </span>
               {showBillingInfo && extraSeats > 0 ? (
                 <span className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                  {extraSeats} extra {extraSeats === 1 ? "seat" : "seats"}{" "}
-                  &times; {formatUsdMonthly(pricing.team.costPerMember)}
+                  {extraSeats} extra {extraSeats === 1 ? "seat" : "seats"} &times; {formatUsdMonthly(pricing.team.costPerMember)}
                   /seat/month
                 </span>
               ) : null}
               {showBillingInfo && (
                 <span className="text-xs leading-4 tracking-[-0.02px] text-dash-text-extra-faded">
-                  Team billing also includes concurrent builds at{" "}
-                  {formatUsdMonthly(pricing.team.costPerBuild)}/build/month.
+                  Team billing also includes concurrent builds at {formatUsdMonthly(pricing.team.costPerBuild)}/build/month.
                 </span>
               )}
             </div>
             {showBillingInfo && (
               <span className="text-lg font-medium text-dash-text-strong">
-                {extraSeats > 0
-                  ? `+${formatUsdMonthly(extraCost)}/mo`
-                  : `${formatUsdMonthly(baseCost)}/mo`}
+                {extraSeats > 0 ? `+${formatUsdMonthly(extraCost)}/mo` : `${formatUsdMonthly(baseCost)}/mo`}
               </span>
             )}
           </div>
@@ -4887,12 +4082,9 @@ function MembersForm({
           <div>
             <div className="flex items-center justify-between gap-4">
               <div className="flex flex-col gap-1">
-                <h4 className="text-sm font-medium text-dash-text-strong">
-                  Transfer ownership
-                </h4>
+                <h4 className="text-sm font-medium text-dash-text-strong">Transfer ownership</h4>
                 <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                  Transfer Creator role to another workspace member. You will
-                  become an Administrator.
+                  Transfer Creator role to another workspace member. You will become an Administrator.
                 </p>
               </div>
               <button
@@ -4921,11 +4113,7 @@ function MembersForm({
             }
             confirmLabel="Transfer"
             confirmLoadingLabel="Sending..."
-            confirmDisabled={
-              !transferTarget ||
-              transferConfirmText !== team?.name ||
-              transferring
-            }
+            confirmDisabled={!transferTarget || transferConfirmText !== team?.name || transferring}
             closeOnConfirm={false}
             onConfirm={async () => {
               if (!transferTarget) return;
@@ -4940,14 +4128,9 @@ function MembersForm({
                 setTransferConfirmText("");
                 await refreshMembers();
               } catch (error) {
-                const message =
-                  error instanceof Error
-                    ? error.message
-                    : "Failed to transfer ownership";
+                const message = error instanceof Error ? error.message : "Failed to transfer ownership";
                 if (/already a pending/i.test(message)) {
-                  toast.error(
-                    "There is already a pending transfer for this team. Cancel it first.",
-                  );
+                  toast.error("There is already a pending transfer for this team. Cancel it first.");
                 } else if (/already the team owner/i.test(message)) {
                   toast.error("This person is already the team owner.");
                 } else {
@@ -4961,9 +4144,7 @@ function MembersForm({
             {/* Member picker */}
             <Dropdown
               value={transferTarget?.id ?? ""}
-              options={members
-                .filter((m) => m.role !== "Creator")
-                .map((m) => ({ id: m.id, label: `${m.name} (${m.role})` }))}
+              options={members.filter((m) => m.role !== "Creator").map((m) => ({ id: m.id, label: `${m.name} (${m.role})` }))}
               onChange={(id) => {
                 const match = members.find((m) => m.id === id);
                 setTransferTarget(match ?? null);
@@ -4977,11 +4158,7 @@ function MembersForm({
             {transferTarget && (
               <div className="flex flex-col gap-2 pt-3">
                 <label className="text-sm text-dash-text-faded">
-                  Type{" "}
-                  <span className="font-medium text-dash-text-strong">
-                    {team?.name}
-                  </span>{" "}
-                  to confirm
+                  Type <span className="font-medium text-dash-text-strong">{team?.name}</span> to confirm
                 </label>
                 <input
                   type="text"
@@ -5005,9 +4182,7 @@ function MembersForm({
         currentUserEmail={currentUser?.email ?? null}
         onInvite={async (emails) => {
           await inviteTeamMembers({ data: { workspace, members: emails } });
-          toast.success(
-            `Sent ${emails.length} invitation${emails.length === 1 ? "" : "s"}`,
-          );
+          toast.success(`Sent ${emails.length} invitation${emails.length === 1 ? "" : "s"}`);
           await refreshMembers();
         }}
       />

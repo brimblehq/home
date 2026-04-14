@@ -9,10 +9,7 @@ export interface ApiRequestOptions<TBody = unknown> {
 }
 
 export interface ApiClient {
-  request<TResponse = unknown, TBody = unknown>(
-    path: string,
-    options?: ApiRequestOptions<TBody>,
-  ): Promise<TResponse>;
+  request<TResponse = unknown, TBody = unknown>(path: string, options?: ApiRequestOptions<TBody>): Promise<TResponse>;
 }
 
 export interface ApiListResponse<TItem> {

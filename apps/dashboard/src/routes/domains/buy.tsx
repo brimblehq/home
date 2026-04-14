@@ -1,10 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  createFileRoute,
-  getRouteApi,
-  useRouter,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
 import { Search, Globe, AlertCircle } from "lucide-react";
@@ -15,18 +10,10 @@ import { hapticToast as toast } from "@/utils/haptic-toast";
 import { Dropdown } from "../../components/shared/dropdown";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { Spinner } from "../../components/shared/spinner";
-import {
-  Modal,
-  ModalHeader,
-  ModalFooter,
-  ModalCancelButton,
-} from "../../components/shared/modal";
+import { Modal, ModalHeader, ModalFooter, ModalCancelButton } from "../../components/shared/modal";
 import { NumberPagination } from "../../components/shared/pagination";
 import { ToggleSwitch } from "../../components/shared/toggle-switch";
-import {
-  searchDomainSaleServerFn,
-  purchaseDomainServerFn,
-} from "../../server/domains/actions";
+import { searchDomainSaleServerFn, purchaseDomainServerFn } from "../../server/domains/actions";
 import { getPaymentMethodsServerFn } from "@/server/payments/actions";
 import { usePaymentMethods } from "@/hooks/use-payments";
 import type { PaymentMethod } from "@/backend/payments";
@@ -44,8 +31,7 @@ const ease = [0.16, 1, 0.3, 1] as const;
 const PAGE_SIZE = 50;
 const PRIVACY_PRICE = 8;
 
-const inputClass =
-  "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+const inputClass = "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 /* ─── Types ─── */
 
@@ -155,15 +141,9 @@ function BuyDomainPage() {
   const autoSearchedQueryRef = useRef("");
 
   const totalPages = Math.ceil(results.length / PAGE_SIZE);
-  const paginatedResults = results.slice(
-    page * PAGE_SIZE,
-    (page + 1) * PAGE_SIZE,
-  );
-  const exactDomainAvailable = results.some(
-    (result) => result.domainName === searchedDomain && result.available,
-  );
-  const showUnavailableBanner =
-    hasSearched && !searching && Boolean(searchedDomain) && !exactDomainAvailable;
+  const paginatedResults = results.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const exactDomainAvailable = results.some((result) => result.domainName === searchedDomain && result.available);
+  const showUnavailableBanner = hasSearched && !searching && Boolean(searchedDomain) && !exactDomainAvailable;
 
   const isAi = purchaseTarget ? isAiDomain(purchaseTarget.domainName) : false;
   const isApp = purchaseTarget ? isAppDomain(purchaseTarget.domainName) : false;
@@ -172,10 +152,7 @@ function BuyDomainPage() {
   const domainCost = (purchaseTarget?.price ?? 0) * years;
   const total = domainCost + privacyCost;
 
-  async function handleSearch(
-    nextQuery?: string,
-    options?: { autoOpenPurchase?: boolean },
-  ) {
+  async function handleSearch(nextQuery?: string, options?: { autoOpenPurchase?: boolean }) {
     const rawQuery = nextQuery ?? query;
     const name = normalizeQuery(rawQuery);
     if (!name || searching) return;
@@ -196,9 +173,7 @@ function BuyDomainPage() {
       setResults(mappedResults);
 
       if (options?.autoOpenPurchase) {
-        const exactMatch = mappedResults.find(
-          (result) => result.domainName === name && result.available,
-        );
+        const exactMatch = mappedResults.find((result) => result.domainName === name && result.available);
         if (exactMatch) {
           handleOpenPurchase(exactMatch);
         }
@@ -297,19 +272,12 @@ function BuyDomainPage() {
     <div className="max-w-[1000px]">
       <div className="mb-8 flex items-center gap-4">
         <div className="hidden shrink-0 brightness-[1.02] mix-blend-multiply dark:invert dark:mix-blend-screen dark:opacity-85 sm:block">
-          <img
-            src="/images/televison.svg"
-            alt=""
-            className="size-[80px]"
-          />
+          <img src="/images/televison.svg" alt="" className="size-[80px]" />
         </div>
         <div>
-          <h2 className="text-base font-medium tracking-[-0.03px] text-dash-text-strong">
-            Buy a domain
-          </h2>
+          <h2 className="text-base font-medium tracking-[-0.03px] text-dash-text-strong">Buy a domain</h2>
           <p className="mt-2 max-w-[560px] text-sm font-light leading-[1.3] text-dash-text-extra-faded">
-            Search for the perfect domain name for your project. We'll check
-            availability across 30+ TLDs and show you pricing instantly.
+            Search for the perfect domain name for your project. We'll check availability across 30+ TLDs and show you pricing instantly.
           </p>
         </div>
       </div>
@@ -344,9 +312,7 @@ function BuyDomainPage() {
       {showUnavailableBanner && (
         <div className="mb-4 flex items-center gap-3 rounded-[4px] bg-[#ef2f1f]/5 px-4 py-2.5 dark:bg-[#ef2f1f]/15">
           <AlertCircle className="size-4 shrink-0 text-[#ef2f1f]" />
-          <p className="text-sm text-dash-text-body dark:text-dash-text-strong">
-            {searchedDomain} is not available for purchase.
-          </p>
+          <p className="text-sm text-dash-text-body dark:text-dash-text-strong">{searchedDomain} is not available for purchase.</p>
         </div>
       )}
 
@@ -359,12 +325,9 @@ function BuyDomainPage() {
           className="flex flex-col items-center justify-center py-20"
         >
           <Globe className="mb-4 size-10 text-dash-text-extra-faded opacity-40" />
-          <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-            Find your perfect domain
-          </h3>
+          <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Find your perfect domain</h3>
           <p className="max-w-[320px] text-center text-sm text-dash-text-faded">
-            Type a domain name above to check availability and pricing across
-            30+ TLDs.
+            Type a domain name above to check availability and pricing across 30+ TLDs.
           </p>
         </motion.div>
       )}
@@ -382,10 +345,7 @@ function BuyDomainPage() {
           {results.length > 0 ? (
             <>
               <p className="mb-1 text-sm text-dash-text-faded">
-                Showing results for{" "}
-                <span className="font-medium text-dash-text-strong">
-                  {searchedQuery}
-                </span>
+                Showing results for <span className="font-medium text-dash-text-strong">{searchedQuery}</span>
               </p>
               <p className="mb-3 text-xs text-dash-text-extra-faded">
                 Only domains available for purchase are shown. If you don't see a domain, it's likely already taken.
@@ -412,19 +372,14 @@ function BuyDomainPage() {
 
               {totalPages > 1 && (
                 <div className="mt-6 flex justify-end">
-                  <NumberPagination
-                    currentPage={page + 1}
-                    totalPages={totalPages}
-                    onPageChange={(p) => setPage(p - 1)}
-                  />
+                  <NumberPagination currentPage={page + 1} totalPages={totalPages} onPageChange={(p) => setPage(p - 1)} />
                 </div>
               )}
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-20">
               <p className="text-sm text-dash-text-faded">
-                No results found for{" "}
-                <span className="font-medium text-dash-text-strong">{searchedQuery}</span>
+                No results found for <span className="font-medium text-dash-text-strong">{searchedQuery}</span>
               </p>
             </div>
           )}
@@ -441,50 +396,34 @@ function BuyDomainPage() {
         }}
         width={420}
       >
-        <ModalHeader
-          title="Purchase domain"
-          description="Complete your domain purchase"
-        />
+        <ModalHeader title="Purchase domain" description="Complete your domain purchase" />
 
         {purchaseTarget && (
           <div className="flex flex-col gap-4 px-6 py-5">
             {/* Domain + price */}
             <div className="flex items-center justify-between rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated px-4 py-3">
-              <span className="text-sm font-medium text-dash-text-strong">
-                {purchaseTarget.domainName}
-              </span>
-              <span className="text-sm font-medium text-[#34d399]">
-                {formatUsd(purchaseTarget.price ?? 0)}/yr
-              </span>
+              <span className="text-sm font-medium text-dash-text-strong">{purchaseTarget.domainName}</span>
+              <span className="text-sm font-medium text-[#34d399]">{formatUsd(purchaseTarget.price ?? 0)}/yr</span>
             </div>
 
             {/* Payment method */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm text-dash-text-faded">
-                Payment method
-              </label>
+              <label className="text-sm text-dash-text-faded">Payment method</label>
               {defaultCard ? (
                 <>
                   <div className="flex items-center gap-3 rounded-[4px] border-[0.5px] border-dash-border px-3.5 py-2.5">
                     <CardChip />
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-dash-text-strong">
-                        {formatCardType(defaultCard.cardType)}
-                      </span>
-                      <span className="text-xs text-dash-text-faded">
-                        ending in {defaultCard.last4 ?? "****"}
-                      </span>
+                      <span className="text-sm font-medium text-dash-text-strong">{formatCardType(defaultCard.cardType)}</span>
+                      <span className="text-xs text-dash-text-faded">ending in {defaultCard.last4 ?? "****"}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-dash-text-extra-faded">
-                    Domain purchases use your available saved card automatically.
-                  </p>
+                  <p className="text-xs text-dash-text-extra-faded">Domain purchases use your available saved card automatically.</p>
                 </>
               ) : (
                 <div className="rounded-[4px] border-[0.5px] border-dash-border px-4 py-3 text-center">
                   <p className="text-sm text-dash-text-faded">
-                    No payment methods found. Add a card in{" "}
-                    <span className="font-medium text-dash-text-strong">Settings</span>.
+                    No payment methods found. Add a card in <span className="font-medium text-dash-text-strong">Settings</span>.
                   </p>
                 </div>
               )}
@@ -494,50 +433,29 @@ function BuyDomainPage() {
             <div className="flex flex-col gap-1.5">
               <label className="text-sm text-dash-text-faded">
                 Duration
-                {isAi && (
-                  <span className="ml-1 text-xs text-dash-text-extra-faded">
-                    (.ai domains require 2-year terms)
-                  </span>
-                )}
+                {isAi && <span className="ml-1 text-xs text-dash-text-extra-faded">(.ai domains require 2-year terms)</span>}
               </label>
-              <Dropdown
-                value={String(years)}
-                options={getDurationOptions()}
-                onChange={(id) => setYears(Number(id))}
-              />
+              <Dropdown value={String(years)} options={getDurationOptions()} onChange={(id) => setYears(Number(id))} />
             </div>
 
             {/* Privacy protection */}
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
-                <span className="text-sm text-dash-text-body">
-                  Privacy protection
-                </span>
+                <span className="text-sm text-dash-text-body">Privacy protection</span>
                 <span className="text-xs text-dash-text-faded">
                   {isApp ? "Included free with .app domains" : `${formatUsd(PRIVACY_PRICE)}/yr — hides your WHOIS info`}
                 </span>
               </div>
-              <ToggleSwitch
-                checked={effectivePrivacy}
-                onChange={setPrivacyEnabled}
-                disabled={isApp}
-              />
+              <ToggleSwitch checked={effectivePrivacy} onChange={setPrivacyEnabled} disabled={isApp} />
             </div>
 
             {/* Auto renewal */}
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
-                <span className="text-sm text-dash-text-body">
-                  Auto renewal
-                </span>
-                <span className="text-xs text-dash-text-faded">
-                  Automatically renew before expiration
-                </span>
+                <span className="text-sm text-dash-text-body">Auto renewal</span>
+                <span className="text-xs text-dash-text-faded">Automatically renew before expiration</span>
               </div>
-              <ToggleSwitch
-                checked={autoRenewal}
-                onChange={setAutoRenewal}
-              />
+              <ToggleSwitch checked={autoRenewal} onChange={setAutoRenewal} />
             </div>
 
             {/* Total */}
@@ -555,12 +473,8 @@ function BuyDomainPage() {
                 </div>
               )}
               <div className="flex items-center justify-between pt-1.5">
-                <span className="text-sm font-medium text-dash-text-body">
-                  Total
-                </span>
-                <span className="text-base font-medium text-dash-text-strong">
-                  {formatUsd(total)}
-                </span>
+                <span className="text-sm font-medium text-dash-text-body">Total</span>
+                <span className="text-base font-medium text-dash-text-strong">{formatUsd(total)}</span>
               </div>
             </div>
           </div>
@@ -568,13 +482,7 @@ function BuyDomainPage() {
 
         <ModalFooter>
           <ModalCancelButton />
-          <GlossyButton
-            variant="blue"
-            onClick={handlePurchase}
-            disabled={purchasing}
-            loading={purchasing}
-            loadingLabel="Purchasing..."
-          >
+          <GlossyButton variant="blue" onClick={handlePurchase} disabled={purchasing} loading={purchasing} loadingLabel="Purchasing...">
             Purchase domain
           </GlossyButton>
         </ModalFooter>

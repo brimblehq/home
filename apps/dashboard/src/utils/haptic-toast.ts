@@ -14,21 +14,18 @@ const VIBRATE = {
   warning: [40, 100, 40],
 };
 
-export const hapticToast = Object.assign(
-  (...args: Parameters<typeof sonnerToast>) => sonnerToast(...args),
-  {
-    ...sonnerToast,
-    success: (...args: Parameters<typeof sonnerToast.success>) => {
-      vibrate(VIBRATE.success);
-      return sonnerToast.success(...args);
-    },
-    error: (...args: Parameters<typeof sonnerToast.error>) => {
-      vibrate(VIBRATE.error);
-      return sonnerToast.error(...args);
-    },
-    warning: (...args: Parameters<typeof sonnerToast.warning>) => {
-      vibrate(VIBRATE.warning);
-      return sonnerToast.warning(...args);
-    },
+export const hapticToast = Object.assign((...args: Parameters<typeof sonnerToast>) => sonnerToast(...args), {
+  ...sonnerToast,
+  success: (...args: Parameters<typeof sonnerToast.success>) => {
+    vibrate(VIBRATE.success);
+    return sonnerToast.success(...args);
   },
-);
+  error: (...args: Parameters<typeof sonnerToast.error>) => {
+    vibrate(VIBRATE.error);
+    return sonnerToast.error(...args);
+  },
+  warning: (...args: Parameters<typeof sonnerToast.warning>) => {
+    vibrate(VIBRATE.warning);
+    return sonnerToast.warning(...args);
+  },
+});

@@ -44,16 +44,19 @@ export function createWorkspacesApi(client: ApiClient): WorkspacesApi {
 
   function mapWorkspace(team: unknown): Workspace {
     const row = asRecord(team) ?? {};
-    const explicitSlug =
-      pickNonEmptyString(row, "slug", "workspaceSlug", "workspace_slug") ??
-      undefined;
+    const explicitSlug = pickNonEmptyString(row, "slug", "workspaceSlug", "workspace_slug") ?? undefined;
     const name = String(pickString(row, "name", "team_name") ?? "");
     return {
       id: String(row.id ?? row._id ?? ""),
       name,
       slug:
         explicitSlug ??
-        (name ? name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : undefined),
+        (name
+          ? name
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-|-$/g, "")
+          : undefined),
       avatarUrl: pickString(row, "avatar", "avatarUrl") || undefined,
       role: row.isCreator ? "creator" : "member",
       accepted: row.accepted !== undefined ? Boolean(row.accepted) : undefined,
@@ -82,11 +85,7 @@ export function createWorkspacesApi(client: ApiClient): WorkspacesApi {
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rootRecord = asRecord(root) ?? {};
-      const teamRecord =
-        asRecord(rootRecord.team) ??
-        asRecord(rootRecord.workspace) ??
-        asRecord(rootRecord.data) ??
-        rootRecord;
+      const teamRecord = asRecord(rootRecord.team) ?? asRecord(rootRecord.workspace) ?? asRecord(rootRecord.data) ?? rootRecord;
 
       return mapWorkspace(teamRecord);
     },
@@ -104,9 +103,7 @@ export function createWorkspacesApi(client: ApiClient): WorkspacesApi {
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const record = asRecord(root) ?? {};
       const nested = asRecord(record.data);
-      const reference =
-        pickNonEmptyString(record, "reference") ??
-        pickNonEmptyString(nested, "reference");
+      const reference = pickNonEmptyString(record, "reference") ?? pickNonEmptyString(nested, "reference");
 
       return {
         valid: Boolean(reference) || record.valid === true || nested?.valid === true,

@@ -11,14 +11,10 @@ function mapConnectError(error: unknown, providerName: string): never {
       throw new Error(`${CONNECT_EXPIRED_PREFIX}Connection expired, please try again.`);
     }
     if (error.status === 401) {
-      throw new Error(
-        `${CONNECT_AUTH_REQUIRED_PREFIX}You need to sign in again to connect ${providerName}.`,
-      );
+      throw new Error(`${CONNECT_AUTH_REQUIRED_PREFIX}You need to sign in again to connect ${providerName}.`);
     }
   }
-  throw error instanceof Error
-    ? error
-    : new Error(`We could not start ${providerName} connection right now. Please try again.`);
+  throw error instanceof Error ? error : new Error(`We could not start ${providerName} connection right now. Please try again.`);
 }
 
 export interface GithubAccount {
@@ -106,16 +102,8 @@ export interface RepositoriesApi {
   getGithubInstallUrl(): Promise<GithubInstallUrlResult>;
   getGitlabConnectUrl(input?: { device?: string }): Promise<GitlabConnectUrlResult>;
   listGithubAccounts(): Promise<GithubAccountsResult>;
-  listGithubRepos(input?: {
-    q?: string;
-    page?: number;
-    limit?: number;
-    installationId?: number | string;
-  }): Promise<GithubRepoListResult>;
-  getGithubRepo(input: {
-    repoName: string;
-    installationId?: number | string;
-  }): Promise<RepositoryMetadata>;
+  listGithubRepos(input?: { q?: string; page?: number; limit?: number; installationId?: number | string }): Promise<GithubRepoListResult>;
+  getGithubRepo(input: { repoName: string; installationId?: number | string }): Promise<RepositoryMetadata>;
   getGithubRootDir(input: {
     repoName: string;
     branch: string;
@@ -123,16 +111,8 @@ export interface RepositoriesApi {
     path?: string;
   }): Promise<RepositoryRootDirResult>;
   listGitlabAccounts(): Promise<GitlabAccountsResult>;
-  listGitlabRepos(input?: {
-    q?: string;
-    page?: number;
-    limit?: number;
-    installationId?: number | string;
-  }): Promise<GitlabRepoListResult>;
-  getGitlabRepo(input: {
-    repoName: string;
-    installationId?: number | string;
-  }): Promise<RepositoryMetadata>;
+  listGitlabRepos(input?: { q?: string; page?: number; limit?: number; installationId?: number | string }): Promise<GitlabRepoListResult>;
+  getGitlabRepo(input: { repoName: string; installationId?: number | string }): Promise<RepositoryMetadata>;
   getGitlabRootDir(input: {
     repoName: string;
     branch: string;
@@ -147,10 +127,7 @@ export interface RepositoriesApi {
     limit?: number;
     installationId?: number | string;
   }): Promise<BitbucketRepoListResult>;
-  getBitbucketRepo(input: {
-    repoName: string;
-    installationId?: number | string;
-  }): Promise<RepositoryMetadata>;
+  getBitbucketRepo(input: { repoName: string; installationId?: number | string }): Promise<RepositoryMetadata>;
   getBitbucketRootDir(input: {
     repoName: string;
     branch: string;
@@ -239,13 +216,8 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
         .map((item: unknown) => {
           const row = asRecord(item);
           if (!row) return null;
-          const accountRow =
-            asRecord(row.account) ??
-            asRecord(row.owner) ??
-            asRecord(row.organization);
-          const installationRow =
-            asRecord(row.installation) ??
-            asRecord(row.installationInfo);
+          const accountRow = asRecord(row.account) ?? asRecord(row.owner) ?? asRecord(row.organization);
+          const installationRow = asRecord(row.installation) ?? asRecord(row.installationInfo);
           const installationId =
             asStringOrNumber(row.installationId) ??
             asStringOrNumber(row.installation_id) ??
@@ -253,27 +225,15 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
             asStringOrNumber(row._id) ??
             asStringOrNumber(installationRow?.id) ??
             asStringOrNumber(installationRow?._id);
-          const username =
-            pickString(row, "username", "login", "slug") ??
-            pickString(accountRow, "username", "login", "slug");
+          const username = pickString(row, "username", "login", "slug") ?? pickString(accountRow, "username", "login", "slug");
 
           return {
-            id:
-              pickString(row, "id", "_id") ??
-              pickString(accountRow, "id", "_id") ??
-              asString(installationId),
-            name:
-              pickString(row, "name") ??
-              pickString(accountRow, "name") ??
-              username,
+            id: pickString(row, "id", "_id") ?? pickString(accountRow, "id", "_id") ?? asString(installationId),
+            name: pickString(row, "name") ?? pickString(accountRow, "name") ?? username,
             username,
-            avatar:
-              pickString(row, "avatar", "avatarUrl", "avatar_url") ??
-              pickString(accountRow, "avatar", "avatarUrl", "avatar_url"),
+            avatar: pickString(row, "avatar", "avatarUrl", "avatar_url") ?? pickString(accountRow, "avatar", "avatarUrl", "avatar_url"),
             installationId,
-            type:
-              pickString(row, "type", "target_type", "targetType") ??
-              pickString(accountRow, "type"),
+            type: pickString(row, "type", "target_type", "targetType") ?? pickString(accountRow, "type"),
           } satisfies GithubAccount;
         })
         .filter((item): item is GithubAccount => item !== null)
@@ -281,9 +241,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
 
       const deduped = new Map<string, GithubAccount>();
       for (const account of mapped) {
-        const key =
-          String(account.installationId ?? "") ||
-          `${account.type ?? ""}:${account.id ?? account.username ?? account.name ?? ""}`;
+        const key = String(account.installationId ?? "") || `${account.type ?? ""}:${account.id ?? account.username ?? account.name ?? ""}`;
         if (!key) continue;
         if (!deduped.has(key)) {
           deduped.set(key, account);
@@ -304,11 +262,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
       });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
-      const rawRepositories = Array.isArray(root?.repositories)
-        ? root.repositories
-        : Array.isArray(root)
-          ? root
-          : [];
+      const rawRepositories = Array.isArray(root?.repositories) ? root.repositories : Array.isArray(root) ? root : [];
 
       const repositories = rawRepositories
         .map((item: unknown) => {
@@ -320,16 +274,11 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
           if (!name || !fullName) return null;
 
           return {
-            id:
-              typeof row.id === "number" || typeof row.id === "string"
-                ? row.id
-                : undefined,
+            id: typeof row.id === "number" || typeof row.id === "string" ? row.id : undefined,
             name,
             fullName,
             private: Boolean(row.private),
-            installationId:
-              asStringOrNumber(row.installationId) ??
-              asStringOrNumber(row.installation_id),
+            installationId: asStringOrNumber(row.installationId) ?? asStringOrNumber(row.installation_id),
             branch: pickString(row, "branch", "default_branch"),
             language: pickString(row, "language"),
           } satisfies GithubRepoListItem;
@@ -338,10 +287,8 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
 
       return {
         repositories,
-        currentPage:
-          typeof root?.currentPage === "number" ? root.currentPage : undefined,
-        totalPages:
-          typeof root?.totalPages === "number" ? root.totalPages : undefined,
+        currentPage: typeof root?.currentPage === "number" ? root.currentPage : undefined,
+        totalPages: typeof root?.totalPages === "number" ? root.totalPages : undefined,
       } satisfies GithubRepoListResult;
     },
     async getGithubRepo(input) {
@@ -368,9 +315,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
         name: pickString(rootRecord, "name"),
         fullName: pickString(rootRecord, "full_name", "fullName"),
         branch: pickString(rootRecord, "branch", "default_branch"),
-        installationId:
-          asStringOrNumber(rootRecord?.installationId) ??
-          asStringOrNumber(input.installationId),
+        installationId: asStringOrNumber(rootRecord?.installationId) ?? asStringOrNumber(input.installationId),
         branches,
         framework: mapRepositoryFrameworkDefaults(rootRecord?.framework),
       };
@@ -436,10 +381,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
         .map((item: unknown) => {
           const row = asRecord(item);
           if (!row) return null;
-          const accountRow =
-            asRecord(row.account) ??
-            asRecord(row.owner) ??
-            asRecord(row.namespace);
+          const accountRow = asRecord(row.account) ?? asRecord(row.owner) ?? asRecord(row.namespace);
           const installationId =
             asStringOrNumber(row.groupId) ??
             asStringOrNumber(row.group_id) ??
@@ -450,26 +392,15 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
             asStringOrNumber(accountRow?.id) ??
             asStringOrNumber(accountRow?._id);
           const username =
-            pickString(row, "username", "login", "slug", "path") ??
-            pickString(accountRow, "username", "login", "slug", "path");
+            pickString(row, "username", "login", "slug", "path") ?? pickString(accountRow, "username", "login", "slug", "path");
 
           return {
-            id:
-              pickString(row, "id", "_id") ??
-              pickString(accountRow, "id", "_id") ??
-              asString(installationId),
-            name:
-              pickString(row, "name") ??
-              pickString(accountRow, "name") ??
-              username,
+            id: pickString(row, "id", "_id") ?? pickString(accountRow, "id", "_id") ?? asString(installationId),
+            name: pickString(row, "name") ?? pickString(accountRow, "name") ?? username,
             username,
-            avatar:
-              pickString(row, "avatar", "avatarUrl", "avatar_url") ??
-              pickString(accountRow, "avatar", "avatarUrl", "avatar_url"),
+            avatar: pickString(row, "avatar", "avatarUrl", "avatar_url") ?? pickString(accountRow, "avatar", "avatarUrl", "avatar_url"),
             installationId,
-            type:
-              pickString(row, "type", "kind") ??
-              pickString(accountRow, "type", "kind"),
+            type: pickString(row, "type", "kind") ?? pickString(accountRow, "type", "kind"),
           } satisfies GitlabAccount;
         })
         .filter((item): item is GitlabAccount => item !== null)
@@ -477,9 +408,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
 
       const deduped = new Map<string, GitlabAccount>();
       for (const account of mapped) {
-        const key =
-          String(account.installationId ?? "") ||
-          `${account.type ?? ""}:${account.id ?? account.username ?? account.name ?? ""}`;
+        const key = String(account.installationId ?? "") || `${account.type ?? ""}:${account.id ?? account.username ?? account.name ?? ""}`;
         if (!key) continue;
         if (!deduped.has(key)) {
           deduped.set(key, account);
@@ -500,31 +429,22 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
       });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
-      const rawRepositories = Array.isArray(root?.repositories)
-        ? root.repositories
-        : Array.isArray(root)
-          ? root
-          : [];
+      const rawRepositories = Array.isArray(root?.repositories) ? root.repositories : Array.isArray(root) ? root : [];
 
       const repositories = rawRepositories
         .map((item: unknown) => {
           const row = asRecord(item);
           if (!row) return null;
 
-          const fullName =
-            pickString(row, "full_name", "fullName", "path_with_namespace") ??
-            pickString(row, "fullName");
+          const fullName = pickString(row, "full_name", "fullName", "path_with_namespace") ?? pickString(row, "fullName");
           const name = pickString(row, "name") ?? fullName ?? "";
           if (!name || !fullName) return null;
 
           return {
-            id:
-              typeof row.id === "number" || typeof row.id === "string"
-                ? row.id
-                : undefined,
+            id: typeof row.id === "number" || typeof row.id === "string" ? row.id : undefined,
             name,
             fullName,
-            private: Boolean(row.private ?? (row.visibility === "private")),
+            private: Boolean(row.private ?? row.visibility === "private"),
             installationId:
               asStringOrNumber(row.groupId) ??
               asStringOrNumber(row.group_id) ??
@@ -539,10 +459,8 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
 
       return {
         repositories,
-        currentPage:
-          typeof root?.currentPage === "number" ? root.currentPage : undefined,
-        totalPages:
-          typeof root?.totalPages === "number" ? root.totalPages : undefined,
+        currentPage: typeof root?.currentPage === "number" ? root.currentPage : undefined,
+        totalPages: typeof root?.totalPages === "number" ? root.totalPages : undefined,
       } satisfies GitlabRepoListResult;
     },
     async getGitlabRepo(input) {
@@ -567,8 +485,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
 
       return {
         name: pickString(rootRecord, "name"),
-        fullName:
-          pickString(rootRecord, "full_name", "fullName", "path_with_namespace"),
+        fullName: pickString(rootRecord, "full_name", "fullName", "path_with_namespace"),
         branch: pickString(rootRecord, "branch", "default_branch"),
         installationId:
           asStringOrNumber(rootRecord?.groupId) ??
@@ -658,10 +575,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
         .map((item: unknown) => {
           const row = asRecord(item);
           if (!row) return null;
-          const accountRow =
-            asRecord(row.account) ??
-            asRecord(row.owner) ??
-            asRecord(row.workspace);
+          const accountRow = asRecord(row.account) ?? asRecord(row.owner) ?? asRecord(row.workspace);
           const installationId =
             asStringOrNumber(row.workspaceId) ??
             asStringOrNumber(row.workspace_id) ??
@@ -672,27 +586,15 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
             asStringOrNumber(row._id) ??
             asStringOrNumber(accountRow?.id) ??
             asStringOrNumber(accountRow?._id);
-          const username =
-            pickString(row, "username", "login", "slug") ??
-            pickString(accountRow, "username", "login", "slug");
+          const username = pickString(row, "username", "login", "slug") ?? pickString(accountRow, "username", "login", "slug");
 
           return {
-            id:
-              pickString(row, "id", "_id") ??
-              pickString(accountRow, "id", "_id") ??
-              asString(installationId),
-            name:
-              pickString(row, "name", "display_name") ??
-              pickString(accountRow, "name", "display_name") ??
-              username,
+            id: pickString(row, "id", "_id") ?? pickString(accountRow, "id", "_id") ?? asString(installationId),
+            name: pickString(row, "name", "display_name") ?? pickString(accountRow, "name", "display_name") ?? username,
             username,
-            avatar:
-              pickString(row, "avatar", "avatarUrl", "avatar_url") ??
-              pickString(accountRow, "avatar", "avatarUrl", "avatar_url"),
+            avatar: pickString(row, "avatar", "avatarUrl", "avatar_url") ?? pickString(accountRow, "avatar", "avatarUrl", "avatar_url"),
             installationId,
-            type:
-              pickString(row, "type", "kind") ??
-              pickString(accountRow, "type", "kind"),
+            type: pickString(row, "type", "kind") ?? pickString(accountRow, "type", "kind"),
           } satisfies BitbucketAccount;
         })
         .filter((item): item is BitbucketAccount => item !== null)
@@ -700,9 +602,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
 
       const deduped = new Map<string, BitbucketAccount>();
       for (const account of mapped) {
-        const key =
-          String(account.installationId ?? "") ||
-          `${account.type ?? ""}:${account.id ?? account.username ?? account.name ?? ""}`;
+        const key = String(account.installationId ?? "") || `${account.type ?? ""}:${account.id ?? account.username ?? account.name ?? ""}`;
         if (!key) continue;
         if (!deduped.has(key)) {
           deduped.set(key, account);
@@ -743,21 +643,16 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
           const mainBranch = asRecord(row.mainbranch);
 
           return {
-            id:
-              typeof row.id === "number" || typeof row.id === "string"
-                ? row.id
-                : undefined,
+            id: typeof row.id === "number" || typeof row.id === "string" ? row.id : undefined,
             name,
             fullName,
-            private: Boolean(row.private ?? (row.is_private)),
+            private: Boolean(row.private ?? row.is_private),
             installationId:
               asStringOrNumber(row.workspaceId) ??
               asStringOrNumber(row.workspace_id) ??
               asStringOrNumber(row.installationId) ??
               asStringOrNumber(row.installation_id),
-            branch:
-              pickString(row, "branch", "default_branch") ??
-              pickString(mainBranch, "name"),
+            branch: pickString(row, "branch", "default_branch") ?? pickString(mainBranch, "name"),
             language: pickString(row, "language"),
           } satisfies BitbucketRepoListItem;
         })
@@ -765,12 +660,8 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
 
       return {
         repositories,
-        currentPage:
-          typeof root?.currentPage === "number" ? root.currentPage
-          : typeof root?.page === "number" ? root.page
-          : undefined,
-        totalPages:
-          typeof root?.totalPages === "number" ? root.totalPages : undefined,
+        currentPage: typeof root?.currentPage === "number" ? root.currentPage : typeof root?.page === "number" ? root.page : undefined,
+        totalPages: typeof root?.totalPages === "number" ? root.totalPages : undefined,
       } satisfies BitbucketRepoListResult;
     },
     async getBitbucketRepo(input) {
@@ -797,9 +688,7 @@ export function createRepositoriesApi(client: ApiClient): RepositoriesApi {
       return {
         name: pickString(rootRecord, "name", "slug"),
         fullName: pickString(rootRecord, "full_name", "fullName"),
-        branch:
-          pickString(rootRecord, "branch", "default_branch") ??
-          pickString(mainBranch, "name"),
+        branch: pickString(rootRecord, "branch", "default_branch") ?? pickString(mainBranch, "name"),
         installationId:
           asStringOrNumber(rootRecord?.workspaceId) ??
           asStringOrNumber(rootRecord?.workspace_id) ??

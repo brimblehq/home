@@ -1,13 +1,6 @@
 import type { ApiClient, ApiListResponse } from "./types";
 import config from "@/config";
-import {
-  asNonEmptyString,
-  asRecord,
-  pickBoolean,
-  pickNonEmptyString,
-  pickNumber,
-  pickString,
-} from "./normalize";
+import { asNonEmptyString, asRecord, pickBoolean, pickNonEmptyString, pickNumber, pickString } from "./normalize";
 
 export interface DomainRecord {
   id: string;
@@ -198,8 +191,7 @@ function mapDomainRecord(domain: any): DomainRecord | null {
   let isCustom = pickBoolean(row, "isCustom", "is_custom");
   if (isCustom === undefined) {
     const lowerName = name.toLowerCase();
-    const isBrimbleManagedDefault =
-      lowerName.endsWith(".brimble.app") || lowerName.endsWith(".brimble.io");
+    const isBrimbleManagedDefault = lowerName.endsWith(".brimble.app") || lowerName.endsWith(".brimble.io");
 
     if (isBrimbleManagedDefault) {
       isCustom = false;
@@ -281,16 +273,12 @@ function mapDomainDetailsRecord(domain: any): DomainDetailsRecord | null {
   if (nameserverRecord) {
     let expected: string[] = [];
     if (Array.isArray(nameserverRecord.expected)) {
-      expected = nameserverRecord.expected
-        .map((item: unknown) => (typeof item === "string" ? item.trim() : ""))
-        .filter(Boolean);
+      expected = nameserverRecord.expected.map((item: unknown) => (typeof item === "string" ? item.trim() : "")).filter(Boolean);
     }
 
     let actual: string[] = [];
     if (Array.isArray(nameserverRecord.actual)) {
-      actual = nameserverRecord.actual
-        .map((item: unknown) => (typeof item === "string" ? item.trim() : ""))
-        .filter(Boolean);
+      actual = nameserverRecord.actual.map((item: unknown) => (typeof item === "string" ? item.trim() : "")).filter(Boolean);
     }
 
     nameserver = { expected, actual };
@@ -368,10 +356,7 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
   return {
     async list(input) {
       const environmentId = input?.environmentId?.trim() || undefined;
-      const headers =
-        input?.useEnvironmentHeader && environmentId
-          ? { "x-brimble-environment": environmentId }
-          : undefined;
+      const headers = input?.useEnvironmentHeader && environmentId ? { "x-brimble-environment": environmentId } : undefined;
       const response = await client.request<any>(listEndpoint, {
         method: "GET",
         headers,
@@ -411,21 +396,15 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
 
     async getStatus(domainName, input) {
       const environmentId = input?.environmentId?.trim() || undefined;
-      const headers =
-        input?.useEnvironmentHeader && environmentId
-          ? { "x-brimble-environment": environmentId }
-          : undefined;
-      const response = await client.request<any>(
-        `${listEndpoint}/${encodeURIComponent(domainName)}/status`,
-        {
-          method: "GET",
-          headers,
-          query: {
-            teamId: input?.teamId,
-            environmentId,
-          },
+      const headers = input?.useEnvironmentHeader && environmentId ? { "x-brimble-environment": environmentId } : undefined;
+      const response = await client.request<any>(`${listEndpoint}/${encodeURIComponent(domainName)}/status`, {
+        method: "GET",
+        headers,
+        query: {
+          teamId: input?.teamId,
+          environmentId,
         },
-      );
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? null;
       if (!root) {
@@ -437,21 +416,15 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
 
     async getByName(domainName, input) {
       const environmentId = input?.environmentId?.trim() || undefined;
-      const headers =
-        input?.useEnvironmentHeader && environmentId
-          ? { "x-brimble-environment": environmentId }
-          : undefined;
-      const response = await client.request<any>(
-        `${listEndpoint}/${encodeURIComponent(domainName)}`,
-        {
-          method: "GET",
-          headers,
-          query: {
-            teamId: input?.teamId,
-            environmentId,
-          },
+      const headers = input?.useEnvironmentHeader && environmentId ? { "x-brimble-environment": environmentId } : undefined;
+      const response = await client.request<any>(`${listEndpoint}/${encodeURIComponent(domainName)}`, {
+        method: "GET",
+        headers,
+        query: {
+          teamId: input?.teamId,
+          environmentId,
         },
-      );
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? null;
       if (!root) {
@@ -463,16 +436,13 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
 
     async add(input) {
       const projectId = (input.id ?? input.projectId)?.trim();
-      const response = await client.request<any>(
-        `${listEndpoint}/${projectId ? encodeURIComponent(projectId) : ""}`,
-        {
-          method: "POST",
-          body: {
-            name: input.name,
-            teamId: input.teamId,
-          },
+      const response = await client.request<any>(`${listEndpoint}/${projectId ? encodeURIComponent(projectId) : ""}`, {
+        method: "POST",
+        body: {
+          name: input.name,
+          teamId: input.teamId,
         },
-      );
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const mapped = mapDomainRecord(root);
@@ -484,17 +454,14 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
     },
 
     async update(input) {
-      const response = await client.request<any>(
-        `${listEndpoint}/${encodeURIComponent(input.id)}`,
-        {
-          method: "PATCH",
-          body: {
-            name: input.name,
-            redirect: input.redirect,
-            teamId: input.teamId,
-          },
+      const response = await client.request<any>(`${listEndpoint}/${encodeURIComponent(input.id)}`, {
+        method: "PATCH",
+        body: {
+          name: input.name,
+          redirect: input.redirect,
+          teamId: input.teamId,
         },
-      );
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const mapped = mapDomainRecord(root);
@@ -514,25 +481,19 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
     },
 
     async transfer(input) {
-      await client.request<any>(
-        `${listEndpoint}/${encodeURIComponent(input.domainId)}/transfer/${encodeURIComponent(input.projectId)}`,
-        {
-          method: "POST",
-          body: {
-            teamId: input.teamId,
-          },
+      await client.request<any>(`${listEndpoint}/${encodeURIComponent(input.domainId)}/transfer/${encodeURIComponent(input.projectId)}`, {
+        method: "POST",
+        body: {
+          teamId: input.teamId,
         },
-      );
+      });
     },
 
     async transferOut(domainName, teamId) {
-      const response = await client.request<any>(
-        `${listEndpoint}/${encodeURIComponent(domainName)}/transfer-out`,
-        {
-          method: "POST",
-          body: { teamId },
-        },
-      );
+      const response = await client.request<any>(`${listEndpoint}/${encodeURIComponent(domainName)}/transfer-out`, {
+        method: "POST",
+        body: { teamId },
+      });
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       return {
         domainName: root.domainName ?? domainName,
@@ -665,10 +626,7 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
       });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
-      const record =
-        mapDnsRecord(root?.record) ??
-        mapDnsRecord(root?.dns) ??
-        mapDnsRecord(root);
+      const record = mapDnsRecord(root?.record) ?? mapDnsRecord(root?.dns) ?? mapDnsRecord(root);
 
       if (!record) {
         return {
@@ -697,10 +655,7 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
       );
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
-      const record =
-        mapDnsRecord(root?.record) ??
-        mapDnsRecord(root?.dns) ??
-        mapDnsRecord(root);
+      const record = mapDnsRecord(root?.record) ?? mapDnsRecord(root?.dns) ?? mapDnsRecord(root);
 
       if (!record) {
         return {
@@ -718,15 +673,12 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
     },
 
     async deleteDnsRecord(input) {
-      await client.request<any>(
-        `${config.dnsApiUrl}/${encodeURIComponent(input.domain)}/${encodeURIComponent(input.recordId)}`,
-        {
-          method: "DELETE",
-          query: {
-            teamId: input.teamId,
-          },
+      await client.request<any>(`${config.dnsApiUrl}/${encodeURIComponent(input.domain)}/${encodeURIComponent(input.recordId)}`, {
+        method: "DELETE",
+        query: {
+          teamId: input.teamId,
         },
-      );
+      });
     },
   };
 }

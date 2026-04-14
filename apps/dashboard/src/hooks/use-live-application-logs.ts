@@ -31,34 +31,17 @@ function escapeRegexLiteral(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/"/g, '\\"');
 }
 
-function buildLokiQuery(input: {
-  containers: string[];
-  searchQuery?: string | null;
-}) {
-  const normalizedContainers = Array.from(
-    new Set(
-      input.containers
-        .map((value) => value.trim())
-        .filter((value) => value.length > 0),
-    ),
-  );
-  const containerPattern = normalizedContainers
-    .map((value) => escapeRegexLiteral(value))
-    .join("|");
-  const base = containerPattern
-    ? `{container=~"^(${containerPattern})$"}`
-    : `{container=""}`;
+function buildLokiQuery(input: { containers: string[]; searchQuery?: string | null }) {
+  const normalizedContainers = Array.from(new Set(input.containers.map((value) => value.trim()).filter((value) => value.length > 0)));
+  const containerPattern = normalizedContainers.map((value) => escapeRegexLiteral(value)).join("|");
+  const base = containerPattern ? `{container=~"^(${containerPattern})$"}` : `{container=""}`;
   const rawSearch = input.searchQuery?.trim();
 
   if (!rawSearch) {
     return base;
   }
 
-  const escaped = rawSearch
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/[()]/g, "")
-    .replace(/\n/g, " ");
+  const escaped = rawSearch.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[()]/g, "").replace(/\n/g, " ");
 
   return `${base} |~ "(?i)${escaped}"`;
 }
@@ -96,8 +79,7 @@ function parseSocketPayload(payload: unknown): LiveApplicationLogEntry[] {
   const items: LiveApplicationLogEntry[] = [];
 
   for (const stream of streams) {
-    const labels =
-      stream.stream && typeof stream.stream === "object" ? stream.stream : {};
+    const labels = stream.stream && typeof stream.stream === "object" ? stream.stream : {};
     const values = Array.isArray(stream.values) ? stream.values : [];
 
     for (const tuple of values) {
@@ -123,10 +105,7 @@ function parseSocketPayload(payload: unknown): LiveApplicationLogEntry[] {
   return items;
 }
 
-function mergeUniqueLogs(
-  current: LiveApplicationLogEntry[],
-  incoming: LiveApplicationLogEntry[],
-): LiveApplicationLogEntry[] {
+function mergeUniqueLogs(current: LiveApplicationLogEntry[], incoming: LiveApplicationLogEntry[]): LiveApplicationLogEntry[] {
   if (incoming.length === 0) {
     return current;
   }
@@ -220,10 +199,7 @@ async function getOrCreateSharedSocket(): Promise<Socket | null> {
   sharedSocketInitPromise = (async () => {
     let token: string | null = null;
     try {
-      token =
-        await (getAccessTokenServerFn as unknown as (input: {
-          data?: undefined;
-        }) => Promise<string | null>)({ data: undefined });
+      token = await (getAccessTokenServerFn as unknown as (input: { data?: undefined }) => Promise<string | null>)({ data: undefined });
     } catch {
       // continue without token
     }
@@ -277,21 +253,12 @@ export function useLiveApplicationLogs(input: UseLiveApplicationLogsInput) {
   const pendingLogsRef = useRef<LiveApplicationLogEntry[]>([]);
   const isPausedRef = useRef(false);
   const activeTailKeyRef = useRef("");
-  const desiredTailRef = useRef<{ key: string; params: TailRequestParams } | null>(
-    null,
-  );
+  const desiredTailRef = useRef<{ key: string; params: TailRequestParams } | null>(null);
   const isTailRestartRef = useRef(false);
   const blockedByLimitRef = useRef(false);
 
   const normalizedContainers = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          input.containers
-            .map((value) => value.trim())
-            .filter((value) => value.length > 0),
-        ),
-      ),
+    () => Array.from(new Set(input.containers.map((value) => value.trim()).filter((value) => value.length > 0))),
     [input.containers],
   );
   const enabled = Boolean(input.enabled && normalizedContainers.length > 0);
@@ -371,10 +338,7 @@ export function useLiveApplicationLogs(input: UseLiveApplicationLogsInput) {
         return;
       }
 
-      if (
-        activeTailKeyRef.current &&
-        desired.key !== activeTailKeyRef.current
-      ) {
+      if (activeTailKeyRef.current && desired.key !== activeTailKeyRef.current) {
         // Grafana tail sessions accumulate server-side; restart transport before re-tail.
         isTailRestartRef.current = true;
         activeTailKeyRef.current = "";
@@ -434,17 +398,15 @@ export function useLiveApplicationLogs(input: UseLiveApplicationLogsInput) {
 
     let cancelled = false;
     let socket: Socket | null = null;
-    let handlers:
-      | {
-          onConnect: () => void;
-          onConnected: () => void;
-          onLogs: (payload: unknown) => void;
-          onSocketDisconnect: (reason?: unknown) => void;
-          onServerDisconnected: (reason?: unknown) => void;
-          onError: (evt: unknown) => void;
-          onConnectError: (evt: unknown) => void;
-        }
-      | null = null;
+    let handlers: {
+      onConnect: () => void;
+      onConnected: () => void;
+      onLogs: (payload: unknown) => void;
+      onSocketDisconnect: (reason?: unknown) => void;
+      onServerDisconnected: (reason?: unknown) => void;
+      onError: (evt: unknown) => void;
+      onConnectError: (evt: unknown) => void;
+    } | null = null;
 
     retainSharedSocket();
     setIsConnecting(true);
@@ -497,20 +459,14 @@ export function useLiveApplicationLogs(input: UseLiveApplicationLogsInput) {
         activeTailKeyRef.current = "";
 
         const reasonText = extractMessage(reason);
-        if (
-          isTailRestartRef.current ||
-          reasonText === "io client disconnect"
-        ) {
+        if (isTailRestartRef.current || reasonText === "io client disconnect") {
           isTailRestartRef.current = false;
           return;
         }
 
         if (isConcurrentTailLimitError(reason)) {
           blockedByLimitRef.current = true;
-          setError(
-            reasonText ||
-              "Log stream limit reached. Click reconnect to retry with one active stream.",
-          );
+          setError(reasonText || "Log stream limit reached. Click reconnect to retry with one active stream.");
         }
       };
 

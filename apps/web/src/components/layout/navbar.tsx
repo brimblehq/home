@@ -33,7 +33,8 @@ export function Navbar() {
           {siteConfig.navLinks.map((link, i) => {
             const isExternal = link.href.startsWith("http");
             const isActive = !isExternal && pathname === link.href;
-            const linkBase = "relative inline-flex items-center gap-1.5 rounded px-2 py-1 font-body text-sm font-medium transition-colors duration-150 hover:bg-brimble-air-gray dark:hover:bg-white/10";
+            const linkBase =
+              "relative inline-flex items-center gap-1.5 rounded px-2 py-1 font-body text-sm font-medium transition-colors duration-150 hover:bg-brimble-air-gray dark:hover:bg-white/10";
             const linkClass = isActive
               ? `${linkBase} text-brimble-black shadow-[var(--shadow-button)]`
               : `${linkBase} text-brimble-black/50 dark:text-white/50 shadow-none`;
@@ -46,7 +47,12 @@ export function Navbar() {
                 transition={{ duration: 0.4, delay: 0.1 + i * 0.05, ease: [0.16, 1, 0.3, 1] }}
               >
                 {isExternal ? (
-                  <a href={link.href} target="_blank" rel="noopener noreferrer" className={`${linkBase} text-brimble-black/50 dark:text-white/50 shadow-none`}>
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${linkBase} text-brimble-black/50 dark:text-white/50 shadow-none`}
+                  >
                     {link.status && <StatusDot />}
                     {link.label}
                   </a>

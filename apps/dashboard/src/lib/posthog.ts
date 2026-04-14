@@ -6,18 +6,12 @@ let surveyBlockObserver: MutationObserver | null = null;
 let surveyBlockRetryBound = false;
 
 const SURVEY_BLOCK_STYLE_ID = "brimble-posthog-survey-block-style";
-const SURVEY_CONTAINER_SELECTOR =
-  '[class^="PostHogSurvey-"], [class*=" PostHogSurvey-"], [class*="PostHogSurvey-"]';
-const SURVEY_BRANDING_SELECTOR =
-  'a.footer-branding[href*="posthog.com/surveys"], a[href*="posthog.com/surveys"], .footer-branding';
+const SURVEY_CONTAINER_SELECTOR = '[class^="PostHogSurvey-"], [class*=" PostHogSurvey-"], [class*="PostHogSurvey-"]';
+const SURVEY_BRANDING_SELECTOR = 'a.footer-branding[href*="posthog.com/surveys"], a[href*="posthog.com/surveys"], .footer-branding';
 const SURVEY_SUBMIT_SELECTOR = 'button.form-submit[aria-label="Submit survey"]';
 
 function isLocalhostHost(hostname: string): boolean {
-  return (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1"
-  );
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
 function shouldEnablePostHog(): boolean {

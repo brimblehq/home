@@ -37,9 +37,7 @@ export function Onboarding() {
                 variant="pill-light"
                 size="sm"
                 className={`transition-all duration-200 ${
-                  activeTab === i
-                    ? "bg-brimble-black text-white dark:bg-white dark:text-black shadow-[var(--shadow-button)]"
-                    : ""
+                  activeTab === i ? "bg-brimble-black text-white dark:bg-white dark:text-black shadow-[var(--shadow-button)]" : ""
                 }`}
                 onClick={() => setActiveTab(i)}
               >
@@ -58,12 +56,9 @@ export function Onboarding() {
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
               <p className="font-body text-xl font-medium leading-[30px] tracking-[-0.24px] text-[#fafafa]">
-                <span className="text-white/50">{tab.step}.</span>{" "}
-                {tab.title}
+                <span className="text-white/50">{tab.step}.</span> {tab.title}
               </p>
-              <p className="max-w-[414px] font-body text-base leading-[21px] tracking-[-0.32px] text-[#70757c]">
-                {tab.description}
-              </p>
+              <p className="max-w-[414px] font-body text-base leading-[21px] tracking-[-0.32px] text-[#70757c]">{tab.description}</p>
             </motion.div>
             {/* Empty space matching Figma's tall card */}
             <div className="h-[300px]" />

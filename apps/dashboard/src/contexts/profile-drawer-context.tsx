@@ -9,17 +9,9 @@ const ProfileDrawerContext = createContext<ProfileDrawerAPI>({
   open: () => {},
 });
 
-export function ProfileDrawerProvider({
-  onOpen,
-  children,
-}: {
-  onOpen: (tab?: ProfileTab) => void;
-  children: ReactNode;
-}) {
+export function ProfileDrawerProvider({ onOpen, children }: { onOpen: (tab?: ProfileTab) => void; children: ReactNode }) {
   const api: ProfileDrawerAPI = { open: useCallback(onOpen, [onOpen]) };
-  return (
-    <ProfileDrawerContext value={api}>{children}</ProfileDrawerContext>
-  );
+  return <ProfileDrawerContext value={api}>{children}</ProfileDrawerContext>;
 }
 
 export function useProfileDrawer() {

@@ -67,8 +67,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
     passkeyById: (id: string) => `/auth/passkey/${encodeURIComponent(id)}`,
     passkeyRecoverStart: "/auth/passkey/recover",
     passkeyRecoverDevices: "/auth/passkey/recover/devices",
-    passkeyRecoverDeviceById: (id: string) =>
-      `/auth/passkey/recover/devices/${encodeURIComponent(id)}`,
+    passkeyRecoverDeviceById: (id: string) => `/auth/passkey/recover/devices/${encodeURIComponent(id)}`,
     passkeyRecoverComplete: "/auth/passkey/recover/complete",
   } as const;
 
@@ -97,12 +96,8 @@ export function createAuthApi(client: ApiClient): AuthApi {
 
   const parseTwoFactorChallenge = (payload: any): VerifyEmailCodeResult | null => {
     const data = payload?.data?.data ?? payload?.data ?? payload;
-    const challengeToken = String(
-      data?.challenge_token ?? data?.challengeToken ?? "",
-    ).trim();
-    const requiresTwoFactor = Boolean(
-      data?.requires_2fa ?? data?.requiresTwoFactor ?? data?.requires2fa,
-    );
+    const challengeToken = String(data?.challenge_token ?? data?.challengeToken ?? "").trim();
+    const requiresTwoFactor = Boolean(data?.requires_2fa ?? data?.requiresTwoFactor ?? data?.requires2fa);
 
     if (!requiresTwoFactor && !challengeToken) {
       return null;
@@ -112,10 +107,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
       throw new Error("Two-factor challenge token is missing");
     }
 
-    const expiresIn = Number.parseInt(
-      String(data?.expires_in ?? data?.expiresIn ?? "300"),
-      10,
-    );
+    const expiresIn = Number.parseInt(String(data?.expires_in ?? data?.expiresIn ?? "300"), 10);
 
     return {
       requiresTwoFactor: true,
@@ -128,12 +120,8 @@ export function createAuthApi(client: ApiClient): AuthApi {
     const data = payload?.data?.data ?? payload?.data ?? payload;
     return {
       enabled: Boolean(data?.enabled),
-      hasRecoveryCodes: Boolean(
-        data?.has_recovery_codes ?? data?.hasRecoveryCodes,
-      ),
-      recoveryCodesRemaining: Number(
-        data?.recovery_codes_remaining ?? data?.recoveryCodesRemaining ?? 0,
-      ),
+      hasRecoveryCodes: Boolean(data?.has_recovery_codes ?? data?.hasRecoveryCodes),
+      recoveryCodesRemaining: Number(data?.recovery_codes_remaining ?? data?.recoveryCodesRemaining ?? 0),
     };
   };
 
@@ -147,13 +135,9 @@ export function createAuthApi(client: ApiClient): AuthApi {
 
     return {
       secret: String(data?.secret ?? ""),
-      provisioningUri: String(
-        data?.provisioning_uri ?? data?.provisioningUri ?? "",
-      ),
+      provisioningUri: String(data?.provisioning_uri ?? data?.provisioningUri ?? ""),
       qrCode: String(data?.qr_code ?? data?.qrCode ?? ""),
-      recoveryCodes: recoveryCodes
-        .map((entry: unknown) => String(entry ?? "").trim())
-        .filter(Boolean),
+      recoveryCodes: recoveryCodes.map((entry: unknown) => String(entry ?? "").trim()).filter(Boolean),
     };
   };
 
@@ -162,9 +146,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
     return {
       id: String(data?.id ?? ""),
       deviceName: String(data?.device_name ?? data?.deviceName ?? ""),
-      transports: Array.isArray(data?.transports)
-        ? data.transports.map((t: unknown) => String(t))
-        : [],
+      transports: Array.isArray(data?.transports) ? data.transports.map((t: unknown) => String(t)) : [],
       createdAt: data?.created_at ?? data?.createdAt ?? undefined,
       lastUsedAt: data?.last_used_at ?? data?.lastUsedAt ?? undefined,
     };
@@ -180,8 +162,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
     };
   };
 
-  const unwrapData = (payload: any) =>
-    payload?.data?.data ?? payload?.data ?? payload;
+  const unwrapData = (payload: any) => payload?.data?.data ?? payload?.data ?? payload;
 
   const bearerHeaders = (token: string) => ({
     Authorization: `Bearer ${token}`,
@@ -195,9 +176,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
         ? data.recoveryCodes
         : [];
 
-    return recoveryCodes
-      .map((entry: unknown) => String(entry ?? "").trim())
-      .filter(Boolean);
+    return recoveryCodes.map((entry: unknown) => String(entry ?? "").trim()).filter(Boolean);
   };
 
   return {
@@ -328,8 +307,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
         });
         return { available: true };
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Lookup request failed";
+        const message = error instanceof Error ? error.message : "Lookup request failed";
         return { available: false, message };
       }
     },
@@ -441,11 +419,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
         method: "GET",
       });
       const data = unwrapData(response);
-      const list = Array.isArray(data?.passkeys)
-        ? data.passkeys
-        : Array.isArray(data)
-          ? data
-          : [];
+      const list = Array.isArray(data?.passkeys) ? data.passkeys : Array.isArray(data) ? data : [];
       return list.map(mapPasskeySummary);
     },
 
@@ -474,10 +448,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
         headers: { Authorization: "" },
       });
       const data = unwrapData(response);
-      const expiresIn = Number.parseInt(
-        String(data?.expires_in ?? data?.expiresIn ?? "600"),
-        10,
-      );
+      const expiresIn = Number.parseInt(String(data?.expires_in ?? data?.expiresIn ?? "600"), 10);
       return {
         recoveryToken: String(data?.access_token ?? data?.accessToken ?? ""),
         expiresIn: Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 600,
@@ -490,11 +461,7 @@ export function createAuthApi(client: ApiClient): AuthApi {
         headers: bearerHeaders(recoveryToken),
       });
       const data = unwrapData(response);
-      const list = Array.isArray(data?.devices)
-        ? data.devices
-        : Array.isArray(data)
-          ? data
-          : [];
+      const list = Array.isArray(data?.devices) ? data.devices : Array.isArray(data) ? data : [];
       return list.map(mapPasskeyRecoveryDevice);
     },
 

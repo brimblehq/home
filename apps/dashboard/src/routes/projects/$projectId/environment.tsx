@@ -1,40 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  createFileRoute,
-  getRouteApi,
-  useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Code2,
-  Copy as CopyIcon,
-  Lock,
-  Search,
-  X,
-} from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Code2, Copy as CopyIcon, Lock, Search, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Info, Eye, EyeSlash } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@brimble/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@brimble/ui";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import { TabHeader } from "../../../components/shared/tab-header";
 import { GlossyButton } from "../../../components/shared/glossy-button";
 import { Tooltip, SimpleTooltip } from "@/components/shared/tooltip";
 import { Spinner } from "@/components/shared/spinner";
-import type {
-  EffectiveEnvironmentVariable,
-  ProjectEnvironmentSnapshot,
-  ProjectEnvironmentVariable,
-} from "@/backend/environments";
+import type { EffectiveEnvironmentVariable, ProjectEnvironmentSnapshot, ProjectEnvironmentVariable } from "@/backend/environments";
 import {
   addProjectEnvironmentVariablesServerFn,
   decryptProjectEnvironmentValuesServerFn,
@@ -70,6 +48,24 @@ import { markDeploymentHistoryForRefresh } from "@/utils/deployment-history-refr
 
 const parentRoute = getRouteApi("/projects/$projectId");
 const DEFAULT_TARGET = "PRODUCTION";
+
+function isProjectLevelVariable(row: ProjectEnvironmentVariable): boolean {
+  return Boolean(row.envId) && row.source !== "environment";
+}
+
+type SharedSource = "own" | "inherited";
+
+type EnvRowMeta = {
+  isShared: boolean;
+  encrypted: boolean;
+  sharedVarId?: string;
+  sharedSource?: SharedSource;
+  sharedSourceEnvironment?: string;
+};
+
+type MergedEnvRow = ProjectEnvironmentVariable & {
+  meta: EnvRowMeta;
+};
 
 type LoaderData = {
   initialTarget: string;
@@ -146,11 +142,11 @@ function HighlightedEditor({
   }
 
   return (
-    <div className="relative h-[260px] w-full rounded-[4px] border-[0.5px] border-[#d0d5dd] bg-dash-bg">
+    <div className="relative h-[420px] w-full rounded-[4px] border-[0.5px] border-[#d0d5dd] bg-dash-bg">
       <pre
         ref={preRef}
         aria-hidden
-        className="pointer-events-none absolute inset-0 overflow-auto whitespace-pre-wrap break-words px-3.5 py-3 font-mono text-sm leading-6 scrollbar-hidden"
+        className="pointer-events-none absolute inset-0 overflow-auto whitespace-pre-wrap break-words px-3.5 py-3 font-mono text-xs leading-5 scrollbar-hidden"
         dangerouslySetInnerHTML={{ __html: `${highlighted}\n` }}
       />
       <textarea
@@ -161,7 +157,7 @@ function HighlightedEditor({
         readOnly={readOnly}
         placeholder={placeholder}
         spellCheck={false}
-        className="scrollbar-hidden relative h-full w-full resize-none overflow-auto bg-transparent px-3.5 py-3 font-mono text-sm leading-6 text-transparent caret-dash-text-strong outline-none placeholder:text-dash-text-extra-faded"
+        className="scrollbar-hidden relative h-full w-full resize-none overflow-auto bg-transparent px-3.5 py-3 font-mono text-xs leading-5 text-transparent caret-dash-text-strong outline-none placeholder:text-dash-text-extra-faded"
       />
     </div>
   );
@@ -172,9 +168,7 @@ function InfoBanner({ children }: { children: React.ReactNode }) {
     <div className="flex items-start gap-2.5 rounded-[4px] bg-[#f59e0b]/8 px-3.5 py-3">
       <Info className="mt-0.5 size-4 shrink-0 text-[#f59e0b]" weight="fill" />
       <div className="flex flex-col gap-0.5">
-        <span className="text-xs font-medium uppercase tracking-wide text-[#b37a10] dark:text-[#f59e0b]">
-          Quick Tip
-        </span>
+        <span className="text-xs font-medium uppercase tracking-wide text-[#b37a10] dark:text-[#f59e0b]">Quick Tip</span>
         <span className="text-sm text-dash-text-body">{children}</span>
       </div>
     </div>
@@ -185,10 +179,7 @@ function EnvRowsSkeleton() {
   return (
     <div className="px-4 pb-6 pt-2">
       {Array.from({ length: 5 }).map((_, index) => (
-        <div
-          key={index}
-          className="flex items-center justify-between border-b border-dash-border py-3 last:border-b-0"
-        >
+        <div key={index} className="flex items-center justify-between border-b border-dash-border py-3 last:border-b-0">
           <div className="h-4 w-48 animate-pulse rounded bg-dash-bg-elevated" />
           <div className="h-4 w-32 animate-pulse rounded bg-dash-bg-elevated" />
         </div>
@@ -206,6 +197,10 @@ function EnvAccordionRow({
   decryptedValue,
   canWrite,
   isShared,
+  sharedVarId,
+  sharedSource,
+  sharedSourceEnvironment,
+  sharedEncrypted,
   environmentId,
   workspace,
   selectedTarget,
@@ -221,6 +216,10 @@ function EnvAccordionRow({
   decryptedValue?: string;
   canWrite: boolean;
   isShared?: boolean;
+  sharedVarId?: string;
+  sharedSource?: SharedSource;
+  sharedSourceEnvironment?: string;
+  sharedEncrypted?: boolean;
   environmentId?: string;
   workspace?: string;
   selectedTarget?: string;
@@ -228,19 +227,13 @@ function EnvAccordionRow({
   onDeleted: (envId: string) => void;
   onRedeploy: (logId?: string) => Promise<void>;
 }) {
-  const updateEnv = useServerFn(
-    updateProjectEnvironmentVariableServerFn as any,
-  ) as (args: {
+  const updateEnv = useServerFn(updateProjectEnvironmentVariableServerFn as any) as (args: {
     data: { projectId: string; envId: string; name: string; value: string };
   }) => Promise<{ success: boolean }>;
-  const deleteEnv = useServerFn(
-    deleteProjectEnvironmentVariableServerFn as any,
-  ) as (args: {
+  const deleteEnv = useServerFn(deleteProjectEnvironmentVariableServerFn as any) as (args: {
     data: { projectId: string; envId: string };
   }) => Promise<{ success: boolean }>;
-  const updateSharedVar = useServerFn(
-    updateEnvironmentVariableServerFn as any,
-  ) as (args: {
+  const updateSharedVar = useServerFn(updateEnvironmentVariableServerFn as any) as (args: {
     data: {
       environmentId: string;
       variableId: string;
@@ -250,23 +243,20 @@ function EnvAccordionRow({
       inheritable?: boolean;
     };
   }) => Promise<{ success: boolean }>;
-  const deleteSharedVar = useServerFn(
-    deleteEnvironmentVariableServerFn as any,
-  ) as (args: {
+  const deleteSharedVar = useServerFn(deleteEnvironmentVariableServerFn as any) as (args: {
     data: { environmentId: string; variableId: string; workspace?: string };
   }) => Promise<{ success: boolean }>;
-  const saveEnvLevelVars = useServerFn(
-    saveEnvironmentVariablesServerFn as any,
-  ) as (args: {
+  const saveEnvLevelVars = useServerFn(saveEnvironmentVariablesServerFn as any) as (args: {
     data: {
       environmentId: string;
       workspace?: string;
       variables: Array<{ name: string; value: string; inheritable?: boolean }>;
     };
   }) => Promise<EffectiveEnvironmentVariable[]>;
-  const addEnvs = useServerFn(
-    addProjectEnvironmentVariablesServerFn as any,
-  ) as (args: {
+  const decryptValues = useServerFn(decryptProjectEnvironmentValuesServerFn as any) as (args: {
+    data: { environments: Array<{ name: string; value: string }> };
+  }) => Promise<Array<{ name: string; value: string }>>;
+  const addEnvs = useServerFn(addProjectEnvironmentVariablesServerFn as any) as (args: {
     data: {
       projectId: string;
       target?: string;
@@ -303,13 +293,18 @@ function EnvAccordionRow({
   }, [isExpanded]);
 
   const canEdit = !databaseProject && canWrite;
-  const canDelete = !databaseProject && canWrite;
+  const canShowDelete = !databaseProject && canWrite;
+  const canPerformDelete = !isShared || sharedSource !== "inherited";
+  const deleteDisabledReason =
+    isShared && sharedSource === "inherited"
+      ? sharedSourceEnvironment
+        ? `Inherited from ${sharedSourceEnvironment}. Delete in source environment.`
+        : "Inherited variable. Delete in source environment."
+      : undefined;
   const projectVariableId = row.envId;
+  const sharedVariableId = sharedVarId;
   const disableNameInput = !canEdit || isNonEditableEnvName(row.name);
-  const isDirty =
-    name !== row.name ||
-    value !== row.value ||
-    sharedToggle !== (isShared ?? false);
+  const isDirty = name !== row.name || value !== row.value || sharedToggle !== (isShared ?? false);
 
   function revealValue() {
     setShowValue((prev) => !prev);
@@ -347,20 +342,34 @@ function EnvAccordionRow({
             environments: [{ name: name.trim(), value }],
           },
         });
-        await deleteSharedVar({
-          data: { environmentId, variableId: row.id, workspace },
-        });
+        if (sharedVariableId && sharedSource !== "inherited") {
+          await deleteSharedVar({
+            data: { environmentId, variableId: sharedVariableId, workspace },
+          });
+        } else {
+          toast("Project variable saved. Shared source variable was not deleted because varId is unavailable.");
+        }
       } else if (sharedToggle && environmentId) {
-        // Already shared, just update
-        await updateSharedVar({
-          data: {
-            environmentId,
-            variableId: row.id,
-            workspace,
-            name: name.trim(),
-            value,
-          },
-        });
+        if (sharedVariableId) {
+          // Shared variable with explicit ID: update via PATCH
+          await updateSharedVar({
+            data: {
+              environmentId,
+              variableId: sharedVariableId,
+              workspace,
+              name: name.trim(),
+              value,
+            },
+          });
+        } else {
+          await saveEnvLevelVars({
+            data: {
+              environmentId,
+              workspace,
+              variables: [{ name: name.trim(), value }],
+            },
+          });
+        }
       } else {
         // Project-level update
         await updateEnv({
@@ -384,29 +393,61 @@ function EnvAccordionRow({
         },
       });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update variable",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to update variable");
     } finally {
       setSaving(false);
     }
   }
 
   async function deleteRow() {
-    if (!canDelete || removing) {
+    if (!canShowDelete || !canPerformDelete || removing) {
       return;
     }
 
     try {
       setRemoving(true);
+      let deletedSharedVarId: string | undefined = sharedVariableId;
       if (isShared && environmentId) {
+        if (sharedSource === "inherited") {
+          return;
+        }
+
+        if (!deletedSharedVarId) {
+          let valueForLookup = decryptedValue ?? row.value;
+          if (sharedEncrypted) {
+            const decrypted = await decryptValues({
+              data: {
+                environments: [{ name: row.name, value: valueForLookup }],
+              },
+            });
+            valueForLookup = decrypted?.[0]?.value ?? valueForLookup;
+          }
+
+          const resolved = await saveEnvLevelVars({
+            data: {
+              environmentId,
+              workspace,
+              variables: [{ name: row.name, value: valueForLookup }],
+            },
+          });
+
+          deletedSharedVarId = resolved.find(
+            (entry) => entry.source !== "inherited" && entry.name.trim().toUpperCase() === row.name.trim().toUpperCase(),
+          )?.id;
+
+          if (!deletedSharedVarId) {
+            throw new Error("Unable to resolve shared variable id for deletion.");
+          }
+        }
+
         await deleteSharedVar({
-          data: { environmentId, variableId: row.id, workspace },
+          data: { environmentId, variableId: deletedSharedVarId, workspace },
         });
       } else {
         await deleteEnv({ data: { projectId, envId: projectVariableId! } });
       }
-      onDeleted(row.id);
+      const deletedIdentifier = isShared ? (deletedSharedVarId ?? row.id) : (projectVariableId ?? row.id);
+      onDeleted(deletedIdentifier);
       toast("Variables deleted successfully", {
         duration: 5000,
         action: {
@@ -417,31 +458,20 @@ function EnvAccordionRow({
         },
       });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete variable",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to delete variable");
     } finally {
       setRemoving(false);
     }
   }
 
   return (
-    <AccordionItem
-      value={row.id}
-      className="border-b border-dash-border last:border-b-0 transition-none hover:bg-transparent"
-    >
+    <AccordionItem value={row.id} className="border-b border-dash-border last:border-b-0 transition-none hover:bg-transparent">
       <AccordionTrigger
-        className={`px-4 py-3 text-sm font-medium text-dash-text-strong hover:text-dash-text-faded [&[data-state=open]]:text-dash-text-strong ${isDecrypting ? "[&>svg:last-child]:hidden" : ""}`}
+        className={`px-4 py-2.5 text-xs font-medium text-dash-text-strong hover:text-dash-text-faded [&[data-state=open]]:text-dash-text-strong ${isDecrypting ? "[&>svg:last-child]:hidden" : ""}`}
       >
         <span className="min-w-0 flex-1 truncate font-mono">{name}</span>
-        {isShared && (
-          <span className="shrink-0 rounded-full bg-[#4879f8]/10 px-2 py-0.5 text-xs text-[#4879f8]">
-            Shared
-          </span>
-        )}
-        <span className="hidden shrink-0 text-sm font-normal text-dash-text-faded sm:block">
-          ••••••••••••••••
-        </span>
+        {isShared && <span className="shrink-0 rounded-full bg-[#4879f8]/10 px-2 py-0.5 text-xs text-[#4879f8]">Shared</span>}
+        <span className="hidden shrink-0 text-sm font-normal text-dash-text-faded sm:block">••••••••••••••••</span>
         {isDecrypting && <Spinner className="size-4 shrink-0" />}
       </AccordionTrigger>
       <AccordionContent className="text-sm text-dash-text-strong">
@@ -464,16 +494,8 @@ function EnvAccordionRow({
                 className={`h-full w-full bg-transparent px-3 pr-16 text-sm text-dash-text-strong outline-none ${!canEdit ? "cursor-default" : ""} ${!showValue ? "[text-security:disc] [-webkit-text-security:disc]" : ""}`}
               />
               <div className="absolute right-2 flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={revealValue}
-                  className="shrink-0 text-dash-text-faded hover:text-dash-text-strong"
-                >
-                  {showValue ? (
-                    <EyeSlash className="size-3.5" />
-                  ) : (
-                    <Eye className="size-3.5" />
-                  )}
+                <button type="button" onClick={revealValue} className="shrink-0 text-dash-text-faded hover:text-dash-text-strong">
+                  {showValue ? <EyeSlash className="size-3.5" /> : <Eye className="size-3.5" />}
                 </button>
                 <button
                   type="button"
@@ -485,11 +507,7 @@ function EnvAccordionRow({
                   }}
                   className="shrink-0 text-dash-text-faded hover:text-dash-text-strong"
                 >
-                  {valueCopied ? (
-                    <Check className="size-3.5 text-[#13d282]" />
-                  ) : (
-                    <CopyIcon className="size-3.5" />
-                  )}
+                  {valueCopied ? <Check className="size-3.5 text-[#13d282]" /> : <CopyIcon className="size-3.5" />}
                 </button>
               </div>
             </div>
@@ -507,20 +525,20 @@ function EnvAccordionRow({
                 }}
               >
                 <span className="text-xs text-dash-text-faded">
-                  {authorName} ·{" "}
-                  {formatEnvRowRelativeTime(row.createdAt, row.updatedAt)}
+                  {authorName} · {formatEnvRowRelativeTime(row.createdAt, row.updatedAt)}
                 </span>
               </Tooltip>
+              {isShared && sharedSource === "inherited" && (
+                <span className="text-xs text-dash-text-faded">
+                  Inherited
+                  {sharedSourceEnvironment
+                    ? ` from ${sharedSourceEnvironment}. Delete in source environment.`
+                    : ". Delete in source environment."}
+                </span>
+              )}
               {environmentId && canEdit && (
-                <SimpleTooltip
-                  content="Share this variable across all projects in your workspace"
-                  side="top"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSharedToggle((prev) => !prev)}
-                    className="flex items-center gap-1.5"
-                  >
+                <SimpleTooltip content="Share this variable across all projects in your workspace" side="top">
+                  <button type="button" onClick={() => setSharedToggle((prev) => !prev)} className="flex items-center gap-1.5">
                     <span
                       className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
                         sharedToggle ? "bg-[#4879f8]" : "bg-dash-border"
@@ -532,11 +550,7 @@ function EnvAccordionRow({
                         }`}
                       />
                     </span>
-                    <span
-                      className={`text-xs ${sharedToggle ? "text-[#4879f8]" : "text-dash-text-extra-faded"}`}
-                    >
-                      Shared
-                    </span>
+                    <span className={`text-xs ${sharedToggle ? "text-[#4879f8]" : "text-dash-text-extra-faded"}`}>Shared</span>
                   </button>
                 </SimpleTooltip>
               )}
@@ -555,19 +569,28 @@ function EnvAccordionRow({
                   Save
                 </GlossyButton>
               )}
-              {canDelete && (
-                <GlossyButton
-                  variant="red"
-                  disabled={removing}
-                  loading={removing}
-                  loadingLabel="Removing..."
-                  onClick={() => {
-                    void deleteRow();
-                  }}
-                >
-                  Remove
-                </GlossyButton>
-              )}
+              {canShowDelete &&
+                (deleteDisabledReason ? (
+                  <SimpleTooltip content={deleteDisabledReason} side="top">
+                    <span>
+                      <GlossyButton variant="red" disabled>
+                        Remove
+                      </GlossyButton>
+                    </span>
+                  </SimpleTooltip>
+                ) : (
+                  <GlossyButton
+                    variant="red"
+                    disabled={removing}
+                    loading={removing}
+                    loadingLabel="Removing..."
+                    onClick={() => {
+                      void deleteRow();
+                    }}
+                  >
+                    Remove
+                  </GlossyButton>
+                ))}
             </div>
           </div>
         </div>
@@ -604,9 +627,7 @@ function EnvLevelVarRow({
   const [removing, setRemoving] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const updateVar = useServerFn(
-    updateEnvironmentVariableServerFn as any,
-  ) as (args: {
+  const updateVar = useServerFn(updateEnvironmentVariableServerFn as any) as (args: {
     data: {
       environmentId: string;
       variableId: string;
@@ -616,16 +637,11 @@ function EnvLevelVarRow({
       inheritable?: boolean;
     };
   }) => Promise<{ success: boolean }>;
-  const deleteVar = useServerFn(
-    deleteEnvironmentVariableServerFn as any,
-  ) as (args: {
+  const deleteVar = useServerFn(deleteEnvironmentVariableServerFn as any) as (args: {
     data: { environmentId: string; variableId: string; workspace?: string };
   }) => Promise<{ success: boolean }>;
 
-  const isDirty =
-    name !== variable.name ||
-    value !== variable.value ||
-    inheritable !== (variable.inheritable ?? false);
+  const isDirty = name !== variable.name || value !== variable.value || inheritable !== (variable.inheritable ?? false);
 
   async function saveRow() {
     if (saving || !variable.id) return;
@@ -648,9 +664,7 @@ function EnvLevelVarRow({
       toast.success("Variable updated");
       onUpdated();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update variable",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to update variable");
     } finally {
       setSaving(false);
     }
@@ -666,9 +680,7 @@ function EnvLevelVarRow({
       toast.success("Variable deleted");
       onDeleted();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to delete variable",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to delete variable");
     } finally {
       setRemoving(false);
     }
@@ -681,24 +693,16 @@ function EnvLevelVarRow({
         onClick={() => !isInherited && setExpanded((prev) => !prev)}
         className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm ${isInherited ? "cursor-default" : "hover:bg-dash-bg-elevated/50"}`}
       >
-        <span className="min-w-0 flex-1 truncate font-mono text-dash-text-strong">
-          {variable.name}
-        </span>
+        <span className="min-w-0 flex-1 truncate font-mono text-dash-text-strong">{variable.name}</span>
         {isInherited ? (
           <span className="shrink-0 rounded-full bg-dash-bg-elevated px-2 py-0.5 text-xs text-dash-text-faded">
             Inherited
-            {variable.sourceEnvironment
-              ? ` from ${variable.sourceEnvironment}`
-              : ""}
+            {variable.sourceEnvironment ? ` from ${variable.sourceEnvironment}` : ""}
           </span>
         ) : (
-          <span className="shrink-0 rounded-full bg-[#4879f8]/10 px-2 py-0.5 text-xs text-[#4879f8]">
-            Own
-          </span>
+          <span className="shrink-0 rounded-full bg-[#4879f8]/10 px-2 py-0.5 text-xs text-[#4879f8]">Own</span>
         )}
-        <span className="hidden shrink-0 text-sm font-normal text-dash-text-faded sm:block">
-          {isInherited ? "" : "••••••••••••••••"}
-        </span>
+        <span className="hidden shrink-0 text-sm font-normal text-dash-text-faded sm:block">{isInherited ? "" : "••••••••••••••••"}</span>
         {!isInherited &&
           (expanded ? (
             <ChevronUp className="size-4 shrink-0 text-dash-text-faded" />
@@ -732,11 +736,7 @@ function EnvLevelVarRow({
                   onClick={() => setShowValue((p) => !p)}
                   className="shrink-0 text-dash-text-faded hover:text-dash-text-strong"
                 >
-                  {showValue ? (
-                    <EyeSlash className="size-3.5" />
-                  ) : (
-                    <Eye className="size-3.5" />
-                  )}
+                  {showValue ? <EyeSlash className="size-3.5" /> : <Eye className="size-3.5" />}
                 </button>
                 <button
                   type="button"
@@ -748,11 +748,7 @@ function EnvLevelVarRow({
                   }}
                   className="shrink-0 text-dash-text-faded hover:text-dash-text-strong"
                 >
-                  {valueCopied ? (
-                    <Check className="size-3.5 text-[#13d282]" />
-                  ) : (
-                    <CopyIcon className="size-3.5" />
-                  )}
+                  {valueCopied ? <Check className="size-3.5 text-[#13d282]" /> : <CopyIcon className="size-3.5" />}
                 </button>
               </div>
             </div>
@@ -804,34 +800,25 @@ function EnvLevelVarRow({
 function EnvironmentPage() {
   const { project, workspace } = parentRoute.useLoaderData() as any;
   const router = useRouter();
-  const {
-    initialTarget,
-    initialSnapshot,
-    targets: initialTargets,
-  } = Route.useLoaderData() as LoaderData;
+  const { initialTarget, initialSnapshot, targets: initialTargets } = Route.useLoaderData() as LoaderData;
   const { canWrite } = useWorkspaceRole();
 
   const projectId = project?.id as string | undefined;
   const framework = project?.framework as string | undefined;
-  const projectEnvironmentId = project?.projectEnvironmentId as
-    | string
-    | null
-    | undefined;
+  const projectEnvironmentId = project?.projectEnvironmentId as string | null | undefined;
+  const inheritEnvironmentVars = project?.inheritEnvironmentVars as boolean | undefined;
+  const sharedLayerEnabled = Boolean(projectEnvironmentId) && inheritEnvironmentVars !== false;
   const databaseProject = getIsDatabaseProject(project);
   const canEdit = !databaseProject && canWrite;
   const envTabSupported = shouldShowEnvironmentTab(framework);
 
-  const getEnvSnapshot = useServerFn(
-    getProjectEnvironmentServerFn as any,
-  ) as (args: {
+  const getEnvSnapshot = useServerFn(getProjectEnvironmentServerFn as any) as (args: {
     data: { projectId: string; target?: string };
   }) => Promise<ProjectEnvironmentSnapshot>;
-  const listTargets = useServerFn(
-    listProjectEnvironmentTargetsServerFn as any,
-  ) as (args: { data: { projectId: string } }) => Promise<string[]>;
-  const addEnvs = useServerFn(
-    addProjectEnvironmentVariablesServerFn as any,
-  ) as (args: {
+  const listTargets = useServerFn(listProjectEnvironmentTargetsServerFn as any) as (args: {
+    data: { projectId: string };
+  }) => Promise<string[]>;
+  const addEnvs = useServerFn(addProjectEnvironmentVariablesServerFn as any) as (args: {
     data: {
       projectId: string;
       target?: string;
@@ -839,14 +826,10 @@ function EnvironmentPage() {
       environments: Array<{ name: string; value: string }>;
     };
   }) => Promise<ProjectEnvironmentSnapshot | null>;
-  const decryptValues = useServerFn(
-    decryptProjectEnvironmentValuesServerFn as any,
-  ) as (args: {
+  const decryptValues = useServerFn(decryptProjectEnvironmentValuesServerFn as any) as (args: {
     data: { environments: Array<{ name: string; value: string }> };
   }) => Promise<Array<{ name: string; value: string }>>;
-  const redeployProject = useServerFn(
-    redeployProjectServerFn as any,
-  ) as (args: {
+  const redeployProject = useServerFn(redeployProjectServerFn as any) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -854,14 +837,10 @@ function EnvironmentPage() {
       startOnly?: boolean;
     };
   }) => Promise<any>;
-  const getEnvLevelVars = useServerFn(
-    getEnvironmentVariablesServerFn as any,
-  ) as (args: {
+  const getEnvLevelVars = useServerFn(getEnvironmentVariablesServerFn as any) as (args: {
     data: { environmentId: string; workspace?: string };
   }) => Promise<EffectiveEnvironmentVariable[]>;
-  const saveEnvLevelVars = useServerFn(
-    saveEnvironmentVariablesServerFn as any,
-  ) as (args: {
+  const saveEnvLevelVars = useServerFn(saveEnvironmentVariablesServerFn as any) as (args: {
     data: {
       environmentId: string;
       workspace?: string;
@@ -874,9 +853,7 @@ function EnvironmentPage() {
   const [search, setSearch] = useState("");
   const [selectedTarget, setSelectedTarget] = useState(initialTarget);
   const [, setTargets] = useState(sortEnvironmentTargets(initialTargets));
-  const [snapshotsByTarget, setSnapshotsByTarget] = useState<
-    Record<string, ProjectEnvironmentSnapshot>
-  >({
+  const [snapshotsByTarget, setSnapshotsByTarget] = useState<Record<string, ProjectEnvironmentSnapshot>>({
     [initialTarget]: initialSnapshot,
   });
   const [loadingTarget, setLoadingTarget] = useState(false);
@@ -886,25 +863,13 @@ function EnvironmentPage() {
   const [rawLoading, setRawLoading] = useState(false);
   const [rawDirty, setRawDirty] = useState(false);
   const [savingRaw, setSavingRaw] = useState(false);
-  const [draftRows, setDraftRows] = useState<DraftRowWithShared[]>([
-    { id: createDraftId(), name: "", value: "", shared: false },
-  ]);
-  const [visibleDraftIds, setVisibleDraftIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [draftRows, setDraftRows] = useState<DraftRowWithShared[]>([{ id: createDraftId(), name: "", value: "", shared: false }]);
+  const [visibleDraftIds, setVisibleDraftIds] = useState<Set<string>>(new Set());
   const [savingDraftRows, setSavingDraftRows] = useState(false);
-  const [expandedRowId, setExpandedRowId] = useState<string | undefined>(
-    undefined,
-  );
-  const [decryptingRowId, setDecryptingRowId] = useState<string | undefined>(
-    undefined,
-  );
-  const [decryptedCache, setDecryptedCache] = useState<Record<string, string>>(
-    {},
-  );
-  const [envLevelVars, setEnvLevelVars] = useState<
-    EffectiveEnvironmentVariable[]
-  >([]);
+  const [expandedRowId, setExpandedRowId] = useState<string | undefined>(undefined);
+  const [decryptingRowId, setDecryptingRowId] = useState<string | undefined>(undefined);
+  const [decryptedCache, setDecryptedCache] = useState<Record<string, string>>({});
+  const [envLevelVars, setEnvLevelVars] = useState<EffectiveEnvironmentVariable[]>([]);
 
   useEffect(() => {
     setSelectedTarget(initialTarget);
@@ -920,18 +885,16 @@ function EnvironmentPage() {
     setDraftRows([{ id: createDraftId(), name: "", value: "", shared: false }]);
   }, [selectedTarget]);
 
-  // Fetch environment-level vars when projectEnvironmentId is available
   const fetchEnvLevelVars = useCallback(async () => {
-    if (!projectEnvironmentId) return;
-    try {
-      const vars = await getEnvLevelVars({
-        data: { environmentId: projectEnvironmentId, workspace },
-      });
-      setEnvLevelVars(vars);
-    } catch {
-      // Best effort — don't block the page
+    if (!projectEnvironmentId || !sharedLayerEnabled) {
+      setEnvLevelVars([]);
+      return;
     }
-  }, [projectEnvironmentId, workspace, getEnvLevelVars]);
+    const vars = await getEnvLevelVars({
+      data: { environmentId: projectEnvironmentId, workspace },
+    }).catch(() => []);
+    setEnvLevelVars(Array.isArray(vars) ? vars : []);
+  }, [projectEnvironmentId, sharedLayerEnabled, workspace, getEnvLevelVars]);
 
   useEffect(() => {
     void fetchEnvLevelVars();
@@ -943,29 +906,60 @@ function EnvironmentPage() {
   };
 
   // Merge project-level and environment-level vars for display
-  const mergedRows = useMemo(() => {
-    const projectRows = currentSnapshot.envs
-      .filter((env) => Boolean(env.envId))
-      .map((env) => ({
-        ...env,
-        _isShared: false as const,
-      }));
-    const sharedRows = envLevelVars
-      .filter((v) => v.source === "own" && v.id)
-      .map((v) => ({
-        id: v.id!,
-        name: v.name,
-        value: v.value,
-        _isShared: true as const,
-      }));
-    return [...projectRows, ...sharedRows];
-  }, [currentSnapshot.envs, envLevelVars]);
+  const mergedRows = useMemo<MergedEnvRow[]>(() => {
+    const sharedByName = new Map<string, EffectiveEnvironmentVariable>();
+    for (const variable of envLevelVars) {
+      sharedByName.set(variable.name.trim().toUpperCase(), variable);
+    }
+
+    const projectRows = currentSnapshot.envs.filter(isProjectLevelVariable).map((env) => ({
+      ...env,
+      meta: {
+        isShared: false,
+        encrypted: true,
+      },
+    }));
+    const sharedRowsFromApi = (sharedLayerEnabled ? envLevelVars : []).map((v) => ({
+      id: v.id ?? `shared:${v.name}`,
+      name: v.name,
+      value: v.value,
+      meta: {
+        isShared: true,
+        encrypted: false,
+        sharedVarId: v.id,
+        sharedSource: v.source,
+        sharedSourceEnvironment: v.sourceEnvironment,
+      },
+    }));
+
+    const namesFromSharedApi = new Set(sharedRowsFromApi.map((row) => row.name.trim().toUpperCase()));
+
+    const sharedRowsFromLegacyList = (sharedLayerEnabled ? currentSnapshot.envs : [])
+      .filter((env) => env.source === "environment" && !namesFromSharedApi.has(env.name.trim().toUpperCase()))
+      .map((env) => {
+        const sharedMeta = sharedByName.get(env.name.trim().toUpperCase());
+        return {
+          ...env,
+          meta: {
+            isShared: true,
+            encrypted: true,
+            sharedVarId: sharedMeta?.id,
+            sharedSource: sharedMeta?.source,
+            sharedSourceEnvironment: sharedMeta?.sourceEnvironment,
+          },
+        };
+      });
+
+    return [...sharedRowsFromApi, ...sharedRowsFromLegacyList, ...projectRows];
+  }, [currentSnapshot.envs, envLevelVars, sharedLayerEnabled]);
 
   const filteredRows = useMemo(() => {
     if (!search.trim()) return mergedRows;
     const q = search.toLowerCase();
     return mergedRows.filter((row) => row.name.toLowerCase().includes(q));
   }, [mergedRows, search]);
+
+  const editableProjectRows = useMemo(() => currentSnapshot.envs.filter(isProjectLevelVariable), [currentSnapshot.envs]);
 
   async function refreshTargets() {
     if (!projectId) {
@@ -991,11 +985,7 @@ function EnvironmentPage() {
       setSnapshotsByTarget((prev) => ({ ...prev, [target]: snapshot }));
       setDecryptedCache({});
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to load environment variables",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to load environment variables");
     } finally {
       setLoadingTarget(false);
     }
@@ -1003,9 +993,7 @@ function EnvironmentPage() {
 
   async function handleRedeploy(logId?: string) {
     if (!canWrite) {
-      toast.error(
-        "You don't have permission to update this project's environment.",
-      );
+      toast.error("You don't have permission to update this project's environment.");
       return;
     }
 
@@ -1026,35 +1014,20 @@ function EnvironmentPage() {
       toast.success("Redeploy started");
       router.invalidate();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to start redeploy",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to start redeploy");
     }
   }
 
   function addDraftRow() {
-    setDraftRows((prev) => [
-      ...prev,
-      { id: createDraftId(), name: "", value: "", shared: false },
-    ]);
+    setDraftRows((prev) => [...prev, { id: createDraftId(), name: "", value: "", shared: false }]);
   }
 
-  function updateDraftRow(
-    id: string,
-    field: "name" | "value",
-    nextValue: string,
-  ) {
-    setDraftRows((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, [field]: nextValue } : row)),
-    );
+  function updateDraftRow(id: string, field: "name" | "value", nextValue: string) {
+    setDraftRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: nextValue } : row)));
   }
 
   function toggleDraftShared(id: string) {
-    setDraftRows((prev) =>
-      prev.map((row) =>
-        row.id === id ? { ...row, shared: !row.shared } : row,
-      ),
-    );
+    setDraftRows((prev) => prev.map((row) => (row.id === id ? { ...row, shared: !row.shared } : row)));
   }
 
   function removeDraftRow(id: string) {
@@ -1069,9 +1042,7 @@ function EnvironmentPage() {
 
   async function handleSaveDraftRows() {
     if (!canWrite) {
-      toast.error(
-        "You don't have permission to update this project's environment.",
-      );
+      toast.error("You don't have permission to update this project's environment.");
       return;
     }
 
@@ -1095,15 +1066,9 @@ function EnvironmentPage() {
 
     // Map draft IDs to shared flag — sanitized rows lose the shared field,
     // so look up by matching name against the original drafts.
-    const sharedNames = new Set(
-      draftRows.filter((r) => r.shared).map((r) => r.name.trim().toUpperCase()),
-    );
-    const projectRows = nonEmpty.filter(
-      (r) => !sharedNames.has(r.name.trim().toUpperCase()),
-    );
-    const sharedRows = nonEmpty.filter((r) =>
-      sharedNames.has(r.name.trim().toUpperCase()),
-    );
+    const sharedNames = new Set(draftRows.filter((r) => r.shared).map((r) => r.name.trim().toUpperCase()));
+    const projectRows = nonEmpty.filter((r) => !sharedNames.has(r.name.trim().toUpperCase()));
+    const sharedRows = nonEmpty.filter((r) => sharedNames.has(r.name.trim().toUpperCase()));
 
     try {
       setSavingDraftRows(true);
@@ -1120,7 +1085,7 @@ function EnvironmentPage() {
           }),
         );
       }
-      if (sharedRows.length > 0 && projectEnvironmentId) {
+      if (sharedRows.length > 0 && sharedLayerEnabled && projectEnvironmentId) {
         promises.push(
           saveEnvLevelVars({
             data: {
@@ -1139,9 +1104,7 @@ function EnvironmentPage() {
       await loadEnvironmentTarget(selectedTarget);
       void fetchEnvLevelVars();
 
-      setDraftRows([
-        { id: createDraftId(), name: "", value: "", shared: false },
-      ]);
+      setDraftRows([{ id: createDraftId(), name: "", value: "", shared: false }]);
       void refreshTargets();
       toast("Variables updated successfully", {
         duration: 5000,
@@ -1153,11 +1116,7 @@ function EnvironmentPage() {
         },
       });
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to save environment variables",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to save environment variables");
     } finally {
       setSavingDraftRows(false);
     }
@@ -1172,17 +1131,15 @@ function EnvironmentPage() {
       setRawLoading(true);
       const decrypted = await decryptValues({
         data: {
-          environments: currentSnapshot.envs.map((env) => ({
+          environments: editableProjectRows.map((env) => ({
             name: env.name,
             value: env.value,
           })),
         },
       });
 
-      const decryptedMap = new Map(
-        decrypted.map((item) => [item.name, item.value]),
-      );
-      const merged = currentSnapshot.envs.map((env) => ({
+      const decryptedMap = new Map(decrypted.map((item) => [item.name, item.value]));
+      const merged = editableProjectRows.map((env) => ({
         id: env.id,
         name: env.name,
         value: decryptedMap.get(env.name) ?? env.value,
@@ -1197,9 +1154,7 @@ function EnvironmentPage() {
       setRawMode(true);
       setRawDirty(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to open raw editor",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to open raw editor");
     } finally {
       setRawLoading(false);
     }
@@ -1242,9 +1197,7 @@ function EnvironmentPage() {
 
   async function saveRawEditor() {
     if (!canWrite) {
-      toast.error(
-        "You don't have permission to update this project's environment.",
-      );
+      toast.error("You don't have permission to update this project's environment.");
       return;
     }
 
@@ -1295,19 +1248,13 @@ function EnvironmentPage() {
         },
       });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update variables",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to update variables");
     } finally {
       setSavingRaw(false);
     }
   }
 
-  function patchCurrentSnapshot(
-    mutator: (
-      current: ProjectEnvironmentSnapshot,
-    ) => ProjectEnvironmentSnapshot,
-  ) {
+  function patchCurrentSnapshot(mutator: (current: ProjectEnvironmentSnapshot) => ProjectEnvironmentSnapshot) {
     setSnapshotsByTarget((prev) => {
       const current = prev[selectedTarget] ?? { envs: [], deployId: undefined };
       return {
@@ -1332,22 +1279,18 @@ function EnvironmentPage() {
       return;
     }
 
-    // Shared (env-level) vars already have their values — no decrypt needed
-    const isSharedRow = envLevelVars.some((v) => v.id === nextValue);
-    if (isSharedRow) {
-      const sharedVar = envLevelVars.find((v) => v.id === nextValue);
-      if (sharedVar) {
-        setDecryptedCache((prev) => ({
-          ...prev,
-          [nextValue]: sharedVar.value,
-        }));
-      }
+    const row = mergedRows.find((entry) => entry.id === nextValue);
+    if (!row) {
       setExpandedRowId(nextValue);
       return;
     }
 
-    const row = currentSnapshot.envs.find((env) => env.id === nextValue);
-    if (!row) {
+    // Values from env-level API are plain text; legacy /envs rows are encrypted.
+    if (!row.meta.encrypted) {
+      setDecryptedCache((prev) => ({
+        ...prev,
+        [nextValue]: row.value,
+      }));
       setExpandedRowId(nextValue);
       return;
     }
@@ -1358,15 +1301,12 @@ function EnvironmentPage() {
         data: { environments: [{ name: row.name, value: row.value }] },
       });
       const first = decrypted[0];
-      const decryptedValue =
-        first && typeof first.value === "string" ? first.value : row.value;
+      const decryptedValue = first && typeof first.value === "string" ? first.value : row.value;
 
       setDecryptedCache((prev) => ({ ...prev, [nextValue]: decryptedValue }));
       setExpandedRowId(nextValue);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to decrypt value",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to decrypt value");
     } finally {
       setDecryptingRowId(undefined);
     }
@@ -1391,12 +1331,7 @@ function EnvironmentPage() {
 
       {envTabSupported && (
         <>
-          {databaseProject && (
-            <InfoBanner>
-              Connect to your database service using a private connection in the
-              same region.
-            </InfoBanner>
-          )}
+          {databaseProject && <InfoBanner>Connect to your database service using a private connection in the same region.</InfoBanner>}
 
           <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
             <div
@@ -1427,11 +1362,7 @@ function EnvironmentPage() {
                 disabled={rawLoading}
                 className="flex h-[34px] items-center gap-2 rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-3.5 text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90 disabled:opacity-60"
               >
-                {rawLoading ? (
-                  <Spinner size="size-3.5" />
-                ) : (
-                  <Code2 className="size-4" />
-                )}
+                {rawLoading ? <Spinner size="size-3.5" /> : <Code2 className="size-4" />}
                 Raw Editor
               </button>
             </div>
@@ -1444,7 +1375,7 @@ function EnvironmentPage() {
                     onClick={() => handleRawFormatChange("env")}
                     className={`rounded-[3px] px-3 py-1 text-xs font-medium ${rawFormat === "env" ? "bg-dash-bg-elevated text-dash-text-strong" : "text-dash-text-faded"}`}
                   >
-                    .env
+                    ENV
                   </button>
                   <button
                     type="button"
@@ -1463,11 +1394,7 @@ function EnvironmentPage() {
                   }}
                   format={rawFormat}
                   readOnly={databaseProject || !canWrite}
-                  placeholder={
-                    rawFormat === "json"
-                      ? '{\n  "API_KEY": "value"\n}'
-                      : "API_KEY=value"
-                  }
+                  placeholder={rawFormat === "json" ? '{\n  "API_KEY": "value"\n}' : "API_KEY=value"}
                 />
 
                 <div className="mt-3 flex items-center justify-end gap-2">
@@ -1514,13 +1441,7 @@ function EnvironmentPage() {
                               <input
                                 type="text"
                                 value={row.name}
-                                onChange={(event) =>
-                                  updateDraftRow(
-                                    row.id,
-                                    "name",
-                                    event.target.value,
-                                  )
-                                }
+                                onChange={(event) => updateDraftRow(row.id, "name", event.target.value)}
                                 placeholder="APP_ENV"
                                 className="input-base input-focus h-[36px] min-w-0 flex-1 px-3 font-mono text-sm text-dash-text-strong placeholder:text-dash-text-extra-faded"
                               />
@@ -1528,13 +1449,7 @@ function EnvironmentPage() {
                                 type="text"
                                 autoComplete="off"
                                 value={row.value}
-                                onChange={(event) =>
-                                  updateDraftRow(
-                                    row.id,
-                                    "value",
-                                    event.target.value,
-                                  )
-                                }
+                                onChange={(event) => updateDraftRow(row.id, "value", event.target.value)}
                                 placeholder="value"
                                 className={`input-base input-focus h-[36px] min-w-0 flex-1 px-3 text-sm text-dash-text-strong placeholder:text-dash-text-extra-faded ${
                                   visibleDraftIds.has(row.id)
@@ -1542,11 +1457,8 @@ function EnvironmentPage() {
                                     : "[text-security:disc] [-webkit-text-security:disc] placeholder:[-webkit-text-security:none]"
                                 }`}
                               />
-                              {projectEnvironmentId && (
-                                <SimpleTooltip
-                                  content="Share this variable across all projects in your workspace"
-                                  side="top"
-                                >
+                              {sharedLayerEnabled && (
+                                <SimpleTooltip content="Share this variable across all projects in your workspace" side="top">
                                   <button
                                     type="button"
                                     onClick={() => toggleDraftShared(row.id)}
@@ -1554,22 +1466,16 @@ function EnvironmentPage() {
                                   >
                                     <span
                                       className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
-                                        row.shared
-                                          ? "bg-[#4879f8]"
-                                          : "bg-dash-border"
+                                        row.shared ? "bg-[#4879f8]" : "bg-dash-border"
                                       }`}
                                     >
                                       <span
                                         className={`inline-block size-3 rounded-full bg-white transition-transform ${
-                                          row.shared
-                                            ? "translate-x-3.5"
-                                            : "translate-x-0.5"
+                                          row.shared ? "translate-x-3.5" : "translate-x-0.5"
                                         }`}
                                       />
                                     </span>
-                                    <span
-                                      className={`text-xs ${row.shared ? "text-[#4879f8]" : "text-dash-text-extra-faded"}`}
-                                    >
+                                    <span className={`text-xs ${row.shared ? "text-[#4879f8]" : "text-dash-text-extra-faded"}`}>
                                       Shared
                                     </span>
                                   </button>
@@ -1586,17 +1492,9 @@ function EnvironmentPage() {
                                   })
                                 }
                                 className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[4px] text-dash-text-faded hover:text-dash-text-body"
-                                title={
-                                  visibleDraftIds.has(row.id)
-                                    ? "Hide value"
-                                    : "Show value"
-                                }
+                                title={visibleDraftIds.has(row.id) ? "Hide value" : "Show value"}
                               >
-                                {visibleDraftIds.has(row.id) ? (
-                                  <EyeSlash className="size-4" />
-                                ) : (
-                                  <Eye className="size-4" />
-                                )}
+                                {visibleDraftIds.has(row.id) ? <EyeSlash className="size-4" /> : <Eye className="size-4" />}
                               </button>
                               <button
                                 type="button"
@@ -1612,11 +1510,7 @@ function EnvironmentPage() {
                       </AnimatePresence>
                     </div>
                     <div className="mt-3 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={addDraftRow}
-                        className="text-sm text-dash-text-faded hover:text-dash-text-strong"
-                      >
+                      <button type="button" onClick={addDraftRow} className="text-sm text-dash-text-faded hover:text-dash-text-strong">
                         + Add Another
                       </button>
                       <GlossyButton
@@ -1641,9 +1535,7 @@ function EnvironmentPage() {
                       <div className="flex flex-col items-center justify-center py-12 text-center">
                         <Lock className="mb-3 size-8 text-dash-text-extra-faded opacity-40" />
                         <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-                          {mergedRows.length === 0
-                            ? "No environment variables"
-                            : "No matching variables"}
+                          {mergedRows.length === 0 ? "No environment variables" : "No matching variables"}
                         </h3>
                         <p className="max-w-[360px] text-sm text-dash-text-faded">
                           {mergedRows.length === 0
@@ -1674,8 +1566,12 @@ function EnvironmentPage() {
                             isDecrypting={decryptingRowId === row.id}
                             decryptedValue={decryptedCache[row.id]}
                             canWrite={canWrite}
-                            isShared={"_isShared" in row && row._isShared}
-                            environmentId={projectEnvironmentId ?? undefined}
+                            isShared={row.meta.isShared}
+                            sharedVarId={row.meta.sharedVarId}
+                            sharedSource={row.meta.sharedSource}
+                            sharedSourceEnvironment={row.meta.sharedSourceEnvironment}
+                            sharedEncrypted={row.meta.encrypted}
+                            environmentId={sharedLayerEnabled ? (projectEnvironmentId ?? undefined) : undefined}
                             workspace={workspace}
                             selectedTarget={selectedTarget}
                             onRedeploy={handleRedeploy}
@@ -1685,16 +1581,12 @@ function EnvironmentPage() {
                             }}
                             onDeleted={(envId) => {
                               setExpandedRowId(undefined);
-                              if ("_isShared" in row && row._isShared) {
-                                setEnvLevelVars((prev) =>
-                                  prev.filter((v) => v.id !== envId),
-                                );
+                              if (row.meta.isShared) {
+                                setEnvLevelVars((prev) => prev.filter((v) => v.id !== envId));
                               } else {
                                 patchCurrentSnapshot((current) => ({
                                   ...current,
-                                  envs: current.envs.filter(
-                                    (item) => item.id !== envId,
-                                  ),
+                                  envs: current.envs.filter((item) => item.id !== envId),
                                 }));
                               }
                               void refreshCurrentTarget();

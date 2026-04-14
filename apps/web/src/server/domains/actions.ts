@@ -8,10 +8,7 @@ export interface DomainSaleSearchResult {
 }
 
 function readEnv(key: string): string | undefined {
-  const fromVite =
-    typeof import.meta !== "undefined"
-      ? ((import.meta as ImportMeta).env?.[key] as string | undefined)
-      : undefined;
+  const fromVite = typeof import.meta !== "undefined" ? ((import.meta as ImportMeta).env?.[key] as string | undefined) : undefined;
 
   if (fromVite) return fromVite;
 
@@ -24,10 +21,7 @@ function readEnv(key: string): string | undefined {
 }
 
 function getSearchEndpoint() {
-  const gatewayUrl =
-    readEnv("NEXT_PUBLIC_GATEWAY_URL") ??
-    readEnv("VITE_GATEWAY_URL") ??
-    "https://api.brimble.io";
+  const gatewayUrl = readEnv("NEXT_PUBLIC_GATEWAY_URL") ?? readEnv("VITE_GATEWAY_URL") ?? "https://api.brimble.io";
 
   return `${gatewayUrl.replace(/\/$/, "")}/core/v1/domains/sale/search`;
 }
@@ -53,10 +47,7 @@ export const searchDomainSaleServerFn = createServerFn({
 }).handler(async ({ data }) => {
   const payload = data as { name?: string; limit?: number } | undefined;
   const name = payload?.name?.trim().toLowerCase();
-  const limit =
-    typeof payload?.limit === "number" && payload.limit > 0
-      ? Math.floor(payload.limit)
-      : undefined;
+  const limit = typeof payload?.limit === "number" && payload.limit > 0 ? Math.floor(payload.limit) : undefined;
 
   if (!name) {
     return [] as DomainSaleSearchResult[];
@@ -85,12 +76,7 @@ export const searchDomainSaleServerFn = createServerFn({
 
   return rows
     .map((row: any) => {
-      const domainName =
-        typeof row?.domainName === "string"
-          ? row.domainName
-          : typeof row?.name === "string"
-            ? row.name
-            : "";
+      const domainName = typeof row?.domainName === "string" ? row.domainName : typeof row?.name === "string" ? row.name : "";
 
       if (!domainName) {
         return null;
@@ -99,14 +85,9 @@ export const searchDomainSaleServerFn = createServerFn({
       return {
         domainName,
         purchasable: Boolean(row?.purchasable),
-        purchasePrice:
-          typeof row?.purchasePrice === "number" ? row.purchasePrice : undefined,
-        renewalPrice:
-          typeof row?.renewalPrice === "number" ? row.renewalPrice : undefined,
+        purchasePrice: typeof row?.purchasePrice === "number" ? row.purchasePrice : undefined,
+        renewalPrice: typeof row?.renewalPrice === "number" ? row.renewalPrice : undefined,
       } satisfies DomainSaleSearchResult;
     })
-    .filter(
-      (item: DomainSaleSearchResult | null): item is DomainSaleSearchResult =>
-        item !== null,
-    );
+    .filter((item: DomainSaleSearchResult | null): item is DomainSaleSearchResult => item !== null);
 });

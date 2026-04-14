@@ -10,8 +10,7 @@ export const legalDocuments: LegalDocument[] = [
   {
     slug: "terms",
     title: "Terms of Service",
-    description:
-      "The terms and conditions governing use of the Brimble platform, APIs, and related services.",
+    description: "The terms and conditions governing use of the Brimble platform, APIs, and related services.",
     lastUpdated: "March 2026",
     content: `These Terms of Service ("Terms") govern access to and use of the services provided by Brimble Inc. ("Brimble", "we", "our", or "us").
 
@@ -154,8 +153,7 @@ Legal inquiries may be directed to: legal@brimble.app`,
   {
     slug: "privacy",
     title: "Privacy Policy",
-    description:
-      "How Brimble collects, uses, and safeguards your personal data and information.",
+    description: "How Brimble collects, uses, and safeguards your personal data and information.",
     lastUpdated: "March 2026",
     content: `Brimble Inc ("Brimble", "we", "our", or "us") respects your privacy and is committed to protecting personal data.
 This Privacy Policy explains how we collect, use, and safeguard information.
@@ -205,8 +203,7 @@ privacy@brimble.app`,
   {
     slug: "acceptable-use",
     title: "Acceptable Use Policy",
-    description:
-      "Prohibited activities and usage guidelines for the Brimble platform.",
+    description: "Prohibited activities and usage guidelines for the Brimble platform.",
     lastUpdated: "March 2026",
     content: `This Acceptable Use Policy defines prohibited activities when using the Brimble platform.
 
@@ -231,8 +228,7 @@ Brimble reserves the right to investigate violations and suspend accounts where 
   {
     slug: "security",
     title: "Security",
-    description:
-      "An overview of the security measures and practices used to protect the Brimble platform.",
+    description: "An overview of the security measures and practices used to protect the Brimble platform.",
     lastUpdated: "March 2026",
     content: `Security is a core priority for Brimble. This document describes the security measures used to protect the platform.
 
@@ -259,8 +255,7 @@ Security researchers may report vulnerabilities to: security@brimble.app`,
   {
     slug: "data-processing",
     title: "Data Processing Agreement",
-    description:
-      "The agreement governing how Brimble processes data on behalf of its customers.",
+    description: "The agreement governing how Brimble processes data on behalf of its customers.",
     lastUpdated: "March 2026",
     content: `This Data Processing Agreement ("DPA") forms part of the agreement between Brimble Inc and its customers.
 
@@ -291,8 +286,7 @@ legal@brimble.app`,
   {
     slug: "subprocessors",
     title: "Sub-processors",
-    description:
-      "A list of third-party service providers that Brimble relies on to operate and deliver the platform.",
+    description: "A list of third-party service providers that Brimble relies on to operate and deliver the platform.",
     lastUpdated: "March 2026",
     content: `Brimble Inc. ("Brimble", "we", "our", or "us") relies on certain third-party service providers ("Sub-processors") to operate and deliver the Brimble platform.
 

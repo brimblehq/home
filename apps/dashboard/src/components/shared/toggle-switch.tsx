@@ -14,12 +14,7 @@ const sizes = {
   default: { track: "w-[36px] h-[20px]", thumb: "size-[16px]", translate: 16 },
 };
 
-export function ToggleSwitch({
-  checked,
-  onChange,
-  disabled = false,
-  size = "default",
-}: ToggleSwitchProps) {
+export function ToggleSwitch({ checked, onChange, disabled = false, size = "default" }: ToggleSwitchProps) {
   const s = sizes[size];
   const haptics = useHaptics();
 

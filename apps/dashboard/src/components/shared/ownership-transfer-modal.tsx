@@ -32,21 +32,14 @@ export function OwnershipTransferModal({
   return (
     <Modal open={open} onOpenChange={onOpenChange} width={420}>
       <div className="flex flex-col items-center gap-4 px-6 pb-5 pt-6 text-center">
-        <img
-          src="/icons/icons8-warning-shield.svg"
-          alt="Warning"
-          className="size-12"
-        />
+        <img src="/icons/icons8-warning-shield.svg" alt="Warning" className="size-12" />
         <div className="flex flex-col gap-1.5">
           <Dialog.Title className="text-base font-medium leading-[1.4] tracking-[-0.096px] text-dash-text-strong">
             Ownership transfer request
           </Dialog.Title>
           <Dialog.Description className="text-sm leading-5 text-dash-text-faded">
-            You have a pending request to become the Creator of{" "}
-            <span className="font-medium text-dash-text-strong">
-              {workspaceName}
-            </span>
-            . Accept to take ownership, or deny to keep the current owner.
+            You have a pending request to become the Creator of <span className="font-medium text-dash-text-strong">{workspaceName}</span>.
+            Accept to take ownership, or deny to keep the current owner.
           </Dialog.Description>
           {!hasPaymentMethod && (
             <p className="mt-2 text-xs leading-4 text-[#f5a623]">
@@ -60,8 +53,8 @@ export function OwnershipTransferModal({
                 className="underline underline-offset-2 hover:opacity-80"
               >
                 add a payment method
-              </button>
-              {" "}before accepting.
+              </button>{" "}
+              before accepting.
             </p>
           )}
         </div>

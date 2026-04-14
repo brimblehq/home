@@ -12,8 +12,7 @@ function staleAssetGuard(): Plugin {
       order: "post",
       handler(server) {
         return () => {
-          const assetPattern =
-            /^\/(assets|icons|images|abc-marfa-font-family)\//;
+          const assetPattern = /^\/(assets|icons|images|abc-marfa-font-family)\//;
           server.middlewares.use((req, res, next) => {
             const url = req.url?.split("?")[0] ?? "";
             if (assetPattern.test(url)) {
@@ -61,8 +60,7 @@ const config = defineConfig({
           if (!id.includes("node_modules")) return;
           if (id.includes("@stripe/")) return "stripe";
           if (id.includes("/ably/")) return "ably";
-          if (id.includes("/motion/") || id.includes("/framer-motion/"))
-            return "motion";
+          if (id.includes("/motion/") || id.includes("/framer-motion/")) return "motion";
           if (id.includes("/lucide-react/")) return "lucide";
           if (id.includes("@sentry/")) return "sentry";
         },

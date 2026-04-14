@@ -42,9 +42,7 @@ function formatRemaining(seconds: number): string {
 }
 
 function TwoFactorChallengePage() {
-  const verifyTwoFactorChallenge = useServerFn(
-    verifyTwoFactorChallengeServerFn as any,
-  ) as (args: {
+  const verifyTwoFactorChallenge = useServerFn(verifyTwoFactorChallengeServerFn as any) as (args: {
     data: { challengeToken: string; code: string; geo?: unknown };
   }) => Promise<{ ok: true; user: { firstName?: string } }>;
   const [challengeToken, setChallengeToken] = useState<string | null>(null);
@@ -70,11 +68,7 @@ function TwoFactorChallengePage() {
 
     setChallengeToken(parsed.challengeToken);
     setDeadlineAt(Date.now() + parsed.expiresIn * 1000);
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${window.location.search}`,
-    );
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
   }, []);
 
   useEffect(() => {
@@ -109,8 +103,7 @@ function TwoFactorChallengePage() {
   }, [deadlineAt, remainingSeconds]);
 
   const normalizedRecoveryCode = recoveryCode.replace(/\s+/g, "").toUpperCase();
-  const canSubmit =
-    mode === "totp" ? /^\d{6}$/.test(totpCode) : /^[A-Z0-9]{8}$/.test(normalizedRecoveryCode);
+  const canSubmit = mode === "totp" ? /^\d{6}$/.test(totpCode) : /^[A-Z0-9]{8}$/.test(normalizedRecoveryCode);
 
   async function handleVerify() {
     if (!challengeToken || !canSubmit || loading) {
@@ -129,15 +122,12 @@ function TwoFactorChallengePage() {
         },
       });
 
-      toast.success(
-        `Welcome back${result.user.firstName ? `, ${result.user.firstName}` : ""}`,
-      );
+      toast.success(`Welcome back${result.user.firstName ? `, ${result.user.firstName}` : ""}`);
       invalidateSessionCache();
       window.location.replace(getNextUrl());
       return;
     } catch (error: any) {
-      const message =
-        error instanceof Error ? error.message : "Verification failed";
+      const message = error instanceof Error ? error.message : "Verification failed";
       setErrorMessage(message);
 
       if (error?.status === 401) {
@@ -165,11 +155,7 @@ function TwoFactorChallengePage() {
         <div className="rounded-[10px] bg-dash-bg-elevated px-3.5 py-3 text-center text-xs text-dash-text-faded dark:bg-[#202225]">
           {challengeToken ? (
             <>
-              This challenge expires in{" "}
-              <span className="font-semibold text-dash-text-strong">
-                {formatRemaining(remainingSeconds)}
-              </span>
-              .
+              This challenge expires in <span className="font-semibold text-dash-text-strong">{formatRemaining(remainingSeconds)}</span>.
             </>
           ) : (
             "Waiting for challenge token..."
@@ -188,9 +174,7 @@ function TwoFactorChallengePage() {
           />
         ) : (
           <label htmlFor="recovery-code" className="block">
-            <div className="mb-1.5 text-xs font-medium text-dash-text-strong">
-              Recovery code
-            </div>
+            <div className="mb-1.5 text-xs font-medium text-dash-text-strong">Recovery code</div>
             <input
               id="recovery-code"
               type="text"
@@ -229,9 +213,7 @@ function TwoFactorChallengePage() {
           }}
           className="w-full text-center text-[13px] font-medium text-[#006fff] transition-colors hover:text-[#0060e0] dark:text-[#4879f8]"
         >
-          {mode === "totp"
-            ? "Use a recovery code instead"
-            : "Use authenticator code instead"}
+          {mode === "totp" ? "Use a recovery code instead" : "Use authenticator code instead"}
         </button>
       </div>
     </AuthSplitLayout>

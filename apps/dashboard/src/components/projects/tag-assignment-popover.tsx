@@ -1,10 +1,4 @@
-import {
-  useState,
-  useRef,
-  useEffect,
-  useLayoutEffect,
-  useCallback,
-} from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Search, Plus, Check } from "lucide-react";
@@ -56,9 +50,7 @@ export function TagAssignmentPopover({
   const inputRef = useRef<HTMLInputElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set());
-  const [localAssigned, setLocalAssigned] = useState<Set<string>>(
-    new Set(assignedTagIds),
-  );
+  const [localAssigned, setLocalAssigned] = useState<Set<string>>(new Set(assignedTagIds));
   const [creatingTag, setCreatingTag] = useState(false);
 
   useEffect(() => {
@@ -104,11 +96,7 @@ export function TagAssignmentPopover({
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (
-        anchorRef.current?.contains(e.target as Node) ||
-        menuRef.current?.contains(e.target as Node)
-      )
-        return;
+      if (anchorRef.current?.contains(e.target as Node) || menuRef.current?.contains(e.target as Node)) return;
       onOpenChange(false);
     }
     document.addEventListener("mousedown", handleClick);
@@ -116,9 +104,7 @@ export function TagAssignmentPopover({
   }, [open, anchorRef, onOpenChange]);
 
   const trimmed = query.trim().toLowerCase();
-  const filtered = tags.filter((t) =>
-    trimmed ? t.name.includes(trimmed) : true,
-  );
+  const filtered = tags.filter((t) => (trimmed ? t.name.includes(trimmed) : true));
   const exactMatch = tags.some((t) => t.name === trimmed);
 
   async function handleToggle(tagId: string) {
@@ -272,22 +258,12 @@ export function TagAssignmentPopover({
                 }}
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-dash-bg-elevated disabled:opacity-70"
               >
-                <span
-                  className="size-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: tag.color }}
-                />
-                <span className="flex-1 truncate text-dash-text-faded">
-                  {tag.name}
-                </span>
+                <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                <span className="flex-1 truncate text-dash-text-faded">{tag.name}</span>
                 {isPending ? (
-                  <Spinner
-                    size="size-3.5"
-                    className="shrink-0 text-dash-text-extra-faded"
-                  />
+                  <Spinner size="size-3.5" className="shrink-0 text-dash-text-extra-faded" />
                 ) : (
-                  isAssigned && (
-                    <Check className="size-3.5 shrink-0 text-dash-text-strong" />
-                  )
+                  isAssigned && <Check className="size-3.5 shrink-0 text-dash-text-strong" />
                 )}
               </button>
             );
@@ -304,20 +280,12 @@ export function TagAssignmentPopover({
               }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-dash-text-faded transition-colors hover:bg-dash-bg-elevated disabled:opacity-70"
             >
-              {creatingTag ? (
-                <Spinner size="size-3.5" className="shrink-0" />
-              ) : (
-                <Plus className="size-3.5 shrink-0" />
-              )}
+              {creatingTag ? <Spinner size="size-3.5" className="shrink-0" /> : <Plus className="size-3.5 shrink-0" />}
               <span>Create &ldquo;{normalizeTagName(trimmed)}&rdquo;</span>
             </button>
           )}
 
-          {filtered.length === 0 && !trimmed && (
-            <div className="px-3 py-2 text-sm text-dash-text-faded">
-              No tags yet
-            </div>
-          )}
+          {filtered.length === 0 && !trimmed && <div className="px-3 py-2 text-sm text-dash-text-faded">No tags yet</div>}
         </motion.div>
       )}
     </AnimatePresence>,

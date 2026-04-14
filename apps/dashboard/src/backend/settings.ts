@@ -141,11 +141,7 @@ function normalizeWebhookUrlValue(value: unknown): string {
 
 function mapWebhooks(payload: any): SettingsWebhookState {
   const data = unwrapData<any>(payload) ?? {};
-  const rawGroups = Array.isArray(data?.events)
-    ? data.events
-    : Array.isArray(data?.groups)
-      ? data.groups
-      : [];
+  const rawGroups = Array.isArray(data?.events) ? data.events : Array.isArray(data?.groups) ? data.groups : [];
 
   return {
     webhookUrl: normalizeWebhookUrlValue(data?.webhookUrl),
@@ -165,35 +161,25 @@ function createEmptyWebhookState(): SettingsWebhookState {
 }
 
 function supportsWebhookPlan(planType?: string): boolean {
-  const normalized = String(planType ?? "").trim().toLowerCase();
+  const normalized = String(planType ?? "")
+    .trim()
+    .toLowerCase();
   if (!normalized) {
     return false;
   }
 
-  return (
-    normalized.includes("developer") ||
-    normalized.includes("pro") ||
-    normalized.includes("team")
-  );
+  return normalized.includes("developer") || normalized.includes("pro") || normalized.includes("team");
 }
 
-async function getCurrentPersonalPlanType(
-  client: ApiClient,
-  currentSubscriptionEndpoint: string,
-): Promise<string | undefined> {
+async function getCurrentPersonalPlanType(client: ApiClient, currentSubscriptionEndpoint: string): Promise<string | undefined> {
   try {
     const response = await client.request(currentSubscriptionEndpoint, {
       method: "GET",
     });
     const data = unwrapData<any>(response);
-    const plan =
-      data?.plan_type ??
-      data?.planType ??
-      data?.plan;
+    const plan = data?.plan_type ?? data?.planType ?? data?.plan;
 
-    return typeof plan === "string" && plan.trim()
-      ? String(plan)
-      : undefined;
+    return typeof plan === "string" && plan.trim() ? String(plan) : undefined;
   } catch {
     return undefined;
   }
@@ -221,9 +207,7 @@ function mapProviders(payload: any): SettingsPaymentProvider[] {
     enum: String(provider?.enum ?? ""),
     logo: provider?.logo,
     description: provider?.description,
-    features: Array.isArray(provider?.features)
-      ? provider.features.map((feature: unknown) => String(feature))
-      : [],
+    features: Array.isArray(provider?.features) ? provider.features.map((feature: unknown) => String(feature)) : [],
   }));
 }
 
@@ -236,14 +220,8 @@ function mapSpendingStats(payload: any): SettingsSpendingStats {
 }
 
 function mapInvoicePage(payload: any, page: number): SettingsInvoicePage {
-  const root =
-    (payload?.data && typeof payload.data === "object" ? payload.data : null) ??
-    (unwrapData<any>(payload) ?? {});
-  const list = Array.isArray(root?.data)
-    ? root.data
-    : Array.isArray(root)
-      ? root
-      : [];
+  const root = (payload?.data && typeof payload.data === "object" ? payload.data : null) ?? unwrapData<any>(payload) ?? {};
+  const list = Array.isArray(root?.data) ? root.data : Array.isArray(root) ? root : [];
 
   const items: SettingsInvoiceItem[] = list.map((invoice: any) => ({
     id: String(invoice?._id ?? invoice?.id ?? ""),
@@ -271,9 +249,7 @@ function mapPlans(payload: any): SettingsPlan[] {
     amount: Number(plan?.amount ?? 0),
     tagLine: plan?.tagLine,
     isRecommended: Boolean(plan?.isRecommended),
-    features: Array.isArray(plan?.features)
-      ? plan.features.map((feature: unknown) => String(feature))
-      : [],
+    features: Array.isArray(plan?.features) ? plan.features.map((feature: unknown) => String(feature)) : [],
   }));
 }
 
@@ -376,28 +352,24 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
     disconnectProvider: `${config.authApiUrl}/user/disconnect`,
   } as const;
 
-  const getBillingSnapshotInternal = async (
-    page = 1,
-    options?: { subscriptionId?: string },
-  ): Promise<SettingsBillingSnapshot> => {
+  const getBillingSnapshotInternal = async (page = 1, options?: { subscriptionId?: string }): Promise<SettingsBillingSnapshot> => {
     const subscriptionId = options?.subscriptionId?.trim() || undefined;
-    const [statsResponse, invoicesResponse, plansResponse] =
-      await Promise.all([
-        client.request(endpoints.paymentStats, {
-          method: "GET",
-          query: {
-            ...(subscriptionId ? { subscriptionId } : {}),
-          },
-        }),
-        client.request(endpoints.paymentInvoices, {
-          method: "GET",
-          query: {
-            page,
-            ...(subscriptionId ? { subscriptionId } : {}),
-          },
-        }),
-        client.request(endpoints.paymentPlans, { method: "GET" }),
-      ]);
+    const [statsResponse, invoicesResponse, plansResponse] = await Promise.all([
+      client.request(endpoints.paymentStats, {
+        method: "GET",
+        query: {
+          ...(subscriptionId ? { subscriptionId } : {}),
+        },
+      }),
+      client.request(endpoints.paymentInvoices, {
+        method: "GET",
+        query: {
+          page,
+          ...(subscriptionId ? { subscriptionId } : {}),
+        },
+      }),
+      client.request(endpoints.paymentPlans, { method: "GET" }),
+    ]);
 
     return {
       cards: [],
@@ -497,9 +469,7 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
       return String(first.value);
     },
     async getWebhooks() {
-      const profile = mapProfile(
-        await client.request(endpoints.authUserMe, { method: "GET" }),
-      );
+      const profile = mapProfile(await client.request(endpoints.authUserMe, { method: "GET" }));
       if (!supportsWebhookPlan(profile.subscription?.planType)) {
         return createEmptyWebhookState();
       }
@@ -508,9 +478,7 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
       return mapWebhooks(response);
     },
     async updateWebhooks(input) {
-      const profile = mapProfile(
-        await client.request(endpoints.authUserMe, { method: "GET" }),
-      );
+      const profile = mapProfile(await client.request(endpoints.authUserMe, { method: "GET" }));
       if (!supportsWebhookPlan(profile.subscription?.planType)) {
         return createEmptyWebhookState();
       }
@@ -532,9 +500,7 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
       return mapWebhooks(refreshed);
     },
     async testWebhook(input) {
-      const profile = mapProfile(
-        await client.request(endpoints.authUserMe, { method: "GET" }),
-      );
+      const profile = mapProfile(await client.request(endpoints.authUserMe, { method: "GET" }));
       if (!supportsWebhookPlan(profile.subscription?.planType)) {
         return;
       }
@@ -597,9 +563,7 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
         getBillingSnapshotInternal(page, options).catch(() => null),
       ]);
 
-      const webhooks = webhookResult
-        ? mapWebhooks(webhookResult)
-        : createEmptyWebhookState();
+      const webhooks = webhookResult ? mapWebhooks(webhookResult) : createEmptyWebhookState();
       const billing = billingResult ?? {
         cards: [],
         providers: [],
@@ -611,10 +575,7 @@ export function createSettingsApi(client: ApiClient): SettingsApi {
       return { profile, webhooks, billing } satisfies SettingsSidebarSnapshot;
     },
     async disconnectGitProvider(provider: GitProvider) {
-      await client.request(
-        `${endpoints.disconnectProvider}/${encodeURIComponent(provider)}`,
-        { method: "DELETE" },
-      );
+      await client.request(`${endpoints.disconnectProvider}/${encodeURIComponent(provider)}`, { method: "DELETE" });
     },
   };
 }

@@ -45,15 +45,7 @@ export function usePushNotification(workspace?: string | null) {
   }, []);
 
   const sendNotification = useCallback(
-    ({
-      title,
-      body,
-      onClick,
-    }: {
-      title: string;
-      body: string;
-      onClick?: () => void;
-    }) => {
+    ({ title, body, onClick }: { title: string; body: string; onClick?: () => void }) => {
       if (typeof window === "undefined" || !window.Notification) return;
       if (window.Notification.permission !== "granted") return;
       if (!isPushEnabled(workspace)) return;

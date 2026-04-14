@@ -41,4 +41,3 @@ function hslToHex(h: number, s: number, l: number): string {
 export function normalizeTagName(raw: string): string {
   return raw.trim().toLowerCase().slice(0, MAX_TAG_NAME_LENGTH);
 }
-

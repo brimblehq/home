@@ -8,9 +8,7 @@ export interface GitProviderApi {
   listRepos: (args: {
     data?: { q?: string; page?: number; limit?: number; installationId?: number | string };
   }) => Promise<{ repositories: GithubRepoListItem[] }>;
-  getRepo: (args: {
-    data: { repoName: string; installationId?: number | string };
-  }) => Promise<RepositoryMetadata>;
+  getRepo: (args: { data: { repoName: string; installationId?: number | string } }) => Promise<RepositoryMetadata>;
 }
 
 export interface UseGitProviderOptions {
@@ -101,9 +99,7 @@ export function useGitProvider({
       } catch (error) {
         setAccountsChecked(true);
         if (!options?.silent) {
-          toast.error(
-            error instanceof Error ? error.message : `Failed to load ${providerName} accounts`,
-          );
+          toast.error(error instanceof Error ? error.message : `Failed to load ${providerName} accounts`);
         }
         return [];
       } finally {
@@ -180,9 +176,7 @@ export function useGitProvider({
       });
       const connectUrl = connect?.url?.trim();
       if (!connectUrl) {
-        throw new Error(
-          `We could not start ${providerName} connection right now. Please refresh and try again.`,
-        );
+        throw new Error(`We could not start ${providerName} connection right now. Please refresh and try again.`);
       }
 
       const popup = window.open(connectUrl, "_blank", "width=900,height=760");
@@ -207,15 +201,11 @@ export function useGitProvider({
 
       pollingTimeoutRef.current = window.setTimeout(() => {
         stopPolling();
-        setConnectError(
-          `Timed out waiting for ${providerName} connection. Finish authorization, then click refresh.`,
-        );
+        setConnectError(`Timed out waiting for ${providerName} connection. Finish authorization, then click refresh.`);
       }, 90_000);
     } catch (error) {
       const rawMessage =
-        error instanceof Error
-          ? error.message
-          : `We could not open the ${providerName} connection window. Please try again.`;
+        error instanceof Error ? error.message : `We could not open the ${providerName} connection window. Please try again.`;
 
       if (rawMessage.startsWith("CONNECT_AUTH_REQUIRED:")) {
         toast.error("Please sign in again to continue.");
@@ -224,9 +214,7 @@ export function useGitProvider({
         return;
       }
 
-      const cleanMessage = rawMessage.startsWith("CONNECT_EXPIRED:")
-        ? "Connection expired, please try again."
-        : rawMessage;
+      const cleanMessage = rawMessage.startsWith("CONNECT_EXPIRED:") ? "Connection expired, please try again." : rawMessage;
 
       setConnectError(cleanMessage);
     } finally {
@@ -235,11 +223,7 @@ export function useGitProvider({
   }, [api, providerName, accounts, refreshAccounts]);
 
   useEffect(() => {
-    if (
-      connectPolling &&
-      accountsSignature.length > 0 &&
-      accountsSignature !== pollingBaselineSignatureRef.current
-    ) {
+    if (connectPolling && accountsSignature.length > 0 && accountsSignature !== pollingBaselineSignatureRef.current) {
       stopPolling();
       toast.success(`${providerName} connected. Select a repository to continue.`);
       if (typeof window !== "undefined") {

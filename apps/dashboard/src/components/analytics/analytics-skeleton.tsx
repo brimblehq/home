@@ -5,11 +5,7 @@ function Bar({ className }: { className?: string }) {
 }
 
 function NavyBar({ className }: { className?: string }) {
-  return (
-    <div
-      className={`animate-pulse rounded bg-[#cfe0ff]/10 ${className ?? ""}`}
-    />
-  );
+  return <div className={`animate-pulse rounded bg-[#cfe0ff]/10 ${className ?? ""}`} />;
 }
 
 function MetricBlock() {
@@ -26,9 +22,7 @@ function MetricBlock() {
 
 function ListRow({ withIcon = false, last = false }: { withIcon?: boolean; last?: boolean }) {
   return (
-    <div
-      className={`flex items-center justify-between px-4 py-2.5 ${last ? "" : "border-b-[0.5px] border-dash-border-soft"}`}
-    >
+    <div className={`flex items-center justify-between px-4 py-2.5 ${last ? "" : "border-b-[0.5px] border-dash-border-soft"}`}>
       <div className="flex min-w-0 items-center gap-2">
         {withIcon && <div className="size-3 shrink-0 animate-pulse rounded-sm bg-dash-border-soft" />}
         <Bar className="h-3 w-32" />
@@ -71,10 +65,7 @@ function BarChartBars() {
     <div className="mt-6 flex h-[320px] items-end gap-1">
       {heights.map((h, i) => (
         <div key={i} className="flex flex-1 flex-col items-center gap-2">
-          <div
-            className="w-full animate-pulse rounded-[4px] bg-dash-border-soft"
-            style={{ height: h }}
-          />
+          <div className="w-full animate-pulse rounded-[4px] bg-dash-border-soft" style={{ height: h }} />
           <Bar className="h-2 w-6" />
         </div>
       ))}
@@ -164,10 +155,7 @@ export function AppAnalyticsSkeleton() {
           </div>
           <Bar className="h-7 w-32 rounded-[4px]" />
         </div>
-        <div
-          className="flex w-full items-center justify-center bg-dash-bg-elevated px-4 py-6"
-          style={{ height: 460 }}
-        >
+        <div className="flex w-full items-center justify-center bg-dash-bg-elevated px-4 py-6" style={{ height: 460 }}>
           <div className="size-full max-w-[900px] animate-pulse rounded-[4px] bg-dash-border-soft" />
         </div>
       </div>

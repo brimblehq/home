@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getDomainDetailsServerFn } from "@/server/domains/actions";
-import {
-  DomainSettings,
-} from "../../components/shared/domain-settings";
+import { DomainSettings } from "../../components/shared/domain-settings";
 import { mapDomainDetailsToDomainInfo } from "@/utils/domain-settings";
 
 export const Route = createFileRoute("/domains/$domainName")({
@@ -12,9 +10,9 @@ export const Route = createFileRoute("/domains/$domainName")({
     const searchParams = new URLSearchParams(location.searchStr || "");
     const workspace = searchParams.get("workspace") || undefined;
 
-    const domain = await (getDomainDetailsServerFn as unknown as (input: {
-      data: { domainName: string; workspace?: string };
-    }) => Promise<any>)({
+    const domain = await (
+      getDomainDetailsServerFn as unknown as (input: { data: { domainName: string; workspace?: string } }) => Promise<any>
+    )({
       data: {
         domainName: decodeURIComponent(params.domainName),
         workspace,

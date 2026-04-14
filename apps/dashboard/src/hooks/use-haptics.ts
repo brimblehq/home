@@ -53,11 +53,7 @@ const PATTERNS = {
     ],
   },
   error: {
-    segments: [
-      { duration: 40 },
-      { delay: 40, duration: 40 },
-      { delay: 40, duration: 40 },
-    ],
+    segments: [{ duration: 40 }, { delay: 40, duration: 40 }, { delay: 40, duration: 40 }],
     options: { intensity: 0.9 },
   },
   light: { segments: [{ duration: 15 }], options: { intensity: 0.4 } },
@@ -105,10 +101,7 @@ export function useHaptics() {
     const fire = (key: keyof typeof PATTERNS) => {
       if (!hapticsEnabled) return;
       const p = PATTERNS[key];
-      trigger(
-        p.segments as unknown as any[],
-        "options" in p ? (p as any).options : undefined,
-      );
+      trigger(p.segments as unknown as any[], "options" in p ? (p as any).options : undefined);
     };
     return {
       success: () => fire("success"),

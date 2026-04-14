@@ -59,4 +59,3 @@ export function createBandwidthApi(client: ApiClient): BandwidthApi {
     },
   };
 }
-

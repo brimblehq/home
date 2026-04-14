@@ -3,16 +3,14 @@ import type { ScalingGroup, BackendApi } from "@/backend";
 import { withTokenRefresh } from "@/server/shared/backend";
 
 function supportsAutoscalingPlan(planType?: string) {
-  const normalized = String(planType ?? "").trim().toLowerCase();
+  const normalized = String(planType ?? "")
+    .trim()
+    .toLowerCase();
   if (!normalized) {
     return false;
   }
 
-  return (
-    normalized.includes("developer") ||
-    normalized.includes("pro") ||
-    normalized.includes("team")
-  );
+  return normalized.includes("developer") || normalized.includes("pro") || normalized.includes("team");
 }
 
 async function canUseAutoscaling(api: BackendApi) {

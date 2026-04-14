@@ -13,17 +13,11 @@ const environmentPreferenceCookieBaseOptions = {
 const environmentPreferenceCookieMaxAge = 60 * 60 * 24 * 30;
 
 function buildEnvironmentPreferenceCookieName(workspace?: string) {
-  const scope = (workspace?.trim().toLowerCase() || "__personal__").replace(
-    /[^a-z0-9_-]/g,
-    "_",
-  );
+  const scope = (workspace?.trim().toLowerCase() || "__personal__").replace(/[^a-z0-9_-]/g, "_");
   return `${config.environmentPreferenceCookiePrefix}${scope}`;
 }
 
-async function resolveWorkspaceTeamId(
-  api: any,
-  workspace?: string,
-) {
+async function resolveWorkspaceTeamId(api: any, workspace?: string) {
   const workspaceSlug = workspace?.trim().toLowerCase();
   if (!workspaceSlug) {
     return undefined;
@@ -75,9 +69,7 @@ export const setActiveEnvironmentPreferenceServerFn = createServerFn({
 export const getProjectEnvironmentDetailsServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
-  const payload = data as
-    | { environmentId: string; workspace?: string }
-    | undefined;
+  const payload = data as { environmentId: string; workspace?: string } | undefined;
 
   const environmentId = payload?.environmentId?.trim();
   if (!environmentId) {
@@ -138,10 +130,7 @@ export const updateProjectEnvironmentServerFn = createServerFn({
     return api.environments.updateEnvironment(environmentId, {
       teamId,
       name: payload?.name?.trim() || undefined,
-      inheritFrom:
-        typeof payload?.inheritFrom === "string"
-          ? payload.inheritFrom.trim() || null
-          : payload?.inheritFrom ?? undefined,
+      inheritFrom: typeof payload?.inheritFrom === "string" ? payload.inheritFrom.trim() || null : (payload?.inheritFrom ?? undefined),
     });
   });
 });
@@ -179,9 +168,7 @@ export const deleteProjectEnvironmentServerFn = createServerFn({
 export const getEnvironmentVariablesServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
-  const payload = data as
-    | { environmentId: string; workspace?: string }
-    | undefined;
+  const payload = data as { environmentId: string; workspace?: string } | undefined;
 
   const environmentId = payload?.environmentId?.trim();
   if (!environmentId) {
@@ -269,9 +256,7 @@ export const updateEnvironmentVariableServerFn = createServerFn({
 export const deleteEnvironmentVariableServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
-  const payload = data as
-    | { environmentId: string; variableId: string; workspace?: string }
-    | undefined;
+  const payload = data as { environmentId: string; variableId: string; workspace?: string } | undefined;
 
   const environmentId = payload?.environmentId?.trim();
   const variableId = payload?.variableId?.trim();
@@ -344,9 +329,7 @@ export const addProjectEnvironmentVariablesServerFn = createServerFn({
     throw new Error("Project ID is required");
   }
 
-  const environments = Array.isArray(payload?.environments)
-    ? payload!.environments
-    : [];
+  const environments = Array.isArray(payload?.environments) ? payload!.environments : [];
   if (environments.length === 0) {
     throw new Error("At least one environment variable is required");
   }
@@ -426,9 +409,7 @@ export const decryptProjectEnvironmentValuesServerFn = createServerFn({
       }
     | undefined;
 
-  const environments = Array.isArray(payload?.environments)
-    ? payload!.environments
-    : [];
+  const environments = Array.isArray(payload?.environments) ? payload!.environments : [];
 
   if (environments.length === 0) {
     return [];

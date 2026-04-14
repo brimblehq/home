@@ -1,23 +1,11 @@
 import { useEffect, useState } from "react";
-import {
-  createFileRoute,
-  getRouteApi,
-  useNavigate,
-  useRouter,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { hapticToast as toast } from "@/utils/haptic-toast";
-import {
-  DomainList,
-  type Domain,
-} from "../../../../components/shared/domain-list";
+import { DomainList, type Domain } from "../../../../components/shared/domain-list";
 import { TabHeader } from "../../../../components/shared/tab-header";
 import { NumberPagination } from "../../../../components/shared/pagination";
-import {
-  AddDomainModal,
-  type DomainValidationError,
-} from "../../../../components/shared/add-domain-modal";
+import { AddDomainModal, type DomainValidationError } from "../../../../components/shared/add-domain-modal";
 import { Route as RootRoute } from "@/routes/__root";
 import type { DomainRecord, PaginatedDomainsResponse } from "@/backend/domains";
 import type { PaginatedProjectsResponse } from "@/backend/projects";
@@ -46,11 +34,7 @@ export const Route = createFileRoute("/projects/$projectId/domains/")({
     const next: { page?: number; workspace?: string } = {};
 
     const rawPage = search.page;
-    if (
-      typeof rawPage === "number" &&
-      Number.isFinite(rawPage) &&
-      rawPage > 0
-    ) {
+    if (typeof rawPage === "number" && Number.isFinite(rawPage) && rawPage > 0) {
       next.page = Math.floor(rawPage);
     } else if (typeof rawPage === "string") {
       const parsed = Number(rawPage);
@@ -70,9 +54,7 @@ export const Route = createFileRoute("/projects/$projectId/domains/")({
     const project = (context as any).project;
     const workspace = (context as any).workspace;
 
-    const searchParams = new URLSearchParams(
-      typeof window !== "undefined" ? window.location.search : "",
-    );
+    const searchParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
     const rawPage = searchParams.get("page");
 
     let page = 1;
@@ -95,11 +77,7 @@ export const Route = createFileRoute("/projects/$projectId/domains/")({
           projectName: params.projectId,
         },
       }),
-      (
-        listDomainProjectsServerFn as unknown as (input: {
-          data: { workspace?: string };
-        }) => Promise<PaginatedProjectsResponse>
-      )({
+      (listDomainProjectsServerFn as unknown as (input: { data: { workspace?: string } }) => Promise<PaginatedProjectsResponse>)({
         data: { workspace },
       }).catch(
         () =>
@@ -152,10 +130,7 @@ function mapDomainStatus(domain: DomainRecord): Domain["status"] {
   return "Failed";
 }
 
-function mapDomainToRow(
-  domain: DomainRecord,
-  fallbackProjectName: string,
-): Domain {
+function mapDomainToRow(domain: DomainRecord, fallbackProjectName: string): Domain {
   const addedAtSource = domain.updatedAt || domain.createdAt;
   const addedAt = `Added ${formatRelativeTime(addedAtSource)}`;
 
@@ -192,9 +167,7 @@ function ProjectDomainsPage() {
   if (!shouldShowProjectDomainsTab(project)) {
     return (
       <div className="mx-auto flex max-w-[1000px] flex-col gap-4 py-8">
-        <TabHeader title="Project domains">
-          Domains are not available for this project type.
-        </TabHeader>
+        <TabHeader title="Project domains">Domains are not available for this project type.</TabHeader>
       </div>
     );
   }
@@ -202,22 +175,15 @@ function ProjectDomainsPage() {
   if (!customDomain) {
     return (
       <div className="mx-auto flex max-w-[1000px] flex-col gap-4 py-8">
-        <TabHeader title="Project domains">
-          Connect your own domain to this project.
-        </TabHeader>
-        <PlanUpgradePrompt
-          feature="Custom Domains"
-          description="Upgrade to connect your own domain to this project."
-        />
+        <TabHeader title="Project domains">Connect your own domain to this project.</TabHeader>
+        <PlanUpgradePrompt feature="Custom Domains" description="Upgrade to connect your own domain to this project." />
       </div>
     );
   }
 
   const { domains: domainsResult, projects } = Route.useLoaderData();
   const [addDomainOpen, setAddDomainOpen] = useState(false);
-  const [rows, setRows] = useState<Domain[]>(() =>
-    domainsResult.items.map((item) => mapDomainToRow(item, project.name)),
-  );
+  const [rows, setRows] = useState<Domain[]>(() => domainsResult.items.map((item) => mapDomainToRow(item, project.name)));
   const navigate = useNavigate({ from: "/projects/$projectId/domains/" });
   const isRouterLoading = useRouterState({ select: (s) => s.isLoading });
   const pendingPage = useRouterState({
@@ -227,14 +193,10 @@ function ProjectDomainsPage() {
       return typeof raw === "number" && raw >= 1 ? Math.floor(raw) : 1;
     },
   });
-  const refreshDomainStatus = useServerFn(
-    refreshDomainStatusServerFn as any,
-  ) as (args: {
+  const refreshDomainStatus = useServerFn(refreshDomainStatusServerFn as any) as (args: {
     data: { workspace?: string; domainName: string };
   }) => Promise<DomainRecord | null>;
-  const createProjectDomain = useServerFn(
-    createProjectDomainServerFn as any,
-  ) as (args: {
+  const createProjectDomain = useServerFn(createProjectDomainServerFn as any) as (args: {
     data: { workspace?: string; id?: string; projectId?: string; name: string };
   }) => Promise<DomainRecord>;
   const searchDomainSale = useServerFn(searchDomainSaleServerFn as any) as (args: {
@@ -256,17 +218,11 @@ function ProjectDomainsPage() {
   }) => Promise<{ success: boolean }>;
 
   useEffect(() => {
-    setRows(
-      domainsResult.items.map((item) => mapDomainToRow(item, project.name)),
-    );
+    setRows(domainsResult.items.map((item) => mapDomainToRow(item, project.name)));
   }, [domainsResult.items, project.name]);
 
   function handlePageChange(page: number) {
-    if (
-      page < 1 ||
-      page === domainsResult.currentPage ||
-      page > domainsResult.totalPages
-    ) {
+    if (page < 1 || page === domainsResult.currentPage || page > domainsResult.totalPages) {
       return;
     }
 
@@ -313,11 +269,7 @@ function ProjectDomainsPage() {
       }
       router.invalidate();
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to refresh domain status",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to refresh domain status");
     }
   }
 
@@ -329,9 +281,7 @@ function ProjectDomainsPage() {
     }
 
     const normalized = domainUrl.trim().toLowerCase();
-    const alreadyOwned = rows.some(
-      (row) => row.name.toLowerCase() === normalized,
-    );
+    const alreadyOwned = rows.some((row) => row.name.toLowerCase() === normalized);
     if (alreadyOwned) {
       toast.error("You already own this domain, try another one.");
       return;
@@ -349,9 +299,7 @@ function ProjectDomainsPage() {
       toast.success("Domain added successfully");
       router.invalidate();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to add domain",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to add domain");
     }
   }
 
@@ -376,16 +324,13 @@ function ProjectDomainsPage() {
       });
 
       const exactPurchasableMatch = saleResults.some(
-        (item) =>
-          (item.domainName || "").toLowerCase() === normalized &&
-          item.purchasable === true,
+        (item) => (item.domainName || "").toLowerCase() === normalized && item.purchasable === true,
       );
 
       if (exactPurchasableMatch) {
         return {
           type: "not-found",
-          message:
-            "Oops! This domain looks unregistered and unavailable to add directly.",
+          message: "Oops! This domain looks unregistered and unavailable to add directly.",
         };
       }
     } catch {
@@ -476,8 +421,7 @@ function ProjectDomainsPage() {
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 py-8">
       <TabHeader title="Project domains">
-        Manage all your domains on this project. You get a default
-        ".brimble.app" domain with each project you deploy.
+        Manage all your domains on this project. You get a default ".brimble.app" domain with each project you deploy.
       </TabHeader>
 
       <DomainList

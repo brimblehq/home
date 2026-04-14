@@ -37,10 +37,7 @@ export function useLogoColor(imageUrl?: string): LogoColors | null {
         ctx.drawImage(img, 0, 0, size, size);
         const data = ctx.getImageData(0, 0, size, size).data;
 
-        const buckets: Record<
-          string,
-          { r: number; g: number; b: number; count: number }
-        > = {};
+        const buckets: Record<string, { r: number; g: number; b: number; count: number }> = {};
 
         for (let i = 0; i < data.length; i += 4) {
           const r = data[i];
@@ -85,11 +82,7 @@ export function useLogoColor(imageUrl?: string): LogoColors | null {
         const boostedS = Math.min(1, s * 1.3 + 0.1);
         const fromHsl = hslToHex(h, boostedS, Math.min(0.6, Math.max(0.45, l)));
         // Shift hue slightly for the "to" color
-        const toHsl = hslToHex(
-          (h + 30) % 360,
-          boostedS,
-          Math.min(0.55, Math.max(0.35, l - 0.05)),
-        );
+        const toHsl = hslToHex((h + 30) % 360, boostedS, Math.min(0.55, Math.max(0.35, l - 0.05)));
         // Dark muted version for logo background
         const bgHsl = hslToHex(h, Math.min(0.4, s * 0.6), 0.15);
 

@@ -56,7 +56,10 @@ export function TagFilterBar({ activeTagId, onFilterChange, projects, workspace 
   const handleReorder = useCallback(
     (newOrder: Tag[]) => {
       setOrderedTags(newOrder);
-      writeStoredOrder(workspace, newOrder.map((t) => t.id));
+      writeStoredOrder(
+        workspace,
+        newOrder.map((t) => t.id),
+      );
       haptics.selection();
     },
     [workspace, haptics],
@@ -66,7 +69,10 @@ export function TagFilterBar({ activeTagId, onFilterChange, projects, workspace 
     <>
       <div className="mb-6 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <button
-          onClick={() => { haptics.selection(); onFilterChange(null); }}
+          onClick={() => {
+            haptics.selection();
+            onFilterChange(null);
+          }}
           className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
             activeTagId === null
               ? "border-dash-text-strong bg-dash-text-strong text-dash-bg"
@@ -76,13 +82,7 @@ export function TagFilterBar({ activeTagId, onFilterChange, projects, workspace 
           All
         </button>
 
-        <Reorder.Group
-          axis="x"
-          values={orderedTags}
-          onReorder={handleReorder}
-          className="flex list-none items-center gap-2"
-          as="ul"
-        >
+        <Reorder.Group axis="x" values={orderedTags} onReorder={handleReorder} className="flex list-none items-center gap-2" as="ul">
           {orderedTags.map((tag) => {
             const count = getProjectCountForTag(tag.id, projects);
             const isActive = activeTagId === tag.id;
@@ -96,11 +96,12 @@ export function TagFilterBar({ activeTagId, onFilterChange, projects, workspace 
                 className="shrink-0 list-none"
               >
                 <button
-                  onClick={() => { haptics.selection(); onFilterChange(isActive ? null : tag.id); }}
+                  onClick={() => {
+                    haptics.selection();
+                    onFilterChange(isActive ? null : tag.id);
+                  }}
                   className={`flex shrink-0 cursor-grab items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors active:cursor-grabbing ${
-                    isActive
-                      ? ""
-                      : "border-dash-border text-dash-text-faded hover:bg-dash-bg-elevated"
+                    isActive ? "" : "border-dash-border text-dash-text-faded hover:bg-dash-bg-elevated"
                   }`}
                   style={
                     isActive
@@ -112,12 +113,7 @@ export function TagFilterBar({ activeTagId, onFilterChange, projects, workspace 
                       : undefined
                   }
                 >
-                  {!isActive && (
-                    <span
-                      className="size-1.5 rounded-full"
-                      style={{ backgroundColor: tag.color }}
-                    />
-                  )}
+                  {!isActive && <span className="size-1.5 rounded-full" style={{ backgroundColor: tag.color }} />}
                   {tag.name}
                   <span className={isActive ? "opacity-75" : "opacity-50"}>({count})</span>
                 </button>

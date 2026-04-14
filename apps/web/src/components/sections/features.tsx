@@ -1,13 +1,7 @@
 import { useRef } from "react";
 import { motion, useInView } from "motion/react";
 import { siteConfig } from "@/config/site";
-import {
-  Button,
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@brimble/ui";
+import { Button, Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@brimble/ui";
 
 import arrowRight from "@/assets/icons/arrow-right.svg";
 
@@ -40,19 +34,11 @@ export function Features() {
               <AccordionItem key={i} value={`item-${i}`}>
                 {item.label && (
                   <div className="px-4 pt-6">
-                    <span className="font-mono text-xs uppercase tracking-[1.2px] text-brimble-black/50">
-                      {item.label}
-                    </span>
+                    <span className="font-mono text-xs uppercase tracking-[1.2px] text-brimble-black/50">{item.label}</span>
                   </div>
                 )}
-                <AccordionTrigger className={item.label ? "px-4 pt-2" : "px-4"}>
-                  {item.title}
-                </AccordionTrigger>
-                {item.description && (
-                  <AccordionContent className="px-4">
-                    {item.description}
-                  </AccordionContent>
-                )}
+                <AccordionTrigger className={item.label ? "px-4 pt-2" : "px-4"}>{item.title}</AccordionTrigger>
+                {item.description && <AccordionContent className="px-4">{item.description}</AccordionContent>}
               </AccordionItem>
             ))}
           </Accordion>

@@ -43,9 +43,7 @@ function tryParseEmbeddedLogLine(content: string): {
   embeddedTimestamp?: string;
 } {
   const trimmed = content.trim();
-  const match = trimmed.match(
-    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)\s+---\s+(.+)$/i,
-  );
+  const match = trimmed.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)\s+---\s+(.+)$/i);
 
   if (!match) {
     return { message: trimmed };
@@ -70,9 +68,7 @@ function classifyLogMessage(message: string): {
   return { type: "detail" };
 }
 
-export function mapDeploymentRunLogsToDrawerEntries(
-  rows: RawDeploymentRunLogRow[],
-): DeploymentDrawerLogEntry[] {
+export function mapDeploymentRunLogsToDrawerEntries(rows: RawDeploymentRunLogRow[]): DeploymentDrawerLogEntry[] {
   if (!Array.isArray(rows) || rows.length === 0) {
     return [];
   }

@@ -1,11 +1,4 @@
-import {
-  type ReactNode,
-  useState,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { type ReactNode, useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -38,10 +31,7 @@ import type { Pricing } from "@/types/pricing";
 import { PricingProvider } from "@/contexts/pricing-context";
 import { PlanTypeProvider } from "@/contexts/plan-type-context";
 import { WorkspaceRoleProvider } from "@/contexts/workspace-role-context";
-import {
-  canWorkspaceRoleWrite,
-  resolveCurrentWorkspaceRole,
-} from "@/utils/workspace-role";
+import { canWorkspaceRoleWrite, resolveCurrentWorkspaceRole } from "@/utils/workspace-role";
 import { ProfileDrawerProvider } from "@/contexts/profile-drawer-context";
 import { DEFAULT_PRICING } from "@/utils/default-pricing";
 import { ProfileTab, Theme } from "../../types/enums";
@@ -63,21 +53,16 @@ const dashboardQueryClient = new QueryClient({
   },
 });
 
-const mobileNavItemBase =
-  "flex w-full items-center gap-3 px-5 py-4 text-sm tracking-[-0.09px] transition-colors";
+const mobileNavItemBase = "flex w-full items-center gap-3 px-5 py-4 text-sm tracking-[-0.09px] transition-colors";
 const DISMISSED_SNACKBARS_STORAGE_PREFIX = "brimble:dismissed-snackbars:";
 
-function mapSnackbarVariant(
-  level: AppTooltipMessage["level"],
-): "info" | "warning" | "error" {
+function mapSnackbarVariant(level: AppTooltipMessage["level"]): "info" | "warning" | "error" {
   if (level === "critical") return "error";
   if (level === "warn") return "warning";
   return "info";
 }
 
-function getSnackbarActionLabel(
-  message: AppTooltipMessage,
-): string | undefined {
+function getSnackbarActionLabel(message: AppTooltipMessage): string | undefined {
   if (message.type === "payment") return "Update billing";
   if (!message.route) return undefined;
   if (message.type === "welcome") return "Create project";
@@ -111,9 +96,7 @@ function readDismissedSnackbars(workspace?: string): Set<string> {
   }
 
   try {
-    const raw = localStorage.getItem(
-      getDismissedSnackbarsStorageKey(workspace),
-    );
+    const raw = localStorage.getItem(getDismissedSnackbarsStorageKey(workspace));
     if (!raw) {
       return new Set();
     }
@@ -121,29 +104,19 @@ function readDismissedSnackbars(workspace?: string): Set<string> {
     if (!Array.isArray(parsed)) {
       return new Set();
     }
-    return new Set(
-      parsed.filter(
-        (item): item is string => typeof item === "string" && item.length > 0,
-      ),
-    );
+    return new Set(parsed.filter((item): item is string => typeof item === "string" && item.length > 0));
   } catch {
     return new Set();
   }
 }
 
-function writeDismissedSnackbars(
-  workspace: string | undefined,
-  keys: Set<string>,
-) {
+function writeDismissedSnackbars(workspace: string | undefined, keys: Set<string>) {
   if (typeof window === "undefined") {
     return;
   }
 
   try {
-    localStorage.setItem(
-      getDismissedSnackbarsStorageKey(workspace),
-      JSON.stringify([...keys]),
-    );
+    localStorage.setItem(getDismissedSnackbarsStorageKey(workspace), JSON.stringify([...keys]));
   } catch {
     // ignore storage write failures
   }
@@ -181,10 +154,7 @@ function HomeTabSkeleton() {
       <div className="mb-4 h-5 w-40 rounded bg-dash-border-soft/60" />
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30"
-          />
+          <div key={i} className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
         ))}
       </div>
       <hr className="-mx-4 mb-10 border-dash-border-soft md:-ml-10 md:mr-0" />
@@ -225,10 +195,7 @@ function ProjectsTabSkeleton() {
       {/* Project cards grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30"
-          />
+          <div key={i} className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
         ))}
       </div>
     </div>
@@ -247,10 +214,7 @@ function DomainsTabSkeleton() {
       {/* Table */}
       <div className="rounded-[4px] border-[0.5px] border-dash-border">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex h-[68px] items-center gap-3 border-b-[0.5px] border-dash-border px-3.5 last:border-b-0"
-          >
+          <div key={i} className="flex h-[68px] items-center gap-3 border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
             <div className="size-[14px] rounded-[3px] bg-dash-border-soft/50" />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="h-3.5 w-40 rounded bg-dash-border-soft/60" />
@@ -294,10 +258,7 @@ function DiscoverTabSkeleton() {
       {/* Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-[200px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30"
-          />
+          <div key={i} className="h-[200px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
         ))}
       </div>
     </div>
@@ -317,10 +278,7 @@ function ScalingTabSkeleton() {
       {/* 2-col grid of scaling cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex h-[164px] flex-col rounded-[4px] border-[0.5px] border-dash-border"
-          >
+          <div key={i} className="flex h-[164px] flex-col rounded-[4px] border-[0.5px] border-dash-border">
             <div className="flex items-center justify-between px-3.5 pb-1 pt-3">
               <div className="h-4 w-28 rounded bg-dash-border-soft/50" />
               <div className="h-4 w-20 rounded bg-dash-border-soft/40" />
@@ -361,10 +319,7 @@ function ProjectDetailTabSkeleton() {
         <div className="flex-1 overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
           <div className="h-10 bg-dash-bg-elevated/60" />
           {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex h-12 items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0"
-            >
+            <div key={i} className="flex h-12 items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
               <div className="h-3 w-20 rounded bg-dash-border-soft/50" />
               <div className="h-3 w-28 rounded bg-dash-border-soft/40" />
             </div>
@@ -374,10 +329,7 @@ function ProjectDetailTabSkeleton() {
         <div className="flex-1 overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
           <div className="h-10 bg-dash-bg-elevated/60" />
           {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex h-12 items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0"
-            >
+            <div key={i} className="flex h-12 items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
               <div className="h-3 w-36 rounded bg-dash-border-soft/50" />
               <div className="h-3 w-16 rounded bg-dash-border-soft/40" />
             </div>
@@ -389,10 +341,7 @@ function ProjectDetailTabSkeleton() {
         <div className="mb-3 h-5 w-40 rounded bg-dash-border-soft/60" />
         <div className="rounded-[4px] border-[0.5px] border-dash-border">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex h-[52px] items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0"
-            >
+            <div key={i} className="flex h-[52px] items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
               <div className="h-3 w-44 rounded bg-dash-border-soft/50" />
               <div className="h-3 w-20 rounded bg-dash-border-soft/40" />
             </div>
@@ -403,17 +352,8 @@ function ProjectDetailTabSkeleton() {
   );
 }
 
-function RouteTransitionSkeleton({
-  pathname,
-  fullWidth,
-}: {
-  pathname: string;
-  fullWidth?: boolean;
-}) {
-  if (
-    /^\/projects\/[^/]+(?:\/|$)/.test(pathname) &&
-    !/^\/projects\/new(?:\/|$)/.test(pathname)
-  ) {
+function RouteTransitionSkeleton({ pathname, fullWidth }: { pathname: string; fullWidth?: boolean }) {
+  if (/^\/projects\/[^/]+(?:\/|$)/.test(pathname) && !/^\/projects\/new(?:\/|$)/.test(pathname)) {
     return <ProjectDetailTabSkeleton />;
   }
 
@@ -438,12 +378,7 @@ function RouteTransitionSkeleton({
   }
 
   return (
-    <div
-      className={cn(
-        "mx-auto w-full animate-pulse",
-        fullWidth ? "max-w-screen-xl px-4 md:px-0" : "max-w-[1000px]",
-      )}
-    >
+    <div className={cn("mx-auto w-full animate-pulse", fullWidth ? "max-w-screen-xl px-4 md:px-0" : "max-w-[1000px]")}>
       <div className="mb-6 h-10 w-56 rounded bg-dash-border-soft/70" />
       <div className="h-72 rounded bg-dash-border-soft/50" />
     </div>
@@ -486,23 +421,11 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
     () =>
       [...mainNav, ...moreNav]
         .filter((item) => {
-          if (
-            "flag" in item &&
-            item.flag &&
-            !("comingSoon" in item && item.comingSoon)
-          )
-            return flagValues[item.flag] !== false;
+          if ("flag" in item && item.flag && !("comingSoon" in item && item.comingSoon)) return flagValues[item.flag] !== false;
           return true;
         })
         .map((item) => {
-          if (
-            "comingSoon" in item &&
-            item.comingSoon &&
-            "flag" in item &&
-            item.flag &&
-            isPostHogEnabled &&
-            flagValues[item.flag]
-          ) {
+          if ("comingSoon" in item && item.comingSoon && "flag" in item && item.flag && isPostHogEnabled && flagValues[item.flag]) {
             return { ...item, comingSoon: false };
           }
           return item;
@@ -516,9 +439,7 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
         const isActive =
           !("comingSoon" in item && item.comingSoon) &&
           !("external" in item && item.external) &&
-          (item.href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(item.href));
+          (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
 
         if (i > 0) {
           // divider before each item
@@ -536,9 +457,7 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
           <>
             {i > 0 && <hr className="mx-4 border-dash-border-soft" />}
             {"comingSoon" in item && item.comingSoon ? (
-              <span
-                className={cn(mobileNavItemBase, "cursor-default opacity-40")}
-              >
+              <span className={cn(mobileNavItemBase, "cursor-default opacity-40")}>
                 {icon}
                 {item.label}
                 <span className="ml-auto rounded-full bg-dash-bg-elevated px-2 py-0.5 text-[10px] font-medium text-dash-text-extra-faded">
@@ -550,10 +469,7 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
                 href={item.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(
-                  mobileNavItemBase,
-                  "text-dash-text-faded hover:bg-dash-bg-elevated",
-                )}
+                className={cn(mobileNavItemBase, "text-dash-text-faded hover:bg-dash-bg-elevated")}
               >
                 {icon}
                 {item.label}
@@ -570,9 +486,7 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
                 className={cn(
                   mobileNavItemBase,
                   "w-full text-left",
-                  isActive
-                    ? "bg-dash-bg-elevated font-medium text-dash-text-strong"
-                    : "text-dash-text-faded hover:bg-dash-bg-elevated",
+                  isActive ? "bg-dash-bg-elevated font-medium text-dash-text-strong" : "text-dash-text-faded hover:bg-dash-bg-elevated",
                 )}
               >
                 {icon}
@@ -587,13 +501,7 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
 
       {/* Settings & theme toggle */}
       <hr className="mx-4 border-dash-border-soft" />
-      <button
-        onClick={onSettingsClick}
-        className={cn(
-          mobileNavItemBase,
-          "text-dash-text-faded hover:bg-dash-bg-elevated",
-        )}
-      >
+      <button onClick={onSettingsClick} className={cn(mobileNavItemBase, "text-dash-text-faded hover:bg-dash-bg-elevated")}>
         <img
           src="/icons/settings.svg"
           alt=""
@@ -602,23 +510,9 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
         Settings
       </button>
       <hr className="mx-4 border-dash-border-soft" />
-      <button
-        onClick={cycleTheme}
-        className={cn(
-          mobileNavItemBase,
-          "text-dash-text-faded hover:bg-dash-bg-elevated",
-        )}
-      >
-        {theme === "dark" ? (
-          <Sun className="size-5 shrink-0" />
-        ) : (
-          <Moon className="size-5 shrink-0" />
-        )}
-        {mode === Theme.System
-          ? "System mode"
-          : theme === Theme.Dark
-            ? "Dark mode"
-            : "Light mode"}
+      <button onClick={cycleTheme} className={cn(mobileNavItemBase, "text-dash-text-faded hover:bg-dash-bg-elevated")}>
+        {theme === "dark" ? <Sun className="size-5 shrink-0" /> : <Moon className="size-5 shrink-0" />}
+        {mode === Theme.System ? "System mode" : theme === Theme.Dark ? "Dark mode" : "Light mode"}
       </button>
     </nav>
   );
@@ -653,9 +547,7 @@ export function DashboardLayout({
   initialPricing?: Pricing;
   initialActivityLogs?: ActivityLogsResponse | null;
   initialSubscriptionStats?: SubscriptionStats | null;
-  initialProjectEnvironments?:
-    | import("@/backend/environments").ProjectEnvironment[]
-    | null;
+  initialProjectEnvironments?: import("@/backend/environments").ProjectEnvironment[] | null;
 }) {
   const pathname = useRouterState({
     select: (s) => s.location.pathname,
@@ -665,12 +557,8 @@ export function DashboardLayout({
   });
   const matchedProjectSwitcherProjects = useRouterState({
     select: (s) => {
-      const projectMatch = s.matches.find(
-        (match) => match.routeId === "/projects/$projectId",
-      );
-      const loaderData = projectMatch?.loaderData as
-        | { projectSwitcherProjects?: ApiListResponse<Project> | null }
-        | undefined;
+      const projectMatch = s.matches.find((match) => match.routeId === "/projects/$projectId");
+      const loaderData = projectMatch?.loaderData as { projectSwitcherProjects?: ApiListResponse<Project> | null } | undefined;
 
       return loaderData?.projectSwitcherProjects?.items ?? null;
     },
@@ -680,9 +568,7 @@ export function DashboardLayout({
     select: (s) => {
       // Try home route first
       const homeMatch = s.matches.find((m) => m.routeId === "/");
-      const homeData = homeMatch?.loaderData as
-        | { projects?: Project[] | null }
-        | undefined;
+      const homeData = homeMatch?.loaderData as { projects?: Project[] | null } | undefined;
       if (homeData?.projects?.length) return homeData.projects;
 
       // Try projects list route
@@ -696,8 +582,7 @@ export function DashboardLayout({
             }> | null;
           }
         | undefined;
-      if (listData?.projects?.length)
-        return listData.projects as unknown as Project[];
+      if (listData?.projects?.length) return listData.projects as unknown as Project[];
 
       return null;
     },
@@ -705,21 +590,15 @@ export function DashboardLayout({
   const matchedOverviewProjectCount = useRouterState({
     select: (s) => {
       const homeMatch = s.matches.find((m) => m.routeId === "/");
-      const homeData = homeMatch?.loaderData as
-        | { overview?: { total?: { project?: number } } | null }
-        | undefined;
+      const homeData = homeMatch?.loaderData as { overview?: { total?: { project?: number } } | null } | undefined;
       const value = homeData?.overview?.total?.project;
       return typeof value === "number" && Number.isFinite(value) ? value : null;
     },
   });
   const navigate = useNavigate();
-  const isAuthRoute =
-    /^\/(login|signup)$/.test(layoutPathname) ||
-    /^\/(login|signup)$/.test(pathname);
-  const knownPrefixes =
-    /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
-  const isCatchAll =
-    layoutPathname !== "/" && !knownPrefixes.test(layoutPathname);
+  const isAuthRoute = /^\/(login|signup)$/.test(layoutPathname) || /^\/(login|signup)$/.test(pathname);
+  const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
+  const isCatchAll = layoutPathname !== "/" && !knownPrefixes.test(layoutPathname);
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const resolvedSearchStr = useRouterState({
     select: (s) => s.resolvedLocation?.searchStr ?? s.location.searchStr,
@@ -729,19 +608,10 @@ export function DashboardLayout({
     const next = new URLSearchParams(searchStr || "");
     const current = new URLSearchParams(resolvedSearchStr || "");
 
-    return (
-      next.get("workspace") !== current.get("workspace") ||
-      next.get("environmentId") !== current.get("environmentId")
-    );
+    return next.get("workspace") !== current.get("workspace") || next.get("environmentId") !== current.get("environmentId");
   }, [searchStr, resolvedSearchStr]);
-  const isRenderedProjectDetailsRoute = useMemo(
-    () => isProjectDetailsPath(layoutPathname),
-    [layoutPathname],
-  );
-  const isIncomingProjectDetailsRoute = useMemo(
-    () => isProjectDetailsPath(pathname),
-    [pathname],
-  );
+  const isRenderedProjectDetailsRoute = useMemo(() => isProjectDetailsPath(layoutPathname), [layoutPathname]);
+  const isIncomingProjectDetailsRoute = useMemo(() => isProjectDetailsPath(pathname), [pathname]);
 
   const [shouldShowRouteSkeleton, setShouldShowRouteSkeleton] = useState(false);
 
@@ -758,50 +628,29 @@ export function DashboardLayout({
     return () => clearTimeout(timer);
   }, [isWorkspaceOrEnvironmentSwitching]);
 
-  const shouldRenderDesktopSidebar = shouldShowRouteSkeleton
-    ? !isIncomingProjectDetailsRoute
-    : !isRenderedProjectDetailsRoute;
+  const shouldRenderDesktopSidebar = shouldShowRouteSkeleton ? !isIncomingProjectDetailsRoute : !isRenderedProjectDetailsRoute;
 
   const currentWorkspace = useMemo(() => {
     const params = new URLSearchParams(searchStr || "");
     return params.get("workspace")?.trim() || undefined;
   }, [searchStr]);
   const dashboardProjects =
-    matchedProjects ??
-    matchedProjectSwitcherProjects ??
-    initialOnboardingProjects?.items ??
-    initialProjectSwitcherProjects?.items ??
-    [];
+    matchedProjects ?? matchedProjectSwitcherProjects ?? initialOnboardingProjects?.items ?? initialProjectSwitcherProjects?.items ?? [];
   const checklistProjects =
-    matchedProjects ??
-    matchedProjectSwitcherProjects ??
-    initialOnboardingProjects?.items ??
-    initialProjectSwitcherProjects?.items ??
-    null;
+    matchedProjects ?? matchedProjectSwitcherProjects ?? initialOnboardingProjects?.items ?? initialProjectSwitcherProjects?.items ?? null;
   const accountProjectCount = Math.max(
     0,
     Math.floor(
-      matchedOverviewProjectCount ??
-        initialOnboardingProjects?.total ??
-        initialProjectSwitcherProjects?.total ??
-        dashboardProjects.length,
+      matchedOverviewProjectCount ?? initialOnboardingProjects?.total ?? initialProjectSwitcherProjects?.total ?? dashboardProjects.length,
     ),
   );
   const settingsScopeKey = currentWorkspace ?? "__personal__";
-  const [stableWorkspaces, setStableWorkspaces] = useState<Workspace[]>(
-    initialWorkspaces?.items ?? [],
-  );
-  const [settingsSnapshotCache, setSettingsSnapshotCache] = useState<
-    Record<string, SettingsSidebarSnapshot | null>
-  >(() => ({
+  const [stableWorkspaces, setStableWorkspaces] = useState<Workspace[]>(initialWorkspaces?.items ?? []);
+  const [settingsSnapshotCache, setSettingsSnapshotCache] = useState<Record<string, SettingsSidebarSnapshot | null>>(() => ({
     [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot ?? null,
   }));
-  const [workspaceTeamMembersCache, setWorkspaceTeamMembersCache] = useState<
-    Record<string, TeamDetails | null>
-  >(() =>
-    initialWorkspaceSlug && initialWorkspaceTeamMembers
-      ? { [initialWorkspaceSlug]: initialWorkspaceTeamMembers }
-      : {},
+  const [workspaceTeamMembersCache, setWorkspaceTeamMembersCache] = useState<Record<string, TeamDetails | null>>(() =>
+    initialWorkspaceSlug && initialWorkspaceTeamMembers ? { [initialWorkspaceSlug]: initialWorkspaceTeamMembers } : {},
   );
 
   useEffect(() => {
@@ -817,16 +666,8 @@ export function DashboardLayout({
     }
   }, [initialWorkspaces?.items, stableWorkspaces.length]);
 
-  const effectiveWorkspaces =
-    stableWorkspaces.length > 0
-      ? stableWorkspaces
-      : (initialWorkspaces?.items ?? []);
-  const isKnownWorkspace = Boolean(
-    currentWorkspace &&
-    effectiveWorkspaces.some(
-      (workspace) => workspace.slug === currentWorkspace,
-    ),
-  );
+  const effectiveWorkspaces = stableWorkspaces.length > 0 ? stableWorkspaces : (initialWorkspaces?.items ?? []);
+  const isKnownWorkspace = Boolean(currentWorkspace && effectiveWorkspaces.some((workspace) => workspace.slug === currentWorkspace));
 
   const isTeamWorkspace = (() => {
     return isKnownWorkspace;
@@ -842,18 +683,14 @@ export function DashboardLayout({
 
   // Settings drawer — shared between sidebar & topbar
   const [profileOpen, setProfileOpen] = useState(false);
-  const [profileRequestedTab, setProfileRequestedTab] = useState<
-    ProfileTab | undefined
-  >(undefined);
+  const [profileRequestedTab, setProfileRequestedTab] = useState<ProfileTab | undefined>(undefined);
 
   const openProfileDrawer = useCallback((tab?: ProfileTab) => {
     setProfileRequestedTab(tab);
     setProfileOpen(true);
   }, []);
 
-  const getTooltipMessages = useServerFn(
-    listTooltipMessagesServerFn as any,
-  ) as (args: {
+  const getTooltipMessages = useServerFn(listTooltipMessagesServerFn as any) as (args: {
     data?: {
       workspace?: string;
       type?: "notifications";
@@ -861,28 +698,19 @@ export function DashboardLayout({
       page?: number;
     };
   }) => Promise<AppTooltipMessage[] | null>;
-  const getSettingsSnapshot = useServerFn(
-    getSettingsSidebarSnapshotServerFn as any,
-  ) as (args?: {
+  const getSettingsSnapshot = useServerFn(getSettingsSidebarSnapshotServerFn as any) as (args?: {
     data?: { workspace?: string };
   }) => Promise<SettingsSidebarSnapshot>;
-  const getWorkspaceTeamMembers = useServerFn(
-    getWorkspaceTeamMembersServerFn as any,
-  ) as (args: { data: { workspace: string } }) => Promise<TeamDetails>;
-  const [tooltipMessages, setTooltipMessages] = useState<
-    AppTooltipMessage[] | null
-  >(initialTooltipMessages ?? null);
+  const getWorkspaceTeamMembers = useServerFn(getWorkspaceTeamMembersServerFn as any) as (args: {
+    data: { workspace: string };
+  }) => Promise<TeamDetails>;
+  const [tooltipMessages, setTooltipMessages] = useState<AppTooltipMessage[] | null>(initialTooltipMessages ?? null);
   // Keep initial render deterministic for SSR hydration; load localStorage after mount.
-  const [dismissedSnackbarKeys, setDismissedSnackbarKeys] = useState<
-    Set<string>
-  >(() => new Set());
-  const activeSettingsSnapshot =
-    settingsSnapshotCache[settingsScopeKey] ?? null;
+  const [dismissedSnackbarKeys, setDismissedSnackbarKeys] = useState<Set<string>>(() => new Set());
+  const activeSettingsSnapshot = settingsSnapshotCache[settingsScopeKey] ?? null;
 
   // Profile is workspace-independent — extract once and keep stable across workspace switches
-  const [userProfile, setUserProfile] = useState<
-    SettingsSidebarSnapshot["profile"] | null
-  >(initialSettingsSnapshot?.profile ?? null);
+  const [userProfile, setUserProfile] = useState<SettingsSidebarSnapshot["profile"] | null>(initialSettingsSnapshot?.profile ?? null);
 
   useEffect(() => {
     const p = initialSettingsSnapshot?.profile;
@@ -896,8 +724,7 @@ export function DashboardLayout({
     const p = activeSettingsSnapshot?.profile;
     if (p && (p.firstName || p.lastName || p.username || p.email)) {
       setUserProfile((prev) => {
-        if (!prev || (!prev.firstName && !prev.lastName && p.firstName))
-          return p;
+        if (!prev || (!prev.firstName && !prev.lastName && p.firstName)) return p;
         return prev;
       });
     }
@@ -940,9 +767,7 @@ export function DashboardLayout({
     phIdentify.identify(userProfile.id, {
       email: userProfile.email,
       username: userProfile.username,
-      name: [userProfile.firstName, userProfile.lastName]
-        .filter(Boolean)
-        .join(" "),
+      name: [userProfile.firstName, userProfile.lastName].filter(Boolean).join(" "),
       plan,
     });
 
@@ -957,10 +782,7 @@ export function DashboardLayout({
     userProfile?.subscription?.planType,
   ]);
 
-  const activeWorkspaceTeamMembers =
-    currentWorkspace && isKnownWorkspace
-      ? (workspaceTeamMembersCache[currentWorkspace] ?? null)
-      : null;
+  const activeWorkspaceTeamMembers = currentWorkspace && isKnownWorkspace ? (workspaceTeamMembersCache[currentWorkspace] ?? null) : null;
 
   useEffect(() => {
     setSettingsSnapshotCache((prev) => ({
@@ -981,12 +803,7 @@ export function DashboardLayout({
   }, [initialWorkspaceSlug, initialWorkspaceTeamMembers]);
 
   useEffect(() => {
-    if (
-      Object.prototype.hasOwnProperty.call(
-        settingsSnapshotCache,
-        settingsScopeKey,
-      )
-    ) {
+    if (Object.prototype.hasOwnProperty.call(settingsSnapshotCache, settingsScopeKey)) {
       return;
     }
 
@@ -1019,12 +836,7 @@ export function DashboardLayout({
     return () => {
       cancelled = true;
     };
-  }, [
-    currentWorkspace,
-    getSettingsSnapshot,
-    settingsScopeKey,
-    settingsSnapshotCache,
-  ]);
+  }, [currentWorkspace, getSettingsSnapshot, settingsScopeKey, settingsSnapshotCache]);
 
   useEffect(() => {
     if (!currentWorkspace || !isKnownWorkspace) {
@@ -1060,12 +872,7 @@ export function DashboardLayout({
     return () => {
       cancelled = true;
     };
-  }, [
-    currentWorkspace,
-    getWorkspaceTeamMembers,
-    isKnownWorkspace,
-    workspaceTeamMembersCache,
-  ]);
+  }, [currentWorkspace, getWorkspaceTeamMembers, isKnownWorkspace, workspaceTeamMembersCache]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1102,13 +909,9 @@ export function DashboardLayout({
         const key = `${msg.type ?? "general"}:${msg.level}:${msg.route ?? ""}:${msg.message}:${index}`;
         return { key, msg, originalIndex: index };
       })
-      .filter(
-        ({ key, msg }) =>
-          !isSnackbarDismissible(msg) || !dismissedSnackbarKeys.has(key),
-      )
+      .filter(({ key, msg }) => !isSnackbarDismissible(msg) || !dismissedSnackbarKeys.has(key))
       .sort((a, b) => {
-        const priorityDiff =
-          getSnackbarPriority(a.msg) - getSnackbarPriority(b.msg);
+        const priorityDiff = getSnackbarPriority(a.msg) - getSnackbarPriority(b.msg);
         if (priorityDiff !== 0) {
           return priorityDiff;
         }
@@ -1122,33 +925,18 @@ export function DashboardLayout({
 
   const workspaceRoleValue = useMemo(() => {
     const inWorkspace = Boolean(currentWorkspace && isKnownWorkspace);
-    const role = inWorkspace
-      ? resolveCurrentWorkspaceRole(
-          activeWorkspaceTeamMembers,
-          userProfile?.id,
-          userProfile?.email,
-        )
-      : null;
+    const role = inWorkspace ? resolveCurrentWorkspaceRole(activeWorkspaceTeamMembers, userProfile?.id, userProfile?.email) : null;
     const isViewer = inWorkspace && role === "Viewer";
     const canWrite = !inWorkspace || canWorkspaceRoleWrite(role);
     return {
       role,
       isViewer,
       canWrite,
-      canManageMembers:
-        !inWorkspace || role === "Creator" || role === "Administrator",
-      canEditWorkspace:
-        !inWorkspace || role === "Creator" || role === "Administrator",
-      canSeeBilling:
-        !inWorkspace || role === "Creator" || role === "Administrator",
+      canManageMembers: !inWorkspace || role === "Creator" || role === "Administrator",
+      canEditWorkspace: !inWorkspace || role === "Creator" || role === "Administrator",
+      canSeeBilling: !inWorkspace || role === "Creator" || role === "Administrator",
     };
-  }, [
-    currentWorkspace,
-    isKnownWorkspace,
-    activeWorkspaceTeamMembers,
-    userProfile?.id,
-    userProfile?.email,
-  ]);
+  }, [currentWorkspace, isKnownWorkspace, activeWorkspaceTeamMembers, userProfile?.id, userProfile?.email]);
 
   if (isAuthRoute || isCatchAll) {
     return (
@@ -1186,11 +974,7 @@ export function DashboardLayout({
                       userProfile={userProfile}
                       workspaces={effectiveWorkspaces}
                       workspaceTeamMembers={activeWorkspaceTeamMembers}
-                      projectSwitcherProjects={
-                        matchedProjectSwitcherProjects ??
-                        initialProjectSwitcherProjects?.items ??
-                        []
-                      }
+                      projectSwitcherProjects={matchedProjectSwitcherProjects ?? initialProjectSwitcherProjects?.items ?? []}
                     />
                     {/* Mobile navigation dropdown */}
                     <AnimatePresence>
@@ -1244,9 +1028,7 @@ export function DashboardLayout({
                                     label: actionLabel,
                                     onClick: () => {
                                       if (isPaymentMessage) {
-                                        setProfileRequestedTab(
-                                          ProfileTab.Billing,
-                                        );
+                                        setProfileRequestedTab(ProfileTab.Billing);
                                         setProfileOpen(true);
                                         return;
                                       }
@@ -1278,10 +1060,7 @@ export function DashboardLayout({
                                     setDismissedSnackbarKeys((prev) => {
                                       const next = new Set(prev);
                                       next.add(key);
-                                      writeDismissedSnackbars(
-                                        currentWorkspace,
-                                        next,
-                                      );
+                                      writeDismissedSnackbars(currentWorkspace, next);
                                       return next;
                                     });
                                   }
@@ -1297,10 +1076,7 @@ export function DashboardLayout({
                         <div className="mx-auto w-full max-w-screen-xl flex-1 px-4 md:px-0">
                           {shouldShowRouteSkeleton ? (
                             <div className="py-8">
-                              <RouteTransitionSkeleton
-                                pathname={pathname}
-                                fullWidth
-                              />
+                              <RouteTransitionSkeleton pathname={pathname} fullWidth />
                             </div>
                           ) : (
                             children
@@ -1311,18 +1087,11 @@ export function DashboardLayout({
                     ) : (
                       <div className="mx-auto flex w-full max-w-screen-xl flex-1 overflow-hidden">
                         <div className="hidden md:flex">
-                          <Sidebar
-                            profileOpen={profileOpen}
-                            onProfileOpenChange={setProfileOpen}
-                          />
+                          <Sidebar profileOpen={profileOpen} onProfileOpenChange={setProfileOpen} />
                         </div>
                         <main className="scrollbar-hidden flex min-h-0 flex-1 flex-col overflow-y-auto">
                           <div className="flex-1 px-4 py-6 md:py-8 md:pl-10 md:pr-0">
-                            {shouldShowRouteSkeleton ? (
-                              <RouteTransitionSkeleton pathname={pathname} />
-                            ) : (
-                              children
-                            )}
+                            {shouldShowRouteSkeleton ? <RouteTransitionSkeleton pathname={pathname} /> : children}
                           </div>
                           <Footer />
                         </main>
@@ -1344,12 +1113,8 @@ export function DashboardLayout({
                       initialPaymentMethods={initialPaymentMethods ?? null}
                       initialInvoices={initialInvoices ?? null}
                       initialActivityLogs={initialActivityLogs ?? null}
-                      initialSubscriptionStats={
-                        initialSubscriptionStats ?? null
-                      }
-                      initialProjectEnvironments={
-                        initialProjectEnvironments ?? null
-                      }
+                      initialSubscriptionStats={initialSubscriptionStats ?? null}
+                      initialProjectEnvironments={initialProjectEnvironments ?? null}
                       projectCount={accountProjectCount}
                     />
                   </div>

@@ -26,10 +26,7 @@ export function asStringOrNumber(value: unknown): string | number | undefined {
   return typeof value === "string" || typeof value === "number" ? value : undefined;
 }
 
-export function pickString(
-  record: JsonRecord | undefined,
-  ...keys: string[]
-): string | undefined {
+export function pickString(record: JsonRecord | undefined, ...keys: string[]): string | undefined {
   if (!record) return undefined;
 
   for (const key of keys) {
@@ -42,10 +39,7 @@ export function pickString(
   return undefined;
 }
 
-export function pickNonEmptyString(
-  record: JsonRecord | undefined,
-  ...keys: string[]
-): string | undefined {
+export function pickNonEmptyString(record: JsonRecord | undefined, ...keys: string[]): string | undefined {
   if (!record) return undefined;
 
   for (const key of keys) {
@@ -58,10 +52,7 @@ export function pickNonEmptyString(
   return undefined;
 }
 
-export function pickBoolean(
-  record: JsonRecord | undefined,
-  ...keys: string[]
-): boolean | undefined {
+export function pickBoolean(record: JsonRecord | undefined, ...keys: string[]): boolean | undefined {
   if (!record) return undefined;
 
   for (const key of keys) {
@@ -74,10 +65,7 @@ export function pickBoolean(
   return undefined;
 }
 
-export function pickNumber(
-  record: JsonRecord | undefined,
-  ...keys: string[]
-): number | undefined {
+export function pickNumber(record: JsonRecord | undefined, ...keys: string[]): number | undefined {
   if (!record) return undefined;
 
   for (const key of keys) {

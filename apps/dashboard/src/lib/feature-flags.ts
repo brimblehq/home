@@ -29,15 +29,7 @@ export function useFeatureFlagStrict(flag: FeatureFlagKey): boolean {
   return value === true;
 }
 
-export function FeatureGate({
-  flag,
-  children,
-  fallback = null,
-}: {
-  flag: FeatureFlagKey;
-  children: ReactNode;
-  fallback?: ReactNode;
-}) {
+export function FeatureGate({ flag, children, fallback = null }: { flag: FeatureFlagKey; children: ReactNode; fallback?: ReactNode }) {
   const enabled = useFeatureFlag(flag);
   return enabled ? children : fallback;
 }

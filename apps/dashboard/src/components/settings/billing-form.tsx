@@ -33,8 +33,7 @@ import type { TeamDetails } from "@/backend/teams";
 import type { DrawerUserProfile } from "@/utils/dashboard";
 
 type UserProfile = DrawerUserProfile;
-const settingsInputClass =
-  "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+const settingsInputClass = "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 /* ── Wrapped billing form (provides Stripe Elements) ── */
 
@@ -125,9 +124,7 @@ function BillingFormInner({
   const daysSinceFailure = profile.subscriptionDue ? 1 : 0;
 
   let currentPlan = "Free";
-  const normalizedPlanType = (
-    profile.subscriptionPlanType || subscription?.plan || ""
-  ).toLowerCase();
+  const normalizedPlanType = (profile.subscriptionPlanType || subscription?.plan || "").toLowerCase();
 
   if (normalizedPlanType.includes("developer")) {
     currentPlan = "Pro";
@@ -156,18 +153,10 @@ function BillingFormInner({
       normalizedTeamSubscriptionStatus !== "canceled" &&
       normalizedTeamSubscriptionStatus !== "cancelled" &&
       normalizedTeamSubscriptionStatus !== "incomplete_expired"
-    : currentPlan !== "Free" &&
-      normalizedSubscriptionStatus !== "canceled" &&
-      normalizedSubscriptionStatus !== "cancelled";
-  const canEditSpendingLimit = isTeamMode
-    ? Boolean(teamId) && workspaceTeam?.isCreator !== false
-    : true;
-  const initialLimit = isTeamMode
-    ? (workspaceTeam?.spendingLimit ?? null)
-    : (profile.spendingLimit ?? null);
-  const [savedSpendingLimit, setSavedSpendingLimit] = useState<number | null>(
-    initialLimit,
-  );
+    : currentPlan !== "Free" && normalizedSubscriptionStatus !== "canceled" && normalizedSubscriptionStatus !== "cancelled";
+  const canEditSpendingLimit = isTeamMode ? Boolean(teamId) && workspaceTeam?.isCreator !== false : true;
+  const initialLimit = isTeamMode ? (workspaceTeam?.spendingLimit ?? null) : (profile.spendingLimit ?? null);
+  const [savedSpendingLimit, setSavedSpendingLimit] = useState<number | null>(initialLimit);
 
   const defaultMethod = paymentMethods.find((m) => m.is_default) ?? paymentMethods[0];
 
@@ -212,8 +201,7 @@ function BillingFormInner({
   }
 
   const currentUsage = spendingLimitStatus?.current_usage ?? 0;
-  const hasSpendingLimit =
-    typeof savedSpendingLimit === "number" && savedSpendingLimit >= 5;
+  const hasSpendingLimit = typeof savedSpendingLimit === "number" && savedSpendingLimit >= 5;
 
   return (
     <div className="flex max-w-[488px] flex-col gap-8">
@@ -224,18 +212,10 @@ function BillingFormInner({
         <div className="relative overflow-hidden rounded-[4px] bg-[#fcfcfc] dark:bg-[#121418]">
           <div className="px-6 py-3 pr-[116px]">
             <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body dark:text-dash-text-faded">
-              You are currently on the Brimble{" "}
-              <span className="text-dash-text-strong dark:text-dash-text-strong">
-                {currentPlan}
-              </span>{" "}
-              plan
+              You are currently on the Brimble <span className="text-dash-text-strong dark:text-dash-text-strong">{currentPlan}</span> plan
               {activePlanPrice > 0 ? (
                 <>
-                  , you pay{" "}
-                  <span className="text-dash-text-strong dark:text-dash-text-strong">
-                    ${activePlanPrice}
-                  </span>{" "}
-                  per month.
+                  , you pay <span className="text-dash-text-strong dark:text-dash-text-strong">${activePlanPrice}</span> per month.
                 </>
               ) : (
                 "."
@@ -251,20 +231,13 @@ function BillingFormInner({
             )}
           </div>
           <div className="absolute inset-y-0 right-0 hidden w-[96px] items-center justify-center sm:flex">
-            <img
-              src="/images/construction-trowel.svg"
-              alt=""
-              className="size-16 opacity-60 dark:invert dark:opacity-40"
-            />
+            <img src="/images/construction-trowel.svg" alt="" className="size-16 opacity-60 dark:invert dark:opacity-40" />
           </div>
         </div>
       )}
 
       {/* ── Forecasted bill ── */}
-      <BillForecast
-        stats={initialSubscriptionStats}
-        hasOpenInvoice={invoices?.items?.some((inv) => inv.status === "open") ?? false}
-      />
+      <BillForecast stats={initialSubscriptionStats} hasOpenInvoice={invoices?.items?.some((inv) => inv.status === "open") ?? false} />
 
       {/* ── Usage / Bill estimate ── */}
       <UsageSection spendingLimit={savedSpendingLimit} usage={currentUsage} />
@@ -281,12 +254,8 @@ function BillingFormInner({
                   <CreditCard size={20} className="text-dash-text-faded" />
                 </div>
                 <div className="flex flex-col gap-[2px] py-2">
-                  <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                    Payment methods
-                  </p>
-                  <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                    No payment methods added yet
-                  </p>
+                  <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Payment methods</p>
+                  <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">No payment methods added yet</p>
                 </div>
               </div>
             )}
@@ -319,8 +288,9 @@ function BillingFormInner({
               </div>
             )}
 
-            {!isLoadingMethods && paymentMethods.length === 0 && (
-              !showAddCard ? (
+            {!isLoadingMethods &&
+              paymentMethods.length === 0 &&
+              (!showAddCard ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -340,8 +310,7 @@ function BillingFormInner({
                     setReplacePaymentMethodId(null);
                   }}
                 />
-              )
-            )}
+              ))}
 
             {paymentMethods.length > 0 && showAddCard && (
               <AddCardForm
@@ -361,26 +330,18 @@ function BillingFormInner({
       {/* ── Spending limit ── */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-[2px]">
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-            Spending limit
-          </p>
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            Set a monthly spending cap to control costs
-          </p>
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Spending limit</p>
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">Set a monthly spending cap to control costs</p>
         </div>
         {isEditingLimit ? (
           <div className="flex items-center gap-2">
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-dash-text-faded">
-                $
-              </span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-dash-text-faded">$</span>
               <input
                 type="text"
                 inputMode="decimal"
                 value={spendingLimitInput}
-                onChange={(e) =>
-                  setSpendingLimitInput(normalizeCurrencyInput(e.target.value))
-                }
+                onChange={(e) => setSpendingLimitInput(normalizeCurrencyInput(e.target.value))}
                 className={`${settingsInputClass} h-[40px] w-[160px] pl-6 tabular-nums`}
                 placeholder="0"
               />
@@ -391,11 +352,7 @@ function BillingFormInner({
               variant="black"
               className="h-[40px] rounded-[6px] px-4"
             >
-              {spendingLimitMutation.isPending ? (
-                <Spinner size="size-3.5" className="text-white" />
-              ) : (
-                "Save"
-              )}
+              {spendingLimitMutation.isPending ? <Spinner size="size-3.5" className="text-white" /> : "Save"}
             </GlossyButton>
             <button
               onClick={() => {
@@ -410,9 +367,7 @@ function BillingFormInner({
         ) : (
           <div className="flex items-center gap-3">
             <p className="text-sm tabular-nums text-dash-text-body">
-              {hasSpendingLimit
-                ? `$${currentUsage.toFixed(2)} used / $${savedSpendingLimit.toFixed(2)} limit`
-                : "No limit set"}
+              {hasSpendingLimit ? `$${currentUsage.toFixed(2)} used / $${savedSpendingLimit.toFixed(2)} limit` : "No limit set"}
             </p>
             {canEditSpendingLimit ? (
               paymentMethods.length === 0 ? (
@@ -424,11 +379,7 @@ function BillingFormInner({
               ) : (
                 <button
                   onClick={() => {
-                    setSpendingLimitInput(
-                      typeof savedSpendingLimit === "number"
-                        ? String(savedSpendingLimit)
-                        : "5",
-                    );
+                    setSpendingLimitInput(typeof savedSpendingLimit === "number" ? String(savedSpendingLimit) : "5");
                     setIsEditingLimit(true);
                   }}
                   className="text-sm font-medium text-[#4879f8] hover:text-[#3a6ae6]"
@@ -437,9 +388,7 @@ function BillingFormInner({
                 </button>
               )
             ) : (
-              <span className="text-xs text-dash-text-extra-faded">
-                Only the workspace creator can update this limit
-              </span>
+              <span className="text-xs text-dash-text-extra-faded">Only the workspace creator can update this limit</span>
             )}
           </div>
         )}
@@ -466,45 +415,41 @@ function BillingFormInner({
 
       {hasActivePaidSubscription && (
         <>
-        <hr className="-ml-8 border-dash-border-soft" />
+          <hr className="-ml-8 border-dash-border-soft" />
 
-        {/* ── Cancel subscription ── */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-[2px] py-2">
-            <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-              Manage your subscription
-            </p>
-            <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-              Cancel your current subscription
-            </p>
+          {/* ── Cancel subscription ── */}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-[2px] py-2">
+              <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Manage your subscription</p>
+              <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">Cancel your current subscription</p>
+            </div>
+            <div>
+              <GlossyButton variant="red" onClick={() => setCancelOpen(true)}>
+                Cancel subscription
+              </GlossyButton>
+            </div>
           </div>
-          <div>
-            <GlossyButton variant="red" onClick={() => setCancelOpen(true)}>
-              Cancel subscription
-            </GlossyButton>
-          </div>
-        </div>
 
-        <WarningModal
-          open={cancelOpen}
-          onOpenChange={setCancelOpen}
-          title="Cancel your subscription?"
-          description={`Your plan will be cancelled at the end of the current billing period. You will be moved to the Free plan and lose access to ${currentPlan} features.`}
-          confirmLabel="Cancel subscription"
-          cancelLabel="Keep my plan"
-          onConfirm={() => {
-            cancelMutation.mutate(undefined, {
-              onSuccess: () => {
-                toast.success("Subscription cancelled. You'll keep access until the end of this billing period.");
-                setCancelOpen(false);
-                router.invalidate();
-              },
-              onError: (err) => {
-                toast.error(err instanceof Error ? err.message : "Failed to cancel subscription");
-              },
-            });
-          }}
-        />
+          <WarningModal
+            open={cancelOpen}
+            onOpenChange={setCancelOpen}
+            title="Cancel your subscription?"
+            description={`Your plan will be cancelled at the end of the current billing period. You will be moved to the Free plan and lose access to ${currentPlan} features.`}
+            confirmLabel="Cancel subscription"
+            cancelLabel="Keep my plan"
+            onConfirm={() => {
+              cancelMutation.mutate(undefined, {
+                onSuccess: () => {
+                  toast.success("Subscription cancelled. You'll keep access until the end of this billing period.");
+                  setCancelOpen(false);
+                  router.invalidate();
+                },
+                onError: (err) => {
+                  toast.error(err instanceof Error ? err.message : "Failed to cancel subscription");
+                },
+              });
+            }}
+          />
         </>
       )}
 
@@ -520,11 +465,7 @@ function BillingFormInner({
 
 /* ── Payment failure banner ── */
 
-function PaymentFailureBanner({
-  daysSinceFailure,
-}: {
-  daysSinceFailure: number;
-}) {
+function PaymentFailureBanner({ daysSinceFailure }: { daysSinceFailure: number }) {
   if (daysSinceFailure <= 0) return null;
 
   const isBuildsDisabled = daysSinceFailure >= 7;
@@ -534,9 +475,7 @@ function PaymentFailureBanner({
     <div
       className={`rounded-[4px] border px-4 py-3 ${isDeactivated ? "border-[#ef2f1f]/30 bg-[#ef2f1f]/[0.06]" : "border-[#f5a623]/30 bg-[#f5a623]/[0.06]"}`}
     >
-      <p
-        className={`text-sm font-medium leading-5 ${isDeactivated ? "text-[#ef2f1f]" : "text-[#b37a10] dark:text-[#f5a623]"}`}
-      >
+      <p className={`text-sm font-medium leading-5 ${isDeactivated ? "text-[#ef2f1f]" : "text-[#b37a10] dark:text-[#f5a623]"}`}>
         {isDeactivated
           ? "Your subscription has been deactivated. Update payment to reactivate."
           : isBuildsDisabled
@@ -549,13 +488,7 @@ function PaymentFailureBanner({
 
 /* ── Forecasted bill ── */
 
-function BillForecast({
-  stats,
-  hasOpenInvoice,
-}: {
-  stats?: SubscriptionStats | null;
-  hasOpenInvoice?: boolean;
-}) {
+function BillForecast({ stats, hasOpenInvoice }: { stats?: SubscriptionStats | null; hasOpenInvoice?: boolean }) {
   if (!stats) return null;
 
   const nextPaymentDate = stats.next_payment_date
@@ -570,21 +503,13 @@ function BillForecast({
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <p className="text-xs font-medium uppercase tracking-wider text-dash-text-faded">
-            Forecasted bill
-          </p>
-          <p className="text-3xl font-semibold tabular-nums text-dash-text-strong">
-            {stats.total}
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wider text-dash-text-faded">Forecasted bill</p>
+          <p className="text-3xl font-semibold tabular-nums text-dash-text-strong">{stats.total}</p>
         </div>
         {nextPaymentDate && (
           <div className="flex flex-col items-end gap-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-dash-text-faded">
-              Next payment
-            </p>
-            <p className="text-sm font-medium text-dash-text-body">
-              {nextPaymentDate}
-            </p>
+            <p className="text-xs font-medium uppercase tracking-wider text-dash-text-faded">Next payment</p>
+            <p className="text-sm font-medium text-dash-text-body">{nextPaymentDate}</p>
           </div>
         )}
       </div>
@@ -601,42 +526,23 @@ function BillForecast({
 
 /* ── Usage section ── */
 
-function UsageSection({
-  spendingLimit,
-  usage,
-}: {
-  spendingLimit?: number | null;
-  usage?: number;
-}) {
+function UsageSection({ spendingLimit, usage }: { spendingLimit?: number | null; usage?: number }) {
   const used = usage ?? 0;
-  const hasSpendingLimit =
-    typeof spendingLimit === "number" && Number.isFinite(spendingLimit) && spendingLimit >= 5;
+  const hasSpendingLimit = typeof spendingLimit === "number" && Number.isFinite(spendingLimit) && spendingLimit >= 5;
   const limit = hasSpendingLimit ? spendingLimit : null;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-[2px]">
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-            Current usage
-          </p>
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            Billing usage for the current period
-          </p>
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Current usage</p>
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">Billing usage for the current period</p>
         </div>
 
         {limit ? (
-          <UsageBar
-            label="Spending budget"
-            used={used}
-            limit={limit}
-            unit="USD"
-            overageNote="Overage may be added to the next invoice"
-          />
+          <UsageBar label="Spending budget" used={used} limit={limit} unit="USD" overageNote="Overage may be added to the next invoice" />
         ) : (
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            No spending budget configured yet.
-          </p>
+          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">No spending budget configured yet.</p>
         )}
       </div>
     </div>
@@ -671,10 +577,7 @@ function UsageBar({
         </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-dash-bg-elevated">
-        <div
-          className={`h-full rounded-full transition-all ${isOver ? "bg-[#f5a623]" : "bg-[#4879f8]"}`}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={`h-full rounded-full transition-all ${isOver ? "bg-[#f5a623]" : "bg-[#4879f8]"}`} style={{ width: `${pct}%` }} />
       </div>
       {overage > 0 && overageNote && (
         <p className="text-xs text-[#f5a623]">
@@ -762,9 +665,11 @@ function PaymentMethodRow({
             disabled={setDefaultMutation.isPending}
             onClick={() =>
               setDefaultMutation.mutate(method.id, {
-                onSuccess: () => { toast.success("Default payment method updated"); router.invalidate(); },
-                onError: (err) =>
-                  toast.error(err instanceof Error ? err.message : "Failed to set default"),
+                onSuccess: () => {
+                  toast.success("Default payment method updated");
+                  router.invalidate();
+                },
+                onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to set default"),
               })
             }
             className="rounded-[4px] p-1.5 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-body"
@@ -779,28 +684,20 @@ function PaymentMethodRow({
           onClick={() =>
             canRemove
               ? removeMutation.mutate(method.id, {
-                  onSuccess: () => { toast.success("Payment method removed"); router.invalidate(); },
-                  onError: (err) =>
-                    toast.error(err instanceof Error ? err.message : "Failed to remove payment method"),
+                  onSuccess: () => {
+                    toast.success("Payment method removed");
+                    router.invalidate();
+                  },
+                  onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to remove payment method"),
                 })
               : toast.error("You can't remove your payment method while subscribed to a paid plan")
           }
           className={`rounded-[4px] p-1.5 text-dash-text-faded transition-colors ${
-            canRemove
-              ? "hover:bg-[#ef2f1f]/10 hover:text-[#ef2f1f]"
-              : "opacity-40"
+            canRemove ? "hover:bg-[#ef2f1f]/10 hover:text-[#ef2f1f]" : "opacity-40"
           } disabled:pointer-events-none disabled:opacity-40`}
-          title={
-            canRemove
-              ? "Remove"
-              : "Active subscriptions require a payment method on file"
-          }
+          title={canRemove ? "Remove" : "Active subscriptions require a payment method on file"}
         >
-          {removeMutation.isPending ? (
-            <Spinner className="size-3.5" />
-          ) : (
-            <FolderTrashIcon className="size-3.5" />
-          )}
+          {removeMutation.isPending ? <Spinner className="size-3.5" /> : <FolderTrashIcon className="size-3.5" />}
         </button>
       </div>
     </div>
@@ -809,13 +706,7 @@ function PaymentMethodRow({
 
 /* ── Add card form (inline Stripe CardElement) ── */
 
-function AddCardForm({
-  onClose,
-  replacePaymentMethodId,
-}: {
-  onClose: () => void;
-  replacePaymentMethodId?: string | null;
-}) {
+function AddCardForm({ onClose, replacePaymentMethodId }: { onClose: () => void; replacePaymentMethodId?: string | null }) {
   const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
@@ -824,9 +715,7 @@ function AddCardForm({
   const removeMethodMutation = useRemovePaymentMethod();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cardError, setCardError] = useState(false);
-  const [isDark, setIsDark] = useState(() =>
-    typeof document !== "undefined" && document.documentElement.classList.contains("dark"),
-  );
+  const [isDark, setIsDark] = useState(() => typeof document !== "undefined" && document.documentElement.classList.contains("dark"));
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -897,26 +786,15 @@ function AddCardForm({
 
       await addMethodMutation.mutateAsync(paymentMethodId);
 
-      if (
-        replacePaymentMethodId &&
-        replacePaymentMethodId !== paymentMethodId
-      ) {
+      if (replacePaymentMethodId && replacePaymentMethodId !== paymentMethodId) {
         try {
           await removeMethodMutation.mutateAsync(replacePaymentMethodId);
         } catch (removeError) {
-          toast.error(
-            removeError instanceof Error
-              ? removeError.message
-              : "New card added, but the old card could not be removed",
-          );
+          toast.error(removeError instanceof Error ? removeError.message : "New card added, but the old card could not be removed");
         }
       }
 
-      toast.success(
-        replacePaymentMethodId
-          ? "Payment method updated successfully"
-          : "Payment method added successfully",
-      );
+      toast.success(replacePaymentMethodId ? "Payment method updated successfully" : "Payment method added successfully");
       router.invalidate();
       onClose();
     } catch (err) {
@@ -936,22 +814,15 @@ function AddCardForm({
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-px pb-px">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-dash-text-strong">
-            {replacePaymentMethodId ? "Change card" : "Add a new card"}
-          </p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-[4px] p-1 text-dash-text-faded hover:text-dash-text-body"
-          >
+          <p className="text-sm font-medium text-dash-text-strong">{replacePaymentMethodId ? "Change card" : "Add a new card"}</p>
+          <button type="button" onClick={onClose} className="rounded-[4px] p-1 text-dash-text-faded hover:text-dash-text-body">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className={`input-base flex h-[50px] items-center overflow-hidden px-3 [&_.StripeElement]:w-full ${cardError ? "!shadow-[0_0_0_1px_#ef2f1f,0_0_0_3px_rgba(239,47,31,0.15)]" : "input-focus-within"}`}>
-          <CardElement
-            options={cardOptions}
-            onChange={(e) => setCardError(!!e.error)}
-          />
+        <div
+          className={`input-base flex h-[50px] items-center overflow-hidden px-3 [&_.StripeElement]:w-full ${cardError ? "!shadow-[0_0_0_1px_#ef2f1f,0_0_0_3px_rgba(239,47,31,0.15)]" : "input-focus-within"}`}
+        >
+          <CardElement options={cardOptions} onChange={(e) => setCardError(!!e.error)} />
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -1016,13 +887,9 @@ function InvoicesSection({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-[2px] py-2">
-        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-          Payment history and invoices
-        </p>
+        <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Payment history and invoices</p>
         <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-          {isTeamMode
-            ? "View this team's billing history and invoices"
-            : "See your billing history with Brimble including invoices"}
+          {isTeamMode ? "View this team's billing history and invoices" : "See your billing history with Brimble including invoices"}
         </p>
       </div>
       <div className="flex flex-col gap-4">
@@ -1039,9 +906,7 @@ function InvoicesSection({
             }
           }
 
-          const isPurchase =
-            invoice.source === "purchase" ||
-            (!invoice.source && invoice.number?.startsWith("BRIMBLE-"));
+          const isPurchase = invoice.source === "purchase" || (!invoice.source && invoice.number?.startsWith("BRIMBLE-"));
 
           const displayNumber = invoice.number
             ? invoice.number.length > 20
@@ -1052,27 +917,13 @@ function InvoicesSection({
           const isOpen = invoice.status === "open";
 
           return (
-            <div
-              key={invoice.id}
-              className="flex items-center justify-between gap-4"
-            >
+            <div key={invoice.id} className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 flex-col gap-0.5">
-                <p className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-                  {displayNumber}
-                </p>
-                <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-                  {label}
-                </p>
+                <p className="truncate text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">{displayNumber}</p>
+                <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">{label}</p>
               </div>
               <div className="flex shrink-0 items-center gap-3">
-                <span
-                  className={cn(
-                    "flex items-center gap-1.5 text-xs",
-                    isOpen
-                      ? "text-[#f5a623]"
-                      : "text-dash-text-extra-faded",
-                  )}
-                >
+                <span className={cn("flex items-center gap-1.5 text-xs", isOpen ? "text-[#f5a623]" : "text-dash-text-extra-faded")}>
                   {isOpen && (
                     <span className="relative flex size-1.5">
                       <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#f5a623] opacity-75" />
@@ -1116,11 +967,7 @@ function InvoicesSection({
             </div>
           );
         })}
-        {items.length === 0 && (
-          <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">
-            No invoices yet.
-          </p>
-        )}
+        {items.length === 0 && <p className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-faded">No invoices yet.</p>}
       </div>
       {(invoices?.next_cursor || invoices?.previous_cursor) && (
         <div className="flex justify-end pt-1">

@@ -17,17 +17,10 @@ export interface BackendClient extends ApiClient {
 type SupportedLogLevel = "debug" | "info" | "warn" | "error";
 
 function resolveLogLevel(): SupportedLogLevel {
-  const runtimeLevel =
-    (typeof process !== "undefined" ? process.env.LOG_LEVEL : undefined) ??
-    import.meta.env.VITE_LOG_LEVEL;
+  const runtimeLevel = (typeof process !== "undefined" ? process.env.LOG_LEVEL : undefined) ?? import.meta.env.VITE_LOG_LEVEL;
   const normalized = runtimeLevel?.trim().toLowerCase();
 
-  if (
-    normalized === "debug" ||
-    normalized === "info" ||
-    normalized === "warn" ||
-    normalized === "error"
-  ) {
+  if (normalized === "debug" || normalized === "info" || normalized === "warn" || normalized === "error") {
     return normalized;
   }
 
@@ -65,19 +58,9 @@ function utf8ToBytes(input: string): Uint8Array {
 
 async function hmacSha256Hex(input: string, secret: string): Promise<string> {
   if (globalThis.crypto?.subtle) {
-    const key = await globalThis.crypto.subtle.importKey(
-      "raw",
-      utf8ToBytes(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
+    const key = await globalThis.crypto.subtle.importKey("raw", utf8ToBytes(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
 
-    const signature = await globalThis.crypto.subtle.sign(
-      "HMAC",
-      key,
-      utf8ToBytes(input),
-    );
+    const signature = await globalThis.crypto.subtle.sign("HMAC", key, utf8ToBytes(input));
 
     return Array.from(new Uint8Array(signature))
       .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -88,10 +71,7 @@ async function hmacSha256Hex(input: string, secret: string): Promise<string> {
   return crypto.createHmac("sha256", secret).update(input).digest("hex");
 }
 
-async function createBrimbleSignatureHeader(
-  data: unknown,
-  expiryInSeconds: number,
-) {
+async function createBrimbleSignatureHeader(data: unknown, expiryInSeconds: number) {
   const secret = appConfig.hmacSecretKey?.trim();
   if (!secret) {
     return "";
@@ -120,9 +100,7 @@ async function createPaymentKeyHeader(length: number) {
   return crypto.randomBytes(length).toString("base64");
 }
 
-export function createBackendClient(
-  config: BackendClientConfig,
-): BackendClient {
+export function createBackendClient(config: BackendClientConfig): BackendClient {
   const http: AxiosInstance = axios.create({
     baseURL: config.baseUrl,
     timeout: 25_000,
@@ -164,11 +142,7 @@ export function createBackendClient(
     ) {
       return "The request took too long to complete. Please try again.";
     }
-    if (
-      lower.includes("network error") ||
-      lower.includes("econnrefused") ||
-      lower.includes("enotfound")
-    ) {
+    if (lower.includes("network error") || lower.includes("econnrefused") || lower.includes("enotfound")) {
       return "Unable to reach the server. Please check your connection and try again.";
     }
     if (lower.includes("econnreset") || lower.includes("socket hang up")) {
@@ -194,10 +168,7 @@ export function createBackendClient(
 
   return {
     config,
-    async request<TResponse = unknown, TBody = unknown>(
-      path: string,
-      options?: ApiRequestOptions<TBody>,
-    ): Promise<TResponse> {
+    async request<TResponse = unknown, TBody = unknown>(path: string, options?: ApiRequestOptions<TBody>): Promise<TResponse> {
       const method = options?.method ?? "GET";
       const headers: Record<string, string> = {
         Accept: "application/json",
@@ -254,17 +225,9 @@ export function createBackendClient(
           "Backend client request failed",
         );
         throw new BackendApiError({
-          code:
-            typeof (payload as any)?.code === "string"
-              ? (payload as any).code
-              : `HTTP_${axiosError.response?.status ?? 500}`,
+          code: typeof (payload as any)?.code === "string" ? (payload as any).code : `HTTP_${axiosError.response?.status ?? 500}`,
           status: axiosError.response?.status,
-          message: getErrorMessage(
-            payload,
-            axiosError.response?.statusText ||
-              axiosError.message ||
-              "Request failed",
-          ),
+          message: getErrorMessage(payload, axiosError.response?.statusText || axiosError.message || "Request failed"),
           details: payload,
         });
       }

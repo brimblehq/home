@@ -1,7 +1,6 @@
 export const siteConfig = {
   name: "Brimble",
-  description:
-    "Ship faster with Brimble: the all-in-one platform to deploy, scale, and manage every part of your stack.",
+  description: "Ship faster with Brimble: the all-in-one platform to deploy, scale, and manage every part of your stack.",
   navLinks: [
     { label: "Pricing", href: "/pricing" },
     { label: "Domains", href: "/domains" },
@@ -12,8 +11,7 @@ export const siteConfig = {
   ],
   socials: {
     heading: "Follow Brimble",
-    description:
-      "Get product updates, release drops, and platform news from our official community channels.",
+    description: "Get product updates, release drops, and platform news from our official community channels.",
     links: [
       { label: "X (Twitter)", href: "https://x.com/brimblehq" },
       { label: "Discord", href: "https://discord.com/invite/XBCBwbXQJQ" },
@@ -36,18 +34,15 @@ export const siteConfig = {
   steps: [
     {
       title: "Application Hosting",
-      description:
-        "Deploy and scale web apps instantly with zero DevOps setup.",
+      description: "Deploy and scale web apps instantly with zero DevOps setup.",
     },
     {
       title: "Database Hosting",
-      description:
-        "Launch production-ready databases in seconds with built-in backups.",
+      description: "Launch production-ready databases in seconds with built-in backups.",
     },
     {
       title: "AI Gateway",
-      description:
-        "Connect to powerful AI models through a single, simplified API.",
+      description: "Connect to powerful AI models through a single, simplified API.",
     },
   ],
   stepsSection: {
@@ -87,23 +82,19 @@ export const siteConfig = {
       {
         label: "PLATFORM",
         title: "Instant Deployments",
-        description:
-          "Ship full stack apps & MCP servers in seconds. No complex setup is required.",
+        description: "Ship full stack apps & MCP servers in seconds. No complex setup is required.",
       },
       {
         title: "Readily available LLMs",
-        description:
-          "We provide endpoints to all the popular LLMs. Connect to powerful AI models through a single, simplified API.",
+        description: "We provide endpoints to all the popular LLMs. Connect to powerful AI models through a single, simplified API.",
       },
       {
         title: "Provision databases in seconds",
-        description:
-          "Provision MySQL, Postgres, Redis and more in seconds. Launch production-ready databases with built-in backups.",
+        description: "Provision MySQL, Postgres, Redis and more in seconds. Launch production-ready databases with built-in backups.",
       },
       {
         title: "Usage-Based Pricing",
-        description:
-          "Pay only for what you use. No hidden fees, no surprises. Start for free, and upgrade when you're ready.",
+        description: "Pay only for what you use. No hidden fees, no surprises. Start for free, and upgrade when you're ready.",
       },
     ],
     footer:
@@ -129,13 +120,11 @@ export const siteConfig = {
       },
       {
         title: "Do I get HTTPS with custom domains?",
-        description:
-          "Absolutely. Brimble automatically provisions SSL certificates for all custom domains at no extra cost.",
+        description: "Absolutely. Brimble automatically provisions SSL certificates for all custom domains at no extra cost.",
       },
       {
         title: "How do I manage DNS records?",
-        description:
-          "Brimble provides a simple DNS management interface where you can add, edit, and delete records for your domains.",
+        description: "Brimble provides a simple DNS management interface where you can add, edit, and delete records for your domains.",
       },
       {
         title: "Can I transfer a domain to Brimble?",
@@ -158,21 +147,14 @@ export const siteConfig = {
   },
   pricing: {
     heading: "Pricing",
-    description:
-      "Brimble's pricing is designed to grow with your needs. Start for free, and upgrade when you're ready.",
+    description: "Brimble's pricing is designed to grow with your needs. Start for free, and upgrade when you're ready.",
     personalPlans: [
       {
         name: "Free",
         description: "For hobby projects and learning.",
         price: 0,
         cta: "Get started",
-        features: [
-          "Automatic HTTPS/SSL",
-          "Deploy Static Sites",
-          "5 Project Limit",
-          "300 Build Minutes",
-          "10 GB Bandwidth",
-        ],
+        features: ["Automatic HTTPS/SSL", "Deploy Static Sites", "5 Project Limit", "300 Build Minutes", "10 GB Bandwidth"],
       },
       {
         name: "Hacker",
@@ -211,8 +193,7 @@ export const siteConfig = {
     ],
     teamPlan: {
       name: "Team",
-      description:
-        "Made for growing teams and scaling. Priced per member and build container.",
+      description: "Made for growing teams and scaling. Priced per member and build container.",
       pricingLabel: "From $30/mo",
       pricePerMember: 5,
       pricePerBuild: 7.5,
@@ -230,8 +211,7 @@ export const siteConfig = {
     },
     enterprise: {
       title: "Enterprise",
-      description:
-        "Custom solutions for large-scale deployments. Dedicated infrastructure, SLAs, and hands-on onboarding.",
+      description: "Custom solutions for large-scale deployments. Dedicated infrastructure, SLAs, and hands-on onboarding.",
       cta: "Contact us",
     },
     faqs: [
@@ -242,8 +222,7 @@ export const siteConfig = {
       },
       {
         title: "Do I need to configure servers?",
-        description:
-          "No. Brimble handles all infrastructure for you — just connect your repo and deploy. No server management required.",
+        description: "No. Brimble handles all infrastructure for you — just connect your repo and deploy. No server management required.",
       },
       {
         title: "Does Brimble support backend APIs?",
@@ -262,15 +241,13 @@ export const siteConfig = {
       },
       {
         title: "Can I still choose specific models?",
-        description:
-          "Yes. You have full control over which AI models to use. Our gateway supports all major providers and models.",
+        description: "Yes. You have full control over which AI models to use. Our gateway supports all major providers and models.",
       },
     ],
   },
   faq: {
     heading: "Frequently Asked Questions",
-    description:
-      "Everything you need to know about Brimble. Can't find what you're looking for? Reach out to our support team.",
+    description: "Everything you need to know about Brimble. Can't find what you're looking for? Reach out to our support team.",
     categories: [
       {
         label: "GENERAL",
@@ -337,8 +314,7 @@ export const siteConfig = {
           },
           {
             title: "Can I still choose specific models?",
-            description:
-              "Yes. You have full control over which AI models to use. Our gateway supports all major providers and models.",
+            description: "Yes. You have full control over which AI models to use. Our gateway supports all major providers and models.",
           },
         ],
       },
@@ -352,8 +328,7 @@ export const siteConfig = {
           },
           {
             title: "Do I get HTTPS with custom domains?",
-            description:
-              "Absolutely. Brimble automatically provisions SSL certificates for all custom domains at no extra cost.",
+            description: "Absolutely. Brimble automatically provisions SSL certificates for all custom domains at no extra cost.",
           },
           {
             title: "Can I buy domains through Brimble?",
@@ -386,8 +361,7 @@ export const siteConfig = {
   },
   cta: {
     heading: "Start your free trial today.",
-    footer:
-      "Spend little to no time on DevOps and more time building. Super efficient way to host & scale your web app.",
+    footer: "Spend little to no time on DevOps and more time building. Super efficient way to host & scale your web app.",
     buttons: {
       primary: "Get started",
       secondary: "Terms & conditions",

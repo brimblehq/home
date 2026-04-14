@@ -1,10 +1,5 @@
 {
-  "references": [
-    { "path": "apps/web" },
-    { "path": "apps/dashboard" },
-    { "path": "packages/ui" },
-    { "path": "packages/config" }
-  ],
+  "references": [{ "path": "apps/web" }, { "path": "apps/dashboard" }, { "path": "packages/ui" }, { "path": "packages/config" }],
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",

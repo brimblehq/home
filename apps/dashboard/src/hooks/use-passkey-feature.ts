@@ -13,9 +13,7 @@ interface PasskeyFeatureState {
 let cachedBackendEnabled: boolean | null = null;
 let inflight: Promise<boolean> | null = null;
 
-async function fetchBackendStatus(
-  fn: () => Promise<{ enabled: boolean }>,
-): Promise<boolean> {
+async function fetchBackendStatus(fn: () => Promise<{ enabled: boolean }>): Promise<boolean> {
   if (cachedBackendEnabled !== null) return cachedBackendEnabled;
   if (inflight) return inflight;
   inflight = fn()

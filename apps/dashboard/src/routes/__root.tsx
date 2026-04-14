@@ -1,10 +1,4 @@
-import {
-  HeadContent,
-  Outlet,
-  Scripts,
-  createRootRoute,
-  useRouterState,
-} from "@tanstack/react-router";
+import { HeadContent, Outlet, Scripts, createRootRoute, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { PostHogProvider } from "posthog-js/react";
 import { usePostHog } from "posthog-js/react";
@@ -81,9 +75,7 @@ const globalDataCache: {
 } = { workspaces: null, pricing: null, fetchedAt: 0 };
 const GLOBAL_CACHE_TTL = 300_000;
 
-function createRootLoaderData(
-  overrides: Partial<RootLoaderData> = {},
-): RootLoaderData {
+function createRootLoaderData(overrides: Partial<RootLoaderData> = {}): RootLoaderData {
   return {
     ...DEFAULT_ROOT_LOADER_DATA,
     ...overrides,
@@ -133,10 +125,8 @@ export const Route = createRootRoute({
   },
   loader: (async ({ location, deps }: any) => {
     const isAuthRoute = /^\/(login|signup|2fa)$/.test(location.pathname);
-    const knownPrefixes =
-      /^\/(login|signup|2fa|projects|domains|addons|scaling|workspace|teams)?(\/|$)/;
-    const isCatchAll =
-      location.pathname !== "/" && !knownPrefixes.test(location.pathname);
+    const knownPrefixes = /^\/(login|signup|2fa|projects|domains|addons|scaling|workspace|teams)?(\/|$)/;
+    const isCatchAll = location.pathname !== "/" && !knownPrefixes.test(location.pathname);
 
     if (isAuthRoute || isCatchAll) {
       return createRootLoaderData();
@@ -145,60 +135,29 @@ export const Route = createRootRoute({
     try {
       const rawWorkspace = deps.workspace;
       let workspace: string | undefined;
-      if (
-        rawWorkspace &&
-        typeof rawWorkspace === "string" &&
-        rawWorkspace.trim()
-      ) {
+      if (rawWorkspace && typeof rawWorkspace === "string" && rawWorkspace.trim()) {
         workspace = rawWorkspace.trim();
       }
 
       const hasGlobalCache = globalDataCache.fetchedAt > 0 && Date.now() - globalDataCache.fetchedAt < GLOBAL_CACHE_TTL;
 
-      const [
-        settingsSnapshot,
-        workspaces,
-        onboardingProjects,
-        pricingResult,
-        tags,
-        subscriptionStats,
-      ] = await Promise.allSettled([
-        (
-          getSettingsSidebarSnapshotServerFn as unknown as (input: {
-            data?: { workspace?: string };
-          }) => Promise<SettingsSidebarSnapshot>
-        )({
+      const [settingsSnapshot, workspaces, onboardingProjects, pricingResult, tags, subscriptionStats] = await Promise.allSettled([
+        (getSettingsSidebarSnapshotServerFn as unknown as (input: { data?: { workspace?: string } }) => Promise<SettingsSidebarSnapshot>)({
           data: { workspace },
         }),
         hasGlobalCache && globalDataCache.workspaces
           ? Promise.resolve(globalDataCache.workspaces)
-          : (
-              listWorkspacesServerFn as unknown as () => Promise<
-                ApiListResponse<Workspace>
-              >
-            )(),
-        (
-          listHomeProjectsServerFn as unknown as (input: {
-            data: { workspace?: string };
-          }) => Promise<ApiListResponse<Project>>
-        )({
+          : (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)(),
+        (listHomeProjectsServerFn as unknown as (input: { data: { workspace?: string } }) => Promise<ApiListResponse<Project>>)({
           data: { workspace },
         }),
         hasGlobalCache && globalDataCache.pricing
           ? Promise.resolve(globalDataCache.pricing)
           : (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
-        (
-          listTagsServerFn as unknown as (input: {
-            data: { workspace?: string };
-          }) => Promise<BackendTag[]>
-        )({
+        (listTagsServerFn as unknown as (input: { data: { workspace?: string } }) => Promise<BackendTag[]>)({
           data: { workspace },
         }),
-        (
-          getSubscriptionStatsServerFn as unknown as (input: {
-            data?: { workspace?: string };
-          }) => Promise<SubscriptionStats>
-        )({
+        (getSubscriptionStatsServerFn as unknown as (input: { data?: { workspace?: string } }) => Promise<SubscriptionStats>)({
           data: { workspace },
         }),
       ]);
@@ -215,31 +174,13 @@ export const Route = createRootRoute({
 
       return createRootLoaderData({
         workspace,
-        settingsSnapshot:
-          settingsSnapshot.status === "fulfilled"
-            ? settingsSnapshot.value
-            : undefined,
-        workspaces:
-          workspaces.status === "fulfilled"
-            ? workspaces.value
-            : DEFAULT_ROOT_LOADER_DATA.workspaces,
-        projectSwitcherProjects:
-          onboardingProjects.status === "fulfilled"
-            ? (onboardingProjects.value as any)
-            : undefined,
-        onboardingProjects:
-          onboardingProjects.status === "fulfilled"
-            ? onboardingProjects.value
-            : undefined,
+        settingsSnapshot: settingsSnapshot.status === "fulfilled" ? settingsSnapshot.value : undefined,
+        workspaces: workspaces.status === "fulfilled" ? workspaces.value : DEFAULT_ROOT_LOADER_DATA.workspaces,
+        projectSwitcherProjects: onboardingProjects.status === "fulfilled" ? (onboardingProjects.value as any) : undefined,
+        onboardingProjects: onboardingProjects.status === "fulfilled" ? onboardingProjects.value : undefined,
         tags: tags.status === "fulfilled" ? tags.value : undefined,
-        subscriptionStats:
-          subscriptionStats.status === "fulfilled"
-            ? subscriptionStats.value
-            : undefined,
-        pricing:
-          pricingResult.status === "fulfilled"
-            ? pricingResult.value
-            : DEFAULT_PRICING,
+        subscriptionStats: subscriptionStats.status === "fulfilled" ? subscriptionStats.value : undefined,
+        pricing: pricingResult.status === "fulfilled" ? pricingResult.value : DEFAULT_PRICING,
       });
     } catch (err) {
       console.error("[root loader] unexpected error:", err);
@@ -250,8 +191,7 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 });
 
-const AUTH_ROUTE_PATTERN =
-  /^\/(login|signup|2fa|passkey-recovery|reset-password)(\/|$)/;
+const AUTH_ROUTE_PATTERN = /^\/(login|signup|2fa|passkey-recovery|reset-password)(\/|$)/;
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -263,10 +203,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
         {!isAuthRoute && (
           <>
-            <script
-              async
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-            />
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
             <script
               dangerouslySetInnerHTML={{
                 __html: `
@@ -286,16 +223,8 @@ gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });
         />
       </head>
       <body>
-        {isPostHogEnabled ? (
-          <PostHogProvider client={posthog}>{children}</PostHogProvider>
-        ) : (
-          children
-        )}
-        {!isAuthRoute && (
-          <script
-            dangerouslySetInnerHTML={{ __html: chatwootBootstrapScript }}
-          />
-        )}
+        {isPostHogEnabled ? <PostHogProvider client={posthog}>{children}</PostHogProvider> : children}
+        {!isAuthRoute && <script dangerouslySetInnerHTML={{ __html: chatwootBootstrapScript }} />}
         <Scripts />
       </body>
     </html>
@@ -340,9 +269,7 @@ function RootComponent() {
       return;
     }
 
-    const gtagFn = (window as any).gtag as
-      | ((...args: Array<string | number | Date | Record<string, unknown>>) => void)
-      | undefined;
+    const gtagFn = (window as any).gtag as ((...args: Array<string | number | Date | Record<string, unknown>>) => void) | undefined;
     if (typeof gtagFn !== "function") {
       return;
     }

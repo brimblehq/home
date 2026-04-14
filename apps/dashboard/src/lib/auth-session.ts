@@ -27,4 +27,3 @@ export function clearAuthSessionCookies() {
   clearCookie(config.accessTokenCookie);
   clearCookie(config.refreshTokenCookie);
 }
-

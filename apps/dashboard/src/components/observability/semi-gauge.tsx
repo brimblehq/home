@@ -10,11 +10,30 @@ const START_ANGLE = 174;
 const END_ANGLE = 6;
 
 const TICK_COLORS = [
-  "#22c55e", "#2dd46b", "#3ee377", "#5bea8a", "#78f29e",
-  "#9ae53b", "#b5e840", "#cdec44", "#e5d030", "#f0c020",
-  "#f5b020", "#f5a623", "#f09418", "#eb7d15", "#e86b11",
-  "#e5590e", "#e04a0c", "#dc3c0a", "#d63027", "#d02824",
-  "#cc2222", "#c41e1e", "#bb1a1a", "#b01616",
+  "#22c55e",
+  "#2dd46b",
+  "#3ee377",
+  "#5bea8a",
+  "#78f29e",
+  "#9ae53b",
+  "#b5e840",
+  "#cdec44",
+  "#e5d030",
+  "#f0c020",
+  "#f5b020",
+  "#f5a623",
+  "#f09418",
+  "#eb7d15",
+  "#e86b11",
+  "#e5590e",
+  "#e04a0c",
+  "#dc3c0a",
+  "#d63027",
+  "#d02824",
+  "#cc2222",
+  "#c41e1e",
+  "#bb1a1a",
+  "#b01616",
 ];
 
 const LINES = Array.from({ length: TICK_COUNT }, (_, i) => {
@@ -32,15 +51,7 @@ const LINES = Array.from({ length: TICK_COUNT }, (_, i) => {
   };
 });
 
-function AnimatedTick({
-  line,
-  isActive,
-  delay,
-}: {
-  line: (typeof LINES)[number];
-  isActive: boolean;
-  delay: number;
-}) {
+function AnimatedTick({ line, isActive, delay }: { line: (typeof LINES)[number]; isActive: boolean; delay: number }) {
   return (
     <motion.line
       x1={line.x1}
@@ -97,13 +108,7 @@ export function SemiGauge({
 
       <div className="flex flex-col items-start gap-4 px-4 py-5 sm:flex-row sm:items-center sm:gap-0 sm:px-5 sm:py-6">
         <div className="w-full shrink-0 sm:w-auto">
-          <svg
-            width="200"
-            height="110"
-            viewBox="0 0 236 130"
-            fill="none"
-            className="mx-auto sm:mx-0"
-          >
+          <svg width="200" height="110" viewBox="0 0 236 130" fill="none" className="mx-auto sm:mx-0">
             <defs>
               <clipPath id={`gauge-clip-${label}`}>
                 <path
@@ -116,14 +121,7 @@ export function SemiGauge({
               {LINES.map((line) => {
                 const isActive = line.index < activeTicks;
                 const delay = isActive ? (line.index / activeTicks) * 0.6 : 0;
-                return (
-                  <AnimatedTick
-                    key={line.index}
-                    line={line}
-                    isActive={isActive}
-                    delay={delay}
-                  />
-                );
+                return <AnimatedTick key={line.index} line={line} isActive={isActive} delay={delay} />;
               })}
             </g>
           </svg>

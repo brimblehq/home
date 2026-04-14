@@ -25,9 +25,7 @@ export function DiskSizeSelect({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs text-dash-text-faded">
-        {label}
-      </label>
+      <label className="mb-1.5 block text-xs text-dash-text-faded">{label}</label>
       <Dropdown value={value} options={diskSizes} onChange={onChange} />
     </div>
   );

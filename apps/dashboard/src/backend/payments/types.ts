@@ -92,12 +92,7 @@ export interface SwapPlanInput {
   target_plan: string;
 }
 
-export type PurchaseType =
-  | "PURCHASE_DOMAIN"
-  | "RENEW_DOMAIN"
-  | "SERVICE_PURCHASE"
-  | "LLM_TOKENS"
-  | "BUILD_MINUTES";
+export type PurchaseType = "PURCHASE_DOMAIN" | "RENEW_DOMAIN" | "SERVICE_PURCHASE" | "LLM_TOKENS" | "BUILD_MINUTES";
 
 export interface PurchaseInput {
   type: PurchaseType;
@@ -154,11 +149,7 @@ export interface PaymentsApi {
   createSubscription(input: CreateSubscriptionInput): Promise<Subscription>;
   swapPlan(input: SwapPlanInput): Promise<Subscription>;
   cancelSubscription(): Promise<void>;
-  listInvoices(input?: {
-    cursor?: string | null;
-    per_page?: number;
-    team_id?: string;
-  }): Promise<InvoicePage>;
+  listInvoices(input?: { cursor?: string | null; per_page?: number; team_id?: string }): Promise<InvoicePage>;
   purchase(input: PurchaseInput): Promise<PurchaseResult>;
   verifyTransaction(reference: string): Promise<VerifyTransactionResult>;
   updateSpendingLimit(input: UpdateSpendingLimitInput): Promise<void>;

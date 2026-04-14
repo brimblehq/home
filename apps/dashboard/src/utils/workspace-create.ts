@@ -38,10 +38,7 @@ export function slugifyWorkspaceName(input: string) {
 }
 
 export const workspaceNameStepSchema = Yup.object({
-  name: Yup.string()
-    .trim()
-    .min(3, "Workspace name must be at least 3 characters")
-    .required("Workspace name is required"),
+  name: Yup.string().trim().min(3, "Workspace name must be at least 3 characters").required("Workspace name is required"),
   slug: Yup.string()
     .trim()
     .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers and hyphens only")
@@ -50,10 +47,7 @@ export const workspaceNameStepSchema = Yup.object({
 
 export const workspaceConfigStepSchema = Yup.object({
   teamSize: Yup.number().min(1).required(),
-  concurrentBuilds: Yup.number()
-    .min(WORKSPACE_MIN_BUILDS)
-    .max(WORKSPACE_MAX_BUILDS)
-    .required(),
+  concurrentBuilds: Yup.number().min(WORKSPACE_MIN_BUILDS).max(WORKSPACE_MAX_BUILDS).required(),
   promoCode: Yup.string().default(""),
   startupCodeReference: Yup.string().default(""),
 });
@@ -112,8 +106,7 @@ export function buildCreateWorkspacePayload(input: {
     type: TEAM_PLAN_TYPE,
     members: input.invitedEmails,
     image: input.imageUrl?.trim() || null,
-    startup_code_reference:
-      input.startupCodeReference?.trim() || input.promoCode?.trim() || "",
+    startup_code_reference: input.startupCodeReference?.trim() || input.promoCode?.trim() || "",
     specifications: {
       members: input.teamSize,
       concurrent_builds: input.concurrentBuilds,

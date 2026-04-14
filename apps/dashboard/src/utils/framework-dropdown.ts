@@ -7,9 +7,7 @@ export type FrameworkDropdownOption = {
   iconClassName?: string;
 };
 
-export function mapFrameworksToDropdownOptions(
-  frameworks: FrameworkOption[] | undefined | null,
-): FrameworkDropdownOption[] {
+export function mapFrameworksToDropdownOptions(frameworks: FrameworkOption[] | undefined | null): FrameworkDropdownOption[] {
   return (frameworks || []).map((item) => {
     const slug = item.slug?.trim().toLowerCase() || "";
     const name = item.name?.trim().toLowerCase() || "";

@@ -24,11 +24,7 @@ function clampDateToBounds(date: Date, minDate?: Date, maxDate?: Date): Date {
   return new Date(value);
 }
 
-function clampRangeToBounds(
-  range: DateRange | undefined,
-  minDate?: Date,
-  maxDate?: Date,
-): DateRange | undefined {
+function clampRangeToBounds(range: DateRange | undefined, minDate?: Date, maxDate?: Date): DateRange | undefined {
   if (!range) return undefined;
 
   const next: Partial<DateRange> = {};
@@ -50,17 +46,9 @@ function clampRangeToBounds(
   return { from: next.from, to: next.to };
 }
 
-export function DateRangePicker({
-  value,
-  onChange,
-  minDate,
-  maxDate,
-  children,
-}: DateRangePickerProps) {
+export function DateRangePicker({ value, onChange, minDate, maxDate, children }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<DateRange | undefined>(
-    clampRangeToBounds(value, minDate, maxDate),
-  );
+  const [draft, setDraft] = useState<DateRange | undefined>(clampRangeToBounds(value, minDate, maxDate));
   const ref = useRef<HTMLDivElement>(null);
 
   // Sync draft when value changes externally
@@ -72,8 +60,7 @@ export function DateRangePicker({
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -116,10 +103,7 @@ export function DateRangePicker({
                 numberOfMonths={2}
                 selected={draft}
                 onSelect={setDraft}
-                disabled={[
-                  ...(minDate ? [{ before: minDate }] : []),
-                  ...(maxDate ? [{ after: maxDate }] : []),
-                ]}
+                disabled={[...(minDate ? [{ before: minDate }] : []), ...(maxDate ? [{ after: maxDate }] : [])]}
                 showOutsideDays
                 weekStartsOn={1}
                 classNames={{
@@ -128,8 +112,7 @@ export function DateRangePicker({
                   month: "rdp-month relative w-[296px]",
                   month_caption:
                     "rdp-month_caption flex items-center justify-center border-b-[0.5px] border-[#d9dadd] px-3 py-3 dark:border-dash-border",
-                  caption_label:
-                    "text-[13px] font-medium leading-5 text-dash-text-strong",
+                  caption_label: "text-[13px] font-medium leading-5 text-dash-text-strong",
                   nav: "flex items-center",
                   button_previous:
                     "absolute left-3 top-2.5 z-10 inline-flex size-7 items-center justify-center rounded-[6px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong",
@@ -137,8 +120,7 @@ export function DateRangePicker({
                     "absolute right-3 top-2.5 z-10 inline-flex size-7 items-center justify-center rounded-[6px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong",
                   month_grid: "w-full border-collapse",
                   weekdays: "rdp-weekdays flex",
-                  weekday:
-                    "rdp-weekday flex h-8 flex-1 items-center justify-center text-[13px] font-medium text-dash-text-faded",
+                  weekday: "rdp-weekday flex h-8 flex-1 items-center justify-center text-[13px] font-medium text-dash-text-faded",
                   week: "rdp-week flex",
                   day: "rdp-day relative flex h-8 flex-1 items-center justify-center text-[13px] font-medium text-dash-text-strong",
                   day_button:
@@ -147,18 +129,13 @@ export function DateRangePicker({
                   range_start: "rdp-range-start",
                   range_end: "rdp-range-end",
                   range_middle: "rdp-range-middle",
-                  outside:
-                    "rdp-outside [&_.rdp-day_button]:text-[#d1d5db] dark:[&_.rdp-day_button]:text-[#555]",
+                  outside: "rdp-outside [&_.rdp-day_button]:text-[#d1d5db] dark:[&_.rdp-day_button]:text-[#555]",
                   disabled: "opacity-25 pointer-events-none",
                   today: "rdp-today",
                 }}
                 components={{
                   Chevron: ({ orientation }) =>
-                    orientation === "left" ? (
-                      <ChevronLeft className="size-4" />
-                    ) : (
-                      <ChevronRight className="size-4" />
-                    ),
+                    orientation === "left" ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />,
                 }}
               />
 

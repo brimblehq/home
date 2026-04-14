@@ -45,6 +45,7 @@ Choose a track based on your goal:
 ## Component references
 
 Use `references/components-index.md` as the entry point. Each component reference should include:
+
 - Intent and best-fit scenarios.
 - Minimal usage pattern with local conventions.
 - Pitfalls and performance notes.

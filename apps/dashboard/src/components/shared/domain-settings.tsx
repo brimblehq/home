@@ -7,13 +7,7 @@ import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 import { FolderTrashIcon } from "./folder-trash-icon";
 import { GlossyButton } from "./glossy-button";
-import {
-  Modal,
-  ModalCancelButton,
-  ModalContinueButton,
-  ModalFooter,
-  ModalHeader,
-} from "./modal";
+import { Modal, ModalCancelButton, ModalContinueButton, ModalFooter, ModalHeader } from "./modal";
 import { SimpleTooltip } from "./tooltip";
 import { ToggleSwitch } from "./toggle-switch";
 import { WarningModal } from "./warning-modal";
@@ -77,11 +71,7 @@ function CopyButton({ text }: { text: string }) {
   }
 
   return (
-    <button
-      onClick={handleCopy}
-      className="text-dash-text-body transition-colors hover:text-dash-text-strong"
-      title="Copy"
-    >
+    <button onClick={handleCopy} className="text-dash-text-body transition-colors hover:text-dash-text-strong" title="Copy">
       {copied ? (
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#34d399]">
           <path d="M3 8.5L6.5 12L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -105,13 +95,7 @@ function AddDnsRecordModal({
   onOpenChange: (open: boolean) => void;
   domainName: string;
   editingRecord?: DnsRecord | null;
-  onSubmit: (input: {
-    name: string;
-    type: string;
-    value: string;
-    ttl: string;
-    isProxied: boolean;
-  }) => Promise<void>;
+  onSubmit: (input: { name: string; type: string; value: string; ttl: string; isProxied: boolean }) => Promise<void>;
   submitting: boolean;
 }) {
   const isEditing = !!editingRecord;
@@ -135,8 +119,7 @@ function AddDnsRecordModal({
   useEffect(() => {
     if (!typeOpen) return;
     function handleClick(e: MouseEvent) {
-      if (typeRef.current && !typeRef.current.contains(e.target as Node))
-        setTypeOpen(false);
+      if (typeRef.current && !typeRef.current.contains(e.target as Node)) setTypeOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -179,9 +162,7 @@ function AddDnsRecordModal({
         <FormField label="Name" placeholder="Name" value={name} onChange={setName} />
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
-            Type
-          </label>
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">Type</label>
           <div ref={typeRef} className="relative">
             <button
               type="button"
@@ -201,9 +182,7 @@ function AddDnsRecordModal({
                       setTypeOpen(false);
                     }}
                     className={`flex w-full items-center px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-dash-bg-elevated ${
-                      t === type
-                        ? "font-medium text-dash-text-strong"
-                        : "font-light text-dash-text-faded"
+                      t === type ? "font-medium text-dash-text-strong" : "font-light text-dash-text-faded"
                     }`}
                   >
                     {t}
@@ -222,9 +201,7 @@ function AddDnsRecordModal({
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium text-dash-text-strong">Proxy</span>
-                <span className="text-sm text-dash-text-faded">
-                  Route through Brimble for SSL and IP protection
-                </span>
+                <span className="text-sm text-dash-text-faded">Route through Brimble for SSL and IP protection</span>
               </div>
               <ToggleSwitch checked={isProxied} onChange={setIsProxied} />
             </div>
@@ -239,10 +216,8 @@ function AddDnsRecordModal({
                     : `[name].${domainName}`}
                 </span>{" "}
                 {type === "CNAME" ? "is an alias of" : "points to"}{" "}
-                <span className="font-semibold">
-                  {value.trim() || (type === "CNAME" ? "[target]" : "[IP address]")}
-                </span>{" "}
-                and has its traffic proxied through Brimble.
+                <span className="font-semibold">{value.trim() || (type === "CNAME" ? "[target]" : "[IP address]")}</span> and has its
+                traffic proxied through Brimble.
               </p>
             ) : null}
           </div>
@@ -277,9 +252,7 @@ function FormField({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
-        {label}
-      </label>
+      <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">{label}</label>
       <input
         type="text"
         placeholder={placeholder}
@@ -291,15 +264,7 @@ function FormField({
   );
 }
 
-export function DomainSettings({
-  domain,
-  backPath,
-  workspace,
-}: {
-  domain: DomainInfo;
-  backPath: string;
-  workspace?: string;
-}) {
+export function DomainSettings({ domain, backPath, workspace }: { domain: DomainInfo; backPath: string; workspace?: string }) {
   const [records, setRecords] = useState(domain.dnsRecords);
   const [addRecordOpen, setAddRecordOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DnsRecord | null>(null);
@@ -372,9 +337,7 @@ export function DomainSettings({
       const result = await (listDomainProjectsServerFn as any)({
         data: { workspace },
       });
-      setLinkProjectList(
-        (result?.items ?? []).map((p: any) => ({ id: String(p.id ?? p._id), name: p.name ?? "" })),
-      );
+      setLinkProjectList((result?.items ?? []).map((p: any) => ({ id: String(p.id ?? p._id), name: p.name ?? "" })));
     } catch {
       toast.error("Failed to load projects");
     } finally {
@@ -411,64 +374,66 @@ export function DomainSettings({
     setRenewAutoRenew(Boolean(domain.autoRenewal));
   }, [domain.renewalDuration, domain.autoRenewal, domain.domainId]);
 
-  const upsertRecord = useCallback((input: {
-    record: {
-      id?: string;
-      type: string;
-      name: string;
-      value: string;
-      ttl?: number;
-      isProxied?: boolean;
-    };
-    ttlLabel: string;
-    previousId?: string;
-  }) => {
-    setRecords((prev) => {
-      const normalized: DnsRecord = {
-        id: input.record.id,
-        type: input.record.type,
-        name: input.record.name,
-        value: input.record.value,
-        ttl: input.ttlLabel || "Auto",
-        ttlSeconds: input.record.ttl,
-        isProxied: input.record.isProxied,
+  const upsertRecord = useCallback(
+    (input: {
+      record: {
+        id?: string;
+        type: string;
+        name: string;
+        value: string;
+        ttl?: number;
+        isProxied?: boolean;
       };
+      ttlLabel: string;
+      previousId?: string;
+    }) => {
+      setRecords((prev) => {
+        const normalized: DnsRecord = {
+          id: input.record.id,
+          type: input.record.type,
+          name: input.record.name,
+          value: input.record.value,
+          ttl: input.ttlLabel || "Auto",
+          ttlSeconds: input.record.ttl,
+          isProxied: input.record.isProxied,
+        };
 
-      const targetId = input.previousId ?? input.record.id;
-      if (targetId) {
-        const existingIndex = prev.findIndex((item) => item.id === targetId);
-        if (existingIndex >= 0) {
-          const next = [...prev];
-          next[existingIndex] = normalized;
-          return next;
+        const targetId = input.previousId ?? input.record.id;
+        if (targetId) {
+          const existingIndex = prev.findIndex((item) => item.id === targetId);
+          if (existingIndex >= 0) {
+            const next = [...prev];
+            next[existingIndex] = normalized;
+            return next;
+          }
         }
+
+        return [...prev, normalized];
+      });
+    },
+    [],
+  );
+
+  const deleteRecord = useCallback(
+    (index: number) => {
+      const record = records[index];
+      if (!record?.id) {
+        toast.error("Unable to delete DNS record: missing record id");
+        return;
       }
 
-      return [...prev, normalized];
-    });
-  }, []);
+      setDeletingRecordId(record.id);
+      setRecords((prev) => prev.filter((_, i) => i !== index));
 
-  const deleteRecord = useCallback((index: number) => {
-    const record = records[index];
-    if (!record?.id) {
-      toast.error("Unable to delete DNS record: missing record id");
-      return;
-    }
+      const deletePromise = deleteDnsRecord({
+        data: {
+          ...(workspace ? { workspace } : {}),
+          domainName: domain.domainName,
+          recordId: record.id,
+        },
+      });
 
-    setDeletingRecordId(record.id);
-    setRecords((prev) => prev.filter((_, i) => i !== index));
-
-    const deletePromise = deleteDnsRecord({
-      data: {
-        ...(workspace ? { workspace } : {}),
-        domainName: domain.domainName,
-        recordId: record.id,
-      },
-    });
-
-    toast.promise(
-      deletePromise,
-      {
+      toast.promise(deletePromise, {
         loading: "Deleting DNS record…",
         success: "DNS record deleted",
         error: (error) => {
@@ -479,99 +444,86 @@ export function DomainSettings({
           });
           return error instanceof Error ? error.message : "Failed to delete DNS record";
         },
-      },
-    );
+      });
 
-    void deletePromise.finally(() => {
-      setDeletingRecordId(null);
-    });
-  }, [records, deleteDnsRecord, workspace, domain.domainName]);
+      void deletePromise.finally(() => {
+        setDeletingRecordId(null);
+      });
+    },
+    [records, deleteDnsRecord, workspace, domain.domainName],
+  );
 
-  const handleDnsSubmit = useCallback(async (input: {
-    name: string;
-    type: string;
-    value: string;
-    ttl: string;
-    isProxied: boolean;
-  }) => {
-    const previousRecord = editingRecord;
-    const parsedTtl = Number(input.ttl);
-    const ttl = Number.isFinite(parsedTtl) && parsedTtl > 0 ? parsedTtl : (previousRecord?.ttlSeconds ?? 3600);
+  const handleDnsSubmit = useCallback(
+    async (input: { name: string; type: string; value: string; ttl: string; isProxied: boolean }) => {
+      const previousRecord = editingRecord;
+      const parsedTtl = Number(input.ttl);
+      const ttl = Number.isFinite(parsedTtl) && parsedTtl > 0 ? parsedTtl : (previousRecord?.ttlSeconds ?? 3600);
 
-    try {
-      setDnsSubmitting(true);
+      try {
+        setDnsSubmitting(true);
 
-      if (previousRecord?.id) {
-        const updated = await updateDnsRecord({
-          data: {
-            ...(workspace ? { workspace } : {}),
-            domainName: domain.domainName,
-            recordId: previousRecord.id,
-            record: {
-              type: input.type,
-              name: input.name,
-              value: input.value,
-              ttl,
-              isProxied: input.isProxied,
+        if (previousRecord?.id) {
+          const updated = await updateDnsRecord({
+            data: {
+              ...(workspace ? { workspace } : {}),
+              domainName: domain.domainName,
+              recordId: previousRecord.id,
+              record: {
+                type: input.type,
+                name: input.name,
+                value: input.value,
+                ttl,
+                isProxied: input.isProxied,
+              },
             },
-          },
-        });
+          });
 
-        upsertRecord({
-          record: updated,
-          ttlLabel: input.ttl || previousRecord.ttl || "Auto",
-          previousId: previousRecord.id,
-        });
-        toast.success("DNS record updated");
-      } else {
-        const created = await createDnsRecord({
-          data: {
-            ...(workspace ? { workspace } : {}),
-            domainName: domain.domainName,
-            record: {
-              type: input.type,
-              name: input.name,
-              value: input.value,
-              ttl,
-              isProxied: input.isProxied,
+          upsertRecord({
+            record: updated,
+            ttlLabel: input.ttl || previousRecord.ttl || "Auto",
+            previousId: previousRecord.id,
+          });
+          toast.success("DNS record updated");
+        } else {
+          const created = await createDnsRecord({
+            data: {
+              ...(workspace ? { workspace } : {}),
+              domainName: domain.domainName,
+              record: {
+                type: input.type,
+                name: input.name,
+                value: input.value,
+                ttl,
+                isProxied: input.isProxied,
+              },
             },
-          },
-        });
+          });
 
-        upsertRecord({
-          record: created,
-          ttlLabel: input.ttl || "Auto",
-        });
-        toast.success("DNS record created");
+          upsertRecord({
+            record: created,
+            ttlLabel: input.ttl || "Auto",
+          });
+          toast.success("DNS record created");
+        }
+
+        setAddRecordOpen(false);
+        setEditingRecord(null);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to save DNS record");
+      } finally {
+        setDnsSubmitting(false);
       }
-
-      setAddRecordOpen(false);
-      setEditingRecord(null);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save DNS record");
-    } finally {
-      setDnsSubmitting(false);
-    }
-  }, [
-    editingRecord,
-    updateDnsRecord,
-    workspace,
-    domain.domainName,
-    upsertRecord,
-    createDnsRecord,
-  ]);
+    },
+    [editingRecord, updateDnsRecord, workspace, domain.domainName, upsertRecord, createDnsRecord],
+  );
 
   const renewalUnitPrice = Number(domain.renewalPrice ?? 0);
   const totalRenewalPrice = renewalUnitPrice * renewDuration;
   const canAutomaticallyTransfer = domain.canTransferOut !== false;
   const transferSupportMessage =
-    domain.transferOutMessage
-    || "This domain does not support automatic transfer in the dashboard. Contact support and we will help you complete the transfer manually.";
-  const canContinueTransfer =
-    transferChecklist.unlocked
-    && transferChecklist.registrantEmailReady
-    && transferChecklist.understandDnsImpact;
-
+    domain.transferOutMessage ||
+    "This domain does not support automatic transfer in the dashboard. Contact support and we will help you complete the transfer manually.";
+  const canContinueTransfer = transferChecklist.unlocked && transferChecklist.registrantEmailReady && transferChecklist.understandDnsImpact;
 
   async function handleCheckDnsStatus() {
     try {
@@ -621,10 +573,7 @@ export function DomainSettings({
       {/* Sub-bar: Back + domain name + action icons */}
       <div className="flex items-center justify-between border-b-[0.5px] border-dash-border px-8 py-2">
         <div className="flex items-center gap-16">
-          <Link
-            to={backPath}
-            className="text-sm text-dash-text-faded underline transition-colors hover:text-dash-text-strong"
-          >
+          <Link to={backPath} className="text-sm text-dash-text-faded underline transition-colors hover:text-dash-text-strong">
             Back
           </Link>
           <a
@@ -645,10 +594,7 @@ export function DomainSettings({
               </span>
             </SimpleTooltip>
           ) : (
-            <button
-              onClick={() => setDeleteOpen(true)}
-              className="transition-opacity hover:opacity-70"
-            >
+            <button onClick={() => setDeleteOpen(true)} className="transition-opacity hover:opacity-70">
               <FolderTrashIcon className="size-4" />
             </button>
           )}
@@ -670,10 +616,7 @@ export function DomainSettings({
                   <Link
                     to={
                       `${`/projects/${encodeURIComponent(
-                        domain.connectedProjectSlug
-                          || domain.connectedProjectName
-                          || domain.connectedProjectId
-                          || "",
+                        domain.connectedProjectSlug || domain.connectedProjectName || domain.connectedProjectId || "",
                       )}`}${workspace ? `?workspace=${encodeURIComponent(workspace)}` : ""}` as any
                     }
                     className="underline decoration-dash-border-soft underline-offset-2 transition-colors hover:text-dash-text-strong"
@@ -728,16 +671,12 @@ export function DomainSettings({
         ) : domain.nameserverWarning ? null : domainActive ? (
           <div className="flex items-center gap-3 rounded-[4px] bg-[#f0fdf4] px-4 py-3 dark:bg-[#162317]">
             <CheckCircle className="size-5 shrink-0 text-[#34d399]" weight="fill" />
-            <span className="text-sm text-dash-text-body">
-              Domain is active — DNS has propagated and your settings are live.
-            </span>
+            <span className="text-sm text-dash-text-body">Domain is active — DNS has propagated and your settings are live.</span>
           </div>
         ) : (
           <div className="flex items-center gap-3 rounded-[4px] bg-[#fffbeb] px-4 py-3 dark:bg-[#2a2518]">
             <AlertCircle className="size-5 shrink-0 text-[#e89c30]" />
-            <span className="text-sm text-dash-text-body">
-              DNS is still propagating. This can take up to 48 hours.
-            </span>
+            <span className="text-sm text-dash-text-body">DNS is still propagating. This can take up to 48 hours.</span>
             <button
               onClick={handleCheckDnsStatus}
               disabled={refreshingStatus}
@@ -753,9 +692,7 @@ export function DomainSettings({
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-1">
-              <h2 className="text-base font-medium leading-5 tracking-[-0.026px] text-dash-text-body dark:text-white">
-                DNS Records
-              </h2>
+              <h2 className="text-base font-medium leading-5 tracking-[-0.026px] text-dash-text-body dark:text-white">DNS Records</h2>
               <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
                 Manage the domain name system for your domain "
                 <a
@@ -772,9 +709,7 @@ export function DomainSettings({
             {records.length > 0 &&
               (domain.isExpired ? (
                 <SimpleTooltip content="DNS cannot be managed for expired domains" side="left">
-                  <span
-                    className="flex w-fit shrink-0 cursor-not-allowed items-center gap-1 whitespace-nowrap rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-3 py-[5px] text-sm font-medium text-white opacity-50 shadow-[0px_1px_2px_rgba(18,18,23,0.05)]"
-                  >
+                  <span className="flex w-fit shrink-0 cursor-not-allowed items-center gap-1 whitespace-nowrap rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-3 py-[5px] text-sm font-medium text-white opacity-50 shadow-[0px_1px_2px_rgba(18,18,23,0.05)]">
                     <Plus className="size-4" />
                     <span className="px-1">Add a New Record</span>
                   </span>
@@ -801,18 +736,10 @@ export function DomainSettings({
           {/* Column headers — hidden on mobile */}
           {records.length > 0 && (
             <div className="hidden grid-cols-[92px_minmax(0,1fr)_84px_minmax(0,2fr)_76px] gap-2 px-3.5 sm:grid">
-              <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
-                Type
-              </span>
-              <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
-                Name
-              </span>
-              <span className="whitespace-nowrap text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
-                TTL
-              </span>
-              <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">
-                Value
-              </span>
+              <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">Type</span>
+              <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">Name</span>
+              <span className="whitespace-nowrap text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">TTL</span>
+              <span className="text-xs font-medium leading-5 tracking-[-0.019px] text-dash-text-body">Value</span>
               <span className="w-[76px]" />
             </div>
           )}
@@ -827,9 +754,7 @@ export function DomainSettings({
                   Add your first DNS record to point <span className="font-mono">{domain.domainName}</span> to the service you want.
                 </p>
                 {domain.isExpired ? (
-                  <p className="text-xs text-[#ef2f1f]">
-                    DNS records cannot be managed for expired domains.
-                  </p>
+                  <p className="text-xs text-[#ef2f1f]">DNS records cannot be managed for expired domains.</p>
                 ) : (
                   <GlossyButton
                     type="button"
@@ -849,11 +774,7 @@ export function DomainSettings({
               records.map((record, i) => (
                 <div
                   key={i}
-                  className={`bg-dash-bg-elevated px-3.5 py-2.5 ${
-                    i < records.length - 1
-                      ? "border-b-[0.5px] border-dash-border"
-                      : ""
-                  }`}
+                  className={`bg-dash-bg-elevated px-3.5 py-2.5 ${i < records.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
                 >
                   {/* Desktop: grid layout */}
                   <div className="hidden items-center gap-2 sm:grid sm:grid-cols-[92px_minmax(0,1fr)_84px_minmax(0,2fr)_76px]">
@@ -861,7 +782,14 @@ export function DomainSettings({
                       <span className="flex items-center gap-1.5">
                         {record.type}
                         {record.isProxied && (
-                          <SimpleTooltip content={<><CheckCircle size={13} weight="fill" className="text-[#34d399]" />Proxied by Brimble</>}>
+                          <SimpleTooltip
+                            content={
+                              <>
+                                <CheckCircle size={13} weight="fill" className="text-[#34d399]" />
+                                Proxied by Brimble
+                              </>
+                            }
+                          >
                             <span className="text-[#4879f8]">
                               <ShieldCheck size={14} weight="fill" />
                             </span>
@@ -976,13 +904,10 @@ export function DomainSettings({
         {/* Nameservers section */}
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <h2 className="text-base font-medium leading-5 tracking-[-0.026px] text-dash-text-body dark:text-white">
-              Nameservers
-            </h2>
+            <h2 className="text-base font-medium leading-5 tracking-[-0.026px] text-dash-text-body dark:text-white">Nameservers</h2>
             <p className="max-w-[720px] text-sm font-light leading-[1.3] text-dash-text-faded">
-              To use Brimble Name Servers, Kindly enable DNS for this domain. It
-              can always be disabled too from the Domains Page. Point your domain
-              nameservers of "
+              To use Brimble Name Servers, Kindly enable DNS for this domain. It can always be disabled too from the Domains Page. Point
+              your domain nameservers of "
               <a
                 href={`https://${domain.domainName}`}
                 target="_blank"
@@ -1002,9 +927,7 @@ export function DomainSettings({
         {domain.nameserverWarning && (
           <div className="flex items-center gap-3 rounded-[4px] bg-[#fff8f0] px-4 py-3 dark:bg-[#2a2118]">
             <AlertCircle className="size-5 shrink-0 text-[#e89c30]" />
-            <span className="text-sm text-dash-text-body">
-              {domain.nameserverWarning}
-            </span>
+            <span className="text-sm text-dash-text-body">{domain.nameserverWarning}</span>
           </div>
         )}
 
@@ -1014,14 +937,10 @@ export function DomainSettings({
             <div
               key={ns}
               className={`flex items-center justify-between bg-dash-bg-elevated px-3.5 py-2.5 ${
-                i < domain.nameservers.length - 1
-                  ? "border-b-[0.5px] border-dash-border"
-                  : ""
+                i < domain.nameservers.length - 1 ? "border-b-[0.5px] border-dash-border" : ""
               }`}
             >
-              <span className="font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">
-                {ns}
-              </span>
+              <span className="font-mono text-sm font-light leading-5 tracking-[-0.022px] text-dash-text-body">{ns}</span>
               <CopyButton text={ns} />
             </div>
           ))}
@@ -1035,40 +954,26 @@ export function DomainSettings({
                   Transfer to another provider
                 </h2>
                 <p className="max-w-[720px] text-sm font-light leading-[1.3] text-dash-text-faded">
-                  Move this domain to another registrar (for example from Brimble to Namecheap or
-                  GoDaddy). The transfer is finalized at the destination provider.
+                  Move this domain to another registrar (for example from Brimble to Namecheap or GoDaddy). The transfer is finalized at the
+                  destination provider.
                 </p>
               </div>
               {domain.isExpired ? (
-                <SimpleTooltip
-                  content="This domain can't be transferred because it has expired"
-                  side="left"
-                >
+                <SimpleTooltip content="This domain can't be transferred because it has expired" side="left">
                   <span className="shrink-0">
-                    <GlossyButton
-                      variant="black"
-                      type="button"
-                      disabled
-                      className="shrink-0 cursor-not-allowed opacity-50"
-                    >
+                    <GlossyButton variant="black" type="button" disabled className="shrink-0 cursor-not-allowed opacity-50">
                       Start transfer
                     </GlossyButton>
                   </span>
                 </SimpleTooltip>
               ) : (
-                <GlossyButton
-                  variant="black"
-                  type="button"
-                  onClick={() => setTransferOutOpen(true)}
-                  className="shrink-0"
-                >
+                <GlossyButton variant="black" type="button" onClick={() => setTransferOutOpen(true)} className="shrink-0">
                   Start transfer
                 </GlossyButton>
               )}
             </div>
           </div>
         )}
-
       </div>
 
       {/* Add DNS Record Modal */}
@@ -1097,10 +1002,7 @@ export function DomainSettings({
         }}
         width={420}
       >
-        <ModalHeader
-          title="Link to project"
-          description="Select a project to connect this domain to"
-        />
+        <ModalHeader title="Link to project" description="Select a project to connect this domain to" />
         <div className="max-h-[280px] overflow-y-auto">
           {linkProjectLoading ? (
             <div className="flex h-20 items-center justify-center">
@@ -1186,15 +1088,11 @@ export function DomainSettings({
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex flex-col">
                     <span className="text-xs text-dash-text-faded">Current registrar</span>
-                    <span className="text-sm font-medium text-dash-text-strong">
-                      {domain.registrar || "Brimble"}
-                    </span>
+                    <span className="text-sm font-medium text-dash-text-strong">{domain.registrar || "Brimble"}</span>
                   </div>
                   <div className="flex flex-col text-right">
                     <span className="text-xs text-dash-text-faded">Domain</span>
-                    <span className="text-sm font-medium text-dash-text-strong">
-                      {domain.domainName}
-                    </span>
+                    <span className="text-sm font-medium text-dash-text-strong">{domain.domainName}</span>
                   </div>
                 </div>
               </div>
@@ -1208,9 +1106,7 @@ export function DomainSettings({
                         <input
                           type="checkbox"
                           checked={transferChecklist.unlocked}
-                          onChange={(e) =>
-                            setTransferChecklist((prev) => ({ ...prev, unlocked: e.target.checked }))
-                          }
+                          onChange={(e) => setTransferChecklist((prev) => ({ ...prev, unlocked: e.target.checked }))}
                           className="mt-0.5 size-4 rounded border-dash-border"
                         />
                         <span className="text-sm text-dash-text-body">
@@ -1246,8 +1142,7 @@ export function DomainSettings({
                           className="mt-0.5 size-4 rounded border-dash-border"
                         />
                         <span className="text-sm text-dash-text-body">
-                          I understand DNS and renewal settings may be managed at the new registrar after
-                          transfer completes.
+                          I understand DNS and renewal settings may be managed at the new registrar after transfer completes.
                         </span>
                       </label>
                     </div>
@@ -1256,8 +1151,7 @@ export function DomainSettings({
                   <div className="rounded-[8px] border border-dash-border bg-dash-bg px-4 py-3">
                     <p className="text-sm font-medium text-dash-text-strong">Authorization code (EPP)</p>
                     <p className="mt-1 text-xs leading-4 text-dash-text-faded">
-                      Some providers ask for an EPP/Auth code during transfer. Click Continue to load the
-                      code for this domain.
+                      Some providers ask for an EPP/Auth code during transfer. Click Continue to load the code for this domain.
                     </p>
                   </div>
                 </>
@@ -1265,12 +1159,12 @@ export function DomainSettings({
                 <div className="flex items-start gap-3 px-1 py-2">
                   <Warning size={18} weight="fill" className="mt-0.5 shrink-0 text-[#f5a623]" />
                   <div className="flex flex-col gap-1">
-                    <p className="text-sm font-medium text-dash-text-strong">
-                      Automatic transfer is not available
-                    </p>
+                    <p className="text-sm font-medium text-dash-text-strong">Automatic transfer is not available</p>
                     <p className="text-sm leading-5 text-dash-text-faded">
                       Automatic transfer isn't supported for this domain. Reach out at{" "}
-                      <a href="mailto:hello@brimble.app" className="underline hover:text-dash-text-body">hello@brimble.app</a>{" "}
+                      <a href="mailto:hello@brimble.app" className="underline hover:text-dash-text-body">
+                        hello@brimble.app
+                      </a>{" "}
                       or use the support chat and a representative will help you complete the transfer.
                     </p>
                   </div>
@@ -1283,9 +1177,7 @@ export function DomainSettings({
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex flex-col">
                     <span className="text-xs text-dash-text-faded">Domain</span>
-                    <span className="text-sm font-medium text-dash-text-strong">
-                      {domain.domainName}
-                    </span>
+                    <span className="text-sm font-medium text-dash-text-strong">{domain.domainName}</span>
                   </div>
                 </div>
               </div>
@@ -1326,9 +1218,7 @@ export function DomainSettings({
                 <GlossyButton
                   variant="white"
                   onClick={() => {
-                    const subject = encodeURIComponent(
-                      `Domain transfer support request: ${domain.domainName}`,
-                    );
+                    const subject = encodeURIComponent(`Domain transfer support request: ${domain.domainName}`);
                     const body = encodeURIComponent(
                       `Hi Brimble team,\n\nI need help transferring ${domain.domainName} to another registrar.\nPlease share the required steps / EPP code.\n`,
                     );
@@ -1339,11 +1229,7 @@ export function DomainSettings({
                   Contact support
                 </GlossyButton>
               ) : (
-                <GlossyButton
-                  variant="white"
-                  onClick={() => setTransferStep("setup")}
-                  className="h-[34px] rounded-[4px] px-3.5 text-sm"
-                >
+                <GlossyButton variant="white" onClick={() => setTransferStep("setup")} className="h-[34px] rounded-[4px] px-3.5 text-sm">
                   Back
                 </GlossyButton>
               )}
@@ -1376,11 +1262,7 @@ export function DomainSettings({
         onOpenChange={setRenewOpen}
         title="Renew this domain?"
         description="Renewing the domain will restore DNS management after the registration is active again."
-        confirmLabel={
-          renewalUnitPrice > 0
-            ? `Pay $${totalRenewalPrice.toFixed(2)} now`
-            : "Renew domain"
-        }
+        confirmLabel={renewalUnitPrice > 0 ? `Pay $${totalRenewalPrice.toFixed(2)} now` : "Renew domain"}
         confirmLoadingLabel="Renewing domain..."
         confirmDisabled={!domain.domainId}
         onConfirm={async () => {
@@ -1412,9 +1294,7 @@ export function DomainSettings({
         <div className="flex flex-col gap-4 text-left">
           <div className="flex items-center justify-between rounded-[8px] border border-dash-border bg-dash-bg-elevated px-3 py-2">
             <span className="text-sm text-dash-text-faded">Domain</span>
-            <span className="text-sm font-medium text-dash-text-strong">
-              {domain.domainName}
-            </span>
+            <span className="text-sm font-medium text-dash-text-strong">{domain.domainName}</span>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -1433,9 +1313,7 @@ export function DomainSettings({
           <div className="flex items-center justify-between py-1">
             <div className="flex flex-col gap-0.5">
               <span className="text-sm text-dash-text-body">Auto renewal</span>
-              <span className="text-xs text-dash-text-faded">
-                Renew automatically before expiration
-              </span>
+              <span className="text-xs text-dash-text-faded">Renew automatically before expiration</span>
             </div>
             <ToggleSwitch checked={renewAutoRenew} onChange={setRenewAutoRenew} />
           </div>
@@ -1443,14 +1321,11 @@ export function DomainSettings({
           {renewalUnitPrice > 0 && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-dash-text-faded">Estimated total</span>
-              <span className="font-medium text-dash-text-strong">
-                ${totalRenewalPrice.toFixed(2)}
-              </span>
+              <span className="font-medium text-dash-text-strong">${totalRenewalPrice.toFixed(2)}</span>
             </div>
           )}
         </div>
       </WarningModal>
-
     </div>
   );
 }
@@ -1458,12 +1333,8 @@ export function DomainSettings({
 function InfoColumn({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-        {label}
-      </span>
-      <span className="text-sm tracking-[-0.084px] text-dash-text-body">
-        {value}
-      </span>
+      <span className="text-sm font-light leading-[1.3] text-dash-text-faded">{label}</span>
+      <span className="text-sm tracking-[-0.084px] text-dash-text-body">{value}</span>
     </div>
   );
 }

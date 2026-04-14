@@ -21,13 +21,7 @@ const defaultValue: WorkspaceRoleValue = {
 
 const WorkspaceRoleContext = createContext<WorkspaceRoleValue>(defaultValue);
 
-export function WorkspaceRoleProvider({
-  value,
-  children,
-}: {
-  value: WorkspaceRoleValue;
-  children: ReactNode;
-}) {
+export function WorkspaceRoleProvider({ value, children }: { value: WorkspaceRoleValue; children: ReactNode }) {
   return <WorkspaceRoleContext value={value}>{children}</WorkspaceRoleContext>;
 }
 

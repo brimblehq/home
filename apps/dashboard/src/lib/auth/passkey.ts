@@ -1,9 +1,4 @@
-import {
-  browserSupportsWebAuthn,
-  browserSupportsWebAuthnAutofill,
-  startAuthentication,
-  startRegistration,
-} from "@simplewebauthn/browser";
+import { browserSupportsWebAuthn, browserSupportsWebAuthnAutofill, startAuthentication, startRegistration } from "@simplewebauthn/browser";
 
 export function isPasskeySupported(): boolean {
   if (typeof window === "undefined") return false;
@@ -27,14 +22,8 @@ export async function runRegistration(options: Record<string, unknown>) {
   return startRegistration({ optionsJSON: options as any });
 }
 
-export async function runAuthentication(
-  options: Record<string, unknown>,
-  useBrowserAutofill = false,
-) {
-  const optionsJSON = normalizeAuthenticationOptions(
-    options,
-    useBrowserAutofill,
-  );
+export async function runAuthentication(options: Record<string, unknown>, useBrowserAutofill = false) {
+  const optionsJSON = normalizeAuthenticationOptions(options, useBrowserAutofill);
   return startAuthentication({
     optionsJSON: optionsJSON as any,
     useBrowserAutofill,
@@ -63,8 +52,7 @@ export function guessDeviceName(): string {
 }
 
 export function passkeyErrorMessage(error: unknown): string {
-  if (!(error instanceof Error))
-    return "Passkey operation failed. Please try again.";
+  if (!(error instanceof Error)) return "Passkey operation failed. Please try again.";
   const msg = error.message || "";
   const lower = msg.toLowerCase();
   const name = getErrorName(error);
@@ -117,10 +105,7 @@ function getErrorName(value: unknown): string {
   return typeof maybeName === "string" ? maybeName : "";
 }
 
-function normalizeAuthenticationOptions(
-  options: Record<string, unknown>,
-  useBrowserAutofill: boolean,
-): Record<string, unknown> {
+function normalizeAuthenticationOptions(options: Record<string, unknown>, useBrowserAutofill: boolean): Record<string, unknown> {
   const normalized: Record<string, unknown> = { ...options };
 
   const rawAllowCredentials = normalized.allowCredentials;
@@ -131,17 +116,11 @@ function normalizeAuthenticationOptions(
       const descriptor: Record<string, unknown> = {
         ...(entry as Record<string, unknown>),
       };
-      const rawTransports = Array.isArray(descriptor.transports)
-        ? descriptor.transports
-        : [];
-      const transports = rawTransports
-        .filter((value): value is string => typeof value === "string")
-        .map((value) => value.toLowerCase());
+      const rawTransports = Array.isArray(descriptor.transports) ? descriptor.transports : [];
+      const transports = rawTransports.filter((value): value is string => typeof value === "string").map((value) => value.toLowerCase());
 
       if (transports.includes("internal")) {
-        descriptor.transports = transports.filter(
-          (value) => value !== "hybrid",
-        );
+        descriptor.transports = transports.filter((value) => value !== "hybrid");
       }
 
       return descriptor;
@@ -150,13 +129,9 @@ function normalizeAuthenticationOptions(
 
   if (!useBrowserAutofill) {
     const existingHints = Array.isArray(normalized.hints)
-      ? normalized.hints.filter(
-          (value): value is string => typeof value === "string",
-        )
+      ? normalized.hints.filter((value): value is string => typeof value === "string")
       : [];
-    const dedupedHints = ["client-device", ...existingHints].filter(
-      (hint, index, all) => all.indexOf(hint) === index,
-    );
+    const dedupedHints = ["client-device", ...existingHints].filter((hint, index, all) => all.indexOf(hint) === index);
     normalized.hints = dedupedHints;
   }
 

@@ -18,4 +18,3 @@ export const backendApi = createBackendApi({
   baseUrl: config.apiUrl,
   getAccessToken: readAccessTokenCookie,
 });
-

@@ -18,9 +18,7 @@ export function Footer() {
             link.internal ? (
               <Link
                 key={link.label}
-                to={
-                  withWorkspaceQuery({ pathname: link.href, searchStr }) as any
-                }
+                to={withWorkspaceQuery({ pathname: link.href, searchStr }) as any}
                 className="text-sm text-dash-text-extra-faded transition-colors hover:text-dash-text-body"
               >
                 {link.label}

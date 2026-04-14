@@ -21,9 +21,7 @@ export interface DrawerUserProfile {
   subscriptionDue?: boolean;
 }
 
-export function mapSettingsSnapshotToDrawerProfile(
-  snapshot: SettingsSidebarSnapshot | null,
-): DrawerUserProfile | null {
+export function mapSettingsSnapshotToDrawerProfile(snapshot: SettingsSidebarSnapshot | null): DrawerUserProfile | null {
   if (!snapshot) {
     return null;
   }

@@ -6,14 +6,8 @@ import config from "@/config";
 export function PaymentProvider({ children }: { children: React.ReactNode }) {
   const stripePromise = useMemo<Promise<Stripe | null> | null>(() => {
     if (!config.stripePublishableKey) return null;
-    return import("@stripe/stripe-js").then(({ loadStripe }) =>
-      loadStripe(config.stripePublishableKey!),
-    );
+    return import("@stripe/stripe-js").then(({ loadStripe }) => loadStripe(config.stripePublishableKey!));
   }, []);
 
-  return stripePromise ? (
-    <Elements stripe={stripePromise}>{children}</Elements>
-  ) : (
-    <>{children}</>
-  );
+  return stripePromise ? <Elements stripe={stripePromise}>{children}</Elements> : <>{children}</>;
 }

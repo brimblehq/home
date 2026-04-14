@@ -14,12 +14,7 @@ import { authLogger } from "@/server/shared/logger";
 function getErrorMeta(error: any) {
   return {
     status: error?.status ?? null,
-    message:
-      typeof error?.message === "string"
-        ? error.message
-        : typeof error?.data?.message === "string"
-          ? error.data.message
-          : null,
+    message: typeof error?.message === "string" ? error.message : typeof error?.data?.message === "string" ? error.data.message : null,
   };
 }
 
@@ -117,9 +112,7 @@ export function getServerBackendApi(geo?: ClientGeoData | null) {
   });
 }
 
-export async function refreshServerSession(
-  refreshToken = getServerRefreshToken(),
-): Promise<AuthSession | null> {
+export async function refreshServerSession(refreshToken = getServerRefreshToken()): Promise<AuthSession | null> {
   if (!refreshToken) {
     authLogger.warn("refreshSession skipped: missing refresh token");
     return null;
@@ -170,12 +163,7 @@ export async function refreshServerSession(
 
     authLogger.warn("refreshServerSession failed", {
       status: status ?? null,
-      message:
-        typeof error?.message === "string"
-          ? error.message
-          : typeof error?.data?.message === "string"
-            ? error.data.message
-            : null,
+      message: typeof error?.message === "string" ? error.message : typeof error?.data?.message === "string" ? error.data.message : null,
       refreshTokenFp,
       currentAccessTokenFp: tokenFingerprint(getServerAccessToken()),
       currentRefreshTokenFp: tokenFingerprint(getServerRefreshToken()),
@@ -188,9 +176,7 @@ export async function refreshServerSession(
   }
 }
 
-export async function withTokenRefresh<T>(
-  fn: (api: BackendApi) => Promise<T>,
-): Promise<T> {
+export async function withTokenRefresh<T>(fn: (api: BackendApi) => Promise<T>): Promise<T> {
   const accessToken = getServerAccessToken();
   const refreshToken = getServerRefreshToken();
 

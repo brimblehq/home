@@ -30,13 +30,7 @@ function useThrottledHaptic() {
   }, [haptics]);
 }
 
-function InlineColorPicker({
-  color,
-  onChange,
-}: {
-  color: string;
-  onChange: (color: string) => void;
-}) {
+function InlineColorPicker({ color, onChange }: { color: string; onChange: (color: string) => void }) {
   const fireHaptic = useThrottledHaptic();
 
   const handleChange = useCallback(
@@ -56,11 +50,7 @@ function InlineColorPicker({
       className="overflow-hidden"
     >
       <div className="flex flex-col gap-3 px-2 pt-2 pb-3">
-        <HexColorPicker
-          color={color}
-          onChange={handleChange}
-          style={{ width: "100%", height: 140 }}
-        />
+        <HexColorPicker color={color} onChange={handleChange} style={{ width: "100%", height: 140 }} />
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-dash-text-extra-faded">#</span>
@@ -84,10 +74,8 @@ function InlineColorPicker({
               className="size-5 rounded-full border transition-transform hover:scale-110"
               style={{
                 backgroundColor: preset,
-                borderColor:
-                  preset === color ? "currentColor" : "rgba(0,0,0,0.1)",
-                boxShadow:
-                  preset === color ? `0 0 0 2px ${preset}40` : undefined,
+                borderColor: preset === color ? "currentColor" : "rgba(0,0,0,0.1)",
+                boxShadow: preset === color ? `0 0 0 2px ${preset}40` : undefined,
               }}
             />
           ))}
@@ -99,8 +87,7 @@ function InlineColorPicker({
 
 export function TagManagementModal({ open, onOpenChange }: TagManagementModalProps) {
   const { canWrite } = useWorkspaceRole();
-  const { tags, createTag, deleteTag, renameTag, updateTagColor } =
-    useTags();
+  const { tags, createTag, deleteTag, renameTag, updateTagColor } = useTags();
   const fireHaptic = useThrottledHaptic();
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(() => randomTagColor());
@@ -147,114 +134,91 @@ export function TagManagementModal({ open, onOpenChange }: TagManagementModalPro
   }
 
   return (
-      <Modal open={open} onOpenChange={onOpenChange} width={420}>
-        <ModalHeader title="Manage tags" description="Create, rename, and delete tags." />
+    <Modal open={open} onOpenChange={onOpenChange} width={420}>
+      <ModalHeader title="Manage tags" description="Create, rename, and delete tags." />
 
-        <div className="flex max-h-[300px] flex-col gap-0.5 overflow-y-auto px-4 py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {tags.length === 0 && (
-            <p className="py-4 text-center text-sm text-dash-text-faded">
-              {canWrite ? "No tags yet. Create one below." : "No tags yet."}
-            </p>
-          )}
+      <div className="flex max-h-[300px] flex-col gap-0.5 overflow-y-auto px-4 py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        {tags.length === 0 && (
+          <p className="py-4 text-center text-sm text-dash-text-faded">{canWrite ? "No tags yet. Create one below." : "No tags yet."}</p>
+        )}
 
-          {tags.map((tag) => (
-            <div key={tag.id}>
-              <div className="group flex items-center gap-2 rounded-[4px] px-2 py-1.5 transition-colors hover:bg-dash-bg-elevated">
-                {/* Color dot — toggle inline picker (disabled for Viewers) */}
-                {canWrite ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setColorPickerId((v) => (v === tag.id ? null : tag.id))
-                  }
-                  className="shrink-0"
-                >
+        {tags.map((tag) => (
+          <div key={tag.id}>
+            <div className="group flex items-center gap-2 rounded-[4px] px-2 py-1.5 transition-colors hover:bg-dash-bg-elevated">
+              {/* Color dot — toggle inline picker (disabled for Viewers) */}
+              {canWrite ? (
+                <button type="button" onClick={() => setColorPickerId((v) => (v === tag.id ? null : tag.id))} className="shrink-0">
                   <span
                     className="block size-4 rounded-full border border-black/10 transition-transform hover:scale-110"
                     style={{ backgroundColor: tag.color }}
                   />
                 </button>
-                ) : (
-                  <span
-                    className="block size-4 shrink-0 rounded-full border border-black/10"
-                    style={{ backgroundColor: tag.color }}
-                  />
-                )}
+              ) : (
+                <span className="block size-4 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: tag.color }} />
+              )}
 
-                {/* Name — inline edit */}
-                {editingId === tag.id ? (
-                  <input
-                    ref={editInputRef}
-                    type="text"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onBlur={() => handleRename(tag.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleRename(tag.id);
-                      if (e.key === "Escape") setEditingId(null);
-                    }}
-                    className="flex-1 rounded-[4px] bg-transparent px-1 text-sm text-dash-text-strong outline-none ring-1 ring-dash-border focus:ring-dash-text-faded"
-                  />
-                ) : (
-                  <span className="flex-1 truncate text-sm text-dash-text-strong">
-                    {tag.name}
-                  </span>
-                )}
+              {/* Name — inline edit */}
+              {editingId === tag.id ? (
+                <input
+                  ref={editInputRef}
+                  type="text"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onBlur={() => handleRename(tag.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRename(tag.id);
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  className="flex-1 rounded-[4px] bg-transparent px-1 text-sm text-dash-text-strong outline-none ring-1 ring-dash-border focus:ring-dash-text-faded"
+                />
+              ) : (
+                <span className="flex-1 truncate text-sm text-dash-text-strong">{tag.name}</span>
+              )}
 
-                {/* Actions — hidden for Viewers */}
-                {canWrite && (
+              {/* Actions — hidden for Viewers */}
+              {canWrite && (
                 <>
-                <button
-                  onClick={() => {
-                    setEditingId(tag.id);
-                    setEditingName(tag.name);
-                  }}
-                  className="shrink-0 text-dash-text-extra-faded opacity-0 transition-opacity hover:text-dash-text-faded group-hover:opacity-100"
-                >
-                  <Pencil className="size-3.5" />
-                </button>
-                <button
-                  disabled={deletingId === tag.id}
-                  onClick={async () => {
-                    setDeletingId(tag.id);
-                    await deleteTag(tag.id);
-                    setDeletingId(null);
-                  }}
-                  className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-100"
-                >
-                  {deletingId === tag.id ? (
-                    <Spinner size="size-3.5" className="text-dash-text-extra-faded" />
-                  ) : (
-                    <FolderTrashIcon className="size-3.5" />
-                  )}
-                </button>
+                  <button
+                    onClick={() => {
+                      setEditingId(tag.id);
+                      setEditingName(tag.name);
+                    }}
+                    className="shrink-0 text-dash-text-extra-faded opacity-0 transition-opacity hover:text-dash-text-faded group-hover:opacity-100"
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                  <button
+                    disabled={deletingId === tag.id}
+                    onClick={async () => {
+                      setDeletingId(tag.id);
+                      await deleteTag(tag.id);
+                      setDeletingId(null);
+                    }}
+                    className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-100"
+                  >
+                    {deletingId === tag.id ? (
+                      <Spinner size="size-3.5" className="text-dash-text-extra-faded" />
+                    ) : (
+                      <FolderTrashIcon className="size-3.5" />
+                    )}
+                  </button>
                 </>
-                )}
-              </div>
-
-              {/* Inline color picker — expands below the row */}
-              <AnimatePresence>
-                {colorPickerId === tag.id && (
-                  <InlineColorPicker
-                    color={tag.color}
-                    onChange={(c) => updateTagColor(tag.id, c)}
-                  />
-                )}
-              </AnimatePresence>
+              )}
             </div>
-          ))}
-        </div>
 
-        {/* Create input — hidden for Viewers */}
-        {canWrite && <div className="border-t border-dash-border-soft">
+            {/* Inline color picker — expands below the row */}
+            <AnimatePresence>
+              {colorPickerId === tag.id && <InlineColorPicker color={tag.color} onChange={(c) => updateTagColor(tag.id, c)} />}
+            </AnimatePresence>
+          </div>
+        ))}
+      </div>
+
+      {/* Create input — hidden for Viewers */}
+      {canWrite && (
+        <div className="border-t border-dash-border-soft">
           <div className="flex items-center gap-2 px-4 py-3">
-            <button
-              type="button"
-              onClick={() =>
-                setColorPickerId((v) => (v === "new" ? null : "new"))
-              }
-              className="shrink-0"
-            >
+            <button type="button" onClick={() => setColorPickerId((v) => (v === "new" ? null : "new"))} className="shrink-0">
               <span
                 className="block size-4 rounded-full border border-black/10 transition-transform hover:scale-110"
                 style={{ backgroundColor: newColor }}
@@ -322,14 +286,8 @@ export function TagManagementModal({ open, onOpenChange }: TagManagementModalPro
                         className="size-5 rounded-full border transition-transform hover:scale-110"
                         style={{
                           backgroundColor: preset,
-                          borderColor:
-                            preset === newColor
-                              ? "currentColor"
-                              : "rgba(0,0,0,0.1)",
-                          boxShadow:
-                            preset === newColor
-                              ? `0 0 0 2px ${preset}40`
-                              : undefined,
+                          borderColor: preset === newColor ? "currentColor" : "rgba(0,0,0,0.1)",
+                          boxShadow: preset === newColor ? `0 0 0 2px ${preset}40` : undefined,
                         }}
                       />
                     ))}
@@ -338,12 +296,13 @@ export function TagManagementModal({ open, onOpenChange }: TagManagementModalPro
               </motion.div>
             )}
           </AnimatePresence>
-        </div>}
+        </div>
+      )}
 
-        <ModalFooter>
-          <div />
-          <ModalCancelButton onClick={() => onOpenChange(false)} />
-        </ModalFooter>
-      </Modal>
+      <ModalFooter>
+        <div />
+        <ModalCancelButton onClick={() => onOpenChange(false)} />
+      </ModalFooter>
+    </Modal>
   );
 }

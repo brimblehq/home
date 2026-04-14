@@ -179,13 +179,10 @@ export function createAnalyticsApi(client: ApiClient): AnalyticsApi {
       if (input.type) query.type = input.type;
       if (input.host) query.host = input.host;
 
-      const response = await client.request(
-        `/core/v1/analytics/${encodeURIComponent(input.projectId)}`,
-        {
-          method: "GET",
-          query,
-        },
-      );
+      const response = await client.request(`/core/v1/analytics/${encodeURIComponent(input.projectId)}`, {
+        method: "GET",
+        query,
+      });
       return unwrap<AnalyticsPayload>(response);
     },
   };

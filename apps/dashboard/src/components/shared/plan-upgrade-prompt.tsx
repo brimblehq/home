@@ -11,26 +11,15 @@ const PLAN_DISPLAY: Record<string, string> = {
   team: "Team",
 };
 
-export function PlanUpgradePrompt({
-  feature,
-  description,
-}: {
-  feature: string;
-  description?: string;
-}) {
+export function PlanUpgradePrompt({ feature, description }: { feature: string; description?: string }) {
   const [changePlanOpen, setChangePlanOpen] = useState(false);
   const { planKey } = usePlanGate();
   const currentPlan = PLAN_DISPLAY[planKey] ?? "Free";
 
   return (
     <div className="flex flex-col items-center justify-center py-20">
-      <LockSimple
-        weight="fill"
-        className="mb-4 size-10 text-dash-text-extra-faded opacity-40"
-      />
-      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-        {feature} is not available on your current plan
-      </h3>
+      <LockSimple weight="fill" className="mb-4 size-10 text-dash-text-extra-faded opacity-40" />
+      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">{feature} is not available on your current plan</h3>
       <p className="mb-5 max-w-[320px] text-center text-sm text-dash-text-faded">
         {description ?? `Upgrade your plan to access ${feature.toLowerCase()}.`}
       </p>
@@ -38,11 +27,7 @@ export function PlanUpgradePrompt({
         Upgrade plan
       </GlossyButton>
 
-      <ChangePlanModal
-        open={changePlanOpen}
-        onOpenChange={setChangePlanOpen}
-        currentPlan={currentPlan}
-      />
+      <ChangePlanModal open={changePlanOpen} onOpenChange={setChangePlanOpen} currentPlan={currentPlan} />
     </div>
   );
 }

@@ -10,15 +10,7 @@ export interface AppLogger {
   withTag: (tag: string) => AppLogger;
 }
 
-const LOG_LEVELS = new Set<LevelWithSilent>([
-  "trace",
-  "debug",
-  "info",
-  "warn",
-  "error",
-  "fatal",
-  "silent",
-]);
+const LOG_LEVELS = new Set<LevelWithSilent>(["trace", "debug", "info", "warn", "error", "fatal", "silent"]);
 
 function resolveLogLevel(): LevelWithSilent {
   const env = process.env.LOG_LEVEL?.trim().toLowerCase() ?? "";
@@ -44,12 +36,7 @@ function normalizeExtra(value: unknown): unknown {
   return value;
 }
 
-function emit(
-  base: PinoLogger,
-  level: LogMethod,
-  message: string,
-  args: unknown[],
-) {
+function emit(base: PinoLogger, level: LogMethod, message: string, args: unknown[]) {
   if (args.length === 0) {
     base[level](message);
     return;

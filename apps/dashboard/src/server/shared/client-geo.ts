@@ -9,24 +9,19 @@ export type ClientGeoPayload = {
   timezone?: string;
 };
 
-export const getClientGeoServerFn = createServerFn({ method: "GET" }).handler(
-  async (): Promise<ClientGeoPayload | null> => {
-    const ip =
-      getRequestHeader("cf-connecting-ip") ??
-      getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ??
-      "";
+export const getClientGeoServerFn = createServerFn({ method: "GET" }).handler(async (): Promise<ClientGeoPayload | null> => {
+  const ip = getRequestHeader("cf-connecting-ip") ?? getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
 
-    if (!ip) return null;
+  if (!ip) return null;
 
-    return {
-      ip,
-      city: decodeHeader(getRequestHeader("cf-ipcity")),
-      region: decodeHeader(getRequestHeader("cf-region")),
-      country: getRequestHeader("cf-ipcountry") ?? undefined,
-      timezone: getRequestHeader("cf-timezone") ?? undefined,
-    };
-  },
-);
+  return {
+    ip,
+    city: decodeHeader(getRequestHeader("cf-ipcity")),
+    region: decodeHeader(getRequestHeader("cf-region")),
+    country: getRequestHeader("cf-ipcountry") ?? undefined,
+    timezone: getRequestHeader("cf-timezone") ?? undefined,
+  };
+});
 
 function decodeHeader(value: string | undefined): string | undefined {
   if (!value) return undefined;

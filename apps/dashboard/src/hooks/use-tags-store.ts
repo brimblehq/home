@@ -40,14 +40,8 @@ interface TagsState {
   deleteTag: (tagId: string) => Promise<void>;
   renameTag: (tagId: string, name: string) => Promise<void>;
   updateTagColor: (tagId: string, color: string) => Promise<void>;
-  toggleTagAssignment: (
-    projectId: string,
-    tagId: string,
-  ) => Promise<{ assigned: boolean }>;
-  getProjectCountForTag: (
-    tagId: string,
-    projects: Array<{ tags?: Array<{ id: string }> }>,
-  ) => number;
+  toggleTagAssignment: (projectId: string, tagId: string) => Promise<{ assigned: boolean }>;
+  getProjectCountForTag: (tagId: string, projects: Array<{ tags?: Array<{ id: string }> }>) => number;
 }
 
 export const useTagsStore = create<TagsState>((set, get) => ({
@@ -132,11 +126,7 @@ export const useTagsStore = create<TagsState>((set, get) => ({
     set((s) => ({ tags: s.tags.filter((t) => t.id !== tagId) }));
 
     try {
-      await (
-        deleteTagServerFn as unknown as (input: {
-          data: { tagId: string };
-        }) => Promise<unknown>
-      )({ data: { tagId } });
+      await (deleteTagServerFn as unknown as (input: { data: { tagId: string } }) => Promise<unknown>)({ data: { tagId } });
     } catch {
       if (removed) set((s) => ({ tags: [...s.tags, removed] }));
     }
@@ -146,17 +136,13 @@ export const useTagsStore = create<TagsState>((set, get) => ({
     const normalized = normalizeTagName(name);
     const prev = get().tags.find((t) => t.id === tagId)?.name;
     set((s) => ({
-      tags: s.tags.map((t) =>
-        t.id === tagId ? { ...t, name: normalized } : t,
-      ),
+      tags: s.tags.map((t) => (t.id === tagId ? { ...t, name: normalized } : t)),
     }));
 
     try {
-      await (
-        updateTagServerFn as unknown as (input: {
-          data: { tagId: string; name: string };
-        }) => Promise<unknown>
-      )({ data: { tagId, name: normalized } });
+      await (updateTagServerFn as unknown as (input: { data: { tagId: string; name: string } }) => Promise<unknown>)({
+        data: { tagId, name: normalized },
+      });
     } catch {
       if (prev !== undefined) {
         set((s) => ({
@@ -173,11 +159,9 @@ export const useTagsStore = create<TagsState>((set, get) => ({
     }));
 
     try {
-      await (
-        updateTagServerFn as unknown as (input: {
-          data: { tagId: string; color: string };
-        }) => Promise<unknown>
-      )({ data: { tagId, color } });
+      await (updateTagServerFn as unknown as (input: { data: { tagId: string; color: string } }) => Promise<unknown>)({
+        data: { tagId, color },
+      });
     } catch {
       if (prev !== undefined) {
         set((s) => ({
@@ -191,9 +175,7 @@ export const useTagsStore = create<TagsState>((set, get) => ({
     tagDebug("toggle:start", { projectId, tagId });
     try {
       const result = await (
-        toggleTagAssignmentServerFn as unknown as (input: {
-          data: { tagId: string; projectId: string };
-        }) => Promise<{ assigned: boolean }>
+        toggleTagAssignmentServerFn as unknown as (input: { data: { tagId: string; projectId: string } }) => Promise<{ assigned: boolean }>
       )({ data: { tagId, projectId } });
       tagDebug("toggle:success", {
         projectId,

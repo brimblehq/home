@@ -1,30 +1,12 @@
 import { useEffect, useState } from "react";
-import {
-  createFileRoute,
-  getRouteApi,
-  useNavigate,
-  useRouter,
-} from "@tanstack/react-router";
-import {
-  ExternalLink,
-  Copy,
-  Check,
-  ArrowUpRight,
-  Terminal,
-  Download,
-  Database,
-  Clock,
-  HardDrive,
-} from "lucide-react";
+import { createFileRoute, getRouteApi, useNavigate, useRouter } from "@tanstack/react-router";
+import { ExternalLink, Copy, Check, ArrowUpRight, Terminal, Download, Database, Clock, HardDrive } from "lucide-react";
 import { SimpleTooltip } from "../../../components/shared/tooltip";
 import { StatusChip } from "../../../components/shared/status-chip";
 import { getProjectScreenshotServerFn } from "@/server/projects/actions";
 import { listFrameworksServerFn } from "@/server/frameworks/actions";
 import { listDeploymentsServerFn } from "@/server/deployments/actions";
-import type {
-  DeploymentLog,
-  PaginatedDeploymentsResponse,
-} from "@/backend/deployments";
+import type { DeploymentLog, PaginatedDeploymentsResponse } from "@/backend/deployments";
 import type { FrameworkOption } from "@/backend/frameworks";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useProjectDeploymentLogsDrawer } from "@/contexts/project-deployment-logs-drawer-context";
@@ -36,10 +18,7 @@ import {
   isWebLikeProject,
 } from "@/utils/project-capabilities";
 import { RegionMap } from "@/components/project/region-map";
-import {
-  DbConnectionCard,
-  DbQuickActionsCard,
-} from "@/components/project/db-connection-sidebar";
+import { DbConnectionCard, DbQuickActionsCard } from "@/components/project/db-connection-sidebar";
 import { redeployProjectServerFn } from "@/server/projects/actions";
 import { useServerFn } from "@tanstack/react-start";
 import { hapticToast as toast } from "@/utils/haptic-toast";
@@ -53,16 +32,7 @@ function formatBytes(bytes: number): string {
 }
 
 /** Backend/service frameworks that don't produce browser screenshots */
-const SERVICE_FRAMEWORKS = new Set([
-  "other",
-  "custom",
-  "docker",
-  "laravel",
-  "php",
-  "python",
-  "golang",
-  "ruby",
-]);
+const SERVICE_FRAMEWORKS = new Set(["other", "custom", "docker", "laravel", "php", "python", "golang", "ruby"]);
 
 const parentRoute = getRouteApi("/projects/$projectId");
 
@@ -76,46 +46,35 @@ export const Route = createFileRoute("/projects/$projectId/")({
     const isWebLike = isWebLikeProject(project);
     const framework = String(project?.framework ?? "").toLowerCase();
     const isService = SERVICE_FRAMEWORKS.has(framework);
-    const needsScreenshot =
-      isWebLike && !isService && !project?.screenshot && project?.id;
+    const needsScreenshot = isWebLike && !isService && !project?.screenshot && project?.id;
 
-    const [deploymentsResult, screenshotResult, frameworksResult] =
-      await Promise.allSettled([
-        project?.id
-          ? (
-              listDeploymentsServerFn as unknown as (input: {
-                data: {
-                  projectId: string;
-                  workspace?: string;
-                  page?: number;
-                  limit?: number;
-                };
-              }) => Promise<PaginatedDeploymentsResponse>
-            )({
-              data: { projectId: project.id, workspace, page: 1, limit: 5 },
-            })
-          : Promise.resolve(null),
-        needsScreenshot
-          ? (
-              getProjectScreenshotServerFn as unknown as (input: {
-                data: { projectId: string };
-              }) => Promise<string | null>
-            )({
-              data: { projectId: project.id },
-            })
-          : Promise.resolve(null),
-        listFrameworksServerFn(),
-      ]);
+    const [deploymentsResult, screenshotResult, frameworksResult] = await Promise.allSettled([
+      project?.id
+        ? (
+            listDeploymentsServerFn as unknown as (input: {
+              data: {
+                projectId: string;
+                workspace?: string;
+                page?: number;
+                limit?: number;
+              };
+            }) => Promise<PaginatedDeploymentsResponse>
+          )({
+            data: { projectId: project.id, workspace, page: 1, limit: 5 },
+          })
+        : Promise.resolve(null),
+      needsScreenshot
+        ? (getProjectScreenshotServerFn as unknown as (input: { data: { projectId: string } }) => Promise<string | null>)({
+            data: { projectId: project.id },
+          })
+        : Promise.resolve(null),
+      listFrameworksServerFn(),
+    ]);
 
     const recentDeployments =
-      deploymentsResult.status === "fulfilled" && deploymentsResult.value
-        ? (deploymentsResult.value.items ?? [])
-        : [];
-    const screenshotUrl =
-      project?.screenshot ??
-      (screenshotResult.status === "fulfilled" ? screenshotResult.value : null);
-    const frameworks =
-      frameworksResult.status === "fulfilled" ? frameworksResult.value : [];
+      deploymentsResult.status === "fulfilled" && deploymentsResult.value ? (deploymentsResult.value.items ?? []) : [];
+    const screenshotUrl = project?.screenshot ?? (screenshotResult.status === "fulfilled" ? screenshotResult.value : null);
+    const frameworks = frameworksResult.status === "fulfilled" ? frameworksResult.value : [];
 
     if (!isWebLike) {
       return { screenshotUrl: null, frameworks, recentDeployments };
@@ -156,13 +115,12 @@ function ProjectDetailPage() {
   const navigate = useNavigate();
   const { projectId } = Route.useParams();
   const { project } = parentRoute.useLoaderData() as any;
-  const { screenshotUrl, isServiceFramework, frameworks, recentDeployments } =
-    Route.useLoaderData() as {
-      screenshotUrl: string | null;
-      isServiceFramework?: boolean;
-      frameworks?: FrameworkOption[];
-      recentDeployments?: DeploymentLog[];
-    };
+  const { screenshotUrl, isServiceFramework, frameworks, recentDeployments } = Route.useLoaderData() as {
+    screenshotUrl: string | null;
+    isServiceFramework?: boolean;
+    frameworks?: FrameworkOption[];
+    recentDeployments?: DeploymentLog[];
+  };
 
   const projectName = project?.name || projectId;
   const isDatabaseProject = getIsDatabaseProject(project);
@@ -175,9 +133,7 @@ function ProjectDetailPage() {
       toast.success("Database restart triggered");
       router.invalidate();
     } catch (error: any) {
-      toast.error(
-        typeof error?.message === "string" ? error.message : "Couldn't restart",
-      );
+      toast.error(typeof error?.message === "string" ? error.message : "Couldn't restart");
     } finally {
       setRestartingDb(false);
     }
@@ -225,37 +181,24 @@ function ProjectDetailPage() {
 
   let computeSizeText = "Not available";
   if (project?.specs) {
-    const memory = project.specs.memory
-      ? `${project.specs.memory}GB RAM`
-      : null;
+    const memory = project.specs.memory ? `${project.specs.memory}GB RAM` : null;
     const cpu = project.specs.cpu ? `${project.specs.cpu} CPU` : null;
-    const storage = project.specs.storage
-      ? `${project.specs.storage}GB Storage`
-      : null;
-    computeSizeText =
-      [memory, cpu, storage].filter(Boolean).join(" • ") || "Not available";
+    const storage = project.specs.storage ? `${project.specs.storage}GB Storage` : null;
+    computeSizeText = [memory, cpu, storage].filter(Boolean).join(" • ") || "Not available";
   }
 
   const frameworkLabel = project?.framework || "Unknown";
-  const matchedFramework = (frameworks ?? []).find(
-    (f) => f.slug === project?.framework,
-  );
+  const matchedFramework = (frameworks ?? []).find((f) => f.slug === project?.framework);
   const frameworkLogo = matchedFramework?.logo;
   const repoSource = project?.repo?.git || "Git";
   const repoName = project?.repo?.name || repoSource;
   const isGitlab = repoSource.toLowerCase() === "gitlab";
   const isBitbucket = repoSource.toLowerCase() === "bitbucket";
   const repositoryHref = project?.gitLink || "";
-  const lastUpdatedText = project?.updatedAt
-    ? formatRelativeTime(project.updatedAt)
-    : "unknown";
-  const mcpServerUrl = project?.domains?.[0]?.name
-    ? `https://${project.domains[0].name}/mcp`
-    : "";
+  const lastUpdatedText = project?.updatedAt ? formatRelativeTime(project.updatedAt) : "unknown";
+  const mcpServerUrl = project?.domains?.[0]?.name ? `https://${project.domains[0].name}/mcp` : "";
 
-  const deploymentRows: Array<{ url: string; date: string }> = (
-    recentDeployments ?? []
-  ).map((dep) => ({
+  const deploymentRows: Array<{ url: string; date: string }> = (recentDeployments ?? []).map((dep) => ({
     url: dep.domain || dep.name || dep.id,
     date: dep.createdAt ? formatRelativeTime(dep.createdAt) : "",
   }));
@@ -270,17 +213,10 @@ function ProjectDetailPage() {
     domainRows = project.domains.map((domain: any) => {
       let type = "Custom domain";
 
-      const domainName =
-        typeof domain?.name === "string" ? domain.name.toLowerCase() : "";
-      const isBrimbleManagedDefault =
-        domainName.endsWith(".brimble.app") ||
-        domainName.endsWith(".brimble.io");
+      const domainName = typeof domain?.name === "string" ? domain.name.toLowerCase() : "";
+      const isBrimbleManagedDefault = domainName.endsWith(".brimble.app") || domainName.endsWith(".brimble.io");
 
-      if (
-        domain?.isDefault === true ||
-        domain?.isCustom === false ||
-        isBrimbleManagedDefault
-      ) {
+      if (domain?.isDefault === true || domain?.isCustom === false || isBrimbleManagedDefault) {
         type = "default domain";
       }
 
@@ -322,17 +258,11 @@ function ProjectDetailPage() {
                 </div>
                 <div className="relative h-[222px] w-full bg-dash-bg-elevated">
                   {screenshotUrl ? (
-                    <img
-                      src={screenshotUrl}
-                      alt={`${projectName} screenshot`}
-                      className="h-full w-full object-cover object-top"
-                    />
+                    <img src={screenshotUrl} alt={`${projectName} screenshot`} className="h-full w-full object-cover object-top" />
                   ) : isServiceFramework ? (
                     <div className="flex h-full flex-col items-center justify-center gap-2 bg-dash-bg">
                       <Terminal className="size-10 text-dash-text-extra-faded" />
-                      <span className="text-sm font-light text-dash-text-faded">
-                        Service deployed successfully
-                      </span>
+                      <span className="text-sm font-light text-dash-text-faded">Service deployed successfully</span>
                     </div>
                   ) : (
                     <div className="flex h-full items-center justify-center text-sm font-light text-dash-text-faded">
@@ -344,20 +274,11 @@ function ProjectDetailPage() {
             </div>
             {/* Project name bar */}
             <div className="flex h-10 items-center justify-between border-t-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5">
-              <span className="text-sm leading-5 tracking-[-0.02px] text-dash-text-faded">
-                {projectName}
-              </span>
+              <span className="text-sm leading-5 tracking-[-0.02px] text-dash-text-faded">{projectName}</span>
               <div className="flex items-center gap-2">
                 {liveHref ? (
-                  <a
-                    href={liveHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2"
-                  >
-                    <span className="text-xs font-light leading-[18px] tracking-[-0.02px] text-dash-text-faded opacity-80">
-                      View live
-                    </span>
+                  <a href={liveHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                    <span className="text-xs font-light leading-[18px] tracking-[-0.02px] text-dash-text-faded opacity-80">View live</span>
                     <ExternalLink className="size-4 text-dash-text-faded" />
                   </a>
                 ) : null}
@@ -368,17 +289,13 @@ function ProjectDetailPage() {
 
         {isMcpProject ? (
           <div className="rounded-[4px] bg-dash-bg-elevated p-3.5">
-            <p className="text-sm font-medium text-dash-text-strong">
-              MCP Server
-            </p>
+            <p className="text-sm font-medium text-dash-text-strong">MCP Server</p>
             <p className="mt-1 text-sm font-light leading-[1.35] text-dash-text-faded">
               {mcpServerUrl ? (
                 <>
                   You can access this MCP server at{" "}
-                  <code className="rounded bg-dash-bg px-1.5 py-0.5 font-mono text-xs text-dash-text-strong">
-                    {mcpServerUrl}
-                  </code>{" "}
-                  and connect over SSE.
+                  <code className="rounded bg-dash-bg px-1.5 py-0.5 font-mono text-xs text-dash-text-strong">{mcpServerUrl}</code> and
+                  connect over SSE.
                 </>
               ) : (
                 "Add a domain to access this MCP server over SSE at /mcp."
@@ -395,11 +312,7 @@ function ProjectDetailPage() {
                   }}
                   className="inline-flex items-center gap-2 rounded-[4px] px-2.5 py-1.5 text-xs text-dash-text-body transition-colors hover:bg-dash-bg"
                 >
-                  {copiedIdx === -1 ? (
-                    <Check className="size-3.5 text-[#13d282]" />
-                  ) : (
-                    <Copy className="size-3.5" />
-                  )}
+                  {copiedIdx === -1 ? <Check className="size-3.5 text-[#13d282]" /> : <Copy className="size-3.5" />}
                   {copiedIdx === -1 ? "Copied" : "Copy MCP URL"}
                 </button>
               ) : null}
@@ -424,12 +337,7 @@ function ProjectDetailPage() {
               : "flex flex-col gap-4 md:flex-row"
           }
         >
-          {isDatabaseProject ? (
-            <DbConnectionCard
-              connectionUri={project?.connectionUri}
-              isActive={projectStatus === "ACTIVE"}
-            />
-          ) : null}
+          {isDatabaseProject ? <DbConnectionCard connectionUri={project?.connectionUri} isActive={projectStatus === "ACTIVE"} /> : null}
 
           {/* Project meta card */}
           <div
@@ -440,53 +348,33 @@ function ProjectDetailPage() {
             </div>
             <div className="flex flex-col">
               <div className="border-b-[0.5px] border-dash-border p-3.5">
-                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                  Last updated {lastUpdatedText}
-                </span>
+                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Last updated {lastUpdatedText}</span>
               </div>
               <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
-                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                  Project status
-                </span>
+                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Project status</span>
                 <StatusChip status={projectStatus} />
               </div>
               <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
-                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                  Status code
-                </span>
+                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Status code</span>
                 {typeof statusCode === "number" ? (
-                  <span className="rounded-[4px] bg-[#13d282]/15 px-2 py-0.5 text-xs font-medium text-[#13d282]">
-                    {statusCode}
-                  </span>
+                  <span className="rounded-[4px] bg-[#13d282]/15 px-2 py-0.5 text-xs font-medium text-[#13d282]">{statusCode}</span>
                 ) : (
-                  <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                    N/A
-                  </span>
+                  <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">N/A</span>
                 )}
               </div>
               <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
-                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                  Region
-                </span>
-                <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                  {regionText}
-                </span>
+                <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Region</span>
+                <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">{regionText}</span>
               </div>
               {showSitePasswordRow ? (
                 <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
-                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                    Site password enabled
-                  </span>
-                  <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                    {passwordEnabledText}
-                  </span>
+                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Site password enabled</span>
+                  <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">{passwordEnabledText}</span>
                 </div>
               ) : null}
               {showMcpAuthRow ? (
                 <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
-                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                    Authentication enabled
-                  </span>
+                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Authentication enabled</span>
                   <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
                     {project?.authEnabled ? "Yes" : "No"}
                   </span>
@@ -494,9 +382,7 @@ function ProjectDetailPage() {
               ) : null}
               {showBuildCacheRow ? (
                 <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
-                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                    Build cache enabled
-                  </span>
+                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Build cache enabled</span>
                   <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
                     {project?.buildCacheEnabled ? "Yes" : "No"}
                   </span>
@@ -504,38 +390,25 @@ function ProjectDetailPage() {
               ) : null}
               {showComputeSizeRow ? (
                 <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
-                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                    Compute size
-                  </span>
-                  <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                    {computeSizeText}
-                  </span>
+                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Compute size</span>
+                  <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">{computeSizeText}</span>
                 </div>
               ) : null}
               {showFrameworkRow ? (
                 <div
                   className={`flex items-center justify-between p-3.5 ${!isDatabaseProject ? "border-b-[0.5px] border-dash-border" : ""}`}
                 >
-                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">
-                    Framework
-                  </span>
+                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Framework</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                      {frameworkLabel}
-                    </span>
+                    <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">{frameworkLabel}</span>
                     {frameworkLogo ? (
-                      frameworkLogo.trim().startsWith("<svg") ||
-                      frameworkLogo.includes("<svg") ? (
+                      frameworkLogo.trim().startsWith("<svg") || frameworkLogo.includes("<svg") ? (
                         <div
                           className="flex size-5 items-center justify-center [&>svg]:size-5"
                           dangerouslySetInnerHTML={{ __html: frameworkLogo }}
                         />
                       ) : (
-                        <img
-                          src={frameworkLogo}
-                          alt={frameworkLabel}
-                          className="size-5"
-                        />
+                        <img src={frameworkLogo} alt={frameworkLabel} className="size-5" />
                       )
                     ) : null}
                   </div>
@@ -543,17 +416,10 @@ function ProjectDetailPage() {
               ) : null}
               {!isDatabaseProject ? (
                 <div className="flex items-center justify-between p-3.5">
-                  <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-faded">
-                    Repository
-                  </span>
+                  <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-faded">Repository</span>
                   <div className="flex items-center gap-2">
                     {repositoryHref ? (
-                      <a
-                        href={repositoryHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2"
-                      >
+                      <a href={repositoryHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                         <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-strong">
                           From <span className="underline">{repoName}</span>
                         </span>
@@ -567,12 +433,7 @@ function ProjectDetailPage() {
                           </div>
                         ) : (
                           <div className="flex size-6 items-center justify-center rounded-full border border-[#3e3e3e] bg-gradient-to-b from-[#666] to-[#1b1b1b] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">
-                            <svg
-                              width="9"
-                              height="9"
-                              viewBox="0 0 16 16"
-                              fill="white"
-                            >
+                            <svg width="9" height="9" viewBox="0 0 16 16" fill="white">
                               <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
                             </svg>
                           </div>
@@ -593,12 +454,7 @@ function ProjectDetailPage() {
                           </div>
                         ) : (
                           <div className="flex size-6 items-center justify-center rounded-full border border-[#3e3e3e] bg-gradient-to-b from-[#666] to-[#1b1b1b] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">
-                            <svg
-                              width="9"
-                              height="9"
-                              viewBox="0 0 16 16"
-                              fill="white"
-                            >
+                            <svg width="9" height="9" viewBox="0 0 16 16" fill="white">
                               <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
                             </svg>
                           </div>
@@ -631,33 +487,23 @@ function ProjectDetailPage() {
                 <div className="flex items-center justify-between px-3.5 py-3.5">
                   <div className="flex items-center gap-2">
                     <HardDrive className="size-4 text-dash-text-extra-faded" />
-                    <span className="text-sm font-light text-dash-text-faded">
-                      Backup size
-                    </span>
+                    <span className="text-sm font-light text-dash-text-faded">Backup size</span>
                   </div>
                   <span className="font-mono text-sm text-dash-text-body">
-                    {project?.backupSize != null
-                      ? formatBytes(project.backupSize)
-                      : "N/A"}
+                    {project?.backupSize != null ? formatBytes(project.backupSize) : "N/A"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between px-3.5 py-3.5">
                   <div className="flex items-center gap-2">
                     <Clock className="size-4 text-dash-text-extra-faded" />
-                    <span className="text-sm font-light text-dash-text-faded">
-                      Backup frequency
-                    </span>
+                    <span className="text-sm font-light text-dash-text-faded">Backup frequency</span>
                   </div>
-                  <span className="font-mono text-sm text-dash-text-body">
-                    Daily
-                  </span>
+                  <span className="font-mono text-sm text-dash-text-body">Daily</span>
                 </div>
                 <div className="flex items-center justify-between px-3.5 py-3.5">
                   <div className="flex items-center gap-2">
                     <Download className="size-4 text-dash-text-extra-faded" />
-                    <span className="text-sm font-light text-dash-text-faded">
-                      Download backup
-                    </span>
+                    <span className="text-sm font-light text-dash-text-faded">Download backup</span>
                   </div>
                   {project?.backupUrl ? (
                     <a
@@ -671,22 +517,16 @@ function ProjectDetailPage() {
                       Download Now
                     </a>
                   ) : (
-                    <span className="font-mono text-sm text-dash-text-extra-faded">
-                      No backup available
-                    </span>
+                    <span className="font-mono text-sm text-dash-text-extra-faded">No backup available</span>
                   )}
                 </div>
                 <div className="flex items-center justify-between px-3.5 py-3.5">
                   <div className="flex items-center gap-2">
                     <Database className="size-4 text-dash-text-extra-faded" />
-                    <span className="text-sm font-light text-dash-text-faded">
-                      Last backup
-                    </span>
+                    <span className="text-sm font-light text-dash-text-faded">Last backup</span>
                   </div>
                   <span className="font-mono text-sm text-dash-text-body">
-                    {project?.lastBackup
-                      ? formatRelativeTime(project.lastBackup)
-                      : "N/A"}
+                    {project?.lastBackup ? formatRelativeTime(project.lastBackup) : "N/A"}
                   </span>
                 </div>
               </div>
@@ -726,56 +566,23 @@ function ProjectDetailPage() {
                     >
                       <div className="flex items-center gap-2">
                         <div className="relative flex h-full w-[17px] shrink-0 items-center">
-                          {i > 0 && (
-                            <div className="absolute -top-3 left-[7.5px] h-3 w-px bg-dash-border" />
-                          )}
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 16 16"
-                            fill="none"
-                            className="shrink-0"
-                          >
-                            <circle
-                              cx="8"
-                              cy="8"
-                              r="2"
-                              stroke="#353535"
-                              strokeWidth="1.5"
-                              fill="none"
-                            />
-                            <path
-                              d="M10 8h4"
-                              stroke="#353535"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                            />
-                            <path
-                              d="M2 8h4"
-                              stroke="#353535"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                            />
+                          {i > 0 && <div className="absolute -top-3 left-[7.5px] h-3 w-px bg-dash-border" />}
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+                            <circle cx="8" cy="8" r="2" stroke="#353535" strokeWidth="1.5" fill="none" />
+                            <path d="M10 8h4" stroke="#353535" strokeWidth="1.5" strokeLinecap="round" />
+                            <path d="M2 8h4" stroke="#353535" strokeWidth="1.5" strokeLinecap="round" />
                           </svg>
-                          {i < deploymentRows.length - 1 && (
-                            <div className="absolute -bottom-3.5 left-[7.5px] h-3.5 w-px bg-dash-border" />
-                          )}
+                          {i < deploymentRows.length - 1 && <div className="absolute -bottom-3.5 left-[7.5px] h-3.5 w-px bg-dash-border" />}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-                            {dep.url}
-                          </span>
-                          <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-faded">
-                            {dep.date}
-                          </span>
+                          <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">{dep.url}</span>
+                          <span className="text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-faded">{dep.date}</span>
                         </div>
                       </div>
                     </button>
                   ))
                 ) : (
-                  <div className="px-3.5 py-4 text-sm font-light text-dash-text-faded">
-                    No deployments available yet.
-                  </div>
+                  <div className="px-3.5 py-4 text-sm font-light text-dash-text-faded">No deployments available yet.</div>
                 )}
               </div>
             </div>
@@ -792,8 +599,7 @@ function ProjectDetailPage() {
                 Project domains
               </h2>
               <p className="max-w-[560px] text-sm font-light leading-[1.3] text-dash-text-faded">
-                Manage all your domains on this project. You get a default
-                ".brimble.app" domain with each project you deploy.
+                Manage all your domains on this project. You get a default ".brimble.app" domain with each project you deploy.
               </p>
             </div>
             <hr className="border-dash-border" />
@@ -805,10 +611,7 @@ function ProjectDetailPage() {
               <tbody>
                 {domainRows.length > 0 ? (
                   domainRows.map((domain, i) => (
-                    <tr
-                      key={i}
-                      className="h-[68px] border-b-[0.5px] border-dash-border bg-white last:border-b-0 dark:bg-dash-bg"
-                    >
+                    <tr key={i} className="h-[68px] border-b-[0.5px] border-dash-border bg-white last:border-b-0 dark:bg-dash-bg">
                       <td className="w-[40%] truncate px-3.5">
                         <a
                           href={`https://${domain.url}`}
@@ -816,19 +619,13 @@ function ProjectDetailPage() {
                           rel="noopener noreferrer"
                           className="group/link inline-flex items-center gap-1 text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-strong transition-colors hover:text-dash-text-body"
                         >
-                          <span className="group-hover/link:underline">
-                            {domain.url}
-                          </span>
+                          <span className="group-hover/link:underline">{domain.url}</span>
                           <ArrowUpRight className="size-3 -translate-x-1 translate-y-0.5 opacity-0 transition-all duration-200 ease-out group-hover/link:translate-x-0 group-hover/link:translate-y-0 group-hover/link:opacity-100" />
                         </a>
                       </td>
                       <td className="w-[100px] px-3.5">
                         <SimpleTooltip
-                          content={
-                            domain.type === "default domain"
-                              ? "Default Brimble domain"
-                              : "Custom domain added by you"
-                          }
+                          content={domain.type === "default domain" ? "Default Brimble domain" : "Custom domain added by you"}
                           side="top"
                           sideOffset={4}
                           delayDuration={150}
@@ -838,29 +635,18 @@ function ProjectDetailPage() {
                               className={`size-[6px] rounded-full ${domain.type === "default domain" ? "bg-[#e87b35]" : "bg-dash-text-strong"}`}
                             />
                             <span className="text-sm font-light text-dash-text-faded">
-                              {domain.type === "default domain"
-                                ? "Default"
-                                : "Custom"}
+                              {domain.type === "default domain" ? "Default" : "Custom"}
                             </span>
                           </span>
                         </SimpleTooltip>
                       </td>
                       <td className="px-3.5 text-right">
-                        <span className="text-sm text-dash-text-strong">
-                          {domain.team}
-                        </span>
+                        <span className="text-sm text-dash-text-strong">{domain.team}</span>
                         <br />
-                        <span className="text-sm font-light text-dash-text-faded">
-                          {domain.date}
-                        </span>
+                        <span className="text-sm font-light text-dash-text-faded">{domain.date}</span>
                       </td>
                       <td className="w-[50px] pr-3.5 text-right">
-                        <SimpleTooltip
-                          content={copiedIdx === i ? "Copied!" : "Copy domain"}
-                          side="top"
-                          sideOffset={4}
-                          delayDuration={150}
-                        >
+                        <SimpleTooltip content={copiedIdx === i ? "Copied!" : "Copy domain"} side="top" sideOffset={4} delayDuration={150}>
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(domain.url);
@@ -882,10 +668,7 @@ function ProjectDetailPage() {
                   ))
                 ) : (
                   <tr className="h-[68px] border-b-0 bg-white dark:bg-dash-bg">
-                    <td
-                      colSpan={4}
-                      className="px-3.5 text-sm font-light text-dash-text-faded"
-                    >
+                    <td colSpan={4} className="px-3.5 text-sm font-light text-dash-text-faded">
                       No domains attached to this project yet.
                     </td>
                   </tr>

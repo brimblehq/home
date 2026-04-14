@@ -1,9 +1,6 @@
 import { Realtime } from "ably";
 import config from "@/config";
-import {
-  extractTwoFactorChallenge,
-  parseTwoFactorChallengeHash,
-} from "./two-factor";
+import { extractTwoFactorChallenge, parseTwoFactorChallengeHash } from "./two-factor";
 
 export type OauthProvider = "github" | "google" | "gitlab" | "bitbucket";
 
@@ -50,27 +47,18 @@ export function getOauthDeviceId() {
 }
 
 function buildOauthUrl(provider: OauthProvider, deviceId: string) {
-  const base = config.authApiUrl.endsWith("/")
-    ? config.authApiUrl
-    : `${config.authApiUrl}/`;
+  const base = config.authApiUrl.endsWith("/") ? config.authApiUrl : `${config.authApiUrl}/`;
   const url = new URL(`signin/${provider}`, base);
   url.searchParams.set("device", deviceId);
   url.searchParams.set("type", "signin");
   return url.toString();
 }
 
-export async function startOauthPopup(
-  provider: OauthProvider,
-  opts?: { timeoutMs?: number },
-): Promise<OauthAuthEventPayload> {
+export async function startOauthPopup(provider: OauthProvider, opts?: { timeoutMs?: number }): Promise<OauthAuthEventPayload> {
   const deviceId = getOauthDeviceId();
   const timeoutMs = opts?.timeoutMs ?? 120_000;
 
-  const popup = window.open(
-    buildOauthUrl(provider, deviceId),
-    "_blank",
-    "width=600,height=600",
-  );
+  const popup = window.open(buildOauthUrl(provider, deviceId), "_blank", "width=600,height=600");
 
   if (!popup) {
     throw new Error("Popup blocked. Please allow popups and try again.");

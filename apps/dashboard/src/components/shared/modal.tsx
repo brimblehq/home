@@ -65,7 +65,10 @@ export function Modal({ open, onOpenChange, children, width = 500, className }: 
                   ease: [0.16, 1, 0.3, 1],
                 }}
                 style={{ width }}
-                className={cn("fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100vh-32px)] max-w-[calc(100vw-16px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border-[0.5px] border-dash-border bg-dash-bg shadow-[0px_2px_3px_rgba(0,0,0,0.06),inset_0px_-3px_2px_rgba(245,245,245,0.3)] sm:max-w-[calc(100vw-32px)] dark:shadow-[0px_2px_3px_rgba(0,0,0,0.2)]", className)}
+                className={cn(
+                  "fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100vh-32px)] max-w-[calc(100vw-16px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border-[0.5px] border-dash-border bg-dash-bg shadow-[0px_2px_3px_rgba(0,0,0,0.06),inset_0px_-3px_2px_rgba(245,245,245,0.3)] sm:max-w-[calc(100vw-32px)] dark:shadow-[0px_2px_3px_rgba(0,0,0,0.2)]",
+                  className,
+                )}
               >
                 {children}
               </motion.div>
@@ -77,33 +80,19 @@ export function Modal({ open, onOpenChange, children, width = 500, className }: 
   );
 }
 
-export function ModalHeader({
-  title,
-  description,
-}: {
-  title: string;
-  description?: string;
-}) {
+export function ModalHeader({ title, description }: { title: string; description?: string }) {
   return (
     <div className="flex flex-col gap-0.5 rounded-t-lg border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-6 py-4">
-      <Dialog.Title className="text-base leading-[1.4] tracking-[-0.096px] text-dash-text-strong">
-        {title}
-      </Dialog.Title>
+      <Dialog.Title className="text-base leading-[1.4] tracking-[-0.096px] text-dash-text-strong">{title}</Dialog.Title>
       {description && (
-        <Dialog.Description className="text-sm font-light leading-[1.3] text-dash-text-faded">
-          {description}
-        </Dialog.Description>
+        <Dialog.Description className="text-sm font-light leading-[1.3] text-dash-text-faded">{description}</Dialog.Description>
       )}
     </div>
   );
 }
 
 export function ModalFooter({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between border-t-[0.5px] border-dash-border px-4 py-4">
-      {children}
-    </div>
-  );
+  return <div className="flex items-center justify-between border-t-[0.5px] border-dash-border px-4 py-4">{children}</div>;
 }
 
 export function ModalCancelButton({ onClick }: { onClick?: () => void }) {

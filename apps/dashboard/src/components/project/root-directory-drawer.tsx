@@ -1,20 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Drawer } from "vaul";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  ArrowLeft,
-  ChevronRight,
-  GitBranch,
-  Loader2,
-} from "lucide-react";
-import type {
-  RepositoryDirectoryEntry,
-  RepositoryFrameworkDefaults,
-} from "@/backend/repositories";
-import {
-  getGithubRootDirServerFn,
-  getGitlabRootDirServerFn,
-} from "@/server/repositories/actions";
+import { ArrowLeft, ChevronRight, GitBranch, Loader2 } from "lucide-react";
+import type { RepositoryDirectoryEntry, RepositoryFrameworkDefaults } from "@/backend/repositories";
+import { getGithubRootDirServerFn, getGitlabRootDirServerFn } from "@/server/repositories/actions";
 
 function DrawerShell({
   open,
@@ -58,14 +47,8 @@ function DrawerShell({
         >
           <div className="flex flex-1 flex-col overflow-y-auto">
             <div className="px-6 pb-4 pt-6">
-              <Drawer.Title className="text-lg font-medium tracking-[-0.03px] text-dash-text-strong">
-                {title}
-              </Drawer.Title>
-              {subtitle ? (
-                <p className="mt-1 text-sm font-light text-dash-text-extra-faded">
-                  {subtitle}
-                </p>
-              ) : null}
+              <Drawer.Title className="text-lg font-medium tracking-[-0.03px] text-dash-text-strong">{title}</Drawer.Title>
+              {subtitle ? <p className="mt-1 text-sm font-light text-dash-text-extra-faded">{subtitle}</p> : null}
             </div>
             {children}
           </div>
@@ -91,12 +74,7 @@ export function BranchDrawer({
   loading?: boolean;
 }) {
   return (
-    <DrawerShell
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Choose branch"
-      subtitle="Select the branch to deploy from your repository"
-    >
+    <DrawerShell open={open} onOpenChange={onOpenChange} title="Choose branch" subtitle="Select the branch to deploy from your repository">
       <div className="flex-1 overflow-y-auto px-6 pb-6">
         {loading ? (
           <div className="flex h-32 items-center justify-center text-dash-text-faded">
@@ -104,9 +82,7 @@ export function BranchDrawer({
             Loading branches...
           </div>
         ) : branches.length === 0 ? (
-          <div className="flex h-32 items-center justify-center text-dash-text-faded">
-            No branches available
-          </div>
+          <div className="flex h-32 items-center justify-center text-dash-text-faded">No branches available</div>
         ) : (
           <div className="space-y-2">
             {branches.map((branch) => {
@@ -120,18 +96,14 @@ export function BranchDrawer({
                     onOpenChange(false);
                   }}
                   className={`flex w-full items-center justify-between rounded-[6px] border px-4 py-3 text-left transition-colors ${
-                    isSelected
-                      ? "border-[#4879f8] bg-[#4879f8]/[0.06]"
-                      : "border-dash-border hover:bg-dash-bg-elevated"
+                    isSelected ? "border-[#4879f8] bg-[#4879f8]/[0.06]" : "border-dash-border hover:bg-dash-bg-elevated"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex size-8 items-center justify-center rounded-full bg-[#4879f8]/10 text-[#4879f8]">
                       <GitBranch className="size-4" />
                     </div>
-                    <span className="font-mono text-sm text-dash-text-strong">
-                      {branch}
-                    </span>
+                    <span className="font-mono text-sm text-dash-text-strong">{branch}</span>
                   </div>
                   <div
                     className={`flex size-5 items-center justify-center rounded-full border ${
@@ -156,13 +128,7 @@ interface DirectoryNode {
   children?: DirectoryNode[];
 }
 
-function TreeConnector({
-  parentLeft,
-  isLast,
-}: {
-  parentLeft: number;
-  isLast: boolean;
-}) {
+function TreeConnector({ parentLeft, isLast }: { parentLeft: number; isLast: boolean }) {
   const r = 8;
 
   return (
@@ -217,24 +183,14 @@ function DirectoryRow({
         className="relative flex w-full items-center gap-3 py-2.5 transition-colors hover:bg-dash-bg-elevated"
         style={{ paddingLeft: `${24 + depth * 32}px`, paddingRight: 16 }}
       >
-        {isChild ? (
-          <TreeConnector parentLeft={parentRadioCenter} isLast={Boolean(isLast)} />
-        ) : null}
+        {isChild ? <TreeConnector parentLeft={parentRadioCenter} isLast={Boolean(isLast)} /> : null}
 
-        <img
-          src={isSelected ? "/icons/box.svg" : "/icons/box-inactive.svg"}
-          alt=""
-          className="size-[18px] shrink-0"
-        />
+        <img src={isSelected ? "/icons/box.svg" : "/icons/box-inactive.svg"} alt="" className="size-[18px] shrink-0" />
 
         <img src="/icons/folder-open.svg" alt="" className="size-4 shrink-0" />
-        <span className="flex-1 -ml-1 text-left text-sm text-dash-text-strong">
-          {node.name}
-        </span>
+        <span className="flex-1 -ml-1 text-left text-sm text-dash-text-strong">{node.name}</span>
 
-        {hasChildren ? (
-          <ChevronRight className="size-4 shrink-0 text-dash-text-extra-faded" />
-        ) : null}
+        {hasChildren ? <ChevronRight className="size-4 shrink-0 text-dash-text-extra-faded" /> : null}
       </button>
 
       {showChildren
@@ -262,10 +218,7 @@ interface RootDirectoryDrawerProps {
   installationId?: number | string;
   branch?: string;
   selectedPath?: string;
-  onSelect?: (payload: {
-    path: string;
-    framework?: RepositoryFrameworkDefaults;
-  }) => void;
+  onSelect?: (payload: { path: string; framework?: RepositoryFrameworkDefaults }) => void;
 }
 
 export function RootDirectoryDrawer({
@@ -299,13 +252,9 @@ export function RootDirectoryDrawer({
   const [entries, setEntries] = useState<RepositoryDirectoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
-  const [activeFramework, setActiveFramework] = useState<RepositoryFrameworkDefaults | undefined>(
-    undefined,
-  );
+  const [activeFramework, setActiveFramework] = useState<RepositoryFrameworkDefaults | undefined>(undefined);
 
-  const cacheRef = useRef<
-    Map<string, { entries: RepositoryDirectoryEntry[]; framework?: RepositoryFrameworkDefaults }>
-  >(new Map());
+  const cacheRef = useRef<Map<string, { entries: RepositoryDirectoryEntry[]; framework?: RepositoryFrameworkDefaults }>>(new Map());
 
   useEffect(() => {
     if (!open) {
@@ -439,12 +388,7 @@ export function RootDirectoryDrawer({
   ];
 
   return (
-    <DrawerShell
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Choose root direction"
-      subtitle="Select directory to deploy"
-    >
+    <DrawerShell open={open} onOpenChange={onOpenChange} title="Choose root direction" subtitle="Select directory to deploy">
       <div className="relative flex items-center gap-3 bg-dash-bg-elevated px-6 py-3">
         <div className="absolute bottom-0 left-[37px] h-3 w-px bg-dash-border" />
         <div className="flex size-8 items-center justify-center rounded-full border border-[#3e3e3e] bg-gradient-to-b from-[#666] to-[#1b1b1b] shadow-[0px_1px_1px_rgba(0,0,0,0.15)]">

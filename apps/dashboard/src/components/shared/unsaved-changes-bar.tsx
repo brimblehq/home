@@ -9,12 +9,7 @@ interface UnsavedChangesBarProps {
   message?: string;
 }
 
-export function UnsavedChangesBar({
-  show,
-  onReset,
-  onSave,
-  message = "Unsaved changes",
-}: UnsavedChangesBarProps) {
+export function UnsavedChangesBar({ show, onReset, onSave, message = "Unsaved changes" }: UnsavedChangesBarProps) {
   return (
     <AnimatePresence>
       {show && (
@@ -28,9 +23,7 @@ export function UnsavedChangesBar({
           <div className="flex w-[calc(100vw-32px)] items-center gap-5 rounded-[14px] border border-[#333] bg-[#1a1a1a] py-3 pl-5 pr-3.5 shadow-[0px_8px_24px_rgba(0,0,0,0.32)] sm:w-auto">
             <div className="flex items-center gap-3">
               <AlertCircle className="size-5 shrink-0 text-[#f5a623]" />
-              <span className="whitespace-nowrap text-sm font-medium text-white">
-                {message}
-              </span>
+              <span className="whitespace-nowrap text-sm font-medium text-white">{message}</span>
             </div>
             <div className="flex items-center gap-2.5">
               <button

@@ -11,15 +11,12 @@ export interface EditableEnvRow {
 
 const EDITABLE_SERVICE_TYPES = new Set(["webservice", "web_service", "web-service", "static", "worker", "mcp"]);
 const DELETEABLE_SERVICE_TYPES = new Set(["webservice", "web_service", "web-service", "static"]);
-const NON_EDITABLE_ENV_NAMES = new Set([
-  "BRIMBLE_URL",
-  "BRIMBLE_ENV",
-  "BRIMBLE_PROJECT_ID",
-  "BRIMBLE_PROJECT_NAME",
-]);
+const NON_EDITABLE_ENV_NAMES = new Set(["BRIMBLE_URL", "BRIMBLE_ENV", "BRIMBLE_PROJECT_ID", "BRIMBLE_PROJECT_NAME"]);
 
 export function normalizeServiceType(value?: string): string {
-  return String(value ?? "").trim().toLowerCase();
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
 }
 
 export function canEditProjectEnvs(serviceType?: string): boolean {
@@ -35,7 +32,9 @@ export function isDatabaseService(serviceType?: string): boolean {
 }
 
 export function shouldShowEnvironmentTab(framework?: string): boolean {
-  const value = String(framework ?? "").trim().toLowerCase();
+  const value = String(framework ?? "")
+    .trim()
+    .toLowerCase();
   if (!value) {
     return false;
   }
@@ -48,9 +47,7 @@ export function isNonEditableEnvName(name?: string): boolean {
 }
 
 export function sortEnvironmentTargets(targets: string[]): string[] {
-  const normalized = targets
-    .map((target) => String(target).trim())
-    .filter(Boolean);
+  const normalized = targets.map((target) => String(target).trim()).filter(Boolean);
 
   const unique = Array.from(new Set(normalized));
   unique.sort((a, b) => {
@@ -62,10 +59,7 @@ export function sortEnvironmentTargets(targets: string[]): string[] {
   return unique.length > 0 ? unique : ["PRODUCTION"];
 }
 
-export function filterEnvironmentRows(
-  rows: ProjectEnvironmentVariable[],
-  query: string,
-): ProjectEnvironmentVariable[] {
+export function filterEnvironmentRows(rows: ProjectEnvironmentVariable[], query: string): ProjectEnvironmentVariable[] {
   const search = query.trim().toLowerCase();
   if (!search) {
     return rows;
@@ -74,23 +68,21 @@ export function filterEnvironmentRows(
   return rows.filter((row) => {
     return (
       row.name.toLowerCase().includes(search) ||
-      String(row.user ?? "").toLowerCase().includes(search)
+      String(row.user ?? "")
+        .toLowerCase()
+        .includes(search)
     );
   });
 }
 
-export function sanitizeEnvironmentEntries(
-  rows: Array<{ name: string; value: string }>,
-): Array<{ name: string; value: string }> {
+export function sanitizeEnvironmentEntries(rows: Array<{ name: string; value: string }>): Array<{ name: string; value: string }> {
   return rows.map((row) => ({
     name: row.name.trim(),
     value: row.value.trim(),
   }));
 }
 
-export function validateEnvironmentEntries(
-  rows: Array<{ name: string; value: string }>,
-): { valid: boolean; message?: string } {
+export function validateEnvironmentEntries(rows: Array<{ name: string; value: string }>): { valid: boolean; message?: string } {
   if (rows.length === 0) {
     return { valid: false, message: "Please add at least one variable" };
   }

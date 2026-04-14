@@ -13,16 +13,8 @@ import {
   startPasskeyRecoveryServerFn,
   verifyPasskeyRecoveryRegistrationServerFn,
 } from "@/server/auth/actions";
-import type {
-  PasskeyRecoveryDevice,
-  PasskeyRegisterOptionsResult,
-  PasskeySummary,
-} from "@/backend/auth/types";
-import {
-  isPasskeySupported,
-  passkeyErrorMessage,
-  runRegistration,
-} from "@/lib/auth/passkey";
+import type { PasskeyRecoveryDevice, PasskeyRegisterOptionsResult, PasskeySummary } from "@/backend/auth/types";
+import { isPasskeySupported, passkeyErrorMessage, runRegistration } from "@/lib/auth/passkey";
 
 export const Route = createFileRoute("/passkey-recovery")({
   component: PasskeyRecoveryPage,
@@ -41,14 +33,10 @@ function PasskeyRecoveryPage() {
   const deleteRecoveryDevice = useServerFn(deletePasskeyRecoveryDeviceServerFn as any) as (args: {
     data: { recoveryToken: string; id: string };
   }) => Promise<{ ok: true }>;
-  const getRegisterOptions = useServerFn(
-    getPasskeyRecoveryRegisterOptionsServerFn as any,
-  ) as (args: {
+  const getRegisterOptions = useServerFn(getPasskeyRecoveryRegisterOptionsServerFn as any) as (args: {
     data: { recoveryToken: string; deviceName: string };
   }) => Promise<PasskeyRegisterOptionsResult>;
-  const verifyRegistration = useServerFn(
-    verifyPasskeyRecoveryRegistrationServerFn as any,
-  ) as (args: {
+  const verifyRegistration = useServerFn(verifyPasskeyRecoveryRegistrationServerFn as any) as (args: {
     data: {
       recoveryToken: string;
       challengeToken: string;
@@ -169,9 +157,7 @@ function PasskeyRecoveryPage() {
     try {
       const response = await completeRecovery({ data: { recoveryToken } });
       invalidateSessionCache();
-      toast.success(
-        `Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
-      );
+      toast.success(`Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`);
       void navigate({ to: "/" as any });
     } catch (err) {
       toast.error(passkeyErrorMessage(err));
@@ -181,11 +167,7 @@ function PasskeyRecoveryPage() {
 
   if (!browserSupported) {
     return (
-      <AuthSplitLayout
-      mode="login"
-      title="Passkey recovery"
-      description="Use a TOTP recovery code to regain access to your account."
-    >
+      <AuthSplitLayout mode="login" title="Passkey recovery" description="Use a TOTP recovery code to regain access to your account.">
         <p className="text-sm text-dash-text-body">
           Your browser doesn't support passkeys. Please use a modern browser to recover your account.
         </p>
@@ -194,15 +176,9 @@ function PasskeyRecoveryPage() {
   }
 
   return (
-    <AuthSplitLayout
-      mode="login"
-      title="Passkey recovery"
-      description="Use a TOTP recovery code to regain access to your account."
-    >
+    <AuthSplitLayout mode="login" title="Passkey recovery" description="Use a TOTP recovery code to regain access to your account.">
       {deadlineAt && step !== "credentials" && step !== "complete" && (
-        <p className="mb-4 text-xs text-dash-text-faded">
-          Recovery session expires in {formatRemaining(remainingSeconds)}
-        </p>
+        <p className="mb-4 text-xs text-dash-text-faded">Recovery session expires in {formatRemaining(remainingSeconds)}</p>
       )}
 
       {step === "credentials" && (
@@ -213,9 +189,7 @@ function PasskeyRecoveryPage() {
             void handleStart();
           }}
         >
-          <p className="mb-2 text-sm text-dash-text-body">
-            Enter your email and a recovery code from your TOTP setup to begin.
-          </p>
+          <p className="mb-2 text-sm text-dash-text-body">Enter your email and a recovery code from your TOTP setup to begin.</p>
           <AuthField
             id="recovery-email"
             type="email"
@@ -247,9 +221,7 @@ function PasskeyRecoveryPage() {
         <div className="space-y-4">
           <div>
             <p className="text-sm font-medium text-dash-text-strong">Review your devices</p>
-            <p className="text-sm text-dash-text-faded">
-              Remove any passkeys that look unfamiliar before adding a new one.
-            </p>
+            <p className="text-sm text-dash-text-faded">Remove any passkeys that look unfamiliar before adding a new one.</p>
           </div>
           {devices.length === 0 ? (
             <p className="text-sm text-dash-text-faded">No passkeys on file.</p>
@@ -257,9 +229,7 @@ function PasskeyRecoveryPage() {
             <ul className="flex flex-col divide-y divide-dash-border-soft rounded-[6px] border border-dash-border">
               {devices.map((d) => (
                 <li key={d.id} className="flex items-center justify-between px-3.5 py-3">
-                  <span className="truncate text-sm text-dash-text-strong">
-                    {d.deviceName || "Unnamed passkey"}
-                  </span>
+                  <span className="truncate text-sm text-dash-text-strong">{d.deviceName || "Unnamed passkey"}</span>
                   <button
                     type="button"
                     disabled={deletingDeviceId === d.id}
@@ -292,9 +262,7 @@ function PasskeyRecoveryPage() {
         >
           <div>
             <p className="text-sm font-medium text-dash-text-strong">Add a new passkey</p>
-            <p className="text-sm text-dash-text-faded">
-              Give your new passkey a name, then complete the prompt from your device.
-            </p>
+            <p className="text-sm text-dash-text-faded">Give your new passkey a name, then complete the prompt from your device.</p>
           </div>
           <AuthField
             id="recovery-device-name"
@@ -317,9 +285,7 @@ function PasskeyRecoveryPage() {
 
       {step === "complete" && (
         <div className="space-y-4">
-          <p className="text-sm text-dash-text-body">
-            Your new passkey is set up. Sign in to finish recovery.
-          </p>
+          <p className="text-sm text-dash-text-body">Your new passkey is set up. Sign in to finish recovery.</p>
           <button
             type="button"
             onClick={() => void handleComplete()}

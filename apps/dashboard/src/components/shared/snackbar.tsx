@@ -55,10 +55,7 @@ export function Snackbar({ variant, message, action, onDismiss }: SnackbarProps)
           </button>
         )}
         {onDismiss && (
-          <button
-            onClick={onDismiss}
-            className="shrink-0 rounded p-0.5 text-dash-text-muted transition-colors hover:text-dash-text-body"
-          >
+          <button onClick={onDismiss} className="shrink-0 rounded p-0.5 text-dash-text-muted transition-colors hover:text-dash-text-body">
             <X className="size-4 max-md:size-3.5" />
           </button>
         )}

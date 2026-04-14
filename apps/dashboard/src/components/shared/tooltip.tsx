@@ -36,8 +36,7 @@ const slideOffset = 6;
 
 function getMotion(side: "top" | "right" | "bottom" | "left") {
   const axis = side === "top" || side === "bottom" ? "y" : "x";
-  const dir =
-    side === "top" || side === "left" ? slideOffset : -slideOffset;
+  const dir = side === "top" || side === "left" ? slideOffset : -slideOffset;
   const initial = { opacity: 0, scale: 0.92, [axis]: dir };
   const animate = { opacity: 1, scale: 1, [axis]: 0 };
   return { initial, animate, exit: initial };
@@ -54,22 +53,12 @@ const springTransition = {
  * User profile tooltip — dark card with avatar, name, divider, role.
  * Stays open while hovering the tooltip content itself (smoothish-sticky).
  */
-export function Tooltip({
-  children,
-  user,
-  side = "top",
-  sideOffset = 6,
-  delayDuration,
-}: TooltipProps) {
+export function Tooltip({ children, user, side = "top", sideOffset = 6, delayDuration }: TooltipProps) {
   const [open, setOpen] = useState(false);
   const { initial, animate, exit } = getMotion(side);
 
   return (
-    <RadixTooltip.Root
-      open={open}
-      onOpenChange={setOpen}
-      delayDuration={delayDuration}
-    >
+    <RadixTooltip.Root open={open} onOpenChange={setOpen} delayDuration={delayDuration}>
       <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
 
       <AnimatePresence>
@@ -91,23 +80,15 @@ export function Tooltip({
                 {/* Name row */}
                 <div className="flex items-center gap-1 pl-1 pr-2 pt-px">
                   {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt=""
-                      className="size-3.5 shrink-0 rounded-[4.2px] object-cover"
-                    />
+                    <img src={user.avatarUrl} alt="" className="size-3.5 shrink-0 rounded-[4.2px] object-cover" />
                   ) : (
                     <div className="flex size-3.5 shrink-0 items-center justify-center rounded-[4.2px] bg-[#d9d9d9]">
                       {user.avatarFallback && (
-                        <span className="text-[7px] font-medium leading-none text-[#232323]">
-                          {user.avatarFallback}
-                        </span>
+                        <span className="text-[7px] font-medium leading-none text-[#232323]">{user.avatarFallback}</span>
                       )}
                     </div>
                   )}
-                  <span className="text-xs leading-5 tracking-[-0.019px] text-white">
-                    {user.name}
-                  </span>
+                  <span className="text-xs leading-5 tracking-[-0.019px] text-white">{user.name}</span>
                 </div>
 
                 {user.role ? (
@@ -117,9 +98,7 @@ export function Tooltip({
 
                     {/* Role row */}
                     <div className="pl-1 pr-2 pb-px">
-                      <span className="text-xs font-light leading-5 tracking-[-0.019px] text-white/70">
-                        {user.role}
-                      </span>
+                      <span className="text-xs font-light leading-5 tracking-[-0.019px] text-white/70">{user.role}</span>
                     </div>
                   </>
                 ) : null}
@@ -142,32 +121,18 @@ interface SimpleTooltipProps {
   delayDuration?: number;
 }
 
-export function SimpleTooltip({
-  children,
-  content,
-  side = "top",
-  sideOffset = 6,
-  delayDuration,
-}: SimpleTooltipProps) {
+export function SimpleTooltip({ children, content, side = "top", sideOffset = 6, delayDuration }: SimpleTooltipProps) {
   const [open, setOpen] = useState(false);
   const { initial, animate, exit } = getMotion(side);
 
   return (
-    <RadixTooltip.Root
-      open={open}
-      onOpenChange={setOpen}
-      delayDuration={delayDuration}
-    >
+    <RadixTooltip.Root open={open} onOpenChange={setOpen} delayDuration={delayDuration}>
       <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
 
       <AnimatePresence>
         {open && (
           <RadixTooltip.Portal forceMount>
-            <RadixTooltip.Content
-              side={side}
-              sideOffset={sideOffset}
-              asChild
-            >
+            <RadixTooltip.Content side={side} sideOffset={sideOffset} asChild>
               <motion.div
                 initial={initial}
                 animate={animate}
@@ -175,9 +140,7 @@ export function SimpleTooltip({
                 transition={springTransition}
                 className="z-50 rounded-md border border-[#141414] bg-gradient-to-b from-[#434343] to-[#232323] px-2.5 py-1 shadow-[0px_0.6px_0px_rgba(0,0,0,0.1),0px_2px_4px_rgba(0,0,0,0.18),inset_0px_1px_0px_rgba(255,255,255,0.18)]"
               >
-                <span className="flex items-center gap-1.5 text-xs leading-5 tracking-[-0.019px] text-white">
-                  {content}
-                </span>
+                <span className="flex items-center gap-1.5 text-xs leading-5 tracking-[-0.019px] text-white">{content}</span>
               </motion.div>
             </RadixTooltip.Content>
           </RadixTooltip.Portal>

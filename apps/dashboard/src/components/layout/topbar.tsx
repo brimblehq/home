@@ -45,12 +45,7 @@ import { WarningModal } from "../shared/warning-modal";
 import { Dropdown } from "../shared/dropdown";
 import { toTitleCase } from "@/utils/dashboard";
 import { Theme } from "@/types/enums";
-import {
-  buildProjectSwitchUrl,
-  buildWorkspaceSwitchUrl,
-  setPendingDomainsAction,
-  withWorkspaceQuery,
-} from "@/utils/topbar-navigation";
+import { buildProjectSwitchUrl, buildWorkspaceSwitchUrl, setPendingDomainsAction, withWorkspaceQuery } from "@/utils/topbar-navigation";
 
 function getWorkspaceSearch(searchStr?: string) {
   const params = new URLSearchParams(searchStr || "");
@@ -64,10 +59,7 @@ function splitInternalUrl(url: string) {
   const search = Object.fromEntries(params.entries());
   return {
     to: (to || "/") as string,
-    search:
-      Object.keys(search).length > 0
-        ? (search as Record<string, string>)
-        : undefined,
+    search: Object.keys(search).length > 0 ? (search as Record<string, string>) : undefined,
   };
 }
 
@@ -108,13 +100,9 @@ function ProjectSwitcher({
 
   const displayProjectId = decodeURIComponent(projectId);
   const currentProject = projects.find(
-    (project) =>
-      project.id === displayProjectId ||
-      project.slug === displayProjectId ||
-      project.name === displayProjectId,
+    (project) => project.id === displayProjectId || project.slug === displayProjectId || project.name === displayProjectId,
   );
-  const activeProjectLabel =
-    currentProjectName?.trim() || currentProject?.name || displayProjectId;
+  const activeProjectLabel = currentProjectName?.trim() || currentProject?.name || displayProjectId;
 
   async function handleCopyProjectName(e: React.MouseEvent) {
     e.stopPropagation();
@@ -134,11 +122,7 @@ function ProjectSwitcher({
         className="flex min-w-0 max-w-[136px] items-center gap-1 text-sm font-medium text-dash-text-faded transition-colors hover:text-dash-text-strong sm:max-w-[260px]"
       >
         <span className="truncate whitespace-nowrap">{activeProjectLabel}</span>
-        <motion.span
-          className="shrink-0"
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        >
+        <motion.span className="shrink-0" animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}>
           <ChevronDown className="size-4" />
         </motion.span>
       </button>
@@ -149,11 +133,7 @@ function ProjectSwitcher({
         title={copied ? "Copied" : "Copy project name"}
         className="flex size-6 shrink-0 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
       >
-        {copied ? (
-          <Check className="size-3.5 text-[#4879f8]" />
-        ) : (
-          <Copy className="size-3.5" />
-        )}
+        {copied ? <Check className="size-3.5 text-[#4879f8]" /> : <Copy className="size-3.5" />}
       </button>
 
       <AnimatePresence>
@@ -179,46 +159,42 @@ function ProjectSwitcher({
             {/* Project list */}
             <div className="scrollbar-hidden flex max-h-[240px] flex-col gap-2 overflow-y-auto border-b-[0.5px] border-dash-border px-3.5 py-2">
               {projects.length > 0 ? (
-                projects.filter((p) => !filter || (p.name || p.slug || "").toLowerCase().includes(filter.toLowerCase())).map((project) => {
-                  const nextProjectId = project.slug || project.id || project.name;
-                  if (!nextProjectId) {
-                    return null;
-                  }
+                projects
+                  .filter((p) => !filter || (p.name || p.slug || "").toLowerCase().includes(filter.toLowerCase()))
+                  .map((project) => {
+                    const nextProjectId = project.slug || project.id || project.name;
+                    if (!nextProjectId) {
+                      return null;
+                    }
 
-                  const isActive =
-                    nextProjectId === displayProjectId ||
-                    project.name === activeProjectLabel;
-                  const nextUrl = buildProjectSwitchUrl({
-                    pathname,
-                    searchStr,
-                    targetProjectId: nextProjectId,
-                  });
-                  const nextNav = splitInternalUrl(nextUrl);
+                    const isActive = nextProjectId === displayProjectId || project.name === activeProjectLabel;
+                    const nextUrl = buildProjectSwitchUrl({
+                      pathname,
+                      searchStr,
+                      targetProjectId: nextProjectId,
+                    });
+                    const nextNav = splitInternalUrl(nextUrl);
 
-                  return (
-                    <button
-                      key={project.id || nextProjectId}
-                      onClick={() => {
-                        setOpen(false);
-                        navigate({
-                          to: nextNav.to as any,
-                          search: nextNav.search as any,
-                        });
-                      }}
-                      className={`flex h-8 items-center px-3.5 text-left text-sm transition-colors ${
-                        isActive
-                          ? "text-dash-text-strong"
-                          : "text-dash-text-faded hover:text-dash-text-body"
-                      }`}
-                    >
-                      {project.name || nextProjectId}
-                    </button>
-                  );
-                })
+                    return (
+                      <button
+                        key={project.id || nextProjectId}
+                        onClick={() => {
+                          setOpen(false);
+                          navigate({
+                            to: nextNav.to as any,
+                            search: nextNav.search as any,
+                          });
+                        }}
+                        className={`flex h-8 items-center px-3.5 text-left text-sm transition-colors ${
+                          isActive ? "text-dash-text-strong" : "text-dash-text-faded hover:text-dash-text-body"
+                        }`}
+                      >
+                        {project.name || nextProjectId}
+                      </button>
+                    );
+                  })
               ) : (
-                <div className="py-1 text-sm text-dash-text-extra-faded">
-                  No projects found
-                </div>
+                <div className="py-1 text-sm text-dash-text-extra-faded">No projects found</div>
               )}
             </div>
             {/* Create project — hidden for Viewers */}
@@ -282,24 +258,16 @@ function WorkspaceSwitcher({
 
   const personalAvatarSeed = profile?.username || profile?.firstName || profile?.email || "user";
 
-  const personalName =
-    profile?.firstName ||
-    profile?.username ||
-    profile?.email;
-  const personalWorkspaceLabel = personalName
-    ? `${toTitleCase(personalName)}'s Workspace`
-    : "";
+  const personalName = profile?.firstName || profile?.username || profile?.email;
+  const personalWorkspaceLabel = personalName ? `${toTitleCase(personalName)}'s Workspace` : "";
   const params = new URLSearchParams(searchStr || "");
   const activeWorkspaceSlug = params.get("workspace");
-  const activeTeam =
-    workspaces.find((team) => team.slug === activeWorkspaceSlug) ?? null;
+  const activeTeam = workspaces.find((team) => team.slug === activeWorkspaceSlug) ?? null;
 
   const activeAvatarSrc = activeTeam?.avatarUrl || profile?.avatarUrl;
   const activeAvatarSeed = activeTeam ? activeTeam.name : personalAvatarSeed;
 
-  const activeWorkspaceLabel = activeTeam
-    ? `${toTitleCase(activeTeam.name)}'s Workspace`
-    : personalWorkspaceLabel;
+  const activeWorkspaceLabel = activeTeam ? `${toTitleCase(activeTeam.name)}'s Workspace` : personalWorkspaceLabel;
 
   const navigateWithWorkspace = (workspaceSlug?: string) => {
     const nextUrl = buildWorkspaceSwitchUrl({
@@ -326,21 +294,10 @@ function WorkspaceSwitcher({
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 text-sm font-medium text-dash-text-strong"
-      >
-        <Avatar
-          src={activeAvatarSrc}
-          fallbackSeed={activeAvatarSeed}
-          alt=""
-          className="size-6 rounded-full object-cover"
-        />
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 text-sm font-medium text-dash-text-strong">
+        <Avatar src={activeAvatarSrc} fallbackSeed={activeAvatarSeed} alt="" className="size-6 rounded-full object-cover" />
         <span className="truncate max-w-[90px] sm:max-w-[180px]">{activeWorkspaceLabel}</span>
-        <motion.span
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        >
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}>
           <ChevronDown className="size-4 text-dash-text-strong" />
         </motion.span>
       </button>
@@ -371,9 +328,7 @@ function WorkspaceSwitcher({
             {personalWorkspaceLabel ? (
               <div className="border-b-[0.5px] border-dash-border px-2 pb-4 pt-2">
                 <div className="py-2">
-                  <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">
-                    Personal Accounts
-                  </span>
+                  <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">Personal Accounts</span>
                 </div>
                 <button
                   onClick={() => {
@@ -390,9 +345,7 @@ function WorkspaceSwitcher({
                     alt=""
                     className="size-6 shrink-0 rounded-full object-cover"
                   />
-                  <span className="text-left text-sm text-dash-text-body dark:text-dash-text-strong">
-                    {personalWorkspaceLabel}
-                  </span>
+                  <span className="text-left text-sm text-dash-text-body dark:text-dash-text-strong">{personalWorkspaceLabel}</span>
                 </button>
               </div>
             ) : null}
@@ -400,9 +353,7 @@ function WorkspaceSwitcher({
             {/* Teams */}
             <div className="border-b-[0.5px] border-dash-border px-2 pb-4 pt-2">
               <div className="py-2">
-                <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">
-                  Teams
-                </span>
+                <span className="text-xs text-dash-text-extra-faded dark:text-dash-text-faded">Teams</span>
               </div>
               <div className="flex flex-col gap-0.5">
                 {filteredTeams.length > 0 ? (
@@ -417,9 +368,7 @@ function WorkspaceSwitcher({
                           }
                         }}
                         className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[4px] px-2 py-2 transition-colors hover:bg-dash-bg-elevated ${
-                          activeTeam?.slug === team.slug
-                            ? "bg-dash-bg-elevated"
-                            : ""
+                          activeTeam?.slug === team.slug ? "bg-dash-bg-elevated" : ""
                         }`}
                       >
                         <Avatar
@@ -435,9 +384,7 @@ function WorkspaceSwitcher({
                     );
                   })
                 ) : (
-                  <div className="px-2 py-2 text-sm text-dash-text-extra-faded">
-                    No teams found
-                  </div>
+                  <div className="px-2 py-2 text-sm text-dash-text-extra-faded">No teams found</div>
                 )}
               </div>
             </div>
@@ -508,14 +455,10 @@ function EnvironmentDropdown({
   const deleteEnvironment = useServerFn(deleteProjectEnvironmentServerFn as any) as (args: {
     data: { environmentId: string; moveTo: string; workspace?: string };
   }) => Promise<{ success: boolean }>;
-  const getActiveEnvironmentPreference = useServerFn(
-    getActiveEnvironmentPreferenceServerFn as any,
-  ) as (args: {
+  const getActiveEnvironmentPreference = useServerFn(getActiveEnvironmentPreferenceServerFn as any) as (args: {
     data: { workspace?: string };
   }) => Promise<string | null>;
-  const setActiveEnvironmentPreference = useServerFn(
-    setActiveEnvironmentPreferenceServerFn as any,
-  ) as (args: {
+  const setActiveEnvironmentPreference = useServerFn(setActiveEnvironmentPreferenceServerFn as any) as (args: {
     data: { workspace?: string; environmentId?: string };
   }) => Promise<{ success: boolean }>;
 
@@ -549,26 +492,23 @@ function EnvironmentDropdown({
           listEnvironmentsRef.current({
             data: { workspace },
           }),
-          getActiveEnvironmentPreferenceRef.current({
-            data: { workspace },
-          }).catch(() => null),
+          getActiveEnvironmentPreferenceRef
+            .current({
+              data: { workspace },
+            })
+            .catch(() => null),
         ]);
         if (!cancelled && Array.isArray(envs) && envs.length > 0) {
           setEnvironments(envs);
 
           const defaultEnv = envs.find((e) => e.isDefault) ?? envs[0];
-          const preferredExists =
-            typeof preferredEnvironmentId === "string" &&
-            envs.some((env) => env._id === preferredEnvironmentId);
-          const resolvedId = preferredExists
-            ? preferredEnvironmentId!
-            : defaultEnv._id;
+          const preferredExists = typeof preferredEnvironmentId === "string" && envs.some((env) => env._id === preferredEnvironmentId);
+          const resolvedId = preferredExists ? preferredEnvironmentId! : defaultEnv._id;
 
           setSelectedId((prev) => {
             if (prev && envs.some((e) => e._id === prev)) return prev;
             return resolvedId;
           });
-
         }
       } catch {
         if (!cancelled) {
@@ -576,7 +516,9 @@ function EnvironmentDropdown({
         }
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [workspace]);
 
   useEffect(() => {
@@ -606,21 +548,18 @@ function EnvironmentDropdown({
   const currentTeamMember = teamDetails?.members?.find((member) => {
     const memberUserId = member.userId?.trim().toLowerCase() ?? "";
     const memberEmail = member.email.trim().toLowerCase();
-    return (
-      (currentUserId && memberUserId === currentUserId) ||
-      (currentUserEmail && memberEmail === currentUserEmail)
-    );
+    return (currentUserId && memberUserId === currentUserId) || (currentUserEmail && memberEmail === currentUserEmail);
   });
   const normalizedRole = (currentTeamMember?.role ?? "").trim().toLowerCase();
   const { isViewer } = useWorkspaceRole();
   const canManageEnvironments =
     !isViewer &&
     (!workspace ||
-    (Boolean(teamDetails?.isCreator) ||
+      Boolean(teamDetails?.isCreator) ||
       Boolean(currentTeamMember?.isCreator) ||
       normalizedRole.includes("creator") ||
       normalizedRole.includes("owner") ||
-      normalizedRole.includes("admin")));
+      normalizedRole.includes("admin"));
 
   async function selectEnvironment(envId: string) {
     setSelectedId(envId);
@@ -629,9 +568,7 @@ function EnvironmentDropdown({
 
     try {
       await setActiveEnvironmentPreferenceRef.current({
-        data: persistedEnvironmentId
-          ? { workspace, environmentId: persistedEnvironmentId }
-          : { workspace },
+        data: persistedEnvironmentId ? { workspace, environmentId: persistedEnvironmentId } : { workspace },
       });
     } catch {
       // silently fail; in-memory selection still updates
@@ -665,9 +602,7 @@ function EnvironmentDropdown({
     }
     setNewEnvNameError(false);
     // If an environment with the same name already exists, just select it
-    const existing = environments.find(
-      (e) => e.name.toLowerCase() === name.toLowerCase(),
-    );
+    const existing = environments.find((e) => e.name.toLowerCase() === name.toLowerCase());
     if (existing) {
       void selectEnvironment(existing._id);
       setCreating(false);
@@ -724,10 +659,7 @@ function EnvironmentDropdown({
     <div className="relative" ref={ref}>
       <DashButton onClick={() => setOpen(!open)}>
         {selectedEnv?.name ?? "Production"}
-        <motion.span
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        >
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}>
           <ChevronDown className="size-3.5" />
         </motion.span>
       </DashButton>
@@ -749,9 +681,7 @@ function EnvironmentDropdown({
                   <div
                     key={env._id}
                     className={`group mx-1 flex w-[calc(100%-8px)] items-center justify-between rounded-[2px] px-2 py-1.5 transition-colors hover:bg-dash-bg-elevated ${
-                      isSelected
-                        ? "font-medium text-dash-text-strong"
-                        : "font-light text-dash-text-faded"
+                      isSelected ? "font-medium text-dash-text-strong" : "font-light text-dash-text-faded"
                     }`}
                   >
                     <button
@@ -823,9 +753,7 @@ function EnvironmentDropdown({
                         }}
                         disabled={creatingSubmitting}
                       />
-                      {creatingSubmitting ? (
-                        <Spinner size="size-3.5" className="shrink-0 text-dash-text-faded" />
-                      ) : null}
+                      {creatingSubmitting ? <Spinner size="size-3.5" className="shrink-0 text-dash-text-faded" /> : null}
                     </div>
                   </form>
                 </div>
@@ -859,14 +787,10 @@ function EnvironmentDropdown({
         onConfirm={handleDeleteConfirm}
       >
         <div className="flex flex-col gap-1.5 text-left">
-          <label className="text-xs font-medium text-dash-text-faded">
-            Move projects to
-          </label>
+          <label className="text-xs font-medium text-dash-text-faded">Move projects to</label>
           <Dropdown
             value={migrateTarget ?? ""}
-            options={environments
-              .filter((e) => e._id !== deleteTarget?._id)
-              .map((e) => ({ id: e._id, label: e.name }))}
+            options={environments.filter((e) => e._id !== deleteTarget?._id).map((e) => ({ id: e._id, label: e.name }))}
             onChange={(id) => setMigrateTarget(id)}
           />
         </div>
@@ -886,13 +810,7 @@ interface Notification {
 }
 
 function getNotificationId(message: AppTooltipMessage, index: number) {
-  return [
-    message.type || "notification",
-    message.level,
-    message.route || "",
-    message.message,
-    index,
-  ].join("|");
+  return [message.type || "notification", message.level, message.route || "", message.message, index].join("|");
 }
 
 function getNotificationTime(meta?: Record<string, unknown>) {
@@ -911,9 +829,7 @@ function getNotificationTime(meta?: Record<string, unknown>) {
   return undefined;
 }
 
-function mapNotifications(
-  messages: AppTooltipMessage[] | null,
-): Notification[] {
+function mapNotifications(messages: AppTooltipMessage[] | null): Notification[] {
   if (!messages || messages.length === 0) {
     return [];
   }
@@ -936,9 +852,7 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
   const navigate = useNavigate();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const workspaceSearch = getWorkspaceSearch(searchStr);
-  const listTooltipMessages = useServerFn(
-    listTooltipMessagesServerFn as any,
-  ) as (args: {
+  const listTooltipMessages = useServerFn(listTooltipMessagesServerFn as any) as (args: {
     data: {
       workspace?: string;
       type: "notifications";
@@ -950,10 +864,7 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
 
   const notificationFetchKey = workspaceSearch?.workspace ?? "__personal__";
 
-  const unreadCount = useMemo(
-    () => notifications.filter((n) => !n.read).length,
-    [notifications],
-  );
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
 
   useEffect(() => {
     listTooltipMessagesRef.current = listTooltipMessages;
@@ -977,9 +888,7 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
       try {
         const messages = await listTooltipMessagesRef.current({
           data: {
-            ...(workspaceSearch?.workspace
-              ? { workspace: workspaceSearch.workspace }
-              : {}),
+            ...(workspaceSearch?.workspace ? { workspace: workspaceSearch.workspace } : {}),
             type: "notifications",
             limit: 8,
             page: 1,
@@ -1025,9 +934,7 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
   }
 
   function markAsRead(id: string) {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   }
 
   function handleNotificationClick(notification: Notification) {
@@ -1052,7 +959,10 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => { haptics?.selection(); setOpen(!open); }}
+        onClick={() => {
+          haptics?.selection();
+          setOpen(!open);
+        }}
         className="flex items-center gap-1.5 text-sm text-dash-text-faded hover:text-dash-text-strong transition-colors"
       >
         <span className="relative">
@@ -1077,14 +987,9 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b-[0.5px] border-dash-border px-4 py-3">
-              <span className="text-sm font-medium text-dash-text-strong">
-                Notifications
-              </span>
+              <span className="text-sm font-medium text-dash-text-strong">Notifications</span>
               {unreadCount > 0 && (
-                <button
-                  onClick={markAllRead}
-                  className="text-xs text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
-                >
+                <button onClick={markAllRead} className="text-xs text-[#4879f8] transition-colors hover:text-[#3a6ae6]">
                   Mark all as read
                 </button>
               )}
@@ -1098,9 +1003,7 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
                   <span>Loading notifications...</span>
                 </div>
               ) : notifications.length === 0 ? (
-                <div className="px-4 py-6 text-sm text-dash-text-faded">
-                  No notifications
-                </div>
+                <div className="px-4 py-6 text-sm text-dash-text-faded">No notifications</div>
               ) : (
                 notifications.map((n) => (
                   <button
@@ -1108,20 +1011,12 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
                     onClick={() => handleNotificationClick(n)}
                     className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-dash-bg-elevated"
                   >
-                    <span
-                      className={`mt-1.5 size-[6px] shrink-0 rounded-full ${n.read ? "bg-transparent" : "bg-[#ef2f1f]"}`}
-                    />
+                    <span className={`mt-1.5 size-[6px] shrink-0 rounded-full ${n.read ? "bg-transparent" : "bg-[#ef2f1f]"}`} />
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span
-                        className={`text-sm leading-[1.4] ${n.read ? "font-light text-dash-text-faded" : "text-dash-text-strong"}`}
-                      >
+                      <span className={`text-sm leading-[1.4] ${n.read ? "font-light text-dash-text-faded" : "text-dash-text-strong"}`}>
                         {n.message}
                       </span>
-                      {n.time ? (
-                        <span className="text-xs text-dash-text-extra-faded">
-                          {n.time}
-                        </span>
-                      ) : null}
+                      {n.time ? <span className="text-xs text-dash-text-extra-faded">{n.time}</span> : null}
                     </div>
                   </button>
                 ))
@@ -1248,13 +1143,13 @@ function CreateDropdown() {
         </button>
         <button
           type="button"
-          onClick={() => { haptics.selection(); setOpen(!open); }}
+          onClick={() => {
+            haptics.selection();
+            setOpen(!open);
+          }}
           className="flex items-center rounded-r border border-l-0 border-[#3964d5] bg-[#4879f8] px-1.5 shadow-[0px_1px_2px_rgba(18,18,23,0.05)]"
         >
-          <motion.span
-            animate={{ rotate: open ? 180 : 0 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          >
+          <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}>
             <ChevronDown className="size-4 text-white" />
           </motion.span>
         </button>
@@ -1315,12 +1210,8 @@ export function Topbar({
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const currentProject = useRouterState({
     select: (s) => {
-      const projectMatch = s.matches.find(
-        (match) => match.routeId === "/projects/$projectId",
-      );
-      const loaderData = projectMatch?.loaderData as
-        | { project?: Project | null }
-        | undefined;
+      const projectMatch = s.matches.find((match) => match.routeId === "/projects/$projectId");
+      const loaderData = projectMatch?.loaderData as { project?: Project | null } | undefined;
       return loaderData?.project ?? null;
     },
   });
@@ -1335,15 +1226,14 @@ export function Topbar({
           <div className="flex items-center gap-3">
             {onMobileNavToggle && (
               <button
-                onClick={() => { haptics.selection(); onMobileNavToggle!(); }}
+                onClick={() => {
+                  haptics.selection();
+                  onMobileNavToggle!();
+                }}
                 className="text-dash-text-faded hover:text-dash-text-strong md:hidden"
                 aria-label="Toggle navigation"
               >
-                {mobileNavOpen ? (
-                  <X className="size-5" />
-                ) : (
-                  <Menu className="size-5" />
-                )}
+                {mobileNavOpen ? <X className="size-5" /> : <Menu className="size-5" />}
               </button>
             )}
             <div
@@ -1351,9 +1241,7 @@ export function Topbar({
               className="flex cursor-pointer items-center gap-2 text-dash-text-extra-faded transition-colors hover:text-dash-text-faded"
             >
               <Search className="size-4" />
-              <span className="hidden text-sm md:inline">
-                Search workspace or use cmd + k
-              </span>
+              <span className="hidden text-sm md:inline">Search workspace or use cmd + k</span>
               <kbd className="ml-1 hidden rounded border border-dash-border-soft px-1.5 py-0.5 text-[10px] font-medium leading-none text-dash-text-extra-faded md:inline">
                 ⌘K
               </kbd>
@@ -1361,15 +1249,15 @@ export function Topbar({
           </div>
           <div className="flex items-center gap-2 text-dash-text-faded md:gap-4">
             <NotificationsDropdown haptics={haptics} />
-            <a
-              href="mailto:hello@brimble.app"
-              className="flex items-center gap-1.5 text-sm hover:text-dash-text-strong transition-colors"
-            >
+            <a href="mailto:hello@brimble.app" className="flex items-center gap-1.5 text-sm hover:text-dash-text-strong transition-colors">
               <HelpCircle className="size-4" />
               <span className="hidden md:inline">Help</span>
             </a>
             <button
-              onClick={() => { haptics.selection(); onSettingsClick(); }}
+              onClick={() => {
+                haptics.selection();
+                onSettingsClick();
+              }}
               className="flex items-center gap-1.5 text-sm transition-colors hover:text-dash-text-strong"
             >
               <img
@@ -1379,15 +1267,14 @@ export function Topbar({
               />
             </button>
             <button
-              onClick={() => { haptics.selection(); cycleTheme(); }}
+              onClick={() => {
+                haptics.selection();
+                cycleTheme();
+              }}
               className="flex items-center gap-1.5 text-sm hover:text-dash-text-strong"
               title={mode === Theme.System ? "System theme" : theme === Theme.Dark ? "Dark theme" : "Light theme"}
             >
-              {theme === "dark" ? (
-                <Sun className="size-4" />
-              ) : (
-                <Moon className="size-4" />
-              )}
+              {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
           </div>
         </div>
@@ -1397,22 +1284,13 @@ export function Topbar({
       <div className="border-b border-dash-border-soft">
         <div className="mx-auto flex max-w-screen-xl items-center justify-between px-4 py-3 md:px-0">
           <div className="flex min-w-0 items-center">
-            <WorkspaceSwitcher
-              profile={userProfile ?? null}
-              workspaces={workspaces ?? []}
-              pathname={pathname}
-              searchStr={searchStr}
-            />
+            <WorkspaceSwitcher profile={userProfile ?? null} workspaces={workspaces ?? []} pathname={pathname} searchStr={searchStr} />
             <span className="mx-2 text-sm text-dash-text-faded">/</span>
             {isWorkspaceNew ? (
-              <span className="text-sm font-medium text-dash-text-faded">
-                New Workspace
-              </span>
+              <span className="text-sm font-medium text-dash-text-faded">New Workspace</span>
             ) : projectId ? (
               projectId === "new" ? (
-                <span className="text-sm font-medium text-dash-text-faded">
-                  New Project
-                </span>
+                <span className="text-sm font-medium text-dash-text-faded">New Project</span>
               ) : (
                 <ProjectSwitcher
                   projectId={projectId}
@@ -1423,9 +1301,7 @@ export function Topbar({
                 />
               )
             ) : (
-              <span className="text-sm font-medium text-dash-text-faded">
-                Home
-              </span>
+              <span className="text-sm font-medium text-dash-text-faded">Home</span>
             )}
           </div>
           <div className="flex items-center gap-4">

@@ -73,11 +73,7 @@ function getPlanInfo(planType?: string, isTeamWorkspace?: boolean) {
     };
   }
 
-  if (
-    key === SUBSCRIPTION_PLAN_TYPE.DeveloperPlan ||
-    key === "PRO" ||
-    key === "PRO_PLAN"
-  ) {
+  if (key === SUBSCRIPTION_PLAN_TYPE.DeveloperPlan || key === "PRO" || key === "PRO_PLAN") {
     return {
       label: "PRO",
       badgeBg: "bg-[#d4a017]",
@@ -130,17 +126,11 @@ export function StatsRow({
   const totalProjects = overview?.total?.project ?? 0;
   const bandwidthChartData =
     bandwidth?.results?.map((point) => ({
-      value:
-        typeof point.total === "number" && Number.isFinite(point.total)
-          ? point.total
-          : 0,
+      value: typeof point.total === "number" && Number.isFinite(point.total) ? point.total : 0,
     })) ?? [];
-  const chartData =
-    bandwidthChartData.length > 0 ? bandwidthChartData : [{ value: 0 }];
+  const chartData = bandwidthChartData.length > 0 ? bandwidthChartData : [{ value: 0 }];
   const latestBandwidthTotal =
-    bandwidth?.results && bandwidth.results.length > 0
-      ? bandwidth.results[bandwidth.results.length - 1]?.total
-      : undefined;
+    bandwidth?.results && bandwidth.results.length > 0 ? bandwidth.results[bandwidth.results.length - 1]?.total : undefined;
   const bandwidthSummaryText = formatBandwidthTotal(latestBandwidthTotal);
 
   const deploymentRows = [
@@ -163,34 +153,13 @@ export function StatsRow({
       {/* Bandwidth */}
       <div className="flex w-full shrink-0 flex-col border-b-[0.5px] border-dash-border lg:w-[36%] lg:border-b-0 lg:border-r-[0.5px]">
         <div className="flex h-[30px] items-center border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-2">
-          <span className="text-xs tracking-[-0.02px] text-dash-text-strong">
-            Bandwidth
-          </span>
+          <span className="text-xs tracking-[-0.02px] text-dash-text-strong">Bandwidth</span>
         </div>
-        <p className="px-2 pt-2 pb-3 text-xs uppercase tracking-[-0.02px] text-[#ff9b01]">
-          {bandwidthSummaryText}
-        </p>
+        <p className="px-2 pt-2 pb-3 text-xs uppercase tracking-[-0.02px] text-[#ff9b01]">{bandwidthSummaryText}</p>
         <div className="mt-auto h-[65px] min-w-0">
-          <ResponsiveContainer
-            width="100%"
-            height={65}
-            minWidth={0}
-            minHeight={1}
-          >
-            <AreaChart
-              data={chartData}
-              margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
-            >
-              <YAxis
-                domain={[
-                  0,
-                  (max: number) =>
-                    typeof max === "number" && Number.isFinite(max) && max > 0
-                      ? max
-                      : 1,
-                ]}
-                hide
-              />
+          <ResponsiveContainer width="100%" height={65} minWidth={0} minHeight={1}>
+            <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+              <YAxis domain={[0, (max: number) => (typeof max === "number" && Number.isFinite(max) && max > 0 ? max : 1)]} hide />
               <Area
                 type="linear"
                 dataKey="value"
@@ -208,9 +177,7 @@ export function StatsRow({
       {/* Deployment minutes */}
       <div className="flex w-full shrink-0 flex-col border-b-[0.5px] border-dash-border lg:w-[34%] lg:border-b-0">
         <div className="flex h-[30px] items-center border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-2">
-          <span className="text-xs tracking-[-0.02px] text-dash-text-strong">
-            Deployment minutes
-          </span>
+          <span className="text-xs tracking-[-0.02px] text-dash-text-strong">Deployment minutes</span>
         </div>
         <div className="flex flex-1 flex-col justify-between gap-1 px-2 py-3.5 lg:gap-0">
           {deploymentRows.map((row, i) => (
@@ -219,9 +186,7 @@ export function StatsRow({
                 <span>{row.label}</span>
                 <span className="text-right">{row.value}</span>
               </div>
-              {i < deploymentRows.length - 1 && (
-                <hr className="mt-2 border-dash-border lg:mt-1.5" />
-              )}
+              {i < deploymentRows.length - 1 && <hr className="mt-2 border-dash-border lg:mt-1.5" />}
             </div>
           ))}
         </div>
@@ -230,9 +195,7 @@ export function StatsRow({
       {/* Total deployments */}
       <div className="flex flex-1 flex-col border-t-[0.5px] border-dash-border lg:border-t-0 lg:border-l-[0.5px]">
         <div className="flex h-[30px] items-center border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-2.5">
-          <span className="text-xs tracking-[-0.02px] text-dash-text-strong">
-            Total projects (per environment)
-          </span>
+          <span className="text-xs tracking-[-0.02px] text-dash-text-strong">Total projects (per environment)</span>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-4 lg:py-0">
           <div className="flex items-center gap-2.5">
@@ -242,17 +205,11 @@ export function StatsRow({
                 <span className="text-dash-text-extra-faded">
                   /
                   <span className="ml-0.5 inline-flex align-middle">
-                    <Infinity
-                      className="size-5"
-                      weight="light"
-                      aria-label="Unlimited"
-                    />
+                    <Infinity className="size-5" weight="light" aria-label="Unlimited" />
                   </span>
                 </span>
               ) : (
-                <span className="text-dash-text-extra-faded">
-                  /{specProjectLimit}
-                </span>
+                <span className="text-dash-text-extra-faded">/{specProjectLimit}</span>
               )}
             </p>
           </div>
@@ -264,14 +221,10 @@ export function StatsRow({
               setChangePlanOpen(true);
             }}
             disabled={!canChangePlan}
-            className={
-              !canChangePlan ? "cursor-default opacity-100" : undefined
-            }
+            className={!canChangePlan ? "cursor-default opacity-100" : undefined}
             aria-disabled={!canChangePlan}
           >
-            {plan.nextPlan
-              ? `Get Brimble ${plan.nextPlan}`
-              : `Brimble ${plan.displayName}`}
+            {plan.nextPlan ? `Get Brimble ${plan.nextPlan}` : `Brimble ${plan.displayName}`}
             <img src={plan.medalIcon} alt="" className="size-4" />
           </DashButton>
         </div>

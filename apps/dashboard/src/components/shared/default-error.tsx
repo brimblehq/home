@@ -42,14 +42,12 @@ function getFriendlyError(error: unknown): { title: string; description: string 
   if (isNetworkError(error)) {
     return {
       title: "Can't reach our servers",
-      description:
-        "Check your internet connection and try again. If the problem persists, our systems may be temporarily unavailable.",
+      description: "Check your internet connection and try again. If the problem persists, our systems may be temporarily unavailable.",
     };
   }
 
   const err = error as { status?: unknown; code?: unknown } | null;
-  const status =
-    typeof err?.status === "number" ? err.status : undefined;
+  const status = typeof err?.status === "number" ? err.status : undefined;
 
   if (status === 404 || err?.code === "HTTP_404") {
     return {
@@ -61,15 +59,13 @@ function getFriendlyError(error: unknown): { title: string; description: string 
   if (status && status >= 500) {
     return {
       title: "Something went wrong on our end",
-      description:
-        "We're looking into it. Please try again in a moment — your data is safe.",
+      description: "We're looking into it. Please try again in a moment — your data is safe.",
     };
   }
 
   return {
     title: "Something went wrong",
-    description:
-      "We hit an unexpected error. Please try again in a moment — if it keeps happening, let us know.",
+    description: "We hit an unexpected error. Please try again in a moment — if it keeps happening, let us know.",
   };
 }
 

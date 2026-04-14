@@ -4,13 +4,15 @@ import { asRecord, asString, pickBoolean, pickString } from "./normalize";
 
 export interface ProjectEnvironmentVariable {
   id: string;
-  envId?: string;
+  envId?: string | null;
+  source?: "environment";
   name: string;
   value: string;
   environment?: string;
   user?: string;
   avatar?: string;
   isSystem?: boolean;
+  encrypted?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -50,27 +52,14 @@ export interface EnvironmentVariableInput {
 
 export interface ProjectEnvironmentsApi {
   listEnvironments(input?: { teamId?: string }): Promise<ProjectEnvironment[]>;
-  getEnvironment(
-    environmentId: string,
-    input?: { teamId?: string },
-  ): Promise<ProjectEnvironment>;
-  createEnvironment(input: {
-    name: string;
-    teamId?: string;
-    inheritFrom?: string;
-  }): Promise<ProjectEnvironment>;
+  getEnvironment(environmentId: string, input?: { teamId?: string }): Promise<ProjectEnvironment>;
+  createEnvironment(input: { name: string; teamId?: string; inheritFrom?: string }): Promise<ProjectEnvironment>;
   updateEnvironment(
     environmentId: string,
     input: { name?: string; inheritFrom?: string | null; teamId?: string },
   ): Promise<ProjectEnvironment>;
-  deleteEnvironment(
-    environmentId: string,
-    input: { moveTo: string; teamId?: string },
-  ): Promise<{ success: boolean }>;
-  listEnvironmentVariables(
-    environmentId: string,
-    input?: { teamId?: string },
-  ): Promise<EffectiveEnvironmentVariable[]>;
+  deleteEnvironment(environmentId: string, input: { moveTo: string; teamId?: string }): Promise<{ success: boolean }>;
+  listEnvironmentVariables(environmentId: string, input?: { teamId?: string }): Promise<EffectiveEnvironmentVariable[]>;
   saveEnvironmentVariables(
     environmentId: string,
     input: { variables: EnvironmentVariableInput[]; teamId?: string },
@@ -80,11 +69,7 @@ export interface ProjectEnvironmentsApi {
     variableId: string,
     input: EnvironmentVariableInput & { teamId?: string },
   ): Promise<{ success: boolean }>;
-  deleteEnvironmentVariable(
-    environmentId: string,
-    variableId: string,
-    input?: { teamId?: string },
-  ): Promise<{ success: boolean }>;
+  deleteEnvironmentVariable(environmentId: string, variableId: string, input?: { teamId?: string }): Promise<{ success: boolean }>;
   get(projectId: string, input?: { target?: string }): Promise<ProjectEnvironmentSnapshot>;
   listTargets(projectId: string): Promise<string[]>;
   add(
@@ -95,11 +80,7 @@ export interface ProjectEnvironmentsApi {
       editor?: boolean;
     },
   ): Promise<ProjectEnvironmentSnapshot | null>;
-  update(
-    projectId: string,
-    envId: string,
-    input: { name: string; value: string },
-  ): Promise<{ success: boolean }>;
+  update(projectId: string, envId: string, input: { name: string; value: string }): Promise<{ success: boolean }>;
   remove(projectId: string, envId: string): Promise<{ success: boolean }>;
   decrypt(input: Array<{ name: string; value: string }>): Promise<Array<{ name: string; value: string }>>;
 }
@@ -123,52 +104,34 @@ function mapEnvVariable(item: any): ProjectEnvironmentVariable {
   const nestedEnvironment = asRecord(row.environment);
   const nestedVariable = asRecord(row.variable);
 
-  const name =
-    asString(row.name) ??
-    asString(nestedVariable?.name) ??
-    "";
+  const name = asString(row.name) ?? asString(nestedVariable?.name) ?? "";
 
-  const value =
-    asString(row.value) ??
-    asString(nestedVariable?.value) ??
-    "";
+  const value = asString(row.value) ?? asString(nestedVariable?.value) ?? "";
 
-  const environment =
-    pickString(row, "environment", "deployment") ??
-    pickString(nestedEnvironment, "name", "slug");
+  const environment = pickString(row, "environment", "deployment") ?? pickString(nestedEnvironment, "name", "slug");
 
-  const envId =
-    pickString(
-      row,
-      "_id",
-      "id",
-      "envId",
-      "env_id",
-    );
-  const id = String(
-    envId ??
-    `${name}:${environment ?? "default"}:${asString(row.createdAt) ?? ""}`,
-  );
+  const source = asString(row.source) === "environment" ? "environment" : undefined;
+  const envId = pickString(row, "id", "_id") ?? null;
+  const id = envId ? envId : `${source === "environment" ? "shared" : "env"}:${name}:${environment ?? "default"}`;
 
-  const user =
-    asString(userValue) ??
-    pickString(userRecord, "username", "name");
+  const user = asString(userValue) ?? pickString(userRecord, "username", "name");
 
-  const avatar =
-    pickString(userRecord, "avatar") ??
-    asString(row.avatar);
+  const avatar = pickString(userRecord, "avatar") ?? asString(row.avatar);
 
   const isSystem = pickBoolean(row, "is_system", "isSystem") ?? false;
+  const encrypted = typeof value === "string" && value.startsWith("U2FsdGVkX1");
 
   return {
     id,
     envId,
+    source,
     name,
     value,
     environment,
     user,
     avatar,
     isSystem,
+    encrypted,
     createdAt: asString(row.createdAt) ?? asString(nestedVariable?.createdAt),
     updatedAt: asString(row.updatedAt) ?? asString(nestedVariable?.updatedAt),
   };
@@ -184,9 +147,7 @@ function mapSnapshot(payload: any): ProjectEnvironmentSnapshot {
         ? data
         : [];
 
-  const mappedEnvs = rootEnvs
-    .map(mapEnvVariable)
-    .filter((env: ProjectEnvironmentVariable) => env.name);
+  const mappedEnvs = rootEnvs.map(mapEnvVariable).filter((env: ProjectEnvironmentVariable) => env.name);
 
   return {
     envs: mappedEnvs,
@@ -206,8 +167,7 @@ function mapProjectEnvironment(item: any): ProjectEnvironment {
     isDefault: pickBoolean(row, "isDefault", "is_default") ?? false,
     createdAt: asString(row.createdAt),
     updatedAt: asString(row.updatedAt),
-    projectCount:
-      typeof row.projectCount === "number" ? row.projectCount : undefined,
+    projectCount: typeof row.projectCount === "number" ? row.projectCount : undefined,
   };
 }
 
@@ -255,20 +215,15 @@ export function createProjectEnvironmentsApi(client: ApiClient): ProjectEnvironm
         return [];
       }
 
-      return data
-        .map(mapProjectEnvironment)
-        .filter((env) => Boolean(env._id) && Boolean(env.name));
+      return data.map(mapProjectEnvironment).filter((env) => Boolean(env._id) && Boolean(env.name));
     },
     async getEnvironment(environmentId, input) {
-      const response = await client.request(
-        `${environmentsPath}/${encodeURIComponent(environmentId)}`,
-        {
-          method: "GET",
-          query: {
-            teamId: input?.teamId,
-          },
+      const response = await client.request(`${environmentsPath}/${encodeURIComponent(environmentId)}`, {
+        method: "GET",
+        query: {
+          teamId: input?.teamId,
         },
-      );
+      });
 
       return mapProjectEnvironment(unwrapData(response));
     },
@@ -285,111 +240,89 @@ export function createProjectEnvironmentsApi(client: ApiClient): ProjectEnvironm
       return mapProjectEnvironment(unwrapData(response));
     },
     async updateEnvironment(environmentId, input) {
-      const response = await client.request(
-        `${environmentsPath}/${encodeURIComponent(environmentId)}`,
-        {
-          method: "PATCH",
-          query: {
-            teamId: input.teamId,
-          },
-          body: {
-            name: input.name,
-            inheritFrom: input.inheritFrom,
-          },
+      const response = await client.request(`${environmentsPath}/${encodeURIComponent(environmentId)}`, {
+        method: "PATCH",
+        query: {
+          teamId: input.teamId,
         },
-      );
+        body: {
+          name: input.name,
+          inheritFrom: input.inheritFrom,
+        },
+      });
 
       return mapProjectEnvironment(unwrapData(response));
     },
     async deleteEnvironment(environmentId, input) {
-      await client.request(
-        `${environmentsPath}/${encodeURIComponent(environmentId)}`,
-        {
-          method: "DELETE",
-          query: {
-            moveTo: input.moveTo,
-            teamId: input.teamId,
-          },
+      await client.request(`${environmentsPath}/${encodeURIComponent(environmentId)}`, {
+        method: "DELETE",
+        query: {
+          moveTo: input.moveTo,
+          teamId: input.teamId,
         },
-      );
+      });
 
       return { success: true };
     },
     async listEnvironmentVariables(environmentId, input) {
-      const response = await client.request(
-        `${environmentsPath}/${encodeURIComponent(environmentId)}/variables`,
-        {
-          method: "GET",
-          query: {
-            teamId: input?.teamId,
-          },
+      const response = await client.request(`${environmentsPath}/${encodeURIComponent(environmentId)}/variables`, {
+        method: "GET",
+        query: {
+          teamId: input?.teamId,
         },
-      );
+      });
 
       const data = unwrapData<any[]>(response);
       if (!Array.isArray(data)) {
         return [];
       }
 
-      return data
-        .map(mapEffectiveEnvironmentVariable)
-        .filter((row) => Boolean(row.name));
+      return data.map(mapEffectiveEnvironmentVariable).filter((row) => Boolean(row.name));
     },
     async saveEnvironmentVariables(environmentId, input) {
-      const response = await client.request(
-        `${environmentsPath}/${encodeURIComponent(environmentId)}/variables`,
-        {
-          method: "POST",
-          query: {
-            teamId: input.teamId,
-          },
-          body: {
-            variables: input.variables.map((variable) => ({
-              name: variable.name,
-              value: variable.value,
-              inheritable: variable.inheritable,
-            })),
-          },
+      const response = await client.request(`${environmentsPath}/${encodeURIComponent(environmentId)}/variables`, {
+        method: "POST",
+        query: {
+          teamId: input.teamId,
         },
-      );
+        body: {
+          variables: input.variables.map((variable) => ({
+            name: variable.name,
+            value: variable.value,
+            inheritable: variable.inheritable,
+          })),
+        },
+      });
 
       const data = unwrapData<any[]>(response);
       if (!Array.isArray(data)) {
         return [];
       }
 
-      return data
-        .map(mapEffectiveEnvironmentVariable)
-        .filter((row) => Boolean(row.name));
+      return data.map(mapEffectiveEnvironmentVariable).filter((row) => Boolean(row.name));
     },
     async updateEnvironmentVariable(environmentId, variableId, input) {
-      await client.request(
-        `${environmentsPath}/${encodeURIComponent(environmentId)}/variables/${encodeURIComponent(variableId)}`,
-        {
-          method: "PATCH",
-          query: {
-            teamId: input.teamId,
-          },
-          body: {
-            name: input.name,
-            value: input.value,
-            inheritable: input.inheritable,
-          },
+      await client.request(`${environmentsPath}/${encodeURIComponent(environmentId)}/variables/${encodeURIComponent(variableId)}`, {
+        method: "PATCH",
+        query: {
+          teamId: input.teamId,
         },
-      );
+        body: {
+          name: input.name,
+          value: input.value,
+          inheritable: input.inheritable,
+        },
+      });
 
       return { success: true };
     },
     async deleteEnvironmentVariable(environmentId, variableId, input) {
-      await client.request(
-        `${environmentsPath}/${encodeURIComponent(environmentId)}/variables/${encodeURIComponent(variableId)}`,
-        {
-          method: "DELETE",
-          query: {
-            teamId: input?.teamId,
-          },
+      await client.request(`${environmentsPath}/${encodeURIComponent(environmentId)}/variables/${encodeURIComponent(variableId)}`, {
+        method: "DELETE",
+        query: {
+          teamId: input?.teamId,
         },
-      );
+      });
 
       return { success: true };
     },
@@ -402,10 +335,7 @@ export function createProjectEnvironmentsApi(client: ApiClient): ProjectEnvironm
       return mapSnapshot(response);
     },
     async listTargets(projectId) {
-      const response = await client.request(
-        `${basePath}/${encodeURIComponent(projectId)}/environments`,
-        { method: "GET" },
-      );
+      const response = await client.request(`${basePath}/${encodeURIComponent(projectId)}/environments`, { method: "GET" });
       const data = unwrapData<any>(response);
       if (!Array.isArray(data)) {
         return ["PRODUCTION"];
@@ -447,26 +377,20 @@ export function createProjectEnvironmentsApi(client: ApiClient): ProjectEnvironm
       }
     },
     async update(projectId, envId, input) {
-      await client.request(
-        `${basePath}/${encodeURIComponent(projectId)}/${encodeURIComponent(envId)}`,
-        {
-          method: "PATCH",
-          body: {
-            environment: {
-              name: input.name,
-              value: input.value,
-            },
+      await client.request(`${basePath}/${encodeURIComponent(projectId)}/${encodeURIComponent(envId)}`, {
+        method: "PATCH",
+        body: {
+          environment: {
+            name: input.name,
+            value: input.value,
           },
         },
-      );
+      });
 
       return { success: true };
     },
     async remove(projectId, envId) {
-      await client.request(
-        `${basePath}/${encodeURIComponent(projectId)}/${encodeURIComponent(envId)}`,
-        { method: "DELETE" },
-      );
+      await client.request(`${basePath}/${encodeURIComponent(projectId)}/${encodeURIComponent(envId)}`, { method: "DELETE" });
 
       return { success: true };
     },

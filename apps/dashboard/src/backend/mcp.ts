@@ -1,12 +1,5 @@
 import type { ApiClient } from "./types";
-import {
-  asRecord,
-  asString,
-  pickBoolean,
-  pickNonEmptyString,
-  pickNumber,
-  pickString,
-} from "./normalize";
+import { asRecord, asString, pickBoolean, pickNonEmptyString, pickNumber, pickString } from "./normalize";
 
 export interface McpConnection {
   type: string;
@@ -152,9 +145,7 @@ function mapMcpServerTemplate(value: unknown): McpServerTemplate | null {
     tags: mapStringArray(row.tags),
     features: mapStringArray(row.features),
     tools: rawTools.map(mapMcpTool).filter((item): item is McpTool => item !== null),
-    connections: rawConnections
-      .map(mapMcpConnection)
-      .filter((item): item is McpConnection => item !== null),
+    connections: rawConnections.map(mapMcpConnection).filter((item): item is McpConnection => item !== null),
   };
 }
 
@@ -174,11 +165,7 @@ export function createMcpApi(client: ApiClient): McpApi {
       });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
-      const rawServers = Array.isArray(root?.servers)
-        ? root.servers
-        : Array.isArray(root)
-          ? root
-          : [];
+      const rawServers = Array.isArray(root?.servers) ? root.servers : Array.isArray(root) ? root : [];
       const paginationRow = asRecord(root?.pagination);
 
       return {
@@ -209,11 +196,7 @@ export function createMcpApi(client: ApiClient): McpApi {
       });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
-      const rawServers = Array.isArray(root?.servers)
-        ? root.servers
-        : Array.isArray(root)
-          ? root
-          : [];
+      const rawServers = Array.isArray(root?.servers) ? root.servers : Array.isArray(root) ? root : [];
       const paginationRow = asRecord(root?.pagination);
 
       return {

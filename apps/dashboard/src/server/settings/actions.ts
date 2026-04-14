@@ -25,10 +25,7 @@ async function resolveWorkspaceSubscriptionId(backend: BackendApi, workspace?: s
   }
 }
 
-async function resolveWorkspaceTeamId(
-  backend: BackendApi,
-  workspace?: string,
-) {
+async function resolveWorkspaceTeamId(backend: BackendApi, workspace?: string) {
   const workspaceSlug = workspace?.trim().toLowerCase();
   if (!workspaceSlug) {
     return undefined;

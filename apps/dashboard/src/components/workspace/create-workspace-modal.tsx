@@ -1,20 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Plus, Minus, X, Check, Info } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  Modal,
-  ModalHeader,
-  ModalFooter,
-  ModalCancelButton,
-  ModalContinueButton,
-} from "../shared/modal";
+import { Modal, ModalHeader, ModalFooter, ModalCancelButton, ModalContinueButton } from "../shared/modal";
 import { Dropdown } from "../shared/dropdown";
 import { RoleDropdown } from "../shared/role-dropdown";
 import { WorkspaceStep } from "../../types/enums";
 import { usePricing } from "@/contexts/pricing-context";
 
-const inputClass =
-  "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+const inputClass = "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 const teamSizeOptions = Array.from({ length: 48 }, (_, i) => i + 3);
 
@@ -47,9 +40,7 @@ function Stepper({
       >
         <Minus className="size-4" />
       </button>
-      <span className="flex-1 text-center text-sm font-medium text-dash-text-strong">
-        {renderValue(value)}
-      </span>
+      <span className="flex-1 text-center text-sm font-medium text-dash-text-strong">{renderValue(value)}</span>
       <button
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
@@ -67,9 +58,7 @@ function InfoBanner({ children }: { children: React.ReactNode }) {
   return (
     <div className="mt-2 flex items-start gap-2.5 rounded-[4px] bg-[#f5a623]/[0.06] px-3 py-2.5 dark:bg-[#f5a623]/[0.08]">
       <Info className="mt-0.5 size-3.5 shrink-0 text-[#f5a623]" />
-      <div className="text-sm font-light leading-[1.4] text-[#b37a10] dark:text-[#f5a623]">
-        {children}
-      </div>
+      <div className="text-sm font-light leading-[1.4] text-[#b37a10] dark:text-[#f5a623]">{children}</div>
     </div>
   );
 }
@@ -100,9 +89,7 @@ function StepName({
   return (
     <div className="flex flex-col gap-4 px-6 py-5">
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-          Workspace name
-        </label>
+        <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Workspace name</label>
         <input
           type="text"
           placeholder="My workspace"
@@ -113,21 +100,12 @@ function StepName({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-          Workspace URL
-        </label>
+        <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Workspace URL</label>
         <div className="flex items-stretch">
           <div className="flex items-center rounded-l-[6px] border border-r-0 border-dash-border bg-dash-bg-elevated px-3">
-            <span className="whitespace-nowrap text-sm text-dash-text-faded">
-              brimble.app/
-            </span>
+            <span className="whitespace-nowrap text-sm text-dash-text-faded">brimble.app/</span>
           </div>
-          <input
-            type="text"
-            value={slug}
-            onChange={(e) => onSlugChange(e.target.value)}
-            className={`${inputClass} rounded-l-none`}
-          />
+          <input type="text" value={slug} onChange={(e) => onSlugChange(e.target.value)} className={`${inputClass} rounded-l-none`} />
         </div>
       </div>
     </div>
@@ -167,9 +145,7 @@ function StepConfig({
     <div className="flex flex-col gap-5 px-6 py-5">
       {/* Team Size */}
       <div>
-        <label className="mb-1.5 block text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-          Team Size
-        </label>
+        <label className="mb-1.5 block text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Team Size</label>
         <Dropdown
           value={String(teamSize)}
           options={teamSizeOptions.map(String)}
@@ -187,9 +163,7 @@ function StepConfig({
 
       {/* Concurrent Builds */}
       <div>
-        <label className="mb-1.5 block text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-          Concurrent Builds
-        </label>
+        <label className="mb-1.5 block text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Concurrent Builds</label>
         <Stepper
           value={concurrentBuilds}
           min={MIN_BUILDS}
@@ -203,18 +177,13 @@ function StepConfig({
         <InfoBanner>
           Build pricing: ${costPerBuild}/build container/mo
           <br />
-          <span className="font-medium">
-            Estimated total: $
-            {totalCost % 1 === 0 ? totalCost : totalCost.toFixed(2)}/mo
-          </span>
+          <span className="font-medium">Estimated total: ${totalCost % 1 === 0 ? totalCost : totalCost.toFixed(2)}/mo</span>
         </InfoBanner>
       </div>
 
       {/* Startup Promo Code */}
       <div>
-        <label className="mb-1.5 block text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-          Startup Promo Code
-        </label>
+        <label className="mb-1.5 block text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Startup Promo Code</label>
         <div className="flex items-stretch gap-2">
           <input
             type="text"
@@ -237,11 +206,7 @@ function StepConfig({
             Promo code applied successfully
           </p>
         )}
-        {promoStatus === "invalid" && (
-          <p className="mt-1.5 text-sm text-[#ef2f1f]">
-            Invalid promo code. Please try again.
-          </p>
-        )}
+        {promoStatus === "invalid" && <p className="mt-1.5 text-sm text-[#ef2f1f]">Invalid promo code. Please try again.</p>}
       </div>
     </div>
   );
@@ -257,15 +222,7 @@ interface InviteRow {
 
 let inviteNextId = 1;
 
-function StepInvite({
-  rows,
-  onRowsChange,
-  teamSize,
-}: {
-  rows: InviteRow[];
-  onRowsChange: (rows: InviteRow[]) => void;
-  teamSize: number;
-}) {
+function StepInvite({ rows, onRowsChange, teamSize }: { rows: InviteRow[]; onRowsChange: (rows: InviteRow[]) => void; teamSize: number }) {
   function addRow() {
     onRowsChange([...rows, { id: inviteNextId++, email: "", role: "Member" }]);
   }
@@ -298,10 +255,7 @@ function StepInvite({
               onChange={(e) => updateRow(row.id, "email", e.target.value)}
               className={`flex-1 ${inputClass}`}
             />
-            <RoleDropdown
-              value={row.role}
-              onChange={(v) => updateRow(row.id, "role", v)}
-            />
+            <RoleDropdown value={row.role} onChange={(v) => updateRow(row.id, "role", v)} />
             <button
               onClick={() => removeRow(row.id)}
               className="flex size-[38px] shrink-0 items-center justify-center rounded-[6px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
@@ -312,10 +266,7 @@ function StepInvite({
         ))}
       </div>
 
-      <button
-        onClick={addRow}
-        className="flex items-center gap-1.5 self-start text-sm text-[#4879f8] hover:text-[#3a6ae6]"
-      >
+      <button onClick={addRow} className="flex items-center gap-1.5 self-start text-sm text-[#4879f8] hover:text-[#3a6ae6]">
         <Plus className="size-3.5" />
         Add another
       </button>
@@ -326,11 +277,7 @@ function StepInvite({
             <span className="text-dash-text-faded">
               {filled} of {teamSize} seats used
             </span>
-            {filled > teamSize && (
-              <span className="text-xs text-[#f5a623]">
-                Exceeds team size — additional seats will be charged
-              </span>
-            )}
+            {filled > teamSize && <span className="text-xs text-[#f5a623]">Exceeds team size — additional seats will be charged</span>}
           </div>
         </div>
       )}
@@ -352,12 +299,8 @@ function StepDone({ name }: { name: string }) {
         <Check className="size-7 text-[#28c840]" />
       </motion.div>
       <div className="flex flex-col items-center gap-1">
-        <h3 className="text-base font-medium text-dash-text-strong">
-          Workspace created!
-        </h3>
-        <p className="text-sm text-dash-text-faded">
-          &ldquo;{name}&rdquo; is ready to go.
-        </p>
+        <h3 className="text-base font-medium text-dash-text-strong">Workspace created!</h3>
+        <p className="text-sm text-dash-text-faded">&ldquo;{name}&rdquo; is ready to go.</p>
       </div>
     </div>
   );
@@ -365,10 +308,7 @@ function StepDone({ name }: { name: string }) {
 
 /* ─── Modal Container ─── */
 
-const stepDescriptions: Record<
-  WorkspaceStep,
-  { title: string; description: string }
-> = {
+const stepDescriptions: Record<WorkspaceStep, { title: string; description: string }> = {
   [WorkspaceStep.Name]: {
     title: "Create workspace",
     description: "Set up a new workspace for your team.",
@@ -389,10 +329,7 @@ interface CreateWorkspaceModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function CreateWorkspaceModal({
-  open,
-  onOpenChange,
-}: CreateWorkspaceModalProps) {
+export function CreateWorkspaceModal({ open, onOpenChange }: CreateWorkspaceModalProps) {
   const pricing = usePricing();
   const [step, setStep] = useState<WorkspaceStep>(WorkspaceStep.Name);
   const [name, setName] = useState("");
@@ -400,12 +337,8 @@ export function CreateWorkspaceModal({
   const [teamSize, setTeamSize] = useState(3);
   const [concurrentBuilds, setConcurrentBuilds] = useState(2);
   const [promoCode, setPromoCode] = useState("");
-  const [promoStatus, setPromoStatus] = useState<
-    "idle" | "verifying" | "valid" | "invalid"
-  >("idle");
-  const [inviteRows, setInviteRows] = useState<InviteRow[]>([
-    { id: inviteNextId++, email: "", role: "Member" },
-  ]);
+  const [promoStatus, setPromoStatus] = useState<"idle" | "verifying" | "valid" | "invalid">("idle");
+  const [inviteRows, setInviteRows] = useState<InviteRow[]>([{ id: inviteNextId++, email: "", role: "Member" }]);
 
   function reset() {
     setStep(WorkspaceStep.Name);
@@ -427,9 +360,7 @@ export function CreateWorkspaceModal({
     if (!promoCode.trim()) return;
     setPromoStatus("verifying");
     setTimeout(() => {
-      setPromoStatus(
-        promoCode.toUpperCase().startsWith("BRIMBLE") ? "valid" : "invalid",
-      );
+      setPromoStatus(promoCode.toUpperCase().startsWith("BRIMBLE") ? "valid" : "invalid");
     }, 800);
   }
 
@@ -438,12 +369,7 @@ export function CreateWorkspaceModal({
     setPromoStatus("idle");
   }
 
-  const steps: WorkspaceStep[] = [
-    WorkspaceStep.Name,
-    WorkspaceStep.Config,
-    WorkspaceStep.Invite,
-    WorkspaceStep.Done,
-  ];
+  const steps: WorkspaceStep[] = [WorkspaceStep.Name, WorkspaceStep.Config, WorkspaceStep.Invite, WorkspaceStep.Done];
   const stepIdx = steps.indexOf(step);
 
   function next() {
@@ -465,26 +391,14 @@ export function CreateWorkspaceModal({
 
   return (
     <Modal open={open} onOpenChange={handleClose} width={500}>
-      {step !== WorkspaceStep.Done && (
-        <ModalHeader
-          title={stepDescriptions[step].title}
-          description={stepDescriptions[step].description}
-        />
-      )}
+      {step !== WorkspaceStep.Done && <ModalHeader title={stepDescriptions[step].title} description={stepDescriptions[step].description} />}
 
       {/* Step indicator */}
       {step !== WorkspaceStep.Done && (
         <div className="flex items-center gap-1.5 px-6 pt-4">
-          {[WorkspaceStep.Name, WorkspaceStep.Config, WorkspaceStep.Invite].map(
-            (s, i) => (
-              <div
-                key={s}
-                className={`h-[3px] flex-1 rounded-full transition-colors ${
-                  i <= stepIdx ? "bg-[#4879f8]" : "bg-dash-border"
-                }`}
-              />
-            ),
-          )}
+          {[WorkspaceStep.Name, WorkspaceStep.Config, WorkspaceStep.Invite].map((s, i) => (
+            <div key={s} className={`h-[3px] flex-1 rounded-full transition-colors ${i <= stepIdx ? "bg-[#4879f8]" : "bg-dash-border"}`} />
+          ))}
         </div>
       )}
 
@@ -496,14 +410,7 @@ export function CreateWorkspaceModal({
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.2, ease }}
         >
-          {step === WorkspaceStep.Name && (
-            <StepName
-              name={name}
-              slug={slug}
-              onNameChange={setName}
-              onSlugChange={setSlug}
-            />
-          )}
+          {step === WorkspaceStep.Name && <StepName name={name} slug={slug} onNameChange={setName} onSlugChange={setSlug} />}
           {step === WorkspaceStep.Config && (
             <StepConfig
               teamSize={teamSize}
@@ -518,13 +425,7 @@ export function CreateWorkspaceModal({
               costPerBuild={pricing.team.costPerBuild}
             />
           )}
-          {step === WorkspaceStep.Invite && (
-            <StepInvite
-              rows={inviteRows}
-              onRowsChange={setInviteRows}
-              teamSize={teamSize}
-            />
-          )}
+          {step === WorkspaceStep.Invite && <StepInvite rows={inviteRows} onRowsChange={setInviteRows} teamSize={teamSize} />}
           {step === WorkspaceStep.Done && <StepDone name={name} />}
         </motion.div>
       </AnimatePresence>

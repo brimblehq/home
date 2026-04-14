@@ -25,8 +25,7 @@ export const Route = createFileRoute("/domains")({
   head: () =>
     buildSeoHead({
       title: "Buy and Manage Domains",
-      description:
-        "Secure your domain in seconds. Buy, connect, and manage custom domains with ease on Brimble.",
+      description: "Secure your domain in seconds. Buy, connect, and manage custom domains with ease on Brimble.",
       path: "/domains",
     }),
   component: DomainsPage,
@@ -89,9 +88,7 @@ function DomainsHero() {
       );
     } catch (searchError) {
       setResults([]);
-      setError(
-        searchError instanceof Error ? searchError.message : "Domain search failed",
-      );
+      setError(searchError instanceof Error ? searchError.message : "Domain search failed");
     } finally {
       setSearching(false);
     }
@@ -104,10 +101,7 @@ function DomainsHero() {
 
   return (
     <section className="relative bg-brimble-surface transition-colors duration-300 px-6 pb-12 pt-10">
-      <div
-        ref={ref}
-        className="mx-auto flex max-w-[720px] flex-col items-center"
-      >
+      <div ref={ref} className="mx-auto flex max-w-[720px] flex-col items-center">
         {/* Balloon illustration + overlapping search bar */}
         <div className="relative w-full">
           <div className="brightness-[1.02] mix-blend-multiply dark:brightness-100 dark:invert dark:mix-blend-screen dark:opacity-85">
@@ -145,13 +139,7 @@ function DomainsHero() {
                   className="w-full bg-transparent text-base leading-normal text-black placeholder:text-[rgba(152,157,164,0.6)] outline-none md:text-sm md:leading-[15.5px] dark:text-white"
                 />
               </div>
-              <Button
-                type="submit"
-                variant="pill-light"
-                size="xs"
-                disabled={!query.trim() || searching}
-                className="shrink-0"
-              >
+              <Button type="submit" variant="pill-light" size="xs" disabled={!query.trim() || searching} className="shrink-0">
                 {searching ? "Searching..." : "Search"}
               </Button>
             </div>
@@ -196,11 +184,7 @@ function DomainsHero() {
           >
             <a href="https://app.brimble.io/domains/buy">
               {siteConfig.domains.cta}
-              <img
-                src={arrowRight}
-                alt=""
-                className="size-3 brightness-0 invert dark:invert-0"
-              />
+              <img src={arrowRight} alt="" className="size-3 brightness-0 invert dark:invert-0" />
             </a>
           </Button>
         </motion.div>
@@ -216,28 +200,17 @@ function DomainsHero() {
           }}
         >
           {!hasSearched && (
-            <p className="text-sm text-brimble-black/60 dark:text-white/65">
-              Search any domain to check live availability and pricing.
-            </p>
+            <p className="text-sm text-brimble-black/60 dark:text-white/65">Search any domain to check live availability and pricing.</p>
           )}
 
-          {searching && (
-            <p className="text-sm text-brimble-black/60 dark:text-white/65">
-              Checking domain availability...
-            </p>
-          )}
+          {searching && <p className="text-sm text-brimble-black/60 dark:text-white/65">Checking domain availability...</p>}
 
-          {!searching && error && (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          )}
+          {!searching && error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           {hasSearched && !searching && !error && (
             <div className="flex flex-col gap-3">
               <p className="text-sm text-brimble-black/60 dark:text-white/65">
-                Showing results for{" "}
-                <span className="font-medium text-brimble-black dark:text-white">
-                  {searchedQuery}
-                </span>
+                Showing results for <span className="font-medium text-brimble-black dark:text-white">{searchedQuery}</span>
               </p>
 
               {results.length > 0 ? (
@@ -260,18 +233,13 @@ function DomainsHero() {
                 </div>
               ) : (
                 <p className="text-sm text-brimble-black/60 dark:text-white/65">
-                  No domains found for{" "}
-                  <span className="font-medium text-brimble-black dark:text-white">
-                    {searchedQuery}
-                  </span>
-                  .
+                  No domains found for <span className="font-medium text-brimble-black dark:text-white">{searchedQuery}</span>.
                 </p>
               )}
             </div>
           )}
         </motion.div>
       </div>
-
     </section>
   );
 }
@@ -284,10 +252,7 @@ function DomainsFaqs() {
 
   return (
     <section className="bg-brimble-surface transition-colors duration-300 px-6 py-[72px]">
-      <div
-        ref={ref}
-        className="mx-auto flex max-w-[720px] flex-col gap-10"
-      >
+      <div ref={ref} className="mx-auto flex max-w-[720px] flex-col gap-10">
         {/* FAQs heading + illustration */}
         <div className="relative">
           <motion.h2
@@ -334,9 +299,7 @@ function DomainsFaqs() {
             {siteConfig.domains.faqs.map((faq, i) => (
               <AccordionItem key={i} value={`faq-${i}`} className="px-4">
                 {i === 0 && faq.label && (
-                  <p className="pt-6 pb-2 font-mono text-xs uppercase tracking-[1.2px] text-brimble-black/50">
-                    {faq.label}
-                  </p>
+                  <p className="pt-6 pb-2 font-mono text-xs uppercase tracking-[1.2px] text-brimble-black/50">{faq.label}</p>
                 )}
                 <AccordionTrigger>{faq.title}</AccordionTrigger>
                 <AccordionContent>{faq.description}</AccordionContent>

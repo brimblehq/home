@@ -23,8 +23,7 @@ export const paymentKeys = {
   methods: () => [...paymentKeys.all, "methods"] as const,
   subscription: () => [...paymentKeys.all, "subscription"] as const,
   spendingLimitStatus: () => [...paymentKeys.all, "spending-limit-status"] as const,
-  invoices: (cursor: string | null, teamId?: string) =>
-    [...paymentKeys.all, "invoices", cursor ?? "first", teamId ?? "personal"] as const,
+  invoices: (cursor: string | null, teamId?: string) => [...paymentKeys.all, "invoices", cursor ?? "first", teamId ?? "personal"] as const,
 };
 
 /* ── Typed server function callers ── */
@@ -33,25 +32,17 @@ const getInvoices = getPaymentInvoicesServerFn as unknown as (args: {
   data: { cursor?: string | null; per_page?: number; team_id?: string };
 }) => Promise<any>;
 
-const addMethod = addPaymentMethodServerFn as unknown as (args: {
-  data: { payment_method: string };
-}) => Promise<any>;
+const addMethod = addPaymentMethodServerFn as unknown as (args: { data: { payment_method: string } }) => Promise<any>;
 
-const removeMethod = removePaymentMethodServerFn as unknown as (args: {
-  data: { payment_method_id: string };
-}) => Promise<any>;
+const removeMethod = removePaymentMethodServerFn as unknown as (args: { data: { payment_method_id: string } }) => Promise<any>;
 
-const setDefault = setDefaultPaymentMethodServerFn as unknown as (args: {
-  data: { payment_method_id: string };
-}) => Promise<any>;
+const setDefault = setDefaultPaymentMethodServerFn as unknown as (args: { data: { payment_method_id: string } }) => Promise<any>;
 
 const createSub = createSubscriptionServerFn as unknown as (args: {
   data: { type: string; payment_method?: string; accept_terms: boolean };
 }) => Promise<any>;
 
-const swap = swapPlanServerFn as unknown as (args: {
-  data: { target_plan: string };
-}) => Promise<any>;
+const swap = swapPlanServerFn as unknown as (args: { data: { target_plan: string } }) => Promise<any>;
 
 const purchase = purchaseServerFn as unknown as (args: {
   data: {
@@ -62,9 +53,7 @@ const purchase = purchaseServerFn as unknown as (args: {
   };
 }) => Promise<any>;
 
-const updateLimit = updateSpendingLimitServerFn as unknown as (args: {
-  data: { spending_limit: number };
-}) => Promise<any>;
+const updateLimit = updateSpendingLimitServerFn as unknown as (args: { data: { spending_limit: number } }) => Promise<any>;
 
 const updateTeamLimit = updateTeamSpendingLimitServerFn as unknown as (args: {
   data: { team_id: string; spending_limit: number };
@@ -116,8 +105,7 @@ export function useCreateSetupIntent() {
 export function useAddPaymentMethod() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (paymentMethodId: string) =>
-      addMethod({ data: { payment_method: paymentMethodId } }),
+    mutationFn: (paymentMethodId: string) => addMethod({ data: { payment_method: paymentMethodId } }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: paymentKeys.methods() });
     },
@@ -127,8 +115,7 @@ export function useAddPaymentMethod() {
 export function useRemovePaymentMethod() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (paymentMethodId: string) =>
-      removeMethod({ data: { payment_method_id: paymentMethodId } }),
+    mutationFn: (paymentMethodId: string) => removeMethod({ data: { payment_method_id: paymentMethodId } }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: paymentKeys.methods() });
     },
@@ -138,8 +125,7 @@ export function useRemovePaymentMethod() {
 export function useSetDefaultPaymentMethod() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (paymentMethodId: string) =>
-      setDefault({ data: { payment_method_id: paymentMethodId } }),
+    mutationFn: (paymentMethodId: string) => setDefault({ data: { payment_method_id: paymentMethodId } }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: paymentKeys.methods() });
     },
@@ -149,8 +135,7 @@ export function useSetDefaultPaymentMethod() {
 export function useCreateSubscription() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { type: string; payment_method?: string; accept_terms: boolean }) =>
-      createSub({ data: input }),
+    mutationFn: (input: { type: string; payment_method?: string; accept_terms: boolean }) => createSub({ data: input }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: paymentKeys.subscription() });
       void qc.invalidateQueries({ queryKey: paymentKeys.methods() });
@@ -186,8 +171,7 @@ export function usePurchase() {
       amount: number;
       metadata: Record<string, unknown>;
       team_id?: string;
-    }) =>
-      purchase({ data: input }),
+    }) => purchase({ data: input }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: [...paymentKeys.all, "invoices"] });
     },

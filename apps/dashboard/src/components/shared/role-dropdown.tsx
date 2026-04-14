@@ -7,13 +7,7 @@ export const TEAM_ROLES: Array<{ value: string; label: string; description: stri
   { value: "Viewer", label: "Viewer", description: "Read-only access to assigned environments" },
 ];
 
-export function RoleDropdown({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+export function RoleDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -41,19 +35,16 @@ export function RoleDropdown({
             <button
               type="button"
               key={role.value}
-              onClick={() => { onChange(role.label); setOpen(false); }}
+              onClick={() => {
+                onChange(role.label);
+                setOpen(false);
+              }}
               className={`flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors ${
-                role.label === value
-                  ? "bg-dash-bg-elevated"
-                  : "hover:bg-dash-bg-elevated"
+                role.label === value ? "bg-dash-bg-elevated" : "hover:bg-dash-bg-elevated"
               }`}
             >
-              <span className={`text-sm ${role.label === value ? "font-medium text-[#4879f8]" : "text-dash-text-body"}`}>
-                {role.label}
-              </span>
-              <span className="text-[11px] leading-tight text-dash-text-extra-faded">
-                {role.description}
-              </span>
+              <span className={`text-sm ${role.label === value ? "font-medium text-[#4879f8]" : "text-dash-text-body"}`}>{role.label}</span>
+              <span className="text-[11px] leading-tight text-dash-text-extra-faded">{role.description}</span>
             </button>
           ))}
         </div>

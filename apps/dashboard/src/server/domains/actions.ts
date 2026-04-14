@@ -1,11 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 import type { BackendApi } from "@/backend";
-import type {
-  DomainDetailsRecord,
-  DomainRecord,
-  PaginatedDomainsResponse,
-} from "@/backend/domains";
+import type { DomainDetailsRecord, DomainRecord, PaginatedDomainsResponse } from "@/backend/domains";
 import type { PaginatedProjectsResponse } from "@/backend/projects";
 import config from "@/config";
 import { withTokenRefresh } from "@/server/shared/backend";
@@ -28,10 +24,7 @@ async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
 }
 
 function buildEnvironmentPreferenceCookieName(workspace?: string) {
-  const scope = (workspace?.trim().toLowerCase() || "__personal__").replace(
-    /[^a-z0-9_-]/g,
-    "_",
-  );
+  const scope = (workspace?.trim().toLowerCase() || "__personal__").replace(/[^a-z0-9_-]/g, "_");
   return `${config.environmentPreferenceCookiePrefix}${scope}`;
 }
 
@@ -48,11 +41,8 @@ async function resolveDomainsEnvironmentId(
     return undefined;
   }
 
-  const preferredEnvironmentId =
-    getCookie(buildEnvironmentPreferenceCookieName(input.workspace))?.trim() || null;
-  const environments = await api.environments
-    .listEnvironments({ teamId: input.teamId })
-    .catch(() => []);
+  const preferredEnvironmentId = getCookie(buildEnvironmentPreferenceCookieName(input.workspace))?.trim() || null;
+  const environments = await api.environments.listEnvironments({ teamId: input.teamId }).catch(() => []);
 
   return resolveEnvironmentId({
     requestedEnvironmentId,
@@ -364,9 +354,7 @@ export const renewDomainSaleServerFn = createServerFn({
   }
 
   const durationRaw = Number(payload?.duration ?? 1);
-  const duration = Number.isFinite(durationRaw) && durationRaw > 0
-    ? Math.floor(durationRaw)
-    : 1;
+  const duration = Number.isFinite(durationRaw) && durationRaw > 0 ? Math.floor(durationRaw) : 1;
 
   return withTokenRefresh(async (api) => {
     const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);

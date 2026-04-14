@@ -3,22 +3,13 @@ import { Search, SlidersHorizontal, Plus, ArrowRightLeft, Loader2 } from "lucide
 import { motion, AnimatePresence } from "motion/react";
 import { Link, getRouteApi, useRouterState } from "@tanstack/react-router";
 import { hapticToast as toast } from "@/utils/haptic-toast";
-import {
-  Modal,
-  ModalHeader,
-  ModalFooter,
-  ModalCancelButton,
-  ModalContinueButton,
-} from "./modal";
+import { Modal, ModalHeader, ModalFooter, ModalCancelButton, ModalContinueButton } from "./modal";
 import { Dropdown } from "./dropdown";
 import type { SettingsPaymentCard } from "@/backend/settings/types";
 import type { PaymentMethod } from "@/backend/payments";
 import { usePaymentMethods } from "@/hooks/use-payments";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
-import {
-  getDomainDetailsServerFn,
-  transferInServerFn,
-} from "@/server/domains/actions";
+import { getDomainDetailsServerFn, transferInServerFn } from "@/server/domains/actions";
 import { getPaymentMethodsServerFn } from "@/server/payments/actions";
 
 interface Project {
@@ -125,24 +116,18 @@ export function AddDomainModal({
   onRegisterDomain,
   initialStep,
 }: AddDomainModalProps) {
-  const { paymentMethods: initialPaymentMethods } =
-    (rootRoute.useLoaderData() ?? {}) as {
-      paymentMethods?: PaymentMethod[] | null;
-    };
-  const { data: paymentMethods = [] } = usePaymentMethods(
-    initialPaymentMethods ?? undefined,
-  );
+  const { paymentMethods: initialPaymentMethods } = (rootRoute.useLoaderData() ?? {}) as {
+    paymentMethods?: PaymentMethod[] | null;
+  };
+  const { data: paymentMethods = [] } = usePaymentMethods(initialPaymentMethods ?? undefined);
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
-  const livePaymentCards: SettingsPaymentCard[] = paymentMethods.map(
-    (method: any) => ({
-      id: method.id,
-      cardType: method.card?.brand ?? method.brand,
-      last4: method.card?.last4 ?? method.last4,
-      preferred: method.is_default,
-    }),
-  );
-  const availablePaymentCards =
-    livePaymentCards.length > 0 ? livePaymentCards : paymentCards;
+  const livePaymentCards: SettingsPaymentCard[] = paymentMethods.map((method: any) => ({
+    id: method.id,
+    cardType: method.card?.brand ?? method.brand,
+    last4: method.card?.last4 ?? method.last4,
+    preferred: method.is_default,
+  }));
+  const availablePaymentCards = livePaymentCards.length > 0 ? livePaymentCards : paymentCards;
   const [step, setStep] = useState<DomainStep>(initialStep ?? DomainStep.SelectProject);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -150,19 +135,12 @@ export function AddDomainModal({
   const [error, setError] = useState<DomainValidationError | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [transferDomain, setTransferDomain] = useState("");
-  const [transferDomainError, setTransferDomainError] = useState<string | null>(
-    null,
-  );
+  const [transferDomainError, setTransferDomainError] = useState<string | null>(null);
   const [transferDomainVerified, setTransferDomainVerified] = useState(false);
-  const [validatingTransferDomain, setValidatingTransferDomain] =
-    useState(false);
+  const [validatingTransferDomain, setValidatingTransferDomain] = useState(false);
   const [transferAuthCode, setTransferAuthCode] = useState("");
-  const [transferRegistrantEmail, setTransferRegistrantEmail] = useState(
-    defaultRegistrantEmail?.trim() ?? "",
-  );
-  const [transferCardId, setTransferCardId] = useState(() =>
-    getPreferredCardId(availablePaymentCards),
-  );
+  const [transferRegistrantEmail, setTransferRegistrantEmail] = useState(defaultRegistrantEmail?.trim() ?? "");
+  const [transferCardId, setTransferCardId] = useState(() => getPreferredCardId(availablePaymentCards));
   const [transferChecklist, setTransferChecklist] = useState({
     domainUnlocked: false,
     registrantEmailAccess: false,
@@ -184,20 +162,15 @@ export function AddDomainModal({
       return;
     }
 
-    const cardStillExists = availablePaymentCards.some(
-      (card) => card.id === transferCardId,
-    );
+    const cardStillExists = availablePaymentCards.some((card) => card.id === transferCardId);
     if (!transferCardId || !cardStillExists) {
       setTransferCardId(preferredCardId);
     }
   }, [availablePaymentCards, transferCardId]);
 
-  const filtered = projects.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = projects.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  const selectedProjectName =
-    projects.find((p) => p.id === selectedProject)?.name ?? "";
+  const selectedProjectName = projects.find((p) => p.id === selectedProject)?.name ?? "";
 
   function handleStepOneContinue() {
     if (selectedProject) {
@@ -220,8 +193,7 @@ export function AddDomainModal({
     if (isReservedBrimbleSubdomain(normalizedDomain)) {
       setError({
         type: "invalid",
-        message:
-          "Brimble-managed subdomains are reserved and cannot be added manually.",
+        message: "Brimble-managed subdomains are reserved and cannot be added manually.",
       });
       setSubmitting(false);
       return;
@@ -252,61 +224,61 @@ export function AddDomainModal({
   const validateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const validateAbortRef = useRef<AbortController | null>(null);
 
-  const validateTransferDomainImmediate = useCallback(async (value: string) => {
-    validateAbortRef.current?.abort();
-    const controller = new AbortController();
-    validateAbortRef.current = controller;
+  const validateTransferDomainImmediate = useCallback(
+    async (value: string) => {
+      validateAbortRef.current?.abort();
+      const controller = new AbortController();
+      validateAbortRef.current = controller;
 
-    const normalized = normalizeDomainInput(value);
-    if (!normalized) {
-      setTransferDomainError(null);
-      setTransferDomainVerified(false);
-      setValidatingTransferDomain(false);
-      return;
-    }
-
-    if (isReservedBrimbleSubdomain(normalized)) {
-      setTransferDomainError("Brimble subdomains cannot be transferred in.");
-      setTransferDomainVerified(false);
-      setValidatingTransferDomain(false);
-      return;
-    }
-
-    setValidatingTransferDomain(true);
-    setTransferDomainVerified(false);
-    try {
-      const workspace =
-        new URLSearchParams(searchStr).get("workspace") || undefined;
-      const domain = await getDomainDetailsServerFn({
-        data: { workspace, domainName: normalized },
-      });
-
-      if (controller.signal.aborted) return;
-
-      if (domain?.purchased) {
-        setTransferDomainError(
-          "This domain was purchased on Brimble and cannot be transferred in.",
-        );
-        return;
-      }
-
-      if (domain) {
-        setTransferDomainError("This domain already exists on Brimble.");
-        return;
-      }
-
-      setTransferDomainError(null);
-      setTransferDomainVerified(true);
-    } catch {
-      if (controller.signal.aborted) return;
-      setTransferDomainError(null);
-      setTransferDomainVerified(true);
-    } finally {
-      if (!controller.signal.aborted) {
+      const normalized = normalizeDomainInput(value);
+      if (!normalized) {
+        setTransferDomainError(null);
+        setTransferDomainVerified(false);
         setValidatingTransferDomain(false);
+        return;
       }
-    }
-  }, [searchStr]);
+
+      if (isReservedBrimbleSubdomain(normalized)) {
+        setTransferDomainError("Brimble subdomains cannot be transferred in.");
+        setTransferDomainVerified(false);
+        setValidatingTransferDomain(false);
+        return;
+      }
+
+      setValidatingTransferDomain(true);
+      setTransferDomainVerified(false);
+      try {
+        const workspace = new URLSearchParams(searchStr).get("workspace") || undefined;
+        const domain = await getDomainDetailsServerFn({
+          data: { workspace, domainName: normalized },
+        });
+
+        if (controller.signal.aborted) return;
+
+        if (domain?.purchased) {
+          setTransferDomainError("This domain was purchased on Brimble and cannot be transferred in.");
+          return;
+        }
+
+        if (domain) {
+          setTransferDomainError("This domain already exists on Brimble.");
+          return;
+        }
+
+        setTransferDomainError(null);
+        setTransferDomainVerified(true);
+      } catch {
+        if (controller.signal.aborted) return;
+        setTransferDomainError(null);
+        setTransferDomainVerified(true);
+      } finally {
+        if (!controller.signal.aborted) {
+          setValidatingTransferDomain(false);
+        }
+      }
+    },
+    [searchStr],
+  );
 
   function scheduleTransferDomainValidation(value: string) {
     if (validateTimerRef.current) clearTimeout(validateTimerRef.current);
@@ -355,8 +327,7 @@ export function AddDomainModal({
 
     setSubmitting(true);
     try {
-      const workspace =
-        new URLSearchParams(searchStr).get("workspace") || undefined;
+      const workspace = new URLSearchParams(searchStr).get("workspace") || undefined;
       const result = await transferInServerFn({
         data: {
           workspace,
@@ -372,9 +343,7 @@ export function AddDomainModal({
       if (result.reversed) {
         toast.error("Domain transfer failed. A refund has been processed.");
       } else {
-        toast.success(
-          "Domain transfer initiated. This may take several days to complete.",
-        );
+        toast.success("Domain transfer initiated. This may take several days to complete.");
       }
       resetAndClose();
     } catch (err: any) {
@@ -431,9 +400,7 @@ export function AddDomainModal({
   return (
     <Modal open={open} onOpenChange={handleOpenChange} width={500}>
       <ModalHeader
-        title={
-          step === DomainStep.TransferIn ? "Transfer Domain" : "Add Domain"
-        }
+        title={step === DomainStep.TransferIn ? "Transfer Domain" : "Add Domain"}
         description={
           step === DomainStep.TransferIn
             ? "Transfer an existing domain from another registrar to Brimble"
@@ -473,23 +440,15 @@ export function AddDomainModal({
                   onClick={() => setSelectedProject(project.id)}
                   className="flex w-full items-center gap-3 px-4 py-3 transition-colors hover:bg-dash-bg-elevated"
                 >
-                  <img
-                    src="/icons/folder-open.svg"
-                    alt=""
-                    className="size-4 shrink-0"
-                  />
-                  <span className="flex-1 text-left text-sm text-dash-text-strong">
-                    {project.name}
-                  </span>
+                  <img src="/icons/folder-open.svg" alt="" className="size-4 shrink-0" />
+                  <span className="flex-1 text-left text-sm text-dash-text-strong">{project.name}</span>
                   <RadioButton selected={selectedProject === project.id} />
                 </button>
               ))}
 
               {filtered.length === 0 && (
                 <div className="flex h-20 items-center justify-center">
-                  <span className="text-sm text-dash-text-faded">
-                    No projects found
-                  </span>
+                  <span className="text-sm text-dash-text-faded">No projects found</span>
                 </div>
               )}
             </div>
@@ -508,9 +467,7 @@ export function AddDomainModal({
               <div className="flex size-6 items-center justify-center rounded-full border border-dash-border-soft bg-dash-bg-elevated">
                 <Plus className="size-3 text-dash-text-faded" />
               </div>
-              <span className="text-sm text-dash-text-strong">
-                Purchase a domain
-              </span>
+              <span className="text-sm text-dash-text-strong">Purchase a domain</span>
             </Link>
 
             <button
@@ -522,12 +479,8 @@ export function AddDomainModal({
                 <ArrowRightLeft className="size-3 text-dash-text-faded" />
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="text-sm text-dash-text-strong">
-                  Transfer a domain to Brimble
-                </span>
-                <span className="text-xs text-dash-text-faded">
-                  Bring your domain from GoDaddy, Namecheap, and others
-                </span>
+                <span className="text-sm text-dash-text-strong">Transfer a domain to Brimble</span>
+                <span className="text-xs text-dash-text-faded">Bring your domain from GoDaddy, Namecheap, and others</span>
               </div>
             </button>
           </motion.div>
@@ -542,18 +495,10 @@ export function AddDomainModal({
             {/* Selected project row */}
             <div className="flex items-center justify-between border-b-[0.5px] border-[#e5e5e5] px-6 py-3.5 dark:border-dash-border">
               <div className="flex items-center gap-2">
-                <img
-                  src="/icons/folder-open.svg"
-                  alt=""
-                  className="size-4 shrink-0"
-                />
+                <img src="/icons/folder-open.svg" alt="" className="size-4 shrink-0" />
                 <span className="text-sm leading-5 tracking-[-0.0224px]">
-                  <span className="font-light text-[#999] dark:text-dash-text-faded">
-                    Selected Project
-                  </span>{" "}
-                  <span className="font-light text-dash-text-body">
-                    {selectedProjectName}
-                  </span>
+                  <span className="font-light text-[#999] dark:text-dash-text-faded">Selected Project</span>{" "}
+                  <span className="font-light text-dash-text-body">{selectedProjectName}</span>
                 </span>
               </div>
               <RadioButton selected />
@@ -563,9 +508,7 @@ export function AddDomainModal({
             <div className="px-6 pb-5 pt-3.5">
               <div className="flex flex-col gap-2">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                    Domain URL
-                  </label>
+                  <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Domain URL</label>
                   <input
                     type="text"
                     placeholder="myawesomewebsite.com"
@@ -615,18 +558,12 @@ export function AddDomainModal({
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
             <div className="flex items-center gap-3 border-b-[0.5px] border-[#e5e5e5] px-6 py-3.5 dark:border-dash-border">
-              <img
-                src="/icons/folder-open.svg"
-                alt=""
-                className="size-4 shrink-0"
-              />
+              <img src="/icons/folder-open.svg" alt="" className="size-4 shrink-0" />
               <div className="min-w-0 flex-1">
                 <span className="text-sm font-light leading-5 tracking-[-0.0224px] text-[#999] dark:text-dash-text-faded">
                   Destination Project
                 </span>
-                <p className="truncate text-sm font-light leading-5 text-dash-text-body">
-                  {selectedProjectName || "Not linked yet"}
-                </p>
+                <p className="truncate text-sm font-light leading-5 text-dash-text-body">{selectedProjectName || "Not linked yet"}</p>
               </div>
               <button
                 type="button"
@@ -640,24 +577,21 @@ export function AddDomainModal({
             <div className="px-6 pb-5 pt-4">
               <div className="flex flex-col gap-4">
                 <div className="rounded-[8px] border border-dash-border bg-dash-bg-elevated px-4 py-3">
-                  <p className="text-sm font-medium text-dash-text-strong">
-                    Transfer domain to Brimble
-                  </p>
+                  <p className="text-sm font-medium text-dash-text-strong">Transfer domain to Brimble</p>
                   <p className="mt-1 text-xs leading-4 text-dash-text-faded">
-                    Enter your domain details and EPP/Auth code. Linking a
-                    project is optional and can be done now or later.
+                    Enter your domain details and EPP/Auth code. Linking a project is optional and can be done now or later.
                   </p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                    Domain name
-                  </label>
-                  <div className={`flex items-center rounded-[6px] border-[0.5px] bg-gradient-to-b from-dash-bg to-dash-bg-elevated px-3 py-2 shadow-[inset_0px_1px_0px_rgba(255,255,255,0.03)] ${
-                    transferDomainError
-                      ? "border-[#e1291d] shadow-[0px_0px_0px_1px_#e1291d,0px_0px_0px_3px_rgba(225,41,29,0.15)]"
-                      : "border-dash-border"
-                  }`}>
+                  <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Domain name</label>
+                  <div
+                    className={`flex items-center rounded-[6px] border-[0.5px] bg-gradient-to-b from-dash-bg to-dash-bg-elevated px-3 py-2 shadow-[inset_0px_1px_0px_rgba(255,255,255,0.03)] ${
+                      transferDomainError
+                        ? "border-[#e1291d] shadow-[0px_0px_0px_1px_#e1291d,0px_0px_0px_3px_rgba(225,41,29,0.15)]"
+                        : "border-dash-border"
+                    }`}
+                  >
                     <input
                       type="text"
                       placeholder="example.com"
@@ -675,21 +609,13 @@ export function AddDomainModal({
                       }}
                       className="w-full bg-transparent text-[13px] text-dash-text-strong outline-none placeholder:text-[#9ca3af] dark:placeholder:text-dash-text-extra-faded"
                     />
-                    {validatingTransferDomain && (
-                      <Loader2 className="size-4 shrink-0 animate-spin text-dash-text-faded" />
-                    )}
+                    {validatingTransferDomain && <Loader2 className="size-4 shrink-0 animate-spin text-dash-text-faded" />}
                   </div>
-                  {transferDomainError && (
-                    <p className="text-sm font-light leading-5 text-[#e1291d]">
-                      {transferDomainError}
-                    </p>
-                  )}
+                  {transferDomainError && <p className="text-sm font-light leading-5 text-[#e1291d]">{transferDomainError}</p>}
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                    EPP/Auth code
-                  </label>
+                  <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">EPP/Auth code</label>
                   <div className="rounded-[6px] border-[0.5px] border-dash-border bg-gradient-to-b from-dash-bg to-dash-bg-elevated px-3 py-2 shadow-[inset_0px_1px_0px_rgba(255,255,255,0.03)]">
                     <input
                       type="text"
@@ -702,9 +628,7 @@ export function AddDomainModal({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                    Registrant email
-                  </label>
+                  <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Registrant email</label>
                   <input
                     type="email"
                     placeholder="you@example.com"
@@ -712,15 +636,11 @@ export function AddDomainModal({
                     onChange={(e) => setTransferRegistrantEmail(e.target.value)}
                     className="input-base input-focus rounded-[4px] px-2 py-1.5 text-[13px] font-light leading-5 text-dash-text-strong placeholder:text-[#9ca3af] dark:placeholder:text-dash-text-extra-faded"
                   />
-                  <p className="text-xs text-dash-text-faded">
-                    You can change it if the registrant email is different.
-                  </p>
+                  <p className="text-xs text-dash-text-faded">You can change it if the registrant email is different.</p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">
-                    Payment method
-                  </label>
+                  <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-strong">Payment method</label>
                   {availablePaymentCards.length > 0 ? (
                     availablePaymentCards.length === 1 ? (
                       <div className="flex items-center gap-3 rounded-[4px] border-[0.5px] border-dash-border px-3.5 py-2.5">
@@ -729,9 +649,7 @@ export function AddDomainModal({
                           <span className="text-sm font-medium text-dash-text-strong">
                             {formatCardType(availablePaymentCards[0].cardType)}
                           </span>
-                          <span className="text-xs text-dash-text-faded">
-                            ending in {availablePaymentCards[0].last4 ?? "****"}
-                          </span>
+                          <span className="text-xs text-dash-text-faded">ending in {availablePaymentCards[0].last4 ?? "****"}</span>
                         </div>
                       </div>
                     ) : (
@@ -748,20 +666,14 @@ export function AddDomainModal({
                   ) : (
                     <div className="rounded-[4px] border-[0.5px] border-dash-border px-4 py-3">
                       <p className="text-sm text-dash-text-faded">
-                        No payment card found. Add one in{" "}
-                        <span className="font-medium text-dash-text-strong">
-                          Settings
-                        </span>
-                        .
+                        No payment card found. Add one in <span className="font-medium text-dash-text-strong">Settings</span>.
                       </p>
                     </div>
                   )}
                 </div>
 
                 <div className="rounded-[8px] border border-dash-border bg-dash-bg-elevated px-4 py-3">
-                  <p className="text-sm font-medium text-dash-text-strong">
-                    Before you continue
-                  </p>
+                  <p className="text-sm font-medium text-dash-text-strong">Before you continue</p>
                   <div className="mt-3 flex flex-col gap-3">
                     <label className="flex items-start gap-3">
                       <input
@@ -775,9 +687,7 @@ export function AddDomainModal({
                         }
                         className="mt-0.5 size-4 rounded border-dash-border"
                       />
-                      <span className="text-sm text-dash-text-body">
-                        My domain is unlocked at the current registrar.
-                      </span>
+                      <span className="text-sm text-dash-text-body">My domain is unlocked at the current registrar.</span>
                     </label>
                     <label className="flex items-start gap-3">
                       <input
@@ -791,10 +701,7 @@ export function AddDomainModal({
                         }
                         className="mt-0.5 size-4 rounded border-dash-border"
                       />
-                      <span className="text-sm text-dash-text-body">
-                        I can access the registrant email for transfer
-                        confirmation.
-                      </span>
+                      <span className="text-sm text-dash-text-body">I can access the registrant email for transfer confirmation.</span>
                     </label>
                     <label className="flex items-start gap-3">
                       <input
@@ -808,10 +715,7 @@ export function AddDomainModal({
                         }
                         className="mt-0.5 size-4 rounded border-dash-border"
                       />
-                      <span className="text-sm text-dash-text-body">
-                        I understand transfers may take several days to
-                        complete.
-                      </span>
+                      <span className="text-sm text-dash-text-body">I understand transfers may take several days to complete.</span>
                     </label>
                   </div>
                 </div>
@@ -824,10 +728,7 @@ export function AddDomainModal({
       <ModalFooter>
         <ModalCancelButton />
         {step === DomainStep.SelectProject ? (
-          <ModalContinueButton
-            onClick={handleStepOneContinue}
-            disabled={!selectedProject}
-          />
+          <ModalContinueButton onClick={handleStepOneContinue} disabled={!selectedProject} />
         ) : step === DomainStep.EnterDomain ? (
           <ModalContinueButton
             onClick={() => {

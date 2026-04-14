@@ -11,9 +11,7 @@ export const Route = createFileRoute("/legal/$slug")({
     const doc = legalDocuments.find((d) => d.slug === params.slug);
     return buildSeoHead({
       title: doc ? doc.title : "Legal",
-      description: doc
-        ? doc.description
-        : "Brimble legal documentation.",
+      description: doc ? doc.description : "Brimble legal documentation.",
       path: `/legal/${params.slug}`,
     });
   },
@@ -52,9 +50,7 @@ function LegalDetailPage() {
               <h1 className="font-heading text-[32px] font-medium italic leading-[38px] tracking-[-0.576px] text-brimble-black">
                 {doc.title}
               </h1>
-              <p className="mt-2 font-body text-sm text-brimble-black/40">
-                Last Updated: {doc.lastUpdated}
-              </p>
+              <p className="mt-2 font-body text-sm text-brimble-black/40">Last Updated: {doc.lastUpdated}</p>
 
               {/* Rendered content */}
               <div className="mt-8">
@@ -67,9 +63,7 @@ function LegalDetailPage() {
           <aside className="hidden w-[200px] shrink-0 lg:block">
             <div className="sticky top-24">
               <div className="rounded-xl border border-[rgba(152,157,164,0.3)] bg-brimble-surface p-5 dark:border-white/10">
-                <p className="font-body text-sm font-medium text-brimble-black">
-                  Brimble Inc
-                </p>
+                <p className="font-body text-sm font-medium text-brimble-black">Brimble Inc</p>
                 <div className="mt-3 flex flex-col gap-1.5 font-body text-xs leading-[1.6] text-brimble-black/50">
                   <p>447 Broadway, 2nd Floor #332</p>
                   <p>New York, NY 10013</p>
@@ -77,16 +71,10 @@ function LegalDetailPage() {
                 </div>
                 <div className="my-3 h-px bg-[rgba(152,157,164,0.2)] dark:bg-white/10" />
                 <div className="flex flex-col gap-1.5 font-body text-xs text-brimble-black/50">
-                  <a
-                    href="mailto:support@brimble.app"
-                    className="text-[#006fff] hover:underline"
-                  >
+                  <a href="mailto:support@brimble.app" className="text-[#006fff] hover:underline">
                     support@brimble.app
                   </a>
-                  <a
-                    href="mailto:legal@brimble.app"
-                    className="text-[#006fff] hover:underline"
-                  >
+                  <a href="mailto:legal@brimble.app" className="text-[#006fff] hover:underline">
                     legal@brimble.app
                   </a>
                 </div>
@@ -104,9 +92,7 @@ function LegalDetailPage() {
 function SidebarNav({ activeSlug }: { activeSlug: string }) {
   return (
     <div className="sticky top-24">
-      <p className="font-heading text-sm font-medium italic text-brimble-black">
-        Legal
-      </p>
+      <p className="font-heading text-sm font-medium italic text-brimble-black">Legal</p>
       <nav className="mt-4 flex flex-col gap-2">
         {legalDocuments.map((doc) => (
           <Link
@@ -114,9 +100,7 @@ function SidebarNav({ activeSlug }: { activeSlug: string }) {
             to="/legal/$slug"
             params={{ slug: doc.slug }}
             className={`font-body text-sm transition-colors duration-150 ${
-              doc.slug === activeSlug
-                ? "font-medium text-brimble-black"
-                : "text-brimble-black/40 hover:text-brimble-black/60"
+              doc.slug === activeSlug ? "font-medium text-brimble-black" : "text-brimble-black/40 hover:text-brimble-black/60"
             }`}
           >
             {doc.title}
@@ -134,10 +118,7 @@ function MobileNav({ activeSlug }: { activeSlug: string }) {
 
   return (
     <div className="mb-6 lg:hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 font-body text-sm font-medium text-brimble-black"
-      >
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 font-body text-sm font-medium text-brimble-black">
         {open ? <X className="size-4" /> : <Menu className="size-4" />}
         Legal Documents
       </button>
@@ -150,9 +131,7 @@ function MobileNav({ activeSlug }: { activeSlug: string }) {
               params={{ slug: doc.slug }}
               onClick={() => setOpen(false)}
               className={`font-body text-sm transition-colors duration-150 ${
-                doc.slug === activeSlug
-                  ? "font-medium text-brimble-black"
-                  : "text-brimble-black/40 hover:text-brimble-black/60"
+                doc.slug === activeSlug ? "font-medium text-brimble-black" : "text-brimble-black/40 hover:text-brimble-black/60"
               }`}
             >
               {doc.title}
@@ -175,19 +154,13 @@ function LegalContent({ content }: { content: string }) {
   function flushList() {
     if (listItems.length > 0) {
       elements.push(
-        <ul
-          key={key++}
-          className="mb-4 list-disc pl-5"
-        >
+        <ul key={key++} className="mb-4 list-disc pl-5">
           {listItems.map((item, i) => (
-            <li
-              key={i}
-              className="mb-1 font-body text-sm leading-[1.7] text-brimble-black/70"
-            >
+            <li key={i} className="mb-1 font-body text-sm leading-[1.7] text-brimble-black/70">
               <Linkify text={item} />
             </li>
           ))}
-        </ul>
+        </ul>,
       );
       listItems = [];
     }
@@ -199,12 +172,7 @@ function LegalContent({ content }: { content: string }) {
     // Horizontal rule
     if (line.trim() === "---") {
       flushList();
-      elements.push(
-        <hr
-          key={key++}
-          className="my-6 border-brimble-black/10"
-        />
-      );
+      elements.push(<hr key={key++} className="my-6 border-brimble-black/10" />);
       continue;
     }
 
@@ -212,12 +180,9 @@ function LegalContent({ content }: { content: string }) {
     if (line.startsWith("### ")) {
       flushList();
       elements.push(
-        <h3
-          key={key++}
-          className="mt-6 mb-2 font-body text-base font-medium text-brimble-black"
-        >
+        <h3 key={key++} className="mt-6 mb-2 font-body text-base font-medium text-brimble-black">
           {line.slice(4)}
-        </h3>
+        </h3>,
       );
       continue;
     }
@@ -226,12 +191,9 @@ function LegalContent({ content }: { content: string }) {
     if (line.startsWith("## ")) {
       flushList();
       elements.push(
-        <h2
-          key={key++}
-          className="mt-8 mb-3 font-body text-lg font-medium text-brimble-black"
-        >
+        <h2 key={key++} className="mt-8 mb-3 font-body text-lg font-medium text-brimble-black">
           {line.slice(3)}
-        </h2>
+        </h2>,
       );
       continue;
     }
@@ -251,12 +213,9 @@ function LegalContent({ content }: { content: string }) {
     // Paragraph
     flushList();
     elements.push(
-      <p
-        key={key++}
-        className="mb-4 font-body text-sm leading-[1.7] text-brimble-black/70"
-      >
+      <p key={key++} className="mb-4 font-body text-sm leading-[1.7] text-brimble-black/70">
         <Linkify text={line} />
-      </p>
+      </p>,
     );
   }
 
@@ -278,16 +237,12 @@ function Linkify({ text }: { text: string }) {
     <>
       {parts.map((part, i) =>
         emailRegex.test(part) ? (
-          <a
-            key={i}
-            href={`mailto:${part}`}
-            className="text-[#006fff] hover:underline"
-          >
+          <a key={i} href={`mailto:${part}`} className="text-[#006fff] hover:underline">
             {part}
           </a>
         ) : (
           <span key={i}>{part}</span>
-        )
+        ),
       )}
     </>
   );

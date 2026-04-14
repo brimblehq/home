@@ -14,9 +14,7 @@ export const getSubscriptionSpecsServerFn = createServerFn({
   }
 
   try {
-    const res = await withTokenRefresh((api) =>
-      api.payments.getSubscriptionSpecs(),
-    );
+    const res = await withTokenRefresh((api) => api.payments.getSubscriptionSpecs());
     const data = normalizePricing(res);
     specsCache = { data, ts: Date.now() };
     return data;
@@ -92,10 +90,7 @@ function toBool(value: unknown, fallback = false): boolean {
 
 function normalizePlanSpecs(raw: any): PlanSpecs {
   return {
-    projectLimit:
-      raw?.project_limit === -1 || raw?.project_limit === "unlimited"
-        ? null
-        : Number(raw?.project_limit ?? 3),
+    projectLimit: raw?.project_limit === -1 || raw?.project_limit === "unlimited" ? null : Number(raw?.project_limit ?? 3),
     webhookEnabled: toBool(raw?.webhook_enabled),
     customDomain: toBool(raw?.custom_domain),
     deployPrivateOrganization: toBool(raw?.deploy_private_organization),

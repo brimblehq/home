@@ -33,13 +33,9 @@ export function Cta() {
             </a>
           </Button>
           <Link to="/legal">
-          <Button
-            variant="pill-light"
-            size="sm"
-            className="transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            {siteConfig.cta.buttons.secondary}
-          </Button>
+            <Button variant="pill-light" size="sm" className="transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]">
+              {siteConfig.cta.buttons.secondary}
+            </Button>
           </Link>
           <Button
             asChild
@@ -47,9 +43,7 @@ export function Cta() {
             size="sm"
             className="transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
           >
-            <a href="mailto:hello@brimble.app">
-              {siteConfig.cta.buttons.tertiary}
-            </a>
+            <a href="mailto:hello@brimble.app">{siteConfig.cta.buttons.tertiary}</a>
           </Button>
         </motion.div>
 
@@ -62,11 +56,7 @@ export function Cta() {
         >
           {/* Top content: Logo + Heading */}
           <div className="relative z-10 flex flex-col items-center gap-6 px-8 pt-10">
-            <img
-              src={brimbleLogoWhite}
-              alt="Brimble"
-              className="h-[26px] w-auto"
-            />
+            <img src={brimbleLogoWhite} alt="Brimble" className="h-[26px] w-auto" />
             <h2 className="max-w-[450px] text-balance text-center font-heading text-[40px] font-medium leading-none tracking-[-0.576px] text-white">
               {siteConfig.cta.heading}
             </h2>

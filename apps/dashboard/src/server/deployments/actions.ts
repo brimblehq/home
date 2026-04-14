@@ -1,10 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { BackendApi } from "@/backend";
 import { listDeploymentRunLogsFromSupabase } from "@/backend/deployment-run-logs";
-import type {
-  PaginatedDeploymentsResponse,
-  DeploymentLog,
-} from "@/backend/deployments";
+import type { PaginatedDeploymentsResponse, DeploymentLog } from "@/backend/deployments";
 import config from "@/config";
 import { withTokenRefresh } from "@/server/shared/backend";
 
@@ -179,9 +176,7 @@ export const listDeploymentRunLogsServerFn = createServerFn({
     },
   });
 
-  const { mapDeploymentRunLogsToDrawerEntries } = await import(
-    "@/utils/deployment-logs"
-  );
+  const { mapDeploymentRunLogsToDrawerEntries } = await import("@/utils/deployment-logs");
 
   return {
     entries: mapDeploymentRunLogsToDrawerEntries(rows),
@@ -191,9 +186,7 @@ export const listDeploymentRunLogsServerFn = createServerFn({
 export const downloadDeploymentLogsServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
-  const payload = data as
-    | { projectId: string; logId: string; workspace?: string }
-    | undefined;
+  const payload = data as { projectId: string; logId: string; workspace?: string } | undefined;
 
   const projectId = payload?.projectId?.trim();
   const logId = payload?.logId?.trim();

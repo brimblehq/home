@@ -5,13 +5,7 @@ import { Check, ArrowRight } from "lucide-react";
 import { siteConfig } from "@/config/site";
 import { buildSeoHead } from "@/config/seo";
 import { Navbar } from "@/components/layout/navbar";
-import {
-  Button,
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@brimble/ui";
+import { Button, Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@brimble/ui";
 import { Cta } from "@/components/sections/cta";
 import trainStation from "@/assets/images/train-station.svg";
 import flower from "@/assets/images/flower.png";
@@ -51,10 +45,7 @@ function PricingHero() {
 
   return (
     <section className="bg-brimble-surface transition-colors duration-300 px-6 pt-16 pb-10">
-      <div
-        ref={ref}
-        className="mx-auto flex max-w-[720px] flex-col items-center text-center"
-      >
+      <div ref={ref} className="mx-auto flex max-w-[720px] flex-col items-center text-center">
         <div className="mb-8 brightness-[1.02] mix-blend-multiply dark:brightness-100 dark:invert dark:mix-blend-screen dark:opacity-85">
           <motion.img
             src={flower}
@@ -99,19 +90,17 @@ function PricingPlans() {
 
   return (
     <section className="bg-brimble-surface transition-colors duration-300 px-6 pb-20">
-      <div
-        ref={ref}
-        className="mx-auto flex max-w-[960px] flex-col items-center gap-10"
-      >
+      <div ref={ref} className="mx-auto flex max-w-[960px] flex-col items-center gap-10">
         {/* Personal plan cards */}
         <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
           {siteConfig.pricing.personalPlans.map((plan, i) => (
             <motion.div
               key={plan.name}
-              className={`relative flex flex-col rounded-3xl border p-6 transition-colors duration-200 ${plan.popular
+              className={`relative flex flex-col rounded-3xl border p-6 transition-colors duration-200 ${
+                plan.popular
                   ? "border-brimble-accent-blue bg-brimble-surface shadow-[var(--shadow-big)]"
                   : "border-[rgba(152,157,164,0.3)] bg-brimble-surface dark:border-white/10"
-                }`}
+              }`}
               initial={{ opacity: 0, y: 24 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{
@@ -133,12 +122,8 @@ function PricingPlans() {
 
               {/* Plan header */}
               <div className="flex flex-col gap-1">
-                <h3 className="font-body text-xl font-medium leading-[30px] tracking-[-0.24px] text-brimble-black">
-                  {plan.name}
-                </h3>
-                <p className="font-body text-sm leading-[18px] tracking-[-0.32px] text-brimble-black/50">
-                  {plan.description}
-                </p>
+                <h3 className="font-body text-xl font-medium leading-[30px] tracking-[-0.24px] text-brimble-black">{plan.name}</h3>
+                <p className="font-body text-sm leading-[18px] tracking-[-0.32px] text-brimble-black/50">{plan.description}</p>
               </div>
 
               {/* Price */}
@@ -146,9 +131,7 @@ function PricingPlans() {
                 <span className="font-heading text-[40px] font-medium leading-none tracking-[-1.6px] text-brimble-black">
                   ${plan.price}
                 </span>
-                <span className="font-body text-sm text-brimble-black/50">
-                  /mo
-                </span>
+                <span className="font-body text-sm text-brimble-black/50">/mo</span>
               </div>
 
               {/* CTA */}
@@ -160,13 +143,7 @@ function PricingPlans() {
               >
                 <a href="https://app.brimble.io" target="_blank" rel="noopener noreferrer">
                   {plan.cta}
-                  {plan.popular && (
-                    <img
-                      src={arrowRight}
-                      alt=""
-                      className="size-3 brightness-0 invert dark:invert-0"
-                    />
-                  )}
+                  {plan.popular && <img src={arrowRight} alt="" className="size-3 brightness-0 invert dark:invert-0" />}
                 </a>
               </Button>
 
@@ -176,10 +153,7 @@ function PricingPlans() {
               {/* Features */}
               <ul className="flex flex-col gap-3">
                 {plan.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-start gap-2 font-body text-sm leading-[18px] text-brimble-black/70"
-                  >
+                  <li key={feature} className="flex items-start gap-2 font-body text-sm leading-[18px] text-brimble-black/70">
                     <Check className="mt-0.5 size-3.5 shrink-0 text-brimble-accent-blue" />
                     {feature}
                   </li>
@@ -203,9 +177,7 @@ function PricingPlans() {
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-3">
-                <h3 className="font-body text-xl font-medium leading-[30px] tracking-[-0.24px] text-brimble-black">
-                  {teamPlan.name}
-                </h3>
+                <h3 className="font-body text-xl font-medium leading-[30px] tracking-[-0.24px] text-brimble-black">{teamPlan.name}</h3>
                 <span className="rounded-full bg-brimble-accent-blue/10 px-2.5 py-0.5 font-body text-xs font-medium text-brimble-accent-blue">
                   Add-on
                 </span>
@@ -236,10 +208,7 @@ function PricingPlans() {
 
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {teamPlan.features.map((feature) => (
-              <li
-                key={feature}
-                className="flex items-start gap-2 font-body text-sm leading-[18px] text-brimble-black/70"
-              >
+              <li key={feature} className="flex items-start gap-2 font-body text-sm leading-[18px] text-brimble-black/70">
                 <Check className="mt-0.5 size-3.5 shrink-0 text-brimble-accent-blue" />
                 {feature}
               </li>
@@ -298,10 +267,7 @@ function PricingFaqs() {
 
   return (
     <section className="bg-brimble-air-gray transition-colors duration-300 px-6 py-[72px]">
-      <div
-        ref={ref}
-        className="mx-auto flex max-w-[720px] flex-col gap-10"
-      >
+      <div ref={ref} className="mx-auto flex max-w-[720px] flex-col gap-10">
         {/* FAQs heading + illustration */}
         <div className="relative">
           <motion.h2

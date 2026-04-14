@@ -39,9 +39,11 @@ export const Route = createFileRoute("/addons/")({
     const offset = (page - 1) * ADDONS_PAGE_SIZE;
 
     const [result, categories] = await Promise.all([
-      (listMcpTemplatesServerFn as unknown as (input: {
-        data?: { query?: string; limit?: number; offset?: number; category?: string };
-      }) => Promise<McpServerListResult>)({
+      (
+        listMcpTemplatesServerFn as unknown as (input: {
+          data?: { query?: string; limit?: number; offset?: number; category?: string };
+        }) => Promise<McpServerListResult>
+      )({
         data: {
           query: deps.q,
           limit: ADDONS_PAGE_SIZE,
@@ -49,9 +51,7 @@ export const Route = createFileRoute("/addons/")({
           category: deps.category,
         },
       }),
-      (listMcpCategoriesServerFn as unknown as () => Promise<string[]>)().catch(
-        () => [] as string[],
-      ),
+      (listMcpCategoriesServerFn as unknown as () => Promise<string[]>)().catch(() => [] as string[]),
     ]);
 
     const addons = result.servers.map(mapMcpTemplateToAddon);
@@ -102,9 +102,7 @@ function AddonsPage() {
   const pendingPage = useRouterState({
     select: (s) => {
       const pending = s.pendingLocation ?? s.location;
-      return parsePositivePageSearchValue(
-        (pending.search as Record<string, unknown>)?.page,
-      ) ?? 1;
+      return parsePositivePageSearchValue((pending.search as Record<string, unknown>)?.page) ?? 1;
     },
   });
 
@@ -114,17 +112,12 @@ function AddonsPage() {
   const settledSearchQuery = routeSearch.q?.trim() ?? "";
   const pendingSearchQuery = searchQuery.trim();
   const isSearchSettling = pendingSearchQuery !== settledSearchQuery;
-  const isSearchOrCategoryLoading = isRouterLoading
-    && (
-      (pendingSearch.q ?? undefined) !== (routeSearch.q ?? undefined)
-      || (pendingSearch.category ?? undefined) !== (routeSearch.category ?? undefined)
-    );
+  const isSearchOrCategoryLoading =
+    isRouterLoading &&
+    ((pendingSearch.q ?? undefined) !== (routeSearch.q ?? undefined) ||
+      (pendingSearch.category ?? undefined) !== (routeSearch.category ?? undefined));
 
-  function buildAddonsSearch(next: {
-    page?: number;
-    category?: string;
-    q?: string;
-  }) {
+  function buildAddonsSearch(next: { page?: number; category?: string; q?: string }) {
     return {
       page: next.page,
       category: next.category,
@@ -185,12 +178,9 @@ function AddonsPage() {
         className="relative overflow-clip rounded-[4px] border-[0.5px] border-dash-border-soft"
       >
         <div className="relative z-10 px-8 py-8">
-          <h2 className="text-base font-medium tracking-[-0.03px] text-dash-text-strong">
-            Discover MCP Servers
-          </h2>
+          <h2 className="text-base font-medium tracking-[-0.03px] text-dash-text-strong">Discover MCP Servers</h2>
           <p className="mt-1 max-w-[560px] text-sm font-light leading-[1.3] text-dash-text-extra-faded">
-            Browse deployable MCP servers from the marketplace and connect them to your Brimble
-            projects.
+            Browse deployable MCP servers from the marketplace and connect them to your Brimble projects.
           </p>
           <div className="mt-4">
             <DashButton size="sm" disabled>
@@ -210,9 +200,7 @@ function AddonsPage() {
           <button
             onClick={() => selectCategory(undefined)}
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs transition-colors ${
-              !activeCategory
-                ? "bg-dash-text-strong text-dash-bg"
-                : "bg-dash-bg-elevated text-dash-text-faded hover:text-dash-text-body"
+              !activeCategory ? "bg-dash-text-strong text-dash-bg" : "bg-dash-bg-elevated text-dash-text-faded hover:text-dash-text-body"
             }`}
           >
             All
@@ -234,12 +222,7 @@ function AddonsPage() {
       )}
 
       <div className="mt-4">
-        <SearchFilterBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search MCP servers..."
-          loading={isSearchSettling}
-        />
+        <SearchFilterBar value={searchQuery} onChange={setSearchQuery} placeholder="Search MCP servers..." loading={isSearchSettling} />
       </div>
 
       <div className="mt-6">
@@ -254,9 +237,7 @@ function AddonsPage() {
               className="flex flex-col items-center justify-center gap-3 py-16"
             >
               <LoaderCircle className="size-5 animate-spin text-dash-text-faded" />
-              <p className="text-sm text-dash-text-faded">
-                Loading servers...
-              </p>
+              <p className="text-sm text-dash-text-faded">Loading servers...</p>
             </motion.div>
           ) : displayAddons.length ? (
             <motion.div

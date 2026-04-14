@@ -17,11 +17,7 @@ function getStoredThemeMode(): Theme {
 
   try {
     const stored = window.localStorage.getItem(DASHBOARD_THEME_STORAGE_KEY);
-    if (
-      stored === Theme.Light ||
-      stored === Theme.Dark ||
-      stored === Theme.System
-    ) {
+    if (stored === Theme.Light || stored === Theme.Dark || stored === Theme.System) {
       return stored;
     }
 

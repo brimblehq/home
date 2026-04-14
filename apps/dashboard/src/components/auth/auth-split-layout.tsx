@@ -2,8 +2,7 @@ import { type ReactNode, useRef, useEffect, useLayoutEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTheme } from "@/hooks/use-theme";
 
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 function applyStoredTheme() {
   if (typeof document === "undefined") return;
@@ -14,9 +13,7 @@ function applyStoredTheme() {
     if (t === "light" || t === "dark" || t === "system") mode = t;
     else if (legacy === "light" || legacy === "dark") mode = legacy;
     const isSystem = mode === "system" || !mode;
-    const isDark =
-      mode === "dark" ||
-      (isSystem && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const isDark = mode === "dark" || (isSystem && window.matchMedia("(prefers-color-scheme: dark)").matches);
     document.documentElement.classList.toggle("dark", isDark);
   } catch {
     // ignore
@@ -106,14 +103,9 @@ export function AuthSplitLayout({
       <div className="w-full max-w-[400px]">
         {/* Header row */}
         <div className="mb-10 flex items-center justify-between">
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-dash-text-strong"
-          >
+          <Link to="/" className="flex items-center gap-2 text-dash-text-strong">
             <BrimbleMark className="size-6" />
-            <span className="text-sm font-semibold tracking-[-0.2px]">
-              Brimble
-            </span>
+            <span className="text-sm font-semibold tracking-[-0.2px]">Brimble</span>
           </Link>
           <Link
             to={mode === "login" ? "/signup" : "/login"}
@@ -125,20 +117,14 @@ export function AuthSplitLayout({
 
         {/* Title */}
         <div className="mb-8">
-          <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.5px] text-dash-text-strong sm:text-[32px]">
-            {title}
-          </h1>
-          <p className="mt-2.5 text-[13px] leading-[1.5] text-dash-text-faded">
-            {description}
-          </p>
+          <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.5px] text-dash-text-strong sm:text-[32px]">{title}</h1>
+          <p className="mt-2.5 text-[13px] leading-[1.5] text-dash-text-faded">{description}</p>
         </div>
 
         {children}
 
         {footer && (
-          <div className="mt-8 border-t border-dash-border/50 pt-4 text-[11px] leading-[1.6] text-dash-text-extra-faded">
-            {footer}
-          </div>
+          <div className="mt-8 border-t border-dash-border/50 pt-4 text-[11px] leading-[1.6] text-dash-text-extra-faded">{footer}</div>
         )}
       </div>
     </main>
@@ -219,12 +205,8 @@ export function AuthField({
   return (
     <label htmlFor={id} className="block">
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <span className="text-xs font-medium text-dash-text-strong">
-          {label}
-        </span>
-        {hint && (
-          <span className="text-[11px] text-dash-text-extra-faded">{hint}</span>
-        )}
+        <span className="text-xs font-medium text-dash-text-strong">{label}</span>
+        {hint && <span className="text-[11px] text-dash-text-extra-faded">{hint}</span>}
       </div>
       <input
         id={id}
@@ -282,10 +264,7 @@ export function OtpInput({
 
   function handlePaste(e: React.ClipboardEvent) {
     e.preventDefault();
-    const pasted = e.clipboardData
-      .getData("text")
-      .replace(/\D/g, "")
-      .slice(0, length);
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, length);
     onChange(pasted);
     const focusIdx = Math.min(pasted.length, length - 1);
     inputsRef.current[focusIdx]?.focus();

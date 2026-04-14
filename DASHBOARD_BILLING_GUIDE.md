@@ -20,18 +20,18 @@ Free → Hacker → Pro
 
 ## What each plan gives you
 
-| | Free | Hacker | Pro | Team |
-|---|---|---|---|---|
-| Price | $0/mo | $7/mo | $19/mo | (members × $5) + (builds × $7.50)/mo |
-| Projects | 5 | 10 | 150 | 500 |
-| Bandwidth | 10 GB/mo | 30 GB/mo | 150 GB/mo | 500 GB/mo |
-| Concurrent builds | 0 (queued) | 1 | 2 | 2 |
-| Team members | — | — | — | Configurable |
-| PR previews | No | No | Yes | Yes |
-| Analytics | No | No | Yes | Yes |
-| Org git deploy | No | Yes | Yes | Yes |
-| Autoscaling | No | No | Yes | Yes |
-| Log retention | 3 days | 7 days | 30 days | 30 days |
+|                   | Free       | Hacker   | Pro       | Team                                 |
+| ----------------- | ---------- | -------- | --------- | ------------------------------------ |
+| Price             | $0/mo      | $7/mo    | $19/mo    | (members × $5) + (builds × $7.50)/mo |
+| Projects          | 5          | 10       | 150       | 500                                  |
+| Bandwidth         | 10 GB/mo   | 30 GB/mo | 150 GB/mo | 500 GB/mo                            |
+| Concurrent builds | 0 (queued) | 1        | 2         | 2                                    |
+| Team members      | —          | —        | —         | Configurable                         |
+| PR previews       | No         | No       | Yes       | Yes                                  |
+| Analytics         | No         | No       | Yes       | Yes                                  |
+| Org git deploy    | No         | Yes      | Yes       | Yes                                  |
+| Autoscaling       | No         | No       | Yes       | Yes                                  |
+| Log retention     | 3 days     | 7 days   | 30 days   | 30 days                              |
 
 ---
 
@@ -96,12 +96,12 @@ When members or builds are added/removed, the cost recalculates. The person whos
 
 The backend uses `DEVELOPER_PLAN` internally for what we call "Pro" in the UI. Always map:
 
-| Backend sends | UI shows |
-|---|---|
-| `FREE_PLAN` | Free |
-| `HACKER_PLAN` | Hacker |
-| `DEVELOPER_PLAN` | Pro |
-| `TEAM_PLAN` | Team |
+| Backend sends    | UI shows |
+| ---------------- | -------- |
+| `FREE_PLAN`      | Free     |
+| `HACKER_PLAN`    | Hacker   |
+| `DEVELOPER_PLAN` | Pro      |
+| `TEAM_PLAN`      | Team     |
 
 ---
 
@@ -127,4 +127,4 @@ Users can have up to **3 cards**. One is marked as default. Cards are added via 
 
 ---
 
-*February 2026*
+_February 2026_

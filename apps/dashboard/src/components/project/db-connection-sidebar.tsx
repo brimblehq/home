@@ -45,9 +45,7 @@ interface DbQuickActionsCardProps {
 
 export function DbConnectionCard({ connectionUri, isActive }: DbConnectionCardProps) {
   const haptics = useHaptics();
-  const decryptConnectionUri = useServerFn(
-    decryptDatabaseConnectionUriServerFn as any,
-  ) as (args: {
+  const decryptConnectionUri = useServerFn(decryptDatabaseConnectionUriServerFn as any) as (args: {
     data: { encryptedConnectionUri: string };
   }) => Promise<{ connectionUri: string }>;
 
@@ -125,13 +123,9 @@ export function DbConnectionCard({ connectionUri, isActive }: DbConnectionCardPr
 
       <div className="flex flex-col gap-3 p-3.5">
         {!isActive ? (
-          <p className="text-xs font-light text-dash-text-faded">
-            Connection details become available once the database is active.
-          </p>
+          <p className="text-xs font-light text-dash-text-faded">Connection details become available once the database is active.</p>
         ) : !connectionUri ? (
-          <p className="text-xs font-light text-dash-text-faded">
-            Waiting for the database to provision its connection URI.
-          </p>
+          <p className="text-xs font-light text-dash-text-faded">Waiting for the database to provision its connection URI.</p>
         ) : !parsed ? (
           <ConnectionFieldsSkeleton />
         ) : (
@@ -174,13 +168,7 @@ export function DbConnectionCard({ connectionUri, isActive }: DbConnectionCardPr
   );
 }
 
-export function DbQuickActionsCard({
-  onDownloadBackup,
-  onRestart,
-  hasBackup,
-  canRestart,
-  restarting = false,
-}: DbQuickActionsCardProps) {
+export function DbQuickActionsCard({ onDownloadBackup, onRestart, hasBackup, canRestart, restarting = false }: DbQuickActionsCardProps) {
   return (
     <div className="flex flex-col overflow-clip rounded-[4px]">
       <div className="flex h-10 items-center border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3 text-sm tracking-[-0.02px]">
@@ -221,9 +209,7 @@ function ConnectionField({
 }) {
   return (
     <div className="flex flex-col gap-1 py-2">
-      <span className="text-[10px] font-medium uppercase tracking-[0.5px] text-dash-text-faded">
-        {label}
-      </span>
+      <span className="text-[10px] font-medium uppercase tracking-[0.5px] text-dash-text-faded">{label}</span>
       <div className="flex items-start gap-2">
         <span
           title={value}
@@ -237,11 +223,7 @@ function ConnectionField({
           className="mt-0.5 shrink-0 text-dash-text-extra-faded transition-colors hover:text-dash-text-strong"
           aria-label={`Copy ${label}`}
         >
-          {copied ? (
-            <Check className="size-3 text-[#22c55e]" />
-          ) : (
-            <Copy className="size-3" />
-          )}
+          {copied ? <Check className="size-3 text-[#22c55e]" /> : <Copy className="size-3" />}
         </button>
       </div>
     </div>

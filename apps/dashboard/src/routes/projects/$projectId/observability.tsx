@@ -1,52 +1,26 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import {
-  createFileRoute,
-  getRouteApi,
-  useNavigate,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown, Monitor, Smartphone, Tablet, Tv } from "lucide-react";
 import { BrowserIcon } from "@/components/analytics/browser-icons";
 import { SimpleTooltip } from "@/components/shared/tooltip";
-import {
-  ArrowBendUpLeft,
-  GlobeHemisphereWest,
-  UsersThree,
-} from "@phosphor-icons/react";
+import { ArrowBendUpLeft, GlobeHemisphereWest, UsersThree } from "@phosphor-icons/react";
 import { motion, useInView } from "motion/react";
 import { TabHeader } from "../../../components/shared/tab-header";
 import { TimeSeriesChart } from "@/components/observability/time-series-chart";
 import { SemiGauge } from "@/components/observability/semi-gauge";
 import { SegmentedToggle } from "@/components/observability/segmented-toggle";
-import {
-  formatTimeLabel,
-  toKbps,
-  hoursAgoForInterval,
-} from "@/utils/observability";
+import { formatTimeLabel, toKbps, hoursAgoForInterval } from "@/utils/observability";
 import type { ResourceObservabilityMetrics } from "@/backend/observability";
-import {
-  getObservabilityGrafanaUrlServerFn,
-  getProjectObservabilityMetricsServerFn,
-} from "@/server/observability/actions";
+import { getObservabilityGrafanaUrlServerFn, getProjectObservabilityMetricsServerFn } from "@/server/observability/actions";
 import { normalizeMemoryGbValue } from "@/utils/project-configuration";
 import { useHaptics } from "@/hooks/use-haptics";
-import {
-  isDatabaseProject,
-  shouldShowProjectObservabilityTab,
-} from "@/utils/project-capabilities";
+import { isDatabaseProject, shouldShowProjectObservabilityTab } from "@/utils/project-capabilities";
 import { InstallTrackingModal } from "@/components/analytics/install-tracking-modal";
 import { VisitorsMap } from "@/components/analytics/visitors-map";
 import { TrafficHeatmap } from "@/components/analytics/traffic-heatmap";
-import type {
-  AnalyticsPayload,
-  AnalyticsPerformanceMetric,
-  AnalyticsSummary,
-} from "@/backend/analytics";
-import {
-  getAnalyticsServerFn,
-  type AnalyticsLoadResult,
-} from "@/server/analytics/actions";
+import type { AnalyticsPayload, AnalyticsPerformanceMetric, AnalyticsSummary } from "@/backend/analytics";
+import { getAnalyticsServerFn, type AnalyticsLoadResult } from "@/server/analytics/actions";
 import { friendlyAnalyticsError } from "@/lib/analytics-errors";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { usePlanGate } from "@/hooks/use-plan-gate";
@@ -69,11 +43,7 @@ export const Route = createFileRoute("/projects/$projectId/observability")({
       )({
         data: { projectId: project?.id, workspace, hrsAgo: 1 },
       }),
-      (
-        getObservabilityGrafanaUrlServerFn as unknown as (input: {
-          data: { workspace?: string };
-        }) => Promise<string | null>
-      )({
+      (getObservabilityGrafanaUrlServerFn as unknown as (input: { data: { workspace?: string } }) => Promise<string | null>)({
         data: { workspace },
       }).catch(() => null),
     ]);
@@ -85,21 +55,9 @@ export const Route = createFileRoute("/projects/$projectId/observability")({
 
 import { MetricChart } from "../../../types/enums";
 
-const timeIntervals = [
-  "Last 1 Hour",
-  "Last 6 Hours",
-  "Last 24 Hours",
-  "Last 7 Days",
-  "Last 30 Days",
-];
+const timeIntervals = ["Last 1 Hour", "Last 6 Hours", "Last 24 Hours", "Last 7 Days", "Last 30 Days"];
 
-function TimeIntervalDropdown({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function TimeIntervalDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -120,9 +78,7 @@ function TimeIntervalDropdown({
         className="flex h-[34px] items-center gap-1.5 rounded-[4px] border-[0.5px] border-dash-border px-3 text-xs font-medium text-dash-text-strong"
       >
         {value}
-        <ChevronDown
-          className={`size-3 transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        <ChevronDown className={`size-3 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1 min-w-[160px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
@@ -134,9 +90,7 @@ function TimeIntervalDropdown({
                 setOpen(false);
               }}
               className={`flex w-full px-3 py-2 text-left text-xs transition-colors ${
-                interval === value
-                  ? "font-medium text-[#4879f8]"
-                  : "font-light text-dash-text-body hover:bg-dash-bg-elevated"
+                interval === value ? "font-medium text-[#4879f8]" : "font-light text-dash-text-body hover:bg-dash-bg-elevated"
               }`}
             >
               {interval}
@@ -159,19 +113,14 @@ function AppMetrics({
   grafanaUrl: string | null;
   workspace?: string;
 }) {
-  const fetchMetrics = useServerFn(
-    getProjectObservabilityMetricsServerFn as any,
-  ) as (args: {
+  const fetchMetrics = useServerFn(getProjectObservabilityMetricsServerFn as any) as (args: {
     data: { projectId: string; workspace?: string; hrsAgo?: number };
   }) => Promise<ResourceObservabilityMetrics>;
   const haptics = useHaptics();
-  const [activeChart, setActiveChart] = useState<MetricChart>(
-    MetricChart.MemoryUsage,
-  );
+  const [activeChart, setActiveChart] = useState<MetricChart>(MetricChart.MemoryUsage);
   const [responseMetric, setResponseMetric] = useState("P90");
   const [timeInterval, setTimeInterval] = useState("Last 1 Hour");
-  const [metrics, setMetrics] =
-    useState<ResourceObservabilityMetrics>(initialMetrics);
+  const [metrics, setMetrics] = useState<ResourceObservabilityMetrics>(initialMetrics);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
 
   useEffect(() => {
@@ -218,12 +167,7 @@ function AppMetrics({
   const isDbProject = isDatabaseProject(project as any);
   const chartTabs: MetricChart[] = isDbProject
     ? [MetricChart.MemoryUsage, MetricChart.CpuUsage, MetricChart.NetworkEgress]
-    : [
-        MetricChart.MemoryUsage,
-        MetricChart.CpuUsage,
-        MetricChart.NetworkEgress,
-        MetricChart.ResponseTimes,
-      ];
+    : [MetricChart.MemoryUsage, MetricChart.CpuUsage, MetricChart.NetworkEgress, MetricChart.ResponseTimes];
 
   const aggregateSeries = useMemo(() => {
     const results = Array.isArray(metrics?.results) ? metrics.results : [];
@@ -294,9 +238,7 @@ function AppMetrics({
 
   const cpuPercent = Number(metrics?.average?.cpu?.totalInPercentage ?? 0);
   const cpuSize = Number(metrics?.average?.cpu?.size ?? 0);
-  const memoryPercent = Number(
-    metrics?.average?.memory?.totalInPercentage ?? 0,
-  );
+  const memoryPercent = Number(metrics?.average?.memory?.totalInPercentage ?? 0);
   const memoryUsedGb = Number(metrics?.average?.memory?.size ?? 0);
   const memoryLimitGb = normalizeMemoryGbValue(project?.specs?.memory);
 
@@ -308,12 +250,7 @@ function AppMetrics({
           {grafanaUrl ? (
             <>
               {" "}
-              <a
-                href={grafanaUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[#4879f8] underline"
-              >
+              <a href={grafanaUrl} target="_blank" rel="noreferrer" className="text-[#4879f8] underline">
                 View in Grafana
               </a>
             </>
@@ -365,25 +302,15 @@ function AppMetrics({
           </div>
           {activeChart === MetricChart.ResponseTimes ? (
             <div className="px-4 pb-3 sm:pb-0 sm:pr-4">
-              <SegmentedToggle
-                options={["P90", "P95", "P99", "Average"]}
-                value={responseMetric}
-                onChange={setResponseMetric}
-              />
+              <SegmentedToggle options={["P90", "P95", "P99", "Average"]} value={responseMetric} onChange={setResponseMetric} />
             </div>
           ) : null}
         </div>
         <div className="min-w-0 overflow-hidden px-3 pb-4 pt-6 sm:px-5 sm:pb-5 sm:pt-8">
           {loadingMetrics ? (
-            <div className="flex h-[260px] items-center justify-center text-sm text-dash-text-faded">
-              Loading metrics...
-            </div>
+            <div className="flex h-[260px] items-center justify-center text-sm text-dash-text-faded">Loading metrics...</div>
           ) : currentData.length > 0 ? (
-            <TimeSeriesChart
-              data={currentData}
-              yUnit={currentUnit}
-              label={activeChart}
-            />
+            <TimeSeriesChart data={currentData} yUnit={currentUnit} label={activeChart} />
           ) : (
             <div className="flex h-[260px] items-center justify-center text-sm text-dash-text-faded">
               No metrics available for this time range.
@@ -398,9 +325,7 @@ function AppMetrics({
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-1 flex-col gap-1">
-      <span className="text-[10px] font-medium uppercase tracking-[1px] text-dash-text-faded">
-        {label}
-      </span>
+      <span className="text-[10px] font-medium uppercase tracking-[1px] text-dash-text-faded">{label}</span>
       <span className="text-2xl font-light text-dash-text-strong">{value}</span>
     </div>
   );
@@ -446,15 +371,7 @@ function formatBucketLabel(point: { x: string }, unit: string): string {
   });
 }
 
-function VisitorBarChart({
-  points,
-  unit,
-  seriesLabel,
-}: {
-  points: { x: string; y: number }[];
-  unit: string;
-  seriesLabel: string;
-}) {
+function VisitorBarChart({ points, unit, seriesLabel }: { points: { x: string; y: number }[]; unit: string; seriesLabel: string }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const safePoints = points.length > 0 ? points : [{ x: "—", y: 0 }];
   const values = safePoints.map((d) => d.y);
@@ -480,9 +397,7 @@ function VisitorBarChart({
               <span className="font-medium">
                 {d.y.toLocaleString()} {seriesLabel.toLowerCase()}
               </span>
-              <span className="text-[10px] text-white/60">
-                {formatBucketLabel(d, unit)}
-              </span>
+              <span className="text-[10px] text-white/60">{formatBucketLabel(d, unit)}</span>
             </div>
           );
 
@@ -493,10 +408,7 @@ function VisitorBarChart({
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             >
-              <div
-                className="relative w-full overflow-hidden rounded-[4px]"
-                style={{ height: barH }}
-              >
+              <div className="relative w-full overflow-hidden rounded-[4px]" style={{ height: barH }}>
                 <div
                   className="absolute inset-0 rounded-[4px]"
                   style={{
@@ -528,10 +440,7 @@ function VisitorBarChart({
                         }}
                       />
                       {isActive && (
-                        <div
-                          className="absolute inset-x-0 top-0 -translate-y-full"
-                          style={{ height: 10, backgroundColor: "#ffa800" }}
-                        />
+                        <div className="absolute inset-x-0 top-0 -translate-y-full" style={{ height: 10, backgroundColor: "#ffa800" }} />
                       )}
                     </motion.div>
                   </SimpleTooltip>
@@ -540,9 +449,7 @@ function VisitorBarChart({
 
               <span
                 className={`text-[10px] font-medium tracking-wide transition-colors ${
-                  isActive
-                    ? "text-dash-text-strong"
-                    : "text-dash-text-extra-faded"
+                  isActive ? "text-dash-text-strong" : "text-dash-text-extra-faded"
                 }`}
               >
                 {showLabel ? formatTickLabel(d, unit) : ""}
@@ -570,25 +477,16 @@ function ListCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const canExpand = showSeeAll && items.length > collapsedCount;
-  const visible =
-    expanded || !canExpand ? items : items.slice(0, collapsedCount);
+  const visible = expanded || !canExpand ? items : items.slice(0, collapsedCount);
   return (
     <div className="flex flex-1 flex-col rounded-[4px] border-[0.5px] border-dash-border">
       <div className="flex items-start justify-between gap-3 border-b-[0.5px] border-dash-border px-4 py-3">
         <div>
           <h3 className="text-sm font-medium text-dash-text-strong">{title}</h3>
-          {subtitle && (
-            <p className="text-xs font-light text-dash-text-faded">
-              {subtitle}
-            </p>
-          )}
+          {subtitle && <p className="text-xs font-light text-dash-text-faded">{subtitle}</p>}
         </div>
         {canExpand && (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="shrink-0 text-xs text-[#4879f8] hover:underline"
-          >
+          <button type="button" onClick={() => setExpanded((v) => !v)} className="shrink-0 text-xs text-[#4879f8] hover:underline">
             {expanded ? "Show less" : "See all"}
           </button>
         )}
@@ -601,13 +499,9 @@ function ListCard({
           >
             <div className="min-w-0 flex items-center gap-2">
               {item.icon && <span className="text-sm">{item.icon}</span>}
-              <span className="truncate text-sm font-light text-dash-text-body">
-                {item.label}
-              </span>
+              <span className="truncate text-sm font-light text-dash-text-body">{item.label}</span>
             </div>
-            <span className="shrink-0 pl-3 text-xs text-dash-text-faded">
-              {item.value}
-            </span>
+            <span className="shrink-0 pl-3 text-xs text-dash-text-faded">{item.value}</span>
           </div>
         ))}
       </div>
@@ -658,10 +552,7 @@ function countryFlag(code: string): string {
   const upper = code.toUpperCase();
   const A = 0x41;
   const REGIONAL_BASE = 0x1f1e6;
-  return String.fromCodePoint(
-    REGIONAL_BASE + (upper.charCodeAt(0) - A),
-    REGIONAL_BASE + (upper.charCodeAt(1) - A),
-  );
+  return String.fromCodePoint(REGIONAL_BASE + (upper.charCodeAt(0) - A), REGIONAL_BASE + (upper.charCodeAt(1) - A));
 }
 
 let _regionDisplay: Intl.DisplayNames | null = null;
@@ -689,8 +580,7 @@ function countryName(code: string): string {
 
 function DeviceIcon({ name, className }: { name: string; className?: string }) {
   const n = (name || "").toLowerCase();
-  if (n.includes("mobile") || n.includes("phone"))
-    return <Smartphone className={className} />;
+  if (n.includes("mobile") || n.includes("phone")) return <Smartphone className={className} />;
   if (n.includes("tablet")) return <Tablet className={className} />;
   if (n.includes("tv")) return <Tv className={className} />;
   return <Monitor className={className} />;
@@ -730,19 +620,10 @@ function bouncePercent(summary: AnalyticsSummary): string {
   return `${Math.round(rate * 100)}%`;
 }
 
-export function AppAnalytics({
-  initial,
-  projectId,
-}: {
-  initial: AnalyticsPayload;
-  projectId: string;
-}) {
+export function AppAnalytics({ initial, projectId }: { initial: AnalyticsPayload; projectId: string }) {
   const navigate = useNavigate({ from: "/projects/$projectId/web-analytics" });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
-  const hostFromSearch = useMemo(
-    () => parseHostFromSearch(searchStr),
-    [searchStr],
-  );
+  const hostFromSearch = useMemo(() => parseHostFromSearch(searchStr), [searchStr]);
   const haptics = useHaptics();
   const getAnalytics = useServerFn(getAnalyticsServerFn as any) as (args: {
     data: {
@@ -757,12 +638,8 @@ export function AppAnalytics({
 
   const [data, setData] = useState<AnalyticsPayload>(initial);
   const [preset, setPreset] = useState<RangePreset>(RANGE_PRESETS[1]);
-  const [visitorTab, setVisitorTab] = useState<"Visitors" | "Page Views">(
-    "Visitors",
-  );
-  const [browserTab, setBrowserTab] = useState<"Browsers" | "Devices">(
-    "Browsers",
-  );
+  const [visitorTab, setVisitorTab] = useState<"Visitors" | "Page Views">("Visitors");
+  const [browserTab, setBrowserTab] = useState<"Browsers" | "Devices">("Browsers");
   const [periodOpen, setPeriodOpen] = useState(false);
   const [hostOpen, setHostOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
@@ -773,10 +650,7 @@ export function AppAnalytics({
   const taggedDomains = useMemo(
     () =>
       (Array.isArray(data.domains) ? data.domains : [])
-        .filter(
-          (entry) =>
-            typeof entry?.host === "string" && entry.host.trim().length > 0,
-        )
+        .filter((entry) => typeof entry?.host === "string" && entry.host.trim().length > 0)
         .map((entry) => ({
           host: entry.host.trim(),
           pageviews: Number(entry.pageviews ?? 0),
@@ -814,8 +688,7 @@ export function AppAnalytics({
         setHostOpen(false);
       }
     }
-    if (periodOpen || hostOpen)
-      document.addEventListener("mousedown", handleClick);
+    if (periodOpen || hostOpen) document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [hostOpen, periodOpen]);
 
@@ -991,21 +864,14 @@ export function AppAnalytics({
   const bounce = bouncePercent(summary);
   const countriesCount = data.metrics.country.length;
 
-  const chartPoints =
-    visitorTab === "Page Views"
-      ? data.pageviews.pageviews
-      : data.pageviews.sessions;
+  const chartPoints = visitorTab === "Page Views" ? data.pageviews.pageviews : data.pageviews.sessions;
 
   const browserOptions = data.metrics.browser;
   const deviceOptions = data.metrics.device;
-  const activeBreakdown =
-    browserTab === "Browsers" ? browserOptions : deviceOptions;
+  const activeBreakdown = browserTab === "Browsers" ? browserOptions : deviceOptions;
 
   const chartLabel = visitorTab === "Page Views" ? "Page views" : "Visitors";
-  const chartTotal =
-    visitorTab === "Page Views"
-      ? summary.pageviews.value
-      : summary.visitors.value;
+  const chartTotal = visitorTab === "Page Views" ? summary.pageviews.value : summary.visitors.value;
   const allDomainsCount = useMemo(() => {
     const summed = domainOptions.reduce((total, domain) => {
       const next = Number(domain.pageviews ?? 0);
@@ -1015,24 +881,12 @@ export function AppAnalytics({
     return summed > 0 ? summed : Number(summary.pageviews.value ?? 0);
   }, [domainOptions, summary.pageviews.value]);
   const selectedHost =
-    data.filteredHost ??
-    (hostFromSearch &&
-    domainOptions.some((item) => item.host === hostFromSearch)
-      ? hostFromSearch
-      : undefined);
-  const selectedDomain = domainOptions.find(
-    (item) => item.host === selectedHost,
-  );
+    data.filteredHost ?? (hostFromSearch && domainOptions.some((item) => item.host === hostFromSearch) ? hostFromSearch : undefined);
+  const selectedDomain = domainOptions.find((item) => item.host === selectedHost);
   const pageSpeedHost = (selectedDomain?.host || data.domain || "").trim();
-  const pageSpeedTarget =
-    pageSpeedHost.length > 0
-      ? `https://${pageSpeedHost.replace(/^https?:\/\//i, "")}`
-      : "";
-  const pageSpeedUrl = pageSpeedTarget
-    ? `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(pageSpeedTarget)}`
-    : null;
-  const hasFilteredEmptyState =
-    Boolean(data.filteredHost) && summary.pageviews.value === 0;
+  const pageSpeedTarget = pageSpeedHost.length > 0 ? `https://${pageSpeedHost.replace(/^https?:\/\//i, "")}` : "";
+  const pageSpeedUrl = pageSpeedTarget ? `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(pageSpeedTarget)}` : null;
+  const hasFilteredEmptyState = Boolean(data.filteredHost) && summary.pageviews.value === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -1043,12 +897,7 @@ export function AppAnalytics({
             {pageSpeedUrl ? (
               <>
                 {" "}
-                <a
-                  href={pageSpeedUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[#4879f8] underline"
-                >
+                <a href={pageSpeedUrl} target="_blank" rel="noreferrer" className="text-[#4879f8] underline">
                   Open in PageSpeed Insights
                 </a>
               </>
@@ -1090,9 +939,7 @@ export function AppAnalytics({
 
       <div className="flex flex-col gap-6 overflow-hidden rounded-[4px] bg-[#0a1430] px-5 py-6 shadow-lg sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:pl-7 sm:pr-10 sm:py-7">
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium uppercase tracking-[1.5px] text-[#cfe0ff]/70">
-            Analytics:
-          </span>
+          <span className="text-[10px] font-medium uppercase tracking-[1.5px] text-[#cfe0ff]/70">Analytics:</span>
           <p className="text-xs font-light leading-[1.4] text-[#cfe0ff]/50">
             Quick view summary for what&apos;s going on
             <br />
@@ -1102,45 +949,26 @@ export function AppAnalytics({
         <div className="grid w-full grid-cols-2 gap-4 sm:flex sm:w-auto sm:flex-nowrap sm:gap-10">
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-2.5">
-              <UsersThree
-                className="size-6 shrink-0 text-[#cfe0ff]"
-                weight="duotone"
-              />
+              <UsersThree className="size-6 shrink-0 text-[#cfe0ff]" weight="duotone" />
               <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">
                 {formatNumber(summary.visitors.value)}
               </span>
             </div>
-            <span className="pl-[34px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">
-              Unique Visitors
-            </span>
+            <span className="pl-[34px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">Unique Visitors</span>
           </div>
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-2.5">
-              <GlobeHemisphereWest
-                className="size-6 shrink-0 text-[#cfe0ff]"
-                weight="duotone"
-              />
-              <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">
-                {formatNumber(countriesCount)}
-              </span>
+              <GlobeHemisphereWest className="size-6 shrink-0 text-[#cfe0ff]" weight="duotone" />
+              <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">{formatNumber(countriesCount)}</span>
             </div>
-            <span className="pl-[34px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">
-              Countries
-            </span>
+            <span className="pl-[34px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">Countries</span>
           </div>
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-2.5">
-              <ArrowBendUpLeft
-                className="size-6 shrink-0 text-[#cfe0ff]"
-                weight="duotone"
-              />
-              <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">
-                {bounce}
-              </span>
+              <ArrowBendUpLeft className="size-6 shrink-0 text-[#cfe0ff]" weight="duotone" />
+              <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">{bounce}</span>
             </div>
-            <span className="pl-[34px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">
-              Bounce rate
-            </span>
+            <span className="pl-[34px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">Bounce rate</span>
           </div>
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-2.5">
@@ -1153,13 +981,9 @@ export function AppAnalytics({
                   ease: "easeInOut",
                 }}
               />
-              <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">
-                {formatNumber(visitorsRightNow)}
-              </span>
+              <span className="text-[32px] font-light leading-none text-[#cfe0ff] sm:text-[44px]">{formatNumber(visitorsRightNow)}</span>
             </div>
-            <span className="pl-[22px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">
-              Visitors right now
-            </span>
+            <span className="pl-[22px] text-[9px] font-medium uppercase tracking-[1px] text-[#cfe0ff]/50">Visitors right now</span>
           </div>
         </div>
       </div>
@@ -1167,12 +991,8 @@ export function AppAnalytics({
       <div className="rounded-[4px] border-[0.5px] border-dash-border p-5">
         <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-light text-dash-text-faded">
-              {chartLabel}
-            </p>
-            <span className="text-[32px] font-medium leading-tight tracking-tight text-dash-text-strong">
-              {formatNumber(chartTotal)}
-            </span>
+            <p className="text-sm font-light text-dash-text-faded">{chartLabel}</p>
+            <span className="text-[32px] font-medium leading-tight tracking-tight text-dash-text-strong">{formatNumber(chartTotal)}</span>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
             <SegmentedToggle
@@ -1191,9 +1011,7 @@ export function AppAnalytics({
                   {selectedDomain
                     ? `${selectedDomain.host} · ${formatNumber(selectedDomain.pageviews)}`
                     : `All domains · ${formatNumber(allDomainsCount)}`}
-                  <ChevronDown
-                    className={`size-3 transition-transform ${hostOpen ? "rotate-180" : ""}`}
-                  />
+                  <ChevronDown className={`size-3 transition-transform ${hostOpen ? "rotate-180" : ""}`} />
                 </button>
                 {hostOpen && (
                   <div className="absolute right-0 top-full z-50 mt-1 min-w-[220px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
@@ -1201,15 +1019,11 @@ export function AppAnalytics({
                       type="button"
                       onClick={() => void handleHostChange(undefined)}
                       className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs transition-colors ${
-                        !selectedHost
-                          ? "font-medium text-[#4879f8]"
-                          : "font-light text-dash-text-body hover:bg-dash-bg-elevated"
+                        !selectedHost ? "font-medium text-[#4879f8]" : "font-light text-dash-text-body hover:bg-dash-bg-elevated"
                       }`}
                     >
                       <span>All domains</span>
-                      <span className="shrink-0 text-dash-text-extra-faded">
-                        · {formatNumber(allDomainsCount)}
-                      </span>
+                      <span className="shrink-0 text-dash-text-extra-faded">· {formatNumber(allDomainsCount)}</span>
                     </button>
                     {domainOptions.map((domain) => (
                       <button
@@ -1223,9 +1037,7 @@ export function AppAnalytics({
                         }`}
                       >
                         <span className="truncate">{domain.host}</span>
-                        <span className="shrink-0 text-dash-text-extra-faded">
-                          · {formatNumber(domain.pageviews)}
-                        </span>
+                        <span className="shrink-0 text-dash-text-extra-faded">· {formatNumber(domain.pageviews)}</span>
                       </button>
                     ))}
                   </div>
@@ -1239,9 +1051,7 @@ export function AppAnalytics({
                 className="flex w-full items-center justify-between gap-1.5 rounded-[4px] border-[0.5px] border-dash-border px-3 py-1.5 text-xs font-medium text-dash-text-strong sm:w-auto sm:justify-start"
               >
                 {refetching ? "Loading..." : preset.label}
-                <ChevronDown
-                  className={`size-3 transition-transform ${periodOpen ? "rotate-180" : ""}`}
-                />
+                <ChevronDown className={`size-3 transition-transform ${periodOpen ? "rotate-180" : ""}`} />
               </button>
               {periodOpen && (
                 <div className="absolute right-0 top-full z-50 mt-1 min-w-[160px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-lg">
@@ -1250,9 +1060,7 @@ export function AppAnalytics({
                       key={p.label}
                       onClick={() => void handlePresetChange(p)}
                       className={`flex w-full px-3 py-2 text-left text-xs transition-colors ${
-                        p.label === preset.label
-                          ? "font-medium text-[#4879f8]"
-                          : "font-light text-dash-text-body hover:bg-dash-bg-elevated"
+                        p.label === preset.label ? "font-medium text-[#4879f8]" : "font-light text-dash-text-body hover:bg-dash-bg-elevated"
                       }`}
                     >
                       {p.label}
@@ -1263,27 +1071,15 @@ export function AppAnalytics({
             </div>
           </div>
         </div>
-        <VisitorBarChart
-          points={chartPoints}
-          unit={data.range.unit}
-          seriesLabel={chartLabel}
-        />
+        <VisitorBarChart points={chartPoints} unit={data.range.unit} seriesLabel={chartLabel} />
       </div>
 
       {hasFilteredEmptyState ? (
         <div className="flex flex-col items-center justify-center gap-4 rounded-[4px] border-[0.5px] border-dash-border px-6 py-16 text-center">
-          <img
-            src="/icons/traffic.svg"
-            alt=""
-            className="size-12 opacity-70 dark:opacity-60 dark:invert"
-          />
+          <img src="/icons/traffic.svg" alt="" className="size-12 opacity-70 dark:opacity-60 dark:invert" />
           <div className="flex max-w-[420px] flex-col gap-1">
-            <p className="text-sm font-medium text-dash-text-strong">
-              No traffic from {data.filteredHost} in this date range
-            </p>
-            <p className="text-xs font-light text-dash-text-faded">
-              Try a wider window, or look at every domain on this project.
-            </p>
+            <p className="text-sm font-medium text-dash-text-strong">No traffic from {data.filteredHost} in this date range</p>
+            <p className="text-xs font-light text-dash-text-faded">Try a wider window, or look at every domain on this project.</p>
           </div>
           <button
             type="button"
@@ -1304,41 +1100,20 @@ export function AppAnalytics({
 
           <div className="flex flex-col rounded-[4px] border-[0.5px] border-dash-border">
             <div className="border-b-[0.5px] border-dash-border px-4 py-3">
-              <h3 className="text-sm font-medium text-dash-text-strong">
-                Page performance
-              </h3>
-              <p className="text-xs font-light text-dash-text-faded">
-                Core Web Vitals (p75) over this window
-              </p>
+              <h3 className="text-sm font-medium text-dash-text-strong">Page performance</h3>
+              <p className="text-xs font-light text-dash-text-faded">Core Web Vitals (p75) over this window</p>
             </div>
             <div className="grid grid-cols-2 gap-x-6 gap-y-5 px-5 py-5 sm:grid-cols-3 md:grid-cols-5">
-              <StatTile
-                label="LCP"
-                value={formatPerf(data.performance.lcp, "lcp")}
-              />
-              <StatTile
-                label="FCP"
-                value={formatPerf(data.performance.fcp, "fcp")}
-              />
-              <StatTile
-                label="INP"
-                value={formatPerf(data.performance.inp, "inp")}
-              />
-              <StatTile
-                label="TTFB"
-                value={formatPerf(data.performance.ttfb, "ttfb")}
-              />
-              <StatTile
-                label="CLS"
-                value={formatPerf(data.performance.cls, "cls")}
-              />
+              <StatTile label="LCP" value={formatPerf(data.performance.lcp, "lcp")} />
+              <StatTile label="FCP" value={formatPerf(data.performance.fcp, "fcp")} />
+              <StatTile label="INP" value={formatPerf(data.performance.inp, "inp")} />
+              <StatTile label="TTFB" value={formatPerf(data.performance.ttfb, "ttfb")} />
+              <StatTile label="CLS" value={formatPerf(data.performance.cls, "cls")} />
             </div>
             <div className="flex items-center justify-between border-t-[0.5px] border-dash-border-soft px-5 py-3 text-xs">
               <span className="text-dash-text-faded">Average load time</span>
               <span className="font-medium text-dash-text-strong">
-                {data.performance.avgLoadTime != null
-                  ? `${(data.performance.avgLoadTime / 1000).toFixed(1)}s`
-                  : "—"}
+                {data.performance.avgLoadTime != null ? `${(data.performance.avgLoadTime / 1000).toFixed(1)}s` : "—"}
               </span>
             </div>
           </div>
@@ -1377,9 +1152,7 @@ export function AppAnalytics({
             />
             <div className="flex flex-1 flex-col rounded-[4px] border-[0.5px] border-dash-border">
               <div className="flex flex-col gap-2 border-b-[0.5px] border-dash-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="text-sm font-medium text-dash-text-strong">
-                  Browser &amp; Device Information
-                </h3>
+                <h3 className="text-sm font-medium text-dash-text-strong">Browser &amp; Device Information</h3>
                 <SegmentedToggle
                   options={["Browsers", "Devices"]}
                   value={browserTab}
@@ -1388,9 +1161,7 @@ export function AppAnalytics({
               </div>
               <div className="flex flex-col">
                 {activeBreakdown.length === 0 ? (
-                  <div className="px-4 py-6 text-xs text-dash-text-faded">
-                    No data yet.
-                  </div>
+                  <div className="px-4 py-6 text-xs text-dash-text-faded">No data yet.</div>
                 ) : (
                   activeBreakdown.map((item, i, arr) => (
                     <div
@@ -1399,23 +1170,13 @@ export function AppAnalytics({
                     >
                       <div className="flex min-w-0 items-center gap-2">
                         {browserTab === "Browsers" ? (
-                          <BrowserIcon
-                            name={item.x}
-                            className="size-4 shrink-0"
-                          />
+                          <BrowserIcon name={item.x} className="size-4 shrink-0" />
                         ) : (
-                          <DeviceIcon
-                            name={item.x}
-                            className="size-4 shrink-0 text-dash-text-faded"
-                          />
+                          <DeviceIcon name={item.x} className="size-4 shrink-0 text-dash-text-faded" />
                         )}
-                        <span className="truncate text-sm font-light text-dash-text-body">
-                          {item.x}
-                        </span>
+                        <span className="truncate text-sm font-light text-dash-text-body">{item.x}</span>
                       </div>
-                      <span className="text-xs text-dash-text-faded">
-                        {formatNumber(item.y)}
-                      </span>
+                      <span className="text-xs text-dash-text-faded">{formatNumber(item.y)}</span>
                     </div>
                   ))
                 )}
@@ -1474,9 +1235,7 @@ function ObservabilityPage() {
   if (!shouldShowProjectObservabilityTab(project)) {
     return (
       <div className="mx-auto flex max-w-[1000px] flex-col gap-4 px-4 py-8 sm:px-0">
-        <TabHeader title="Metrics & Observability">
-          Observability is not available for static projects.
-        </TabHeader>
+        <TabHeader title="Metrics & Observability">Observability is not available for static projects.</TabHeader>
       </div>
     );
   }
@@ -1484,12 +1243,7 @@ function ObservabilityPage() {
 
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 px-4 py-8 sm:px-0">
-      <AppMetrics
-        project={project}
-        initialMetrics={metrics}
-        grafanaUrl={grafanaUrl}
-        workspace={workspace}
-      />
+      <AppMetrics project={project} initialMetrics={metrics} grafanaUrl={grafanaUrl} workspace={workspace} />
     </div>
   );
 }

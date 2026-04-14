@@ -27,10 +27,7 @@ export function ProjectCardTags({ tags, maxVisible = 2 }: ProjectCardTagsProps) 
     <div className="flex items-center gap-2 px-3.5 pb-1.5">
       {visible.map((tag) => (
         <span key={tag.id} className="flex items-center gap-1.5">
-          <span
-            className="size-1.5 shrink-0 rounded-full"
-            style={{ backgroundColor: tag.color }}
-          />
+          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
           <span className="text-xs text-dash-text-faded">{tag.name}</span>
         </span>
       ))}
@@ -61,13 +58,8 @@ export function ProjectCardTags({ tags, maxVisible = 2 }: ProjectCardTagsProps) 
               >
                 {tags.map((tag) => (
                   <span key={tag.id} className="flex items-center gap-2">
-                    <span
-                      className="size-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: tag.color }}
-                    />
-                    <span className="text-xs leading-5 tracking-[-0.019px] text-white">
-                      {tag.name}
-                    </span>
+                    <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
+                    <span className="text-xs leading-5 tracking-[-0.019px] text-white">{tag.name}</span>
                   </span>
                 ))}
               </motion.div>

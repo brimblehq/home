@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import {
-  getRouteApi,
-  useNavigate,
-  useRouterState,
-} from "@tanstack/react-router";
+import { getRouteApi, useNavigate, useRouterState } from "@tanstack/react-router";
 import * as Dialog from "@radix-ui/react-dialog";
 import { motion, AnimatePresence } from "motion/react";
 import { Command } from "cmdk";
@@ -13,10 +9,7 @@ import { PaletteView, Theme } from "../../types/enums";
 import { useScoutBar } from "../../contexts/scoutbar-context";
 import { useTheme } from "../../hooks/use-theme";
 import { useHaptics } from "@/hooks/use-haptics";
-import {
-  getWorkspaceFromSearch,
-  withWorkspaceQuery,
-} from "@/utils/topbar-navigation";
+import { getWorkspaceFromSearch, withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { listDomainsPageServerFn } from "@/server/domains/actions";
 import { listProjectEnvironmentsServerFn } from "@/server/environments/actions";
 import type { DomainRecord } from "@/backend/domains";
@@ -50,12 +43,11 @@ export function CommandPalette() {
   const { canWrite } = useWorkspaceRole();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const currentPathname = useRouterState({ select: (s) => s.location.pathname });
-  const { onboardingProjects, workspaces, settingsSnapshot } =
-    (rootRoute.useLoaderData() ?? {}) as {
-      onboardingProjects: { items: Project[] } | null;
-      workspaces: { items: Workspace[] };
-      settingsSnapshot: SettingsSidebarSnapshot | null;
-    };
+  const { onboardingProjects, workspaces, settingsSnapshot } = (rootRoute.useLoaderData() ?? {}) as {
+    onboardingProjects: { items: Project[] } | null;
+    workspaces: { items: Workspace[] };
+    settingsSnapshot: SettingsSidebarSnapshot | null;
+  };
   const haptics = useHaptics();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<PaletteView>(PaletteView.Root);
@@ -63,9 +55,7 @@ export function CommandPalette() {
   const [futureViews, setFutureViews] = useState<PaletteView[]>([]);
   const [domains, setDomains] = useState<CommandDomain[]>([]);
   const [domainsLoading, setDomainsLoading] = useState(false);
-  const [domainsLoadedForKey, setDomainsLoadedForKey] = useState<string | null>(
-    null,
-  );
+  const [domainsLoadedForKey, setDomainsLoadedForKey] = useState<string | null>(null);
   const [environments, setEnvironments] = useState<ProjectEnvironment[]>([]);
   const [environmentsLoading, setEnvironmentsLoading] = useState(false);
   const [environmentsLoadedForKey, setEnvironmentsLoadedForKey] = useState<string | null>(null);
@@ -97,10 +87,7 @@ export function CommandPalette() {
   );
 
   const personalName =
-    settingsSnapshot?.profile?.username ||
-    settingsSnapshot?.profile?.firstName ||
-    settingsSnapshot?.profile?.email ||
-    "Personal Account";
+    settingsSnapshot?.profile?.username || settingsSnapshot?.profile?.firstName || settingsSnapshot?.profile?.email || "Personal Account";
 
   const teams = useMemo(
     () => [
@@ -118,8 +105,7 @@ export function CommandPalette() {
     [personalName, workspaces?.items],
   );
 
-  const go = (pathname: string) =>
-    navigate({ to: withWorkspaceQuery({ pathname, searchStr }) as any });
+  const go = (pathname: string) => navigate({ to: withWorkspaceQuery({ pathname, searchStr }) as any });
 
   // ⌘K / Ctrl+K to toggle
   useEffect(() => {
@@ -234,11 +220,14 @@ export function CommandPalette() {
     };
   }, [environmentsLoadedForKey, isOpen, workspace]);
 
-  const runAction = useCallback((fn: () => void) => {
-    haptics.selection();
-    setIsOpen(false);
-    fn();
-  }, [haptics, setIsOpen]);
+  const runAction = useCallback(
+    (fn: () => void) => {
+      haptics.selection();
+      setIsOpen(false);
+      fn();
+    },
+    [haptics, setIsOpen],
+  );
 
   const openNewProject = () => {
     runAction(() => go("/projects/new"));
@@ -346,12 +335,14 @@ export function CommandPalette() {
     }
 
     const shortcutActions: Record<string, () => void> = {
-      ...(canWrite ? {
-        n: openNewProject,
-        d: openNewDomain,
-        b: openBuyDomain,
-        db: openNewDatabase,
-      } : {}),
+      ...(canWrite
+        ? {
+            n: openNewProject,
+            d: openNewDomain,
+            b: openBuyDomain,
+            db: openNewDatabase,
+          }
+        : {}),
       t: openNewTeam,
     };
     const shortcutPrefixes = new Set(["d"]);
@@ -426,16 +417,7 @@ export function CommandPalette() {
       document.removeEventListener("keydown", handleBadgeShortcuts);
       resetShortcutBuffer();
     };
-  }, [
-    isOpen,
-    openBuyDomain,
-    openNewDatabase,
-    openNewDomain,
-    openNewProject,
-    openNewTeam,
-    query,
-    view,
-  ]);
+  }, [isOpen, openBuyDomain, openNewDatabase, openNewDomain, openNewProject, openNewTeam, query, view]);
 
   const inputPlaceholder = (() => {
     if (view === PaletteView.ProjectSearch) return "Search projects...";
@@ -500,11 +482,7 @@ export function CommandPalette() {
                 className="cmdk-dialog"
               >
                 <Command loop>
-                  <Command.Input
-                    placeholder={inputPlaceholder}
-                    value={query}
-                    onValueChange={setQuery}
-                  />
+                  <Command.Input placeholder={inputPlaceholder} value={query} onValueChange={setQuery} />
                   <Command.List>
                     <Command.Empty>{emptyStateLabel}</Command.Empty>
 
@@ -518,225 +496,103 @@ export function CommandPalette() {
                           transition={{ duration: 0.16 }}
                         >
                           <Command.Group heading="PROJECTS">
-                            <Command.Item
-                              value="search projects find project"
-                              onSelect={openProjectSearch}
-                            >
-                              <img
-                                src="/icons/scoutbar/search-alt.svg"
-                                width="16"
-                                height="16"
-                                alt=""
-                              />
+                            <Command.Item value="search projects find project" onSelect={openProjectSearch}>
+                              <img src="/icons/scoutbar/search-alt.svg" width="16" height="16" alt="" />
                               <span>Search projects</span>
                             </Command.Item>
                             {canWrite && (
-                            <Command.Item
-                              value="new project create"
-                              onSelect={openNewProject}
-                            >
-                              <img
-                                src="/icons/scoutbar/add.svg"
-                                width="16"
-                                height="16"
-                                alt=""
-                              />
-                              <span>New project</span>
-                              <span className="cmdk-shortcut cmdk-shortcut-blue">
-                                N
-                              </span>
-                            </Command.Item>
+                              <Command.Item value="new project create" onSelect={openNewProject}>
+                                <img src="/icons/scoutbar/add.svg" width="16" height="16" alt="" />
+                                <span>New project</span>
+                                <span className="cmdk-shortcut cmdk-shortcut-blue">N</span>
+                              </Command.Item>
                             )}
                           </Command.Group>
 
                           <Command.Group heading="DOMAINS">
-                            <Command.Item
-                              value="search domains find domain"
-                              onSelect={openDomainSearch}
-                            >
-                              <img
-                                src="/icons/scoutbar/search-alt.svg"
-                                width="16"
-                                height="16"
-                                alt=""
-                              />
+                            <Command.Item value="search domains find domain" onSelect={openDomainSearch}>
+                              <img src="/icons/scoutbar/search-alt.svg" width="16" height="16" alt="" />
                               <span>Search domains</span>
                             </Command.Item>
                             {canWrite && (
-                            <>
-                            <Command.Item
-                              value="new domain add"
-                              onSelect={openNewDomain}
-                            >
-                              <img
-                                src="/icons/scoutbar/add.svg"
-                                width="16"
-                                height="16"
-                                alt=""
-                              />
-                              <span>New domain</span>
-                              <span className="cmdk-shortcut cmdk-shortcut-red">
-                                D
-                              </span>
-                            </Command.Item>
-                            <Command.Item
-                              value="buy domain register"
-                              onSelect={openBuyDomain}
-                            >
-                              <img
-                                src="/icons/scoutbar/earth.svg"
-                                width="16"
-                                height="16"
-                                alt=""
-                              />
-                              <span>Buy domain</span>
-                              <span className="cmdk-shortcut cmdk-shortcut-red">
-                                B
-                              </span>
-                            </Command.Item>
-                            </>
+                              <>
+                                <Command.Item value="new domain add" onSelect={openNewDomain}>
+                                  <img src="/icons/scoutbar/add.svg" width="16" height="16" alt="" />
+                                  <span>New domain</span>
+                                  <span className="cmdk-shortcut cmdk-shortcut-red">D</span>
+                                </Command.Item>
+                                <Command.Item value="buy domain register" onSelect={openBuyDomain}>
+                                  <img src="/icons/scoutbar/earth.svg" width="16" height="16" alt="" />
+                                  <span>Buy domain</span>
+                                  <span className="cmdk-shortcut cmdk-shortcut-red">B</span>
+                                </Command.Item>
+                              </>
                             )}
                           </Command.Group>
 
                           {canWrite && (
-                          <Command.Group heading="DATABASES">
-                            <Command.Item
-                              value="new database create"
-                              onSelect={openNewDatabase}
-                            >
-                              <img
-                                src="/icons/scoutbar/add.svg"
-                                width="16"
-                                height="16"
-                                alt=""
-                              />
-                              <span>New database</span>
-                              <span className="cmdk-shortcut cmdk-shortcut-green">
-                                D
-                              </span>
-                              <span className="cmdk-shortcut cmdk-shortcut-green">
-                                B
-                              </span>
-                            </Command.Item>
-                          </Command.Group>
+                            <Command.Group heading="DATABASES">
+                              <Command.Item value="new database create" onSelect={openNewDatabase}>
+                                <img src="/icons/scoutbar/add.svg" width="16" height="16" alt="" />
+                                <span>New database</span>
+                                <span className="cmdk-shortcut cmdk-shortcut-green">D</span>
+                                <span className="cmdk-shortcut cmdk-shortcut-green">B</span>
+                              </Command.Item>
+                            </Command.Group>
                           )}
 
                           <Command.Group heading="TEAM">
-                            <Command.Item
-                              value="switch environment staging production development"
-                              onSelect={openEnvironmentSearch}
-                            >
+                            <Command.Item value="switch environment staging production development" onSelect={openEnvironmentSearch}>
                               <TreeStructure className="size-4" />
                               <span>Switch environment</span>
                             </Command.Item>
-                            <Command.Item
-                              value="switch workspace team personal"
-                              onSelect={openWorkspaceSearch}
-                            >
-                              <img
-                                src="/icons/scoutbar/People.svg"
-                                width="16"
-                                height="16"
-                                alt=""
-                              />
+                            <Command.Item value="switch workspace team personal" onSelect={openWorkspaceSearch}>
+                              <img src="/icons/scoutbar/People.svg" width="16" height="16" alt="" />
                               <span>Switch workspace</span>
                             </Command.Item>
-                            <Command.Item
-                              value="new team create workspace"
-                              onSelect={openNewTeam}
-                            >
-                              <img
-                                src="/icons/scoutbar/add.svg"
-                                width="16"
-                                height="16"
-                                alt=""
-                              />
+                            <Command.Item value="new team create workspace" onSelect={openNewTeam}>
+                              <img src="/icons/scoutbar/add.svg" width="16" height="16" alt="" />
                               <span>New workspace</span>
-                              <span className="cmdk-shortcut cmdk-shortcut-orange">
-                                T
-                              </span>
+                              <span className="cmdk-shortcut cmdk-shortcut-orange">T</span>
                             </Command.Item>
                           </Command.Group>
 
                           <Command.Group heading="THEME">
-                            <Command.Item
-                              value="theme toggle switch"
-                              onSelect={toggleAppTheme}
-                            >
+                            <Command.Item value="theme toggle switch" onSelect={toggleAppTheme}>
                               <ArrowsClockwise className="size-4" />
                               <span>Toggle theme</span>
-                              <span className="cmdk-shortcut">
-                                {mode === Theme.System ? "S" : theme === Theme.Dark ? "D" : "L"}
-                              </span>
+                              <span className="cmdk-shortcut">{mode === Theme.System ? "S" : theme === Theme.Dark ? "D" : "L"}</span>
                             </Command.Item>
-                            <Command.Item
-                              value="theme light mode"
-                              onSelect={setLightTheme}
-                            >
+                            <Command.Item value="theme light mode" onSelect={setLightTheme}>
                               <Sun className="size-4" />
                               <span>Light mode</span>
-                              {mode === Theme.Light && (
-                                <Check className="ml-auto size-4 text-[#34d399]" weight="bold" />
-                              )}
+                              {mode === Theme.Light && <Check className="ml-auto size-4 text-[#34d399]" weight="bold" />}
                             </Command.Item>
-                            <Command.Item
-                              value="theme dark mode"
-                              onSelect={setDarkTheme}
-                            >
+                            <Command.Item value="theme dark mode" onSelect={setDarkTheme}>
                               <Moon className="size-4" />
                               <span>Dark mode</span>
-                              {mode === Theme.Dark && (
-                                <Check className="ml-auto size-4 text-[#34d399]" weight="bold" />
-                              )}
+                              {mode === Theme.Dark && <Check className="ml-auto size-4 text-[#34d399]" weight="bold" />}
                             </Command.Item>
-                            <Command.Item
-                              value="theme system mode follow os"
-                              onSelect={setSystemTheme}
-                            >
+                            <Command.Item value="theme system mode follow os" onSelect={setSystemTheme}>
                               <ArrowsClockwise className="size-4" />
                               <span>System mode</span>
-                              {mode === Theme.System && (
-                                <Check className="ml-auto size-4 text-[#34d399]" weight="bold" />
-                              )}
+                              {mode === Theme.System && <Check className="ml-auto size-4 text-[#34d399]" weight="bold" />}
                             </Command.Item>
                           </Command.Group>
 
                           <Command.Group heading="HELP &amp; ACCOUNT">
                             <Command.Item
                               value="cli docs documentation"
-                              onSelect={() =>
-                                runAction(() =>
-                                  window.open(
-                                    "https://docs.brimble.io",
-                                    "_blank",
-                                  ),
-                                )
-                              }
+                              onSelect={() => runAction(() => window.open("https://docs.brimble.io", "_blank"))}
                             >
-                              <img
-                                src="/icons/scoutbar/desktop.svg"
-                                width="16"
-                                height="16"
-                                alt=""
-                              />
+                              <img src="/icons/scoutbar/desktop.svg" width="16" height="16" alt="" />
                               <span>CLI docs</span>
                             </Command.Item>
                             <Command.Item
                               value="contact support email help"
-                              onSelect={() =>
-                                runAction(
-                                  () =>
-                                    (window.location.href =
-                                      "mailto:hello@brimble.app"),
-                                )
-                              }
+                              onSelect={() => runAction(() => (window.location.href = "mailto:hello@brimble.app"))}
                             >
-                              <img
-                                src="/icons/scoutbar/mail.svg"
-                                width="16"
-                                height="16"
-                                alt=""
-                              />
+                              <img src="/icons/scoutbar/mail.svg" width="16" height="16" alt="" />
                               <span>Contact support</span>
                             </Command.Item>
                             <Command.Item
@@ -767,31 +623,18 @@ export function CommandPalette() {
                           transition={{ duration: 0.16 }}
                         >
                           <Command.Group heading={subviewHeading}>
-                            <Command.Item
-                              value="back to commands"
-                              onSelect={goBackView}
-                            >
+                            <Command.Item value="back to commands" onSelect={goBackView}>
                               <ArrowLeft className="size-4" />
-                              <span>
-                                Back to{" "}
-                                {pastViews.length > 0 ? "previous" : "commands"}
-                              </span>
+                              <span>Back to {pastViews.length > 0 ? "previous" : "commands"}</span>
                             </Command.Item>
                             {view === PaletteView.ProjectSearch &&
                               projects.map((p) => (
                                 <Command.Item
                                   key={p.slug}
                                   value={`project ${p.name} ${p.slug}`}
-                                  onSelect={() =>
-                                    runAction(() => go(`/projects/${p.slug}`))
-                                  }
+                                  onSelect={() => runAction(() => go(`/projects/${p.slug}`))}
                                 >
-                                  <img
-                                    src="/icons/scoutbar/search-alt.svg"
-                                    width="16"
-                                    height="16"
-                                    alt=""
-                                  />
+                                  <img src="/icons/scoutbar/search-alt.svg" width="16" height="16" alt="" />
                                   <span>{p.name}</span>
                                 </Command.Item>
                               ))}
@@ -800,20 +643,9 @@ export function CommandPalette() {
                                 <Command.Item
                                   key={d.name}
                                   value={`domain ${d.name} ${d.project ?? ""}`}
-                                  onSelect={() =>
-                                    runAction(() =>
-                                      go(
-                                        `/domains/${encodeURIComponent(d.name)}`,
-                                      ),
-                                    )
-                                  }
+                                  onSelect={() => runAction(() => go(`/domains/${encodeURIComponent(d.name)}`))}
                                 >
-                                  <img
-                                    src="/icons/scoutbar/earth.svg"
-                                    width="16"
-                                    height="16"
-                                    alt=""
-                                  />
+                                  <img src="/icons/scoutbar/earth.svg" width="16" height="16" alt="" />
                                   <span>{d.name}</span>
                                 </Command.Item>
                               ))}
@@ -826,19 +658,12 @@ export function CommandPalette() {
                                     runAction(() =>
                                       navigate({
                                         to: "/projects",
-                                        search: t.slug
-                                          ? ({ workspace: t.slug } as any)
-                                          : ({} as any),
+                                        search: t.slug ? ({ workspace: t.slug } as any) : ({} as any),
                                       }),
                                     )
                                   }
                                 >
-                                  <img
-                                    src="/icons/scoutbar/People.svg"
-                                    width="16"
-                                    height="16"
-                                    alt=""
-                                  />
+                                  <img src="/icons/scoutbar/People.svg" width="16" height="16" alt="" />
                                   <span className="capitalize">{t.name}</span>
                                 </Command.Item>
                               ))}
@@ -846,12 +671,8 @@ export function CommandPalette() {
                               environments.map((env) => {
                                 const params = new URLSearchParams(searchStr || "");
                                 const currentEnvId = params.get("environmentId");
-                                const isActive = env.isDefault
-                                  ? !currentEnvId
-                                  : currentEnvId === env._id;
-                                const parentEnv = env.inherit_from
-                                  ? environments.find((e) => e._id === env.inherit_from)
-                                  : null;
+                                const isActive = env.isDefault ? !currentEnvId : currentEnvId === env._id;
+                                const parentEnv = env.inherit_from ? environments.find((e) => e._id === env.inherit_from) : null;
 
                                 return (
                                   <Command.Item
@@ -868,7 +689,7 @@ export function CommandPalette() {
                                         const search = Object.fromEntries(nextParams.entries());
                                         navigate({
                                           to: currentPathname as any,
-                                          search: Object.keys(search).length > 0 ? search as any : undefined,
+                                          search: Object.keys(search).length > 0 ? (search as any) : undefined,
                                         });
                                       })
                                     }
@@ -885,20 +706,13 @@ export function CommandPalette() {
                                         </span>
                                       ) : null}
                                     </div>
-                                    {isActive ? (
-                                      <div className="ml-auto size-1.5 shrink-0 rounded-full bg-[#34d399]" />
-                                    ) : null}
+                                    {isActive ? <div className="ml-auto size-1.5 shrink-0 rounded-full bg-[#34d399]" /> : null}
                                   </Command.Item>
                                 );
                               })}
                             {view === PaletteView.DomainSearch && domainsLoading ? (
                               <Command.Item value="domains loading" disabled>
-                                <img
-                                  src="/icons/scoutbar/earth.svg"
-                                  width="16"
-                                  height="16"
-                                  alt=""
-                                />
+                                <img src="/icons/scoutbar/earth.svg" width="16" height="16" alt="" />
                                 <span>Loading domains...</span>
                               </Command.Item>
                             ) : null}

@@ -38,33 +38,20 @@ export interface ListDeploymentsInput {
 }
 
 export interface DeploymentsApi {
-  list(
-    projectId: string,
-    input?: ListDeploymentsInput,
-  ): Promise<PaginatedDeploymentsResponse>;
+  list(projectId: string, input?: ListDeploymentsInput): Promise<PaginatedDeploymentsResponse>;
   getById(projectId: string, logId: string): Promise<DeploymentLog | null>;
-  redeploy(
-    projectId: string,
-    logId: string,
-    input?: { teamId?: string },
-  ): Promise<{ id?: string }>;
-  cancel(
-    projectId: string,
-    logId: string,
-    input?: { teamId?: string },
-  ): Promise<void>;
-  downloadLogs(
-    projectId: string,
-    logId: string,
-    input?: { teamId?: string },
-  ): Promise<{ content: string; filename: string }>;
+  redeploy(projectId: string, logId: string, input?: { teamId?: string }): Promise<{ id?: string }>;
+  cancel(projectId: string, logId: string, input?: { teamId?: string }): Promise<void>;
+  downloadLogs(projectId: string, logId: string, input?: { teamId?: string }): Promise<{ content: string; filename: string }>;
 }
 
 function mapDeploymentLog(log: any): DeploymentLog {
   return {
     id: log.id ?? log._id,
     name: log.name ?? "",
-    status: String(log.status ?? "").trim().toLowerCase(),
+    status: String(log.status ?? "")
+      .trim()
+      .toLowerCase(),
     branch: log.branch,
     message: log.message,
     commitLink: log.commitLink ?? log.commit_link,
@@ -81,29 +68,24 @@ function mapDeploymentLog(log: any): DeploymentLog {
 export function createDeploymentsApi(client: ApiClient): DeploymentsApi {
   return {
     async list(projectId, input) {
-      const response = await client.request<any>(
-        `/core/v1/logs/search/${encodeURIComponent(projectId)}`,
-        {
-          method: "GET",
-          query: {
-            page: input?.page,
-            limit: input?.limit,
-            filterBy: input?.filterBy,
-            statuses: input?.statuses,
-            environment: input?.environment,
-            start: input?.start,
-            end: input?.end,
-            search: input?.search?.trim() || undefined,
-            teamId: input?.teamId,
-          },
+      const response = await client.request<any>(`/core/v1/logs/search/${encodeURIComponent(projectId)}`, {
+        method: "GET",
+        query: {
+          page: input?.page,
+          limit: input?.limit,
+          filterBy: input?.filterBy,
+          statuses: input?.statuses,
+          environment: input?.environment,
+          start: input?.start,
+          end: input?.end,
+          search: input?.search?.trim() || undefined,
+          teamId: input?.teamId,
         },
-      );
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rawLogs = root.logs ?? root ?? [];
-      const items = (Array.isArray(rawLogs) ? rawLogs : []).map(
-        mapDeploymentLog,
-      );
+      const items = (Array.isArray(rawLogs) ? rawLogs : []).map(mapDeploymentLog);
 
       return {
         items,
@@ -111,40 +93,35 @@ export function createDeploymentsApi(client: ApiClient): DeploymentsApi {
         totalPages: root.totalPages ?? root.total_pages ?? 1,
         total: root.total ?? root.count,
         environments: root.environments ?? ["PRODUCTION"],
-        statuses: root.statuses ?? [
-          "ACTIVE",
-          "INPROGRESS",
-          "FAILED",
-          "CANCELLED",
-          "PENDING",
-        ],
+        statuses: root.statuses ?? ["ACTIVE", "INPROGRESS", "FAILED", "CANCELLED", "PENDING"],
       };
     },
 
     async getById(projectId, logId) {
-      const response = await client.request<any>(
-        `/core/v1/logs/${encodeURIComponent(projectId)}/${encodeURIComponent(logId)}`,
-        { method: "GET" },
-      );
+      const response = await client.request<any>(`/core/v1/logs/${encodeURIComponent(projectId)}/${encodeURIComponent(logId)}`, {
+        method: "GET",
+      });
 
       const root = response?.data?.data ?? response?.data ?? response;
       return root ? mapDeploymentLog(root) : null;
     },
 
     async redeploy(projectId, logId, input) {
-      const response = await client.request<any>(
-        `/core/v1/projects/${encodeURIComponent(projectId)}/redeploy`,
-        { method: "POST", body: { logId }, query: { teamId: input?.teamId } },
-      );
+      const response = await client.request<any>(`/core/v1/projects/${encodeURIComponent(projectId)}/redeploy`, {
+        method: "POST",
+        body: { logId },
+        query: { teamId: input?.teamId },
+      });
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       return { id: root.id ?? root._id };
     },
 
     async cancel(projectId, logId, input) {
-      await client.request<any>(
-        `/core/v1/projects/cancel/${encodeURIComponent(projectId)}/${encodeURIComponent(logId)}`,
-        { method: "POST", body: {}, query: { teamId: input?.teamId } },
-      );
+      await client.request<any>(`/core/v1/projects/cancel/${encodeURIComponent(projectId)}/${encodeURIComponent(logId)}`, {
+        method: "POST",
+        body: {},
+        query: { teamId: input?.teamId },
+      });
     },
 
     async downloadLogs(projectId, logId, input) {
@@ -158,8 +135,7 @@ export function createDeploymentsApi(client: ApiClient): DeploymentsApi {
       const raw = (response as any)?.data ?? response ?? "";
       const content = typeof raw === "string" ? raw : JSON.stringify(raw);
 
-      const disposition =
-        (response as any)?.headers?.["content-disposition"] ?? "";
+      const disposition = (response as any)?.headers?.["content-disposition"] ?? "";
       const filenameMatch = disposition.match(/filename="?([^";\s]+)"?/);
       const filename = filenameMatch?.[1] || `deployment-${logId}.log`;
 

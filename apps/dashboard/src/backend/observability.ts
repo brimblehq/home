@@ -97,18 +97,15 @@ function parseDateString(value: unknown): string {
 export function createObservabilityApi(client: ApiClient): ObservabilityApi {
   return {
     async getProjectMetrics(input) {
-      const response = await client.request<any>(
-        `/core/v1/projects/stats/${encodeURIComponent(input.projectId)}`,
-        {
-          method: "GET",
-          query: {
-            hrsAgo: input.hrsAgo,
-            container: input.container,
-            breakdown: input.breakdown,
-            teamId: input.teamId,
-          },
+      const response = await client.request<any>(`/core/v1/projects/stats/${encodeURIComponent(input.projectId)}`, {
+        method: "GET",
+        query: {
+          hrsAgo: input.hrsAgo,
+          container: input.container,
+          breakdown: input.breakdown,
+          teamId: input.teamId,
         },
-      );
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rootRecord = asRecord(root);
@@ -121,9 +118,7 @@ export function createObservabilityApi(client: ApiClient): ObservabilityApi {
 
       const rawReplicas = Array.isArray(rootRecord?.replicas) ? rootRecord.replicas : [];
       const rawResults = Array.isArray(rootRecord?.results) ? rootRecord.results : [];
-      const rawResponseTimeResults = Array.isArray(responseTimeRecord?.results)
-        ? responseTimeRecord.results
-        : [];
+      const rawResponseTimeResults = Array.isArray(responseTimeRecord?.results) ? responseTimeRecord.results : [];
 
       const replicas: ReplicaInfo[] = rawReplicas
         .map((item: any) => {

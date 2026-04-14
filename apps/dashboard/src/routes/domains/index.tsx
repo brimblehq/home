@@ -6,10 +6,7 @@ import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import { PageHeader } from "../../components/shared/page-header";
 import { DomainList, type Domain } from "../../components/shared/domain-list";
 import { NumberPagination } from "../../components/shared/pagination";
-import {
-  AddDomainModal,
-  type DomainValidationError,
-} from "../../components/shared/add-domain-modal";
+import { AddDomainModal, type DomainValidationError } from "../../components/shared/add-domain-modal";
 import { DomainStep } from "@/types/enums";
 import { Route as RootRoute } from "@/routes/__root";
 import type { DomainRecord, PaginatedDomainsResponse } from "@/backend/domains";
@@ -25,10 +22,7 @@ import {
   updateDomainServerFn,
 } from "@/server/domains/actions";
 import { formatRelativeTime } from "@/utils/dashboard";
-import {
-  consumePendingDomainsAction,
-  getWorkspaceFromSearch,
-} from "@/utils/topbar-navigation";
+import { consumePendingDomainsAction, getWorkspaceFromSearch } from "@/utils/topbar-navigation";
 import {
   parsePositivePageSearchValue,
   parseTextSearchValue,
@@ -64,20 +58,23 @@ export const Route = createFileRoute("/domains/")({
     const workspace = deps.workspace;
 
     const [domainsResult, projectsResult] = await Promise.all([
-      (listDomainsPageServerFn as unknown as (input: {
-        data: { page?: number; workspace?: string; q?: string };
-      }) => Promise<PaginatedDomainsResponse>)({
+      (
+        listDomainsPageServerFn as unknown as (input: {
+          data: { page?: number; workspace?: string; q?: string };
+        }) => Promise<PaginatedDomainsResponse>
+      )({
         data: { page, workspace, q: deps.q },
       }),
-      (listDomainProjectsServerFn as unknown as (input: {
-        data: { workspace?: string };
-      }) => Promise<PaginatedProjectsResponse>)({
+      (listDomainProjectsServerFn as unknown as (input: { data: { workspace?: string } }) => Promise<PaginatedProjectsResponse>)({
         data: { workspace },
-      }).catch(() => ({
-        items: [],
-        currentPage: 1,
-        totalPages: 1,
-      } as PaginatedProjectsResponse)),
+      }).catch(
+        () =>
+          ({
+            items: [],
+            currentPage: 1,
+            totalPages: 1,
+          }) as PaginatedProjectsResponse,
+      ),
     ]);
 
     return {
@@ -159,17 +156,13 @@ function DomainsPage() {
   const [addDomainOpen, setAddDomainOpen] = useState(false);
   const [addDomainStep, setAddDomainStep] = useState<DomainStep | undefined>();
   const [searchQuery, setSearchQuery] = useState(search.q ?? "");
-  const [rows, setRows] = useState<Domain[]>(() =>
-    domainsResult.items.map((item) => mapDomainToRow(item)),
-  );
+  const [rows, setRows] = useState<Domain[]>(() => domainsResult.items.map((item) => mapDomainToRow(item)));
   const navigate = useNavigate({ from: "/domains/" });
   const isRouterLoading = useRouterState({ select: (s) => s.isLoading });
   const pendingPage = useRouterState({
     select: (s) => {
       const pending = s.pendingLocation ?? s.location;
-      return parsePositivePageSearchValue(
-        (pending.search as Record<string, unknown>)?.page,
-      ) ?? 1;
+      return parsePositivePageSearchValue((pending.search as Record<string, unknown>)?.page) ?? 1;
     },
   });
   const refreshDomainStatus = useServerFn(refreshDomainStatusServerFn as any) as (args: {
@@ -196,10 +189,7 @@ function DomainsPage() {
     data: { workspace?: string; domainId: string; projectId?: string };
   }) => Promise<{ success: boolean }>;
 
-  function buildDomainsSearch(next: {
-    page?: number;
-    q?: string;
-  }) {
+  function buildDomainsSearch(next: { page?: number; q?: string }) {
     return {
       page: next.page,
       workspace: workspaceFromUrl,
@@ -242,48 +232,48 @@ function DomainsPage() {
     setAddDomainOpen(true);
   }, []);
 
-  const validateAddDomain = useCallback(async (domainUrl: string): Promise<DomainValidationError | null> => {
-    const inlineError = validateDomain(domainUrl);
-    if (inlineError) {
-      return inlineError;
-    }
+  const validateAddDomain = useCallback(
+    async (domainUrl: string): Promise<DomainValidationError | null> => {
+      const inlineError = validateDomain(domainUrl);
+      if (inlineError) {
+        return inlineError;
+      }
 
-    const normalized = domainUrl.trim().toLowerCase();
-    const alreadyOwned = rows.some((domain) => domain.name.toLowerCase() === normalized);
-    if (alreadyOwned) {
-      return {
-        type: "already-owned",
-        message: "You already own this domain, try another one.",
-      };
-    }
-
-    try {
-      const saleResults = await searchDomainSale({
-        data: { name: normalized },
-      });
-
-      const exactPurchasableMatch = saleResults.some(
-        (item) =>
-          (item.domainName || "").toLowerCase() === normalized &&
-          item.purchasable === true,
-      );
-
-      if (exactPurchasableMatch) {
+      const normalized = domainUrl.trim().toLowerCase();
+      const alreadyOwned = rows.some((domain) => domain.name.toLowerCase() === normalized);
+      if (alreadyOwned) {
         return {
-          type: "not-found",
-          message:
-            "Oops! This domain looks unregistered and unavailable to add directly.",
+          type: "already-owned",
+          message: "You already own this domain, try another one.",
         };
       }
-    } catch {
-      return {
-        type: "generic",
-        message: "Unable to verify this domain right now. Please try again.",
-      };
-    }
 
-    return null;
-  }, [rows, searchDomainSale]);
+      try {
+        const saleResults = await searchDomainSale({
+          data: { name: normalized },
+        });
+
+        const exactPurchasableMatch = saleResults.some(
+          (item) => (item.domainName || "").toLowerCase() === normalized && item.purchasable === true,
+        );
+
+        if (exactPurchasableMatch) {
+          return {
+            type: "not-found",
+            message: "Oops! This domain looks unregistered and unavailable to add directly.",
+          };
+        }
+      } catch {
+        return {
+          type: "generic",
+          message: "Unable to verify this domain right now. Please try again.",
+        };
+      }
+
+      return null;
+    },
+    [rows, searchDomainSale],
+  );
 
   // Listen for topbar "add domain" / "transfer in" events
   useEffect(() => {
@@ -490,8 +480,8 @@ function DomainsPage() {
   return (
     <div className="max-w-[1000px]">
       <PageHeader title="Domains" image="/images/lamp.svg">
-        Manage your domains and DNS records in one place. Connect projects, configure records,
-        and keep your routing organized across environments.
+        Manage your domains and DNS records in one place. Connect projects, configure records, and keep your routing organized across
+        environments.
       </PageHeader>
 
       <DomainList

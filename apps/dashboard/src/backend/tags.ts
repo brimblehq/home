@@ -13,20 +13,10 @@ export interface BackendTag {
 
 export interface TagsApi {
   list(input?: { teamId?: string }): Promise<BackendTag[]>;
-  create(input: {
-    name: string;
-    color: string;
-    teamId?: string;
-  }): Promise<BackendTag>;
-  update(
-    tagId: string,
-    input: { name?: string; color?: string },
-  ): Promise<BackendTag>;
+  create(input: { name: string; color: string; teamId?: string }): Promise<BackendTag>;
+  update(tagId: string, input: { name?: string; color?: string }): Promise<BackendTag>;
   remove(tagId: string): Promise<void>;
-  toggleAssignment(input: {
-    tagId: string;
-    projectId: string;
-  }): Promise<{ assigned: boolean }>;
+  toggleAssignment(input: { tagId: string; projectId: string }): Promise<{ assigned: boolean }>;
 }
 
 function mapTag(raw: any): BackendTag {
@@ -74,16 +64,13 @@ export function createTagsApi(client: ApiClient): TagsApi {
     },
 
     async update(tagId, input) {
-      const response = await client.request<any>(
-        `${endpoint}/${encodeURIComponent(tagId)}`,
-        {
-          method: "PATCH",
-          body: {
-            ...(input.name ? { name: input.name } : {}),
-            ...(input.color ? { color: input.color } : {}),
-          },
+      const response = await client.request<any>(`${endpoint}/${encodeURIComponent(tagId)}`, {
+        method: "PATCH",
+        body: {
+          ...(input.name ? { name: input.name } : {}),
+          ...(input.color ? { color: input.color } : {}),
         },
-      );
+      });
       const root = response?.data ?? response ?? {};
       return mapTag(root);
     },
@@ -95,16 +82,13 @@ export function createTagsApi(client: ApiClient): TagsApi {
     },
 
     async toggleAssignment(input) {
-      const response = await client.request<any>(
-        `${endpoint}/assignments/toggle`,
-        {
-          method: "PUT",
-          body: {
-            tagId: input.tagId,
-            projectId: input.projectId,
-          },
+      const response = await client.request<any>(`${endpoint}/assignments/toggle`, {
+        method: "PUT",
+        body: {
+          tagId: input.tagId,
+          projectId: input.projectId,
         },
-      );
+      });
       const root = asRecord(response?.data ?? response) ?? {};
       return { assigned: root.assigned === true };
     },

@@ -17,13 +17,7 @@ function OrangeSpinner() {
   return (
     <div className="relative size-8 shrink-0">
       <svg className="size-full animate-spin" viewBox="0 0 32 32" fill="none">
-        <circle
-          cx="16"
-          cy="16"
-          r="13"
-          stroke="#3a3a3a"
-          strokeWidth="3"
-        />
+        <circle cx="16" cy="16" r="13" stroke="#3a3a3a" strokeWidth="3" />
         <circle
           cx="16"
           cy="16"
@@ -52,9 +46,7 @@ export function StatusBar({ show, children, action }: StatusBarProps) {
         >
           <div className="flex w-[calc(100vw-32px)] items-center gap-4 rounded-[14px] border border-[#333] bg-[#1a1a1a] py-3 pl-4 pr-3.5 shadow-[0px_8px_24px_rgba(0,0,0,0.32)] sm:w-auto">
             <OrangeSpinner />
-            <div className="min-w-0 text-sm leading-5 text-[#999]">
-              {children}
-            </div>
+            <div className="min-w-0 text-sm leading-5 text-[#999]">{children}</div>
             {action && (
               <button
                 onClick={action.onClick}

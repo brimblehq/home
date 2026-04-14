@@ -1,17 +1,12 @@
 import type { Project } from "@/backend/projects";
 import { ServiceType } from "@brimble/models/dist/enum";
 
-const GIT_SOURCE_TYPES = new Set([
-  "github",
-  "gitlab",
-  "bitbucket",
-  "GITHUB",
-  "GITLAB",
-  "BITBUCKET",
-]);
+const GIT_SOURCE_TYPES = new Set(["github", "gitlab", "bitbucket", "GITHUB", "GITLAB", "BITBUCKET"]);
 
 function normalize(value?: string): string {
-  return String(value ?? "").trim().toLowerCase();
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
 }
 
 export function normalizeProjectServiceType(value?: string): string {
@@ -43,12 +38,7 @@ export function isWebLikeProject(project?: Pick<Project, "serviceType"> | null):
 }
 
 export function isDeployableServiceProject(project?: Pick<Project, "serviceType"> | null): boolean {
-  return (
-    isWebServiceProject(project) ||
-    isStaticProject(project) ||
-    isWorkerProject(project) ||
-    isMcpProject(project)
-  );
+  return isWebServiceProject(project) || isStaticProject(project) || isWorkerProject(project) || isMcpProject(project);
 }
 
 export function isGitBackedRepoGit(gitType?: string): boolean {
@@ -109,9 +99,7 @@ export function shouldShowProjectLogsTab(project?: Pick<Project, "serviceType"> 
   return true;
 }
 
-export function shouldShowBuildCacheToggle(
-  project?: Pick<Project, "serviceType"> | null,
-): boolean {
+export function shouldShowBuildCacheToggle(project?: Pick<Project, "serviceType"> | null): boolean {
   if (isDatabaseProject(project) || isStaticProject(project)) {
     return false;
   }
@@ -123,15 +111,11 @@ export function shouldShowMcpAuthToggle(project?: Pick<Project, "serviceType"> |
   return isMcpProject(project);
 }
 
-export function shouldShowBranchRootFrameworkFields(
-  project?: Pick<Project, "repo"> | null,
-): boolean {
+export function shouldShowBranchRootFrameworkFields(project?: Pick<Project, "repo"> | null): boolean {
   return isGitBackedProject(project);
 }
 
-export function shouldShowDockerSourceFields(
-  project?: Pick<Project, "repo" | "framework"> | null,
-): boolean {
+export function shouldShowDockerSourceFields(project?: Pick<Project, "repo" | "framework"> | null): boolean {
   return isDockerSourceProject(project);
 }
 

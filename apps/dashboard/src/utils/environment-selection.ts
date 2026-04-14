@@ -24,10 +24,7 @@ export function resolveEnvironmentId(input: {
       : findDefaultEnvironmentId(environments);
   }
 
-  if (
-    preferredEnvironmentId &&
-    environments.some((environment) => environment._id === preferredEnvironmentId)
-  ) {
+  if (preferredEnvironmentId && environments.some((environment) => environment._id === preferredEnvironmentId)) {
     return preferredEnvironmentId;
   }
 

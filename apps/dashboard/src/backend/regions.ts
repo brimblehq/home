@@ -86,9 +86,7 @@ export function createRegionsApi(client: ApiClient): RegionsApi {
           rawRegions = root;
         }
       } else if (root && typeof root === "object") {
-        const providers = Array.isArray((root as any).providers)
-          ? (root as any).providers
-          : [];
+        const providers = Array.isArray((root as any).providers) ? (root as any).providers : [];
 
         if (providers.length) {
           for (const provider of providers) {
@@ -101,9 +99,7 @@ export function createRegionsApi(client: ApiClient): RegionsApi {
         }
       }
 
-      return rawRegions
-        .map(mapRegion)
-        .filter((r): r is Region => r !== null);
+      return rawRegions.map(mapRegion).filter((r): r is Region => r !== null);
     },
   };
 }

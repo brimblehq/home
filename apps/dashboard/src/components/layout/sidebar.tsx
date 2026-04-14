@@ -53,13 +53,7 @@ export const moreNav = [
 const navItemBase =
   "flex items-center gap-2 rounded px-2 py-1.5 text-sm tracking-[-0.09px] transition-colors text-dash-text-faded dark:text-dash-text-strong";
 
-export function Sidebar({
-  profileOpen,
-  onProfileOpenChange,
-}: {
-  profileOpen: boolean;
-  onProfileOpenChange: (open: boolean) => void;
-}) {
+export function Sidebar({ profileOpen, onProfileOpenChange }: { profileOpen: boolean; onProfileOpenChange: (open: boolean) => void }) {
   const { theme, mode, cycleTheme } = useTheme();
   const haptics = useHaptics();
   const navigate = useNavigate();
@@ -96,8 +90,7 @@ export function Sidebar({
     () =>
       mainNav
         .filter((item) => {
-          if (item.flag && !item.comingSoon)
-            return flagValues[item.flag] !== false;
+          if (item.flag && !item.comingSoon) return flagValues[item.flag] !== false;
           return true;
         })
         .map((item) => {
@@ -117,10 +110,7 @@ export function Sidebar({
             {filteredMainNav.map((item) => {
               if (item.comingSoon) {
                 return (
-                  <span
-                    key={item.label}
-                    className={cn(navItemBase, "cursor-default opacity-40")}
-                  >
+                  <span key={item.label} className={cn(navItemBase, "cursor-default opacity-40")}>
                     <img
                       src={item.icon}
                       alt=""
@@ -133,10 +123,7 @@ export function Sidebar({
                   </span>
                 );
               }
-              const isActive =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.href);
+              const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
               return (
                 <button
                   key={item.label}
@@ -152,9 +139,7 @@ export function Sidebar({
                   className={cn(
                     navItemBase,
                     "w-full",
-                    isActive
-                      ? "bg-dash-bg-elevated !text-dash-text-strong"
-                      : "hover:bg-dash-bg-elevated",
+                    isActive ? "bg-dash-bg-elevated !text-dash-text-strong" : "hover:bg-dash-bg-elevated",
                   )}
                 >
                   <img
@@ -170,9 +155,7 @@ export function Sidebar({
 
           <div className="mt-4">
             <div className="px-2 py-1.5">
-              <span className="text-xs font-medium tracking-[-0.09px] text-dash-text-extra-faded">
-                MORE
-              </span>
+              <span className="text-xs font-medium tracking-[-0.09px] text-dash-text-extra-faded">MORE</span>
             </div>
             <div className="flex flex-col gap-1">
               {moreNav.map((item) => {
@@ -252,16 +235,8 @@ export function Sidebar({
             }}
             className={cn(navItemBase, "hover:bg-dash-bg-elevated")}
           >
-            {theme === "dark" ? (
-              <Sun className="size-4 shrink-0" />
-            ) : (
-              <Moon className="size-4 shrink-0" />
-            )}
-            {mode === Theme.System
-              ? "System mode"
-              : theme === Theme.Dark
-                ? "Dark mode"
-                : "Light mode"}
+            {theme === "dark" ? <Sun className="size-4 shrink-0" /> : <Moon className="size-4 shrink-0" />}
+            {mode === Theme.System ? "System mode" : theme === Theme.Dark ? "Dark mode" : "Light mode"}
           </button>
         </div>
       </aside>

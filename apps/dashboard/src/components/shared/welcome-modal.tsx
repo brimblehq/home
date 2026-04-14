@@ -6,11 +6,7 @@ import { Modal } from "./modal";
 
 const STORAGE_KEY = "brimble:welcome-modal-dismissed";
 
-const rotatingTexts = [
-  "Deploy on\nBrimble.",
-  "Scale with\nBrimble.",
-  "Ship on\nBrimble.",
-];
+const rotatingTexts = ["Deploy on\nBrimble.", "Scale with\nBrimble.", "Ship on\nBrimble."];
 
 const EASING = [0.16, 1, 0.3, 1] as const;
 
@@ -69,20 +65,12 @@ export function WelcomeModal() {
 
         {/* Logo top-left */}
         <div className="mb-8">
-          <img
-            src="/images/brimble.svg"
-            alt="Brimble"
-            className="h-[19px] w-[17px]"
-          />
+          <img src="/images/brimble.svg" alt="Brimble" className="h-[19px] w-[17px]" />
         </div>
 
         {/* Baggage illustration — left-aligned with text */}
         <div className="mb-8 h-[208px] w-[296px] max-w-full overflow-hidden brightness-[1.02] mix-blend-multiply dark:invert dark:mix-blend-screen dark:opacity-85">
-          <img
-            src="/images/baggage.svg"
-            alt=""
-            className="block h-[252px] w-[296px] max-w-none -translate-x-7 -translate-y-6 opacity-90"
-          />
+          <img src="/images/baggage.svg" alt="" className="block h-[252px] w-[296px] max-w-none -translate-x-7 -translate-y-6 opacity-90" />
         </div>
 
         {/* Rotating heading text */}
@@ -103,8 +91,7 @@ export function WelcomeModal() {
 
         {/* Description */}
         <p className="text-sm leading-relaxed text-dash-text-faded">
-          Build, deploy, and scale your web applications with ease. Welcome to
-          the platform built for modern developers.
+          Build, deploy, and scale your web applications with ease. Welcome to the platform built for modern developers.
         </p>
       </div>
     </Modal>

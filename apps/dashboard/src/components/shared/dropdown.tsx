@@ -79,11 +79,7 @@ export function Dropdown({
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (
-        triggerRef.current?.contains(e.target as Node) ||
-        menuRef.current?.contains(e.target as Node)
-      )
-        return;
+      if (triggerRef.current?.contains(e.target as Node) || menuRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
@@ -106,19 +102,11 @@ export function Dropdown({
     return () => window.cancelAnimationFrame(frame);
   }, [open, showSearch]);
 
-  const selectedOption = isObject
-    ? (safeOptions as DropdownOption[]).find((o) => o.id === value)
-    : undefined;
-  const displayLabel = isObject
-    ? selectedOption?.label
-    : renderOption
-      ? renderOption(value)
-      : value;
+  const selectedOption = isObject ? (safeOptions as DropdownOption[]).find((o) => o.id === value) : undefined;
+  const displayLabel = isObject ? selectedOption?.label : renderOption ? renderOption(value) : value;
 
   const filteredObjectOptions = isObject
-    ? (safeOptions as DropdownOption[]).filter((opt) =>
-        trimmedQuery ? opt.label.toLowerCase().includes(trimmedQuery) : true,
-      )
+    ? (safeOptions as DropdownOption[]).filter((opt) => (trimmedQuery ? opt.label.toLowerCase().includes(trimmedQuery) : true))
     : [];
 
   const filteredStringOptions = !isObject
@@ -163,17 +151,8 @@ export function Dropdown({
                 className="w-full bg-transparent text-sm leading-6 text-dash-text-strong outline-none placeholder:text-[#9ca3af]"
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="ml-2 shrink-0"
-              aria-label="Close dropdown"
-            >
-              <motion.span
-                animate={{ rotate: open ? 180 : 0 }}
-                transition={{ duration: 0.2, ease }}
-                className="block"
-              >
+            <button type="button" onClick={() => setOpen(false)} className="ml-2 shrink-0" aria-label="Close dropdown">
+              <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2, ease }} className="block">
                 <ChevronDown className="size-3.5 text-dash-text-faded" />
               </motion.span>
             </button>
@@ -191,18 +170,11 @@ export function Dropdown({
           >
             <span className={`flex items-center gap-2 ${displayLabel ? "" : "text-[#9ca3af]"}`}>
               {selectedOption?.icon && (
-                <img
-                  src={selectedOption.icon}
-                  alt=""
-                  className={`size-4 shrink-0 object-contain ${selectedOption.iconClassName ?? ""}`}
-                />
+                <img src={selectedOption.icon} alt="" className={`size-4 shrink-0 object-contain ${selectedOption.iconClassName ?? ""}`} />
               )}
               {displayLabel || placeholder || "Select..."}
             </span>
-            <motion.span
-              animate={{ rotate: open ? 180 : 0 }}
-              transition={{ duration: 0.2, ease }}
-            >
+            <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2, ease }}>
               <ChevronDown className="size-3.5 text-dash-text-faded" />
             </motion.span>
           </button>
@@ -253,25 +225,17 @@ export function Dropdown({
                           opt.disabled
                             ? "cursor-not-allowed text-dash-text-extra-faded hover:bg-transparent"
                             : opt.id === value
-                            ? "font-medium text-dash-text-strong"
-                            : "text-dash-text-faded"
+                              ? "font-medium text-dash-text-strong"
+                              : "text-dash-text-faded"
                         }`}
                       >
                         <span className="flex min-w-0 items-center gap-2">
                           {opt.icon && (
-                            <img
-                              src={opt.icon}
-                              alt=""
-                              className={`size-4 shrink-0 object-contain ${opt.iconClassName ?? ""}`}
-                            />
+                            <img src={opt.icon} alt="" className={`size-4 shrink-0 object-contain ${opt.iconClassName ?? ""}`} />
                           )}
                           <span className="truncate">{opt.label}</span>
                         </span>
-                        {opt.asideText && (
-                          <span className="ml-auto shrink-0 text-[11px] text-[#4879f8]">
-                            {opt.asideText}
-                          </span>
-                        )}
+                        {opt.asideText && <span className="ml-auto shrink-0 text-[11px] text-[#4879f8]">{opt.asideText}</span>}
                       </button>
                     ))
                   : filteredStringOptions.map((opt) => (
@@ -283,19 +247,14 @@ export function Dropdown({
                           setOpen(false);
                         }}
                         className={`flex w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-dash-bg-elevated ${
-                          opt === value
-                            ? "font-medium text-dash-text-strong"
-                            : "text-dash-text-faded"
+                          opt === value ? "font-medium text-dash-text-strong" : "text-dash-text-faded"
                         }`}
                       >
                         {renderOption ? renderOption(opt) : opt}
                       </button>
                     ))}
-                {((isObject && filteredObjectOptions.length === 0) ||
-                  (!isObject && filteredStringOptions.length === 0)) && (
-                  <div className="px-3 py-2 text-sm text-dash-text-faded">
-                    No results found
-                  </div>
+                {((isObject && filteredObjectOptions.length === 0) || (!isObject && filteredStringOptions.length === 0)) && (
+                  <div className="px-3 py-2 text-sm text-dash-text-faded">No results found</div>
                 )}
               </motion.div>
             )}

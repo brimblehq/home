@@ -15,11 +15,7 @@ export function ScoutBarProvider({ children }: { children: ReactNode }) {
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
 
-  return (
-    <ScoutBarContext.Provider value={{ isOpen, setIsOpen, open, close }}>
-      {children}
-    </ScoutBarContext.Provider>
-  );
+  return <ScoutBarContext.Provider value={{ isOpen, setIsOpen, open, close }}>{children}</ScoutBarContext.Provider>;
 }
 
 export function useScoutBar() {

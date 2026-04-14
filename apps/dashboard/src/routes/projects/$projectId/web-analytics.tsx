@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  getRouteApi,
-  useRouter,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ChartLineUp } from "@phosphor-icons/react";
 import { TabHeader } from "../../../components/shared/tab-header";
@@ -61,28 +56,16 @@ export const Route = createFileRoute("/projects/$projectId/web-analytics")({
   component: WebAnalyticsPage,
 });
 
-function EnableAnalyticsEmptyState({
-  projectId,
-  onEnabled,
-}: {
-  projectId: string;
-  onEnabled?: () => void;
-}) {
+function EnableAnalyticsEmptyState({ projectId, onEnabled }: { projectId: string; onEnabled?: () => void }) {
   const plan = usePlanGate();
-  const enableAnalytics = useServerFn(
-    enableAnalyticsServerFn as any,
-  ) as (args: {
+  const enableAnalytics = useServerFn(enableAnalyticsServerFn as any) as (args: {
     data: { projectId: string };
   }) => Promise<EnableAnalyticsResult>;
   const [open, setOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [enabling, setEnabling] = useState(false);
-  const [serverSnippet, setServerSnippet] = useState<string | undefined>(
-    undefined,
-  );
-  const [snippets, setSnippets] = useState<
-    import("@/backend/analytics").AnalyticsSnippets | undefined
-  >(undefined);
+  const [serverSnippet, setServerSnippet] = useState<string | undefined>(undefined);
+  const [snippets, setSnippets] = useState<import("@/backend/analytics").AnalyticsSnippets | undefined>(undefined);
   const [siteId, setSiteId] = useState<string>("your-site-id");
   const [planLocked, setPlanLocked] = useState(false);
 
@@ -114,18 +97,11 @@ function EnableAnalyticsEmptyState({
 
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 px-4 py-8 sm:px-0">
-      <TabHeader title="Web analytics">
-        Track visitor activity, top pages, and traffic sources.
-      </TabHeader>
+      <TabHeader title="Web analytics">Track visitor activity, top pages, and traffic sources.</TabHeader>
       <div className="flex flex-col items-center gap-5 px-6 py-16 text-center">
-        <ChartLineUp
-          className="size-10 text-dash-text-extra-faded"
-          weight="duotone"
-        />
+        <ChartLineUp className="size-10 text-dash-text-extra-faded" weight="duotone" />
         <div className="flex max-w-[420px] flex-col gap-1.5">
-          <h3 className="text-base font-medium text-dash-text-strong">
-            Analytics not enabled
-          </h3>
+          <h3 className="text-base font-medium text-dash-text-strong">Analytics not enabled</h3>
           <p className="text-sm font-light leading-[1.45] text-dash-text-faded">
             {planLocked
               ? "Web analytics is not supported on your plan. Upgrade to a higher plan to start tracking visitors on this project."
@@ -173,12 +149,7 @@ function EnableAnalyticsEmptyState({
         enabling={enabling}
       />
 
-      <ChangePlanModal
-        open={upgradeOpen}
-        onOpenChange={setUpgradeOpen}
-        currentPlan={currentPlanLabel}
-        defaultSelectedPlan="Pro"
-      />
+      <ChangePlanModal open={upgradeOpen} onOpenChange={setUpgradeOpen} currentPlan={currentPlanLabel} defaultSelectedPlan="Pro" />
     </div>
   );
 }
@@ -190,16 +161,10 @@ function PlanLockedCard({ message }: { message: string }) {
 
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 px-4 py-8 sm:px-0">
-      <TabHeader title="Web analytics">
-        Track visitor activity, top pages, and traffic sources.
-      </TabHeader>
+      <TabHeader title="Web analytics">Track visitor activity, top pages, and traffic sources.</TabHeader>
       <div className="flex flex-col items-center gap-4 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated px-6 py-12 text-center">
-        <h3 className="text-base font-medium text-dash-text-strong">
-          Upgrade to enable analytics
-        </h3>
-        <p className="max-w-[420px] text-sm font-light text-dash-text-faded">
-          {message}
-        </p>
+        <h3 className="text-base font-medium text-dash-text-strong">Upgrade to enable analytics</h3>
+        <p className="max-w-[420px] text-sm font-light text-dash-text-faded">{message}</p>
         <button
           type="button"
           onClick={() => setUpgradeOpen(true)}
@@ -208,12 +173,7 @@ function PlanLockedCard({ message }: { message: string }) {
           Upgrade plan
         </button>
       </div>
-      <ChangePlanModal
-        open={upgradeOpen}
-        onOpenChange={setUpgradeOpen}
-        currentPlan={currentPlanLabel}
-        defaultSelectedPlan="Pro"
-      />
+      <ChangePlanModal open={upgradeOpen} onOpenChange={setUpgradeOpen} currentPlan={currentPlanLabel} defaultSelectedPlan="Pro" />
     </div>
   );
 }
@@ -222,9 +182,7 @@ function ErrorCard({ message }: { message: string }) {
   const router = useRouter();
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 px-4 py-8 sm:px-0">
-      <TabHeader title="Web analytics">
-        Track visitor activity, top pages, and traffic sources.
-      </TabHeader>
+      <TabHeader title="Web analytics">Track visitor activity, top pages, and traffic sources.</TabHeader>
       <div className="flex flex-col items-center gap-4 rounded-[4px] border-[0.5px] border-dash-border px-6 py-12 text-center">
         <p className="text-sm text-dash-text-body">{message}</p>
         <button
@@ -295,32 +253,20 @@ function WebAnalyticsPage() {
   if (!webAnalyticsEnabled || !shouldShowProjectWebAnalyticsTab(project)) {
     return (
       <div className="mx-auto flex max-w-[1000px] flex-col gap-4 px-4 py-8 sm:px-0">
-        <TabHeader title="Web analytics">
-          Web analytics is not available for this project type.
-        </TabHeader>
+        <TabHeader title="Web analytics">Web analytics is not available for this project type.</TabHeader>
       </div>
     );
   }
 
   if (loading || !result) {
     if (!cachedPlanSupportsAnalytics) {
-      return (
-        <EnableAnalyticsEmptyState
-          projectId={projectId}
-          onEnabled={() => setRefreshKey((k) => k + 1)}
-        />
-      );
+      return <EnableAnalyticsEmptyState projectId={projectId} onEnabled={() => setRefreshKey((k) => k + 1)} />;
     }
     return <SkeletonShell />;
   }
 
   if (result.state === "empty") {
-    return (
-      <EnableAnalyticsEmptyState
-        projectId={projectId}
-        onEnabled={() => setRefreshKey((k) => k + 1)}
-      />
-    );
+    return <EnableAnalyticsEmptyState projectId={projectId} onEnabled={() => setRefreshKey((k) => k + 1)} />;
   }
   if (result.state === "plan-locked") {
     return <PlanLockedCard message={result.message} />;

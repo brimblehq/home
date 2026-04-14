@@ -53,9 +53,7 @@ export const createWorkspaceServerFn = createServerFn({
     throw new Error("Concurrent builds is invalid");
   }
 
-  const members = Array.isArray(payload?.members)
-    ? payload!.members.filter((member): member is string => typeof member === "string")
-    : [];
+  const members = Array.isArray(payload?.members) ? payload!.members.filter((member): member is string => typeof member === "string") : [];
   const image = payload?.image?.trim() || null;
 
   const body = {

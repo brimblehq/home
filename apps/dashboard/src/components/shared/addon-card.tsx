@@ -14,20 +14,12 @@ export interface Addon {
   installed?: boolean;
 }
 
-export function AddonCard({
-  addon,
-  onManage,
-}: {
-  addon: Addon;
-  onManage?: () => void;
-}) {
+export function AddonCard({ addon, onManage }: { addon: Addon; onManage?: () => void }) {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const workspace = getWorkspaceFromSearch({ searchStr });
   const logoColors = useLogoColor(addon.logoImageUrl);
 
-  const gradientStyle = logoColors
-    ? { background: `linear-gradient(to bottom, ${logoColors.from}, ${logoColors.to})` }
-    : undefined;
+  const gradientStyle = logoColors ? { background: `linear-gradient(to bottom, ${logoColors.from}, ${logoColors.to})` } : undefined;
   const logoBgColor = logoColors?.logoBg ?? addon.logoBg;
 
   return (
@@ -79,12 +71,8 @@ export function AddonCard({
 
       {/* Text content */}
       <div className="flex-1 px-3.5 pt-3 pb-2">
-        <p className="text-sm font-medium leading-5 tracking-[-0.02px] text-dash-text-strong">
-          {addon.name}
-        </p>
-        <p className="mt-0.5 line-clamp-5 text-sm font-light leading-[22px] tracking-[-0.02px] text-dash-text-faded">
-          {addon.description}
-        </p>
+        <p className="text-sm font-medium leading-5 tracking-[-0.02px] text-dash-text-strong">{addon.name}</p>
+        <p className="mt-0.5 line-clamp-5 text-sm font-light leading-[22px] tracking-[-0.02px] text-dash-text-faded">{addon.description}</p>
       </div>
 
       {/* Footer action */}

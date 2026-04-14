@@ -3,12 +3,7 @@ import { hapticToast as toast } from "@/utils/haptic-toast";
 import { Modal, ModalHeader, ModalFooter, ModalCancelButton, ModalContinueButton } from "./modal";
 import { Dropdown } from "./dropdown";
 import { usePricing } from "@/contexts/pricing-context";
-import {
-  usePaymentMethods,
-  useSubscription,
-  useCreateSubscription,
-  useSwapPlan,
-} from "@/hooks/use-payments";
+import { usePaymentMethods, useSubscription, useCreateSubscription, useSwapPlan } from "@/hooks/use-payments";
 import type { PaymentMethod } from "@/backend/payments";
 
 const PLAN_ID_TO_API_TYPE: Record<string, string> = {
@@ -76,11 +71,7 @@ export function ChangePlanModal({
       label: p.price === 0 ? `${p.name} — Free` : `${p.name} — $${p.price}/mo`,
     }));
 
-  const buttonLabel = isUpgrade
-    ? "Upgrade"
-    : isDowngrade
-      ? "Downgrade"
-      : "Confirm change";
+  const buttonLabel = isUpgrade ? "Upgrade" : isDowngrade ? "Downgrade" : "Confirm change";
 
   function hardRefreshPage() {
     if (typeof window === "undefined") {
@@ -157,22 +148,12 @@ export function ChangePlanModal({
       }}
       width={420}
     >
-      <ModalHeader
-        title="Change plan"
-        description="Select a new plan. See full plan details on the pricing page."
-      />
+      <ModalHeader title="Change plan" description="Select a new plan. See full plan details on the pricing page." />
 
       <div className="flex flex-col gap-4 px-6 py-5">
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">
-            New plan
-          </label>
-          <Dropdown
-            value={selectedPlan}
-            options={dropdownOptions}
-            onChange={setSelectedPlan}
-            placeholder="Select a plan..."
-          />
+          <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">New plan</label>
+          <Dropdown value={selectedPlan} options={dropdownOptions} onChange={setSelectedPlan} placeholder="Select a plan..." />
         </div>
 
         {selectedObj && currentObj && (
@@ -186,15 +167,14 @@ export function ChangePlanModal({
             </p>
             {needsPaymentMethod && (
               <div className="rounded-[4px] bg-[#4879f8]/[0.06] px-3 py-2.5 dark:bg-[#4879f8]/[0.08]">
-                <p className="text-sm leading-[1.4] text-[#4879f8]">
-                  You need to add a payment method before upgrading to a paid plan.
-                </p>
+                <p className="text-sm leading-[1.4] text-[#4879f8]">You need to add a payment method before upgrading to a paid plan.</p>
               </div>
             )}
             {isDowngrade && (
               <div className="rounded-[4px] bg-[#f5a623]/[0.06] px-3 py-2.5 dark:bg-[#f5a623]/[0.08]">
                 <p className="text-sm leading-[1.4] text-[#b37a10] dark:text-[#f5a623]">
-                  If you have more projects than the new plan allows, your existing projects won't be deleted, but you won't be able to create new ones until you're within the limit.
+                  If you have more projects than the new plan allows, your existing projects won't be deleted, but you won't be able to
+                  create new ones until you're within the limit.
                 </p>
               </div>
             )}
@@ -211,33 +191,18 @@ export function ChangePlanModal({
             />
             <span className="text-sm leading-5 text-dash-text-faded">
               I agree to the{" "}
-              <a
-                href="https://brimble.io/terms"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#4879f8] hover:underline"
-              >
+              <a href="https://brimble.io/terms" target="_blank" rel="noopener noreferrer" className="text-[#4879f8] hover:underline">
                 Terms of Service
               </a>{" "}
               and{" "}
-              <a
-                href="https://brimble.io/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#4879f8] hover:underline"
-              >
+              <a href="https://brimble.io/privacy" target="_blank" rel="noopener noreferrer" className="text-[#4879f8] hover:underline">
                 Privacy Policy
               </a>
             </span>
           </label>
         )}
 
-        <a
-          href="/pricing"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-[#4879f8] hover:underline"
-        >
+        <a href="/pricing" target="_blank" rel="noopener noreferrer" className="text-sm text-[#4879f8] hover:underline">
           Compare all plans &rarr;
         </a>
       </div>

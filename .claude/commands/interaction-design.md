@@ -179,11 +179,7 @@ function RippleButton({ children, onClick }) {
     <button onClick={handleClick} className="relative overflow-hidden">
       {children}
       {ripples.map((ripple) => (
-        <span
-          key={ripple.id}
-          className="absolute bg-white/30 rounded-full animate-ripple"
-          style={{ left: ripple.x, top: ripple.y }}
-        />
+        <span key={ripple.id} className="absolute bg-white/30 rounded-full animate-ripple" style={{ left: ripple.x, top: ripple.y }} />
       ))}
     </button>
   );
@@ -288,16 +284,9 @@ function SwipeCard({ children, onDismiss }) {
 
 ```tsx
 function AnimatedComponent() {
-  const prefersReducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  return (
-    <motion.div
-      animate={{ opacity: 1 }}
-      transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
-    />
-  );
+  return <motion.div animate={{ opacity: 1 }} transition={{ duration: prefersReducedMotion ? 0 : 0.3 }} />;
 }
 ```
 

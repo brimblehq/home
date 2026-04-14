@@ -116,20 +116,14 @@ export function CodePreview() {
               >
                 <span className="text-[8px] leading-none text-[#28c840]">✓</span>
               </motion.span>
-              <p className="font-mono text-xs leading-5 tracking-[-0.02px] text-[#28c840]">
-                Deployed → app.brimble.io
-              </p>
+              <p className="font-mono text-xs leading-5 tracking-[-0.02px] text-[#28c840]">Deployed → app.brimble.io</p>
             </motion.div>
 
             {/* Blinking cursor */}
             <motion.span
               className="mt-1 inline-block h-[13px] w-[7px] rounded-[1px] bg-white/50"
               initial={{ opacity: 0 }}
-              animate={
-                isInView
-                  ? { opacity: [0, 1, 1, 0, 0] }
-                  : {}
-              }
+              animate={isInView ? { opacity: [0, 1, 1, 0, 0] } : {}}
               transition={{
                 delay: CURSOR_DELAY,
                 duration: 1,

@@ -1,9 +1,6 @@
 export type ProjectDeploySourceType = "github" | "bitbucket" | "docker" | "database";
 
-export function getLegacyServiceType(
-  sourceType: ProjectDeploySourceType,
-  frameworkId: string,
-) {
+export function getLegacyServiceType(sourceType: ProjectDeploySourceType, frameworkId: string) {
   if (sourceType === "docker") return "web-service";
   const normalized = frameworkId.trim().toLowerCase();
   if (normalized === "static" || normalized === "html") return "static";

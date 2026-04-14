@@ -29,11 +29,7 @@ function readPendingRefresh(): PendingDeploymentHistoryRefresh | null {
     }
 
     const parsed = JSON.parse(raw) as Partial<PendingDeploymentHistoryRefresh>;
-    if (
-      typeof parsed?.projectId !== "string" ||
-      !parsed.projectId.trim() ||
-      typeof parsed?.createdAt !== "number"
-    ) {
+    if (typeof parsed?.projectId !== "string" || !parsed.projectId.trim() || typeof parsed?.createdAt !== "number") {
       window.sessionStorage.removeItem(DEPLOYMENT_HISTORY_REFRESH_KEY);
       return null;
     }
@@ -53,9 +49,7 @@ function readPendingRefresh(): PendingDeploymentHistoryRefresh | null {
   }
 }
 
-export function markDeploymentHistoryForRefresh(
-  input: DeploymentHistoryRefreshInput,
-) {
+export function markDeploymentHistoryForRefresh(input: DeploymentHistoryRefreshInput) {
   if (typeof window === "undefined") {
     return;
   }
@@ -72,18 +66,13 @@ export function markDeploymentHistoryForRefresh(
   };
 
   try {
-    window.sessionStorage.setItem(
-      DEPLOYMENT_HISTORY_REFRESH_KEY,
-      JSON.stringify(payload),
-    );
+    window.sessionStorage.setItem(DEPLOYMENT_HISTORY_REFRESH_KEY, JSON.stringify(payload));
   } catch {
     // ignore storage failures
   }
 }
 
-export function consumeDeploymentHistoryRefresh(
-  input: DeploymentHistoryRefreshInput,
-): boolean {
+export function consumeDeploymentHistoryRefresh(input: DeploymentHistoryRefreshInput): boolean {
   const pending = readPendingRefresh();
   if (!pending) {
     return false;

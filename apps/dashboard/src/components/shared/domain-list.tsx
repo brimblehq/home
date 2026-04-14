@@ -1,15 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import {
-  MoreVertical,
-  RefreshCw,
-  AlertCircle,
-  LifeBuoy,
-  Minus,
-  Plus,
-  Pencil,
-  ArrowRightLeft,
-  Settings,
-} from "lucide-react";
+import { MoreVertical, RefreshCw, AlertCircle, LifeBuoy, Minus, Plus, Pencil, ArrowRightLeft, Settings } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { hapticToast as toast } from "@/utils/haptic-toast";
@@ -56,19 +46,14 @@ interface DomainMenuItem {
   onClick: () => void;
 }
 
-function DomainActionsMenu({
-  items,
-}: {
-  items: DomainMenuItem[];
-}) {
+function DomainActionsMenu({ items }: { items: DomainMenuItem[] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -76,10 +61,7 @@ function DomainActionsMenu({
 
   return (
     <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="text-dash-text-faded transition-colors hover:text-dash-text-strong"
-      >
+      <button onClick={() => setOpen(!open)} className="text-dash-text-faded transition-colors hover:text-dash-text-strong">
         <MoreVertical className="size-4" />
       </button>
       {open && (
@@ -118,15 +100,7 @@ const mockWorkspaces = [
   { id: "brimble-team", name: "Brimble Team", type: "Team" as const },
 ];
 
-function TransferDomainModal({
-  open,
-  onOpenChange,
-  domain,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  domain: Domain;
-}) {
+function TransferDomainModal({ open, onOpenChange, domain }: { open: boolean; onOpenChange: (open: boolean) => void; domain: Domain }) {
   const [selectedWorkspace, setSelectedWorkspace] = useState("");
   const [transferring, setTransferring] = useState(false);
 
@@ -142,32 +116,23 @@ function TransferDomainModal({
 
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
-      <ModalHeader
-        title="Transfer Domain"
-        description={`Transfer ${domain.name} to another workspace`}
-      />
+      <ModalHeader title="Transfer Domain" description={`Transfer ${domain.name} to another workspace`} />
       <div className="flex flex-col gap-4 px-6 pb-5 pt-4">
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
-            Domain
-          </label>
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">Domain</label>
           <div className="flex items-center gap-2 rounded-[6px] bg-dash-bg-elevated px-3 py-2.5">
             <span className="text-sm text-dash-text-body">{domain.name}</span>
           </div>
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
-            Destination workspace
-          </label>
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">Destination workspace</label>
           <div className="flex flex-col gap-1">
             {mockWorkspaces.map((ws) => (
               <button
                 key={ws.id}
                 onClick={() => setSelectedWorkspace(ws.id)}
                 className={`flex items-center gap-3 rounded-[6px] px-3 py-2.5 text-left transition-colors ${
-                  selectedWorkspace === ws.id
-                    ? "bg-[#4879f8]/10 ring-1 ring-[#4879f8]"
-                    : "bg-dash-bg-elevated hover:bg-dash-border-soft"
+                  selectedWorkspace === ws.id ? "bg-[#4879f8]/10 ring-1 ring-[#4879f8]" : "bg-dash-bg-elevated hover:bg-dash-border-soft"
                 }`}
               >
                 <div
@@ -270,12 +235,7 @@ function EditDomainModal({
   onOpenChange: (open: boolean) => void;
   domain: Domain;
   projectOptions: Array<{ id: string; label: string }>;
-  onSave?: (input: {
-    domain: Domain;
-    name: string;
-    projectId?: string;
-    redirect: { url: string; status: number } | null;
-  }) => Promise<void>;
+  onSave?: (input: { domain: Domain; name: string; projectId?: string; redirect: { url: string; status: number } | null }) => Promise<void>;
 }) {
   let initialProject = "";
   if (domain.projectId) {
@@ -337,15 +297,10 @@ function EditDomainModal({
 
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
-      <ModalHeader
-        title="Edit Domain"
-        description={`Update settings for ${domain.name}`}
-      />
+      <ModalHeader title="Edit Domain" description={`Update settings for ${domain.name}`} />
       <div className="flex flex-col gap-4 px-6 pb-5 pt-4">
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
-            Domain name
-          </label>
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">Domain name</label>
           <input
             type="text"
             value={domain.name}
@@ -355,9 +310,7 @@ function EditDomainModal({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
-            Linked project
-          </label>
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">Linked project</label>
           <Dropdown
             value={project}
             options={projectOptions}
@@ -368,21 +321,12 @@ function EditDomainModal({
           />
         </div>
         <div className="mt-1 flex flex-col gap-1.5">
-          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
-            Redirect status
-          </label>
-          <Dropdown
-            value={redirectStatus}
-            options={redirectOptions}
-            onChange={setRedirectStatus}
-            placeholder="Select redirect status..."
-          />
+          <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">Redirect status</label>
+          <Dropdown value={redirectStatus} options={redirectOptions} onChange={setRedirectStatus} placeholder="Select redirect status..." />
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">
-              Redirect URL
-            </label>
+            <label className="text-sm leading-5 tracking-[-0.022px] text-dash-text-strong">Redirect URL</label>
             {redirectUrl ? (
               <button
                 type="button"
@@ -418,20 +362,13 @@ function EditDomainModal({
           {redirectUrlError ? (
             <p className="text-xs text-[#fc391e]">{redirectUrlError}</p>
           ) : (
-            <p className="text-xs text-dash-text-faded">
-              Optional. Leave empty to disable redirect.
-            </p>
+            <p className="text-xs text-dash-text-faded">Optional. Leave empty to disable redirect.</p>
           )}
         </div>
       </div>
       <ModalFooter>
         <ModalCancelButton />
-        <ModalContinueButton
-          onClick={handleSave}
-          disabled={Boolean(redirectUrlError) || saving}
-          loading={saving}
-          loadingLabel="Saving..."
-        >
+        <ModalContinueButton onClick={handleSave} disabled={Boolean(redirectUrlError) || saving} loading={saving} loadingLabel="Saving...">
           Save Changes
         </ModalContinueButton>
       </ModalFooter>
@@ -603,13 +540,7 @@ export function DomainList({
           placeholder="Search domains"
           loading={searchLoading}
           className="flex-1"
-          rightSlot={(
-            <FilterDropdown
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={domainStatusOptions}
-            />
-          )}
+          rightSlot={<FilterDropdown value={statusFilter} onChange={setStatusFilter} options={domainStatusOptions} />}
         />
 
         {/* Add Domain button hidden for now */}
@@ -621,11 +552,7 @@ export function DomainList({
           <div className="flex size-8 items-center justify-center rounded-full bg-dash-bg-elevated text-dash-text-faded">
             <LifeBuoy className="size-4" />
           </div>
-          <span className="text-sm text-dash-text-faded">
-            {domains.length === 0
-              ? "No domains yet"
-              : "No domains found"}
-          </span>
+          <span className="text-sm text-dash-text-faded">{domains.length === 0 ? "No domains yet" : "No domains found"}</span>
         </div>
       )}
 
@@ -650,12 +577,18 @@ export function DomainList({
                             {domain.name}
                           </Link>
                         ) : (
-                          <span className="text-sm tracking-[-0.084px] text-dash-text-body">
-                            {domain.name}
-                          </span>
+                          <span className="text-sm tracking-[-0.084px] text-dash-text-body">{domain.name}</span>
                         )}
                         {domain.purchased && (
-                          <SimpleTooltip content={<><CheckCircle size={13} weight="fill" className="text-[#34d399]" />Purchased from Brimble</>} side="right">
+                          <SimpleTooltip
+                            content={
+                              <>
+                                <CheckCircle size={13} weight="fill" className="text-[#34d399]" />
+                                Purchased from Brimble
+                              </>
+                            }
+                            side="right"
+                          >
                             <span className="text-[#4879f8]">
                               <CheckCircle size={14} weight="fill" />
                             </span>
@@ -674,9 +607,7 @@ export function DomainList({
                   <td className="w-auto py-2 sm:w-[140px]">
                     <div className="flex items-center gap-1.5">
                       <span className="size-[6px] shrink-0 rounded-full bg-[#fc391e]" />
-                      <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
-                        Failed
-                      </span>
+                      <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">Failed</span>
                     </div>
                   </td>
                   <td className="w-[180px] py-2 text-right">
@@ -750,12 +681,18 @@ export function DomainList({
                             {domain.name}
                           </Link>
                         ) : (
-                          <span className="text-sm tracking-[-0.084px] text-dash-text-body">
-                            {domain.name}
-                          </span>
+                          <span className="text-sm tracking-[-0.084px] text-dash-text-body">{domain.name}</span>
                         )}
                         {domain.purchased && (
-                          <SimpleTooltip content={<><CheckCircle size={13} weight="fill" className="text-[#34d399]" />Purchased from Brimble</>} side="right">
+                          <SimpleTooltip
+                            content={
+                              <>
+                                <CheckCircle size={13} weight="fill" className="text-[#34d399]" />
+                                Purchased from Brimble
+                              </>
+                            }
+                            side="right"
+                          >
                             <span className="text-[#4879f8]">
                               <CheckCircle size={14} weight="fill" />
                             </span>
@@ -774,19 +711,13 @@ export function DomainList({
                   <td className="w-auto py-2 sm:w-[140px]">
                     <div className="flex items-center gap-1.5">
                       <span className="size-[6px] shrink-0 rounded-full bg-[#f5a623]" />
-                      <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
-                        Expired
-                      </span>
+                      <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">Expired</span>
                     </div>
                   </td>
                   <td className="w-[180px] py-2">
                     <div className="flex flex-col gap-1 text-right">
-                      <span className="text-sm tracking-[-0.084px] text-dash-text-body">
-                        {domain.addedAt}
-                      </span>
-                      <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">
-                        {domain.addedBy}
-                      </span>
+                      <span className="text-sm tracking-[-0.084px] text-dash-text-body">{domain.addedAt}</span>
+                      <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">{domain.addedBy}</span>
                     </div>
                   </td>
                   <td className="w-10 pr-3.5 text-right">
@@ -841,12 +772,18 @@ export function DomainList({
                               {domain.name}
                             </Link>
                           ) : (
-                            <span className="text-sm tracking-[-0.084px] text-dash-text-body">
-                              {domain.name}
-                            </span>
+                            <span className="text-sm tracking-[-0.084px] text-dash-text-body">{domain.name}</span>
                           )}
                           {domain.purchased && (
-                            <SimpleTooltip content={<><CheckCircle size={13} weight="fill" className="text-[#34d399]" />Purchased from Brimble</>} side="right">
+                            <SimpleTooltip
+                              content={
+                                <>
+                                  <CheckCircle size={13} weight="fill" className="text-[#34d399]" />
+                                  Purchased from Brimble
+                                </>
+                              }
+                              side="right"
+                            >
                               <span className="text-[#4879f8]">
                                 <CheckCircle size={14} weight="fill" />
                               </span>
@@ -854,9 +791,7 @@ export function DomainList({
                           )}
                         </div>
                         {projectLabel ? (
-                          <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">
-                            {projectLabel}
-                          </span>
+                          <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">{projectLabel}</span>
                         ) : !isAssigned ? (
                           <span className="inline-flex w-fit items-center rounded-full bg-[#f5a623]/10 px-2 py-0.5 text-[11px] font-medium leading-none text-[#c48418] dark:bg-[#f5a623]/15 dark:text-[#f5a623]">
                             Unassigned
@@ -867,19 +802,13 @@ export function DomainList({
                     <td className="w-auto py-2 sm:w-[140px]">
                       <div className="flex items-center gap-1.5">
                         <span className="size-[6px] shrink-0 rounded-full bg-[#34d399]" />
-                        <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">
-                          Active
-                        </span>
+                        <span className="text-sm font-light leading-5 tracking-[-0.02px] text-dash-text-body">Active</span>
                       </div>
                     </td>
                     <td className="hidden w-[180px] py-2 sm:table-cell">
                       <div className="flex flex-col gap-1 text-right">
-                        <span className="text-sm tracking-[-0.084px] text-dash-text-body">
-                          {domain.addedAt}
-                        </span>
-                        <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">
-                          {domain.addedBy}
-                        </span>
+                        <span className="text-sm tracking-[-0.084px] text-dash-text-body">{domain.addedAt}</span>
+                        <span className="text-sm font-light leading-[1.3] text-dash-text-extra-faded">{domain.addedBy}</span>
                       </div>
                     </td>
                     <td className="w-10 pr-3.5 text-right">
@@ -890,7 +819,6 @@ export function DomainList({
               })}
             </tbody>
           </table>
-
         </div>
       )}
 
@@ -899,7 +827,9 @@ export function DomainList({
         <TransferDomainModal
           key={`transfer-${transferringDomain.name}`}
           open={!!transferringDomain}
-          onOpenChange={(v) => { if (!v) setTransferringDomain(null); }}
+          onOpenChange={(v) => {
+            if (!v) setTransferringDomain(null);
+          }}
           domain={transferringDomain}
         />
       )}
@@ -909,7 +839,9 @@ export function DomainList({
         <EditDomainModal
           key={editingDomain.name}
           open={!!editingDomain}
-          onOpenChange={(v) => { if (!v) setEditingDomain(null); }}
+          onOpenChange={(v) => {
+            if (!v) setEditingDomain(null);
+          }}
           domain={editingDomain}
           projectOptions={projectDropdownOptions}
           onSave={async (input) => {
@@ -924,7 +856,9 @@ export function DomainList({
       {/* Delete Domain Modal */}
       <WarningModal
         open={!!deletingDomain}
-        onOpenChange={(v) => { if (!v) setDeletingDomain(null); }}
+        onOpenChange={(v) => {
+          if (!v) setDeletingDomain(null);
+        }}
         title="Delete Domain"
         description={`Are you sure you want to delete "${deletingDomain?.name}"? This action cannot be undone. All DNS records and settings for this domain will be permanently removed.`}
         confirmLabel="Delete"

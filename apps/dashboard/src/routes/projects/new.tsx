@@ -1,13 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { IpWhitelist } from "@/components/shared/ip-whitelist";
-import {
-  createFileRoute,
-  getRouteApi,
-  Link,
-  useNavigate,
-  useRouter,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -30,38 +23,22 @@ import {
 import { GithubLogo, Cube, Database, CircleNotch } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
-import {
-  useGitProvider,
-  type UseGitProviderResult,
-} from "@/hooks/use-git-provider";
+import { useGitProvider, type UseGitProviderResult } from "@/hooks/use-git-provider";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { ChangePlanModal } from "../../components/shared/change-plan-modal";
 import { DashButton } from "../../components/shared/dash-button";
 import { ToggleSwitch } from "../../components/shared/toggle-switch";
 import { RangeSlider } from "../../components/shared/range-slider";
 import { Dropdown } from "../../components/shared/dropdown";
-import {
-  DiskSizeSelect,
-  diskSizes,
-} from "../../components/shared/disk-size-select";
+import { DiskSizeSelect, diskSizes } from "../../components/shared/disk-size-select";
 import { RootDirectoryTrigger } from "../../components/shared/root-directory-trigger";
-import {
-  AccessDenied,
-  accessDeniedForbidden,
-} from "../../components/shared/access-denied";
+import { AccessDenied, accessDeniedForbidden } from "../../components/shared/access-denied";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import { RootDirectoryDrawer } from "../../components/project/root-directory-drawer";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
-import {
-  inferProjectNameFromDockerImage,
-  parseDockerImageRef,
-} from "@/utils/docker-image";
+import { inferProjectNameFromDockerImage, parseDockerImageRef } from "@/utils/docker-image";
 import { mapFrameworksToDropdownOptions } from "@/utils/framework-dropdown";
-import {
-  getEnvPrefixForFramework,
-  getLegacyServiceType,
-  isNoBuildFramework,
-} from "@/utils/project-deploy";
+import { getEnvPrefixForFramework, getLegacyServiceType, isNoBuildFramework } from "@/utils/project-deploy";
 import { ServiceType } from "@brimble/models/dist/enum";
 import { listFrameworksServerFn } from "@/server/frameworks/actions";
 import { listRegionsServerFn } from "@/server/regions/actions";
@@ -110,8 +87,7 @@ export const Route = createFileRoute("/projects/new")({
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
-const inputClass =
-  "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+const inputClass = "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 /* ─── Icons ─── */
 
@@ -243,25 +219,16 @@ function debugMaskDeployPayload(payload: Record<string, unknown>) {
       const row = env as Record<string, unknown>;
       return {
         ...row,
-        value:
-          typeof row.value === "string" && row.value.length > 0
-            ? "[REDACTED]"
-            : row.value,
+        value: typeof row.value === "string" && row.value.length > 0 ? "[REDACTED]" : row.value,
       };
     });
   }
 
-  if (
-    copy.registry_credentials &&
-    typeof copy.registry_credentials === "object"
-  ) {
+  if (copy.registry_credentials && typeof copy.registry_credentials === "object") {
     const creds = copy.registry_credentials as Record<string, unknown>;
     copy.registry_credentials = {
       ...creds,
-      token:
-        typeof creds.token === "string" && creds.token.length > 0
-          ? "[REDACTED]"
-          : creds.token,
+      token: typeof creds.token === "string" && creds.token.length > 0 ? "[REDACTED]" : creds.token,
     };
   }
 
@@ -282,14 +249,12 @@ const mockOrgs = [
   {
     id: "personal",
     name: "Kemdirimakujuobi",
-    avatar:
-      "radial-gradient(circle at 62% 30%, #b8fce8, #91f2d5 25%, #6ae8c3 50%, #43deb0 75%, #1bd49d)",
+    avatar: "radial-gradient(circle at 62% 30%, #b8fce8, #91f2d5 25%, #6ae8c3 50%, #43deb0 75%, #1bd49d)",
   },
   {
     id: "team",
     name: "Brimble Team",
-    avatar:
-      "radial-gradient(circle at 62% 30%, #b8cffc, #94b6f8 25%, #6f9cf3 50%, #4b82ee 75%, #2769e9)",
+    avatar: "radial-gradient(circle at 62% 30%, #b8cffc, #94b6f8 25%, #6f9cf3 50%, #4b82ee 75%, #2769e9)",
   },
 ];
 
@@ -439,8 +404,7 @@ function ComputeSliderField({
 }) {
   const maxIndex = Math.max(steps.length - 1, 1);
   const indexToTrack = (index: number) => (index / maxIndex) * 100;
-  const trackToIndex = (track: number) =>
-    Math.min(maxIndex, Math.max(0, Math.round((track / 100) * maxIndex)));
+  const trackToIndex = (track: number) => Math.min(maxIndex, Math.max(0, Math.round((track / 100) * maxIndex)));
   const [trackValue, setTrackValue] = useState(() => indexToTrack(value));
 
   useEffect(() => {
@@ -453,9 +417,7 @@ function ComputeSliderField({
     <div>
       <div className="mb-2 flex items-center justify-between">
         <label className="text-sm text-dash-text-body">{label}</label>
-        <span className="text-sm font-medium text-dash-text-strong">
-          {formatValue(steps[previewIndex] ?? steps[0] ?? 0)}
-        </span>
+        <span className="text-sm font-medium text-dash-text-strong">{formatValue(steps[previewIndex] ?? steps[0] ?? 0)}</span>
       </div>
       <RangeSlider
         value={trackValue}
@@ -473,14 +435,12 @@ function ComputeSliderField({
 function generateMockCredential(length: number): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let result = "";
-  for (let i = 0; i < length; i++)
-    result += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < length; i++) result += chars[Math.floor(Math.random() * chars.length)];
   return result;
 }
 
 function generateSecureCredential(length: number): string {
-  const chars =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const bytes = new Uint8Array(length);
   globalThis.crypto.getRandomValues(bytes);
   let result = "";
@@ -493,9 +453,7 @@ function generateSecureCredential(length: number): string {
 function isValidCidr(value: string): boolean {
   const trimmed = value.trim();
   if (!trimmed) return false;
-  return /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)\/([0-9]|[1-2][0-9]|3[0-2])$/.test(
-    trimmed,
-  );
+  return /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)\/([0-9]|[1-2][0-9]|3[0-2])$/.test(trimmed);
 }
 
 type DatabaseEnvDraft = {
@@ -542,10 +500,7 @@ function SummaryChip({
           </a>
         )}
       </span>
-      <button
-        onClick={onChangeClick}
-        className="text-xs text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
-      >
+      <button onClick={onChangeClick} className="text-xs text-[#4879f8] transition-colors hover:text-[#3a6ae6]">
         Change
       </button>
     </motion.div>
@@ -554,11 +509,7 @@ function SummaryChip({
 
 /* ─── Phase 1: Source Type ─── */
 
-function Phase1SourceType({
-  onSelect,
-}: {
-  onSelect: (type: SourceType) => void;
-}) {
+function Phase1SourceType({ onSelect }: { onSelect: (type: SourceType) => void }) {
   const haptics = useHaptics();
   const sourceCards: {
     type: SourceType;
@@ -595,9 +546,7 @@ function Phase1SourceType({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-4 text-sm font-medium text-dash-text-strong">
-        How would you like to deploy?
-      </h3>
+      <h3 className="mb-4 text-sm font-medium text-dash-text-strong">How would you like to deploy?</h3>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {sourceCards.map((card) => (
           <button
@@ -608,20 +557,10 @@ function Phase1SourceType({
             }}
             className="group flex flex-col gap-3 rounded-[4px] border-[0.5px] border-dash-border p-5 text-left transition-all hover:border-dash-text-faded hover:bg-dash-bg-elevated"
           >
-            <img
-              src={card.icon}
-              alt=""
-              className={
-                card.iconClass ?? "size-5 brightness-0 dark:brightness-200"
-              }
-            />
+            <img src={card.icon} alt="" className={card.iconClass ?? "size-5 brightness-0 dark:brightness-200"} />
             <div>
-              <div className="text-sm font-medium text-dash-text-strong">
-                {card.title}
-              </div>
-              <div className="mt-0.5 text-xs text-dash-text-faded">
-                {card.desc}
-              </div>
+              <div className="text-sm font-medium text-dash-text-strong">{card.title}</div>
+              <div className="mt-0.5 text-xs text-dash-text-faded">{card.desc}</div>
             </div>
           </button>
         ))}
@@ -665,12 +604,9 @@ function Phase2GitConnect({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-        Connect your {provider.name} account
-      </h3>
+      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Connect your {provider.name} account</h3>
       <p className="mb-5 text-sm text-dash-text-faded">
-        To import a repository, you need to connect your {provider.name} account
-        to Brimble first.
+        To import a repository, you need to connect your {provider.name} account to Brimble first.
       </p>
 
       <div className="rounded-[4px] border-[0.5px] border-dash-border p-5">
@@ -678,36 +614,20 @@ function Phase2GitConnect({
           <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-dash-bg-elevated">
             <Icon className="size-6 text-dash-text-body" />
           </div>
-          <p className="mb-1 text-sm font-medium text-dash-text-strong">
-            {provider.name} not connected
-          </p>
+          <p className="mb-1 text-sm font-medium text-dash-text-strong">{provider.name} not connected</p>
           <p className="mb-5 max-w-[320px] text-center text-sm text-dash-text-faded">
-            Allow Brimble to access your repositories so you can import and
-            deploy them directly.
+            Allow Brimble to access your repositories so you can import and deploy them directly.
           </p>
-          <GlossyButton
-            variant="blue"
-            onClick={onConnected}
-            disabled={buttonDisabled}
-          >
-            {polling ? (
-              <CircleNotch className="size-4 animate-spin" />
-            ) : (
-              buttonLabel
-            )}
+          <GlossyButton variant="blue" onClick={onConnected} disabled={buttonDisabled}>
+            {polling ? <CircleNotch className="size-4 animate-spin" /> : buttonLabel}
           </GlossyButton>
           {errorMessage ? (
-            <p className="mt-3 text-center text-xs text-[#ef2f1f]">
-              {errorMessage}
-            </p>
+            <p className="mt-3 text-center text-xs text-[#ef2f1f]">{errorMessage}</p>
           ) : checkingConnection ? (
-            <p className="mt-3 text-center text-xs text-dash-text-faded">
-              Checking your {provider.name} connection status…
-            </p>
+            <p className="mt-3 text-center text-xs text-dash-text-faded">Checking your {provider.name} connection status…</p>
           ) : polling ? (
             <p className="mt-3 text-center text-xs text-dash-text-faded">
-              Complete the {provider.name} authorization, then return here.
-              We’re checking automatically.
+              Complete the {provider.name} authorization, then return here. We’re checking automatically.
             </p>
           ) : null}
         </div>
@@ -719,12 +639,8 @@ function Phase2GitConnect({
             <div key={perm.label} className="flex items-start gap-2.5">
               <span className="mt-1 size-[6px] shrink-0 rounded-full bg-[#34d399]" />
               <div className="flex flex-col">
-                <span className="text-sm text-dash-text-body">
-                  {perm.label}
-                </span>
-                <span className="text-xs text-dash-text-faded">
-                  {perm.desc}
-                </span>
+                <span className="text-sm text-dash-text-body">{perm.label}</span>
+                <span className="text-xs text-dash-text-faded">{perm.desc}</span>
               </div>
             </div>
           ))}
@@ -758,16 +674,12 @@ function Phase2GitRepoSelect({
   onRefreshAccounts?: () => void;
   onConnectAccount?: () => void;
   canAddAccount?: boolean;
-  onLoadRepos?: (input: {
-    installationId?: number | string;
-    q?: string;
-  }) => void;
+  onLoadRepos?: (input: { installationId?: number | string; q?: string }) => void;
   onSelect: (repo: GithubRepoListItem) => void;
 }) {
   const { Icon: ProviderIcon } = provider;
   const { deployPrivateOrganization } = usePlanGate();
-  const [selectedInstallationId, setSelectedInstallationId] =
-    useState<string>("");
+  const [selectedInstallationId, setSelectedInstallationId] = useState<string>("");
   const [search, setSearch] = useState("");
   const [orgOpen, setOrgOpen] = useState(false);
   const orgRef = useRef<HTMLDivElement>(null);
@@ -779,8 +691,7 @@ function Phase2GitRepoSelect({
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (orgRef.current && !orgRef.current.contains(e.target as Node))
-        setOrgOpen(false);
+      if (orgRef.current && !orgRef.current.contains(e.target as Node)) setOrgOpen(false);
     }
     if (orgOpen) {
       document.addEventListener("mousedown", handleClick);
@@ -795,17 +706,11 @@ function Phase2GitRepoSelect({
     }
 
     setSelectedInstallationId((prev) => {
-      if (
-        prev &&
-        accounts.some((a) => String(a.installationId ?? "") === prev)
-      ) {
+      if (prev && accounts.some((a) => String(a.installationId ?? "") === prev)) {
         return prev;
       }
 
-      const preferred =
-        accounts.find(
-          (a) => String(a.type ?? "").toLowerCase() !== "organization",
-        ) ?? accounts[0];
+      const preferred = accounts.find((a) => String(a.type ?? "").toLowerCase() !== "organization") ?? accounts[0];
 
       return String(preferred.installationId ?? "");
     });
@@ -826,10 +731,7 @@ function Phase2GitRepoSelect({
     return () => window.clearTimeout(timeoutId);
   }, [search, selectedInstallationId]);
 
-  const selectedOrg = accounts.find(
-    (account) =>
-      String(account.installationId ?? "") === selectedInstallationId,
-  );
+  const selectedOrg = accounts.find((account) => String(account.installationId ?? "") === selectedInstallationId);
 
   return (
     <motion.div
@@ -838,9 +740,7 @@ function Phase2GitRepoSelect({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-4 text-sm font-medium text-dash-text-strong">
-        Import from {provider.name}
-      </h3>
+      <h3 className="mb-4 text-sm font-medium text-dash-text-strong">Import from {provider.name}</h3>
 
       {!accounts.length ? (
         <div className="rounded-[4px] border-[0.5px] border-dash-border p-5">
@@ -868,28 +768,17 @@ function Phase2GitRepoSelect({
                 className={`flex items-center gap-2 ${inputClass} w-auto min-w-[200px] ${!canAddAccount && accounts.length <= 1 ? "cursor-default" : ""}`}
               >
                 {selectedOrg?.avatar ? (
-                  <img
-                    src={selectedOrg.avatar}
-                    alt=""
-                    className="size-5 shrink-0 rounded-full object-cover"
-                  />
+                  <img src={selectedOrg.avatar} alt="" className="size-5 shrink-0 rounded-full object-cover" />
                 ) : (
                   <div
                     className="size-5 shrink-0 rounded-full"
                     style={{
-                      background:
-                        "radial-gradient(circle at 62% 30%, #b8cffc, #94b6f8 25%, #6f9cf3 50%, #4b82ee 75%, #2769e9)",
+                      background: "radial-gradient(circle at 62% 30%, #b8cffc, #94b6f8 25%, #6f9cf3 50%, #4b82ee 75%, #2769e9)",
                     }}
                   />
                 )}
-                <span className="flex-1 truncate text-left">
-                  {selectedOrg?.name ||
-                    selectedOrg?.username ||
-                    "Select account"}
-                </span>
-                {(canAddAccount || accounts.length > 1) && (
-                  <ChevronDown className="size-3.5 shrink-0 text-dash-text-faded" />
-                )}
+                <span className="flex-1 truncate text-left">{selectedOrg?.name || selectedOrg?.username || "Select account"}</span>
+                {(canAddAccount || accounts.length > 1) && <ChevronDown className="size-3.5 shrink-0 text-dash-text-faded" />}
               </button>
               <AnimatePresence>
                 {orgOpen && (
@@ -901,48 +790,30 @@ function Phase2GitRepoSelect({
                     className="absolute left-0 top-full z-50 mt-1 w-full overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_2px_4px_-4px_rgba(0,0,0,0.07)]"
                   >
                     {accounts.map((account) => {
-                      const isOrg =
-                        String(account.type ?? "").toLowerCase() ===
-                        "organization";
+                      const isOrg = String(account.type ?? "").toLowerCase() === "organization";
                       const locked = isOrg && !deployPrivateOrganization;
                       return (
                         <button
-                          key={String(
-                            account.id ??
-                              account.installationId ??
-                              account.username ??
-                              account.name,
-                          )}
+                          key={String(account.id ?? account.installationId ?? account.username ?? account.name)}
                           onClick={() => {
                             if (locked) return;
-                            setSelectedInstallationId(
-                              String(account.installationId ?? ""),
-                            );
+                            setSelectedInstallationId(String(account.installationId ?? ""));
                             setOrgOpen(false);
                           }}
                           disabled={locked}
                           className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors ${locked ? "cursor-not-allowed text-dash-text-extra-faded" : "text-dash-text-body hover:bg-dash-bg-elevated"}`}
                         >
                           {account.avatar ? (
-                            <img
-                              src={account.avatar}
-                              alt=""
-                              className="size-5 shrink-0 rounded-full object-cover"
-                            />
+                            <img src={account.avatar} alt="" className="size-5 shrink-0 rounded-full object-cover" />
                           ) : (
                             <div
                               className="size-5 shrink-0 rounded-full"
                               style={{
-                                background:
-                                  "radial-gradient(circle at 62% 30%, #b8cffc, #94b6f8 25%, #6f9cf3 50%, #4b82ee 75%, #2769e9)",
+                                background: "radial-gradient(circle at 62% 30%, #b8cffc, #94b6f8 25%, #6f9cf3 50%, #4b82ee 75%, #2769e9)",
                               }}
                             />
                           )}
-                          <span className="truncate">
-                            {account.name ||
-                              account.username ||
-                              "GitHub Account"}
-                          </span>
+                          <span className="truncate">{account.name || account.username || "GitHub Account"}</span>
                           {locked && (
                             <span className="ml-auto shrink-0 rounded bg-dash-bg px-1.5 py-0.5 text-[10px] font-medium text-dash-text-faded">
                               Upgrade
@@ -987,13 +858,9 @@ function Phase2GitRepoSelect({
           {/* Repo list */}
           <div className="mt-3 overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
             {reposLoading ? (
-              <div className="px-4 py-8 text-center text-sm text-dash-text-faded">
-                Loading repositories…
-              </div>
+              <div className="px-4 py-8 text-center text-sm text-dash-text-faded">Loading repositories…</div>
             ) : repos.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-dash-text-faded">
-                No repositories found.
-              </div>
+              <div className="px-4 py-8 text-center text-sm text-dash-text-faded">No repositories found.</div>
             ) : (
               repos.map((repo, i) => (
                 <motion.div
@@ -1001,19 +868,11 @@ function Phase2GitRepoSelect({
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: 0.04 * i, ease }}
-                  className={`flex items-center justify-between px-4 py-3 ${
-                    i > 0 ? "border-t-[0.5px] border-dash-border" : ""
-                  }`}
+                  className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t-[0.5px] border-dash-border" : ""}`}
                 >
                   <div className="flex items-center gap-3">
-                    <img
-                      src="/icons/git-circle.svg"
-                      alt=""
-                      className="size-6 shrink-0"
-                    />
-                    <span className="text-sm font-medium text-dash-text-strong">
-                      {repo.name}
-                    </span>
+                    <img src="/icons/git-circle.svg" alt="" className="size-6 shrink-0" />
+                    <span className="text-sm font-medium text-dash-text-strong">{repo.name}</span>
                     {repo.private ? (
                       <span className="inline-flex items-center gap-1 rounded-full border border-dash-border-soft px-2 py-0.5 text-[11px] text-dash-text-faded">
                         <Lock className="size-3" />
@@ -1026,14 +885,8 @@ function Phase2GitRepoSelect({
                       </span>
                     )}
                   </div>
-                  <DashButton
-                    size="sm"
-                    onClick={() => onSelect(repo)}
-                    disabled={importingRepoFullName === repo.fullName}
-                  >
-                    {importingRepoFullName === repo.fullName
-                      ? "Importing…"
-                      : "Import"}
+                  <DashButton size="sm" onClick={() => onSelect(repo)} disabled={importingRepoFullName === repo.fullName}>
+                    {importingRepoFullName === repo.fullName ? "Importing…" : "Import"}
                   </DashButton>
                 </motion.div>
               ))
@@ -1061,30 +914,19 @@ function Phase2Docker({
   onImageChange?: () => void;
 }) {
   const [image, setImage] = useState(initialValue?.imageUri ?? "");
-  const [username, setUsername] = useState(
-    initialValue?.credentials?.username ?? "",
-  );
+  const [username, setUsername] = useState(initialValue?.credentials?.username ?? "");
   const [token, setToken] = useState(initialValue?.credentials?.token ?? "");
   const [tokenVisible, setTokenVisible] = useState(false);
-  const [authExpanded, setAuthExpanded] = useState(
-    Boolean(
-      initialValue?.credentials?.username || initialValue?.credentials?.token,
-    ),
-  );
+  const [authExpanded, setAuthExpanded] = useState(Boolean(initialValue?.credentials?.username || initialValue?.credentials?.token));
 
   useEffect(() => {
     setImage(initialValue?.imageUri ?? "");
     setUsername(initialValue?.credentials?.username ?? "");
     setToken(initialValue?.credentials?.token ?? "");
-    setAuthExpanded(
-      Boolean(
-        initialValue?.credentials?.username || initialValue?.credentials?.token,
-      ),
-    );
+    setAuthExpanded(Boolean(initialValue?.credentials?.username || initialValue?.credentials?.token));
   }, [initialValue]);
 
-  const hasPartialCreds =
-    (username.trim() && !token.trim()) || (!username.trim() && token.trim());
+  const hasPartialCreds = (username.trim() && !token.trim()) || (!username.trim() && token.trim());
 
   function submitDockerImage() {
     const trimmedImage = image.trim();
@@ -1113,12 +955,8 @@ function Phase2Docker({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-        Docker Image
-      </h3>
-      <p className="mb-4 text-sm text-dash-text-faded">
-        Enter the image name including tag and optional registry.
-      </p>
+      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Docker Image</h3>
+      <p className="mb-4 text-sm text-dash-text-faded">Enter the image name including tag and optional registry.</p>
       <form
         autoComplete="off"
         onSubmit={(e) => {
@@ -1128,9 +966,7 @@ function Phase2Docker({
         }}
       >
         <div>
-          <label className="mb-1.5 block text-sm text-dash-text-body">
-            Image name
-          </label>
+          <label className="mb-1.5 block text-sm text-dash-text-body">Image name</label>
           <input
             type="text"
             placeholder="nginx:latest or ghcr.io/org/image:tag"
@@ -1144,14 +980,9 @@ function Phase2Docker({
             } px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]`}
             autoFocus
           />
-          {imageError ? (
-            <p className="mt-2 text-xs text-[#ef4444]">{imageError}</p>
-          ) : null}
-          <p
-            className={`${imageError ? "mt-1.5" : "mt-2"} text-xs text-dash-text-extra-faded`}
-          >
-            Supports Docker Hub, GitHub Container Registry, and custom
-            registries.
+          {imageError ? <p className="mt-2 text-xs text-[#ef4444]">{imageError}</p> : null}
+          <p className={`${imageError ? "mt-1.5" : "mt-2"} text-xs text-dash-text-extra-faded`}>
+            Supports Docker Hub, GitHub Container Registry, and custom registries.
           </p>
         </div>
         <div className="mt-4">
@@ -1160,13 +991,8 @@ function Phase2Docker({
             onClick={() => setAuthExpanded((prev) => !prev)}
             className="flex w-full items-center justify-between rounded-[6px] border-[0.5px] border-dash-border px-3 py-2.5 text-left text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
           >
-            <span className="font-medium text-dash-text-strong">
-              Private registry credentials
-            </span>
-            <motion.span
-              animate={{ rotate: authExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2, ease }}
-            >
+            <span className="font-medium text-dash-text-strong">Private registry credentials</span>
+            <motion.span animate={{ rotate: authExpanded ? 180 : 0 }} transition={{ duration: 0.2, ease }}>
               <ChevronDown className="size-4 text-dash-text-faded" />
             </motion.span>
           </button>
@@ -1184,9 +1010,7 @@ function Phase2Docker({
               >
                 <div className="mt-3 grid grid-cols-1 gap-3 px-px pb-px sm:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-sm text-dash-text-body">
-                      Username
-                    </label>
+                    <label className="mb-1.5 block text-sm text-dash-text-body">Username</label>
                     <input
                       type="text"
                       value={username}
@@ -1203,9 +1027,7 @@ function Phase2Docker({
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm text-dash-text-body">
-                      Token
-                    </label>
+                    <label className="mb-1.5 block text-sm text-dash-text-body">Token</label>
                     <div className="relative">
                       <input
                         type={tokenVisible ? "text" : "password"}
@@ -1226,28 +1048,20 @@ function Phase2Docker({
                         onClick={() => setTokenVisible((prev) => !prev)}
                         className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1 text-dash-text-faded transition-colors hover:text-dash-text-strong"
                       >
-                        {tokenVisible ? (
-                          <EyeOff className="size-3.5" />
-                        ) : (
-                          <Eye className="size-3.5" />
-                        )}
+                        {tokenVisible ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                       </button>
                     </div>
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-dash-text-extra-faded">
-                  Optional. Provide both username and token to validate private
-                  images.
+                  Optional. Provide both username and token to validate private images.
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
         {hasPartialCreds ? (
-          <p className="mt-3 text-xs text-[#f59e0b]">
-            Provide both username and token to use private registry
-            authentication.
-          </p>
+          <p className="mt-3 text-xs text-[#f59e0b]">Provide both username and token to use private registry authentication.</p>
         ) : null}
         <div className="mt-5">
           <GlossyButton
@@ -1312,14 +1126,7 @@ function Phase2DbEngine({
       );
     }
 
-    return (
-      <img
-        src={imageUrl}
-        alt=""
-        className="size-5 object-contain"
-        loading="lazy"
-      />
-    );
+    return <img src={imageUrl} alt="" className="size-5 object-contain" loading="lazy" />;
   }
 
   if (loading) {
@@ -1330,18 +1137,11 @@ function Phase2DbEngine({
         exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.25, ease }}
       >
-        <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-          Choose a database engine
-        </h3>
-        <p className="mb-4 text-sm text-dash-text-faded">
-          Loading available databases...
-        </p>
+        <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Choose a database engine</h3>
+        <p className="mb-4 text-sm text-dash-text-faded">Loading available databases...</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-[4px] border-[0.5px] border-dash-border p-5"
-            >
+            <div key={i} className="rounded-[4px] border-[0.5px] border-dash-border p-5">
               <div className="h-5 w-5 rounded bg-dash-bg-elevated" />
               <div className="mt-3 h-4 w-28 rounded bg-dash-bg-elevated" />
               <div className="mt-2 h-3 w-40 rounded bg-dash-bg-elevated" />
@@ -1352,8 +1152,7 @@ function Phase2DbEngine({
     );
   }
 
-  const selectedEngine =
-    engines.find((engine) => engine.id === selectedEngineId) ?? null;
+  const selectedEngine = engines.find((engine) => engine.id === selectedEngineId) ?? null;
   const getDropdownIconSrc = (value?: string) => {
     const raw = value?.trim();
     if (!raw) return undefined;
@@ -1363,12 +1162,7 @@ function Phase2DbEngine({
       }
       return undefined;
     }
-    if (
-      raw.startsWith("http://") ||
-      raw.startsWith("https://") ||
-      raw.startsWith("/") ||
-      raw.startsWith("data:image/")
-    ) {
+    if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("/") || raw.startsWith("data:image/")) {
       return raw;
     }
     return undefined;
@@ -1376,8 +1170,7 @@ function Phase2DbEngine({
   const engineOptions = engines.map((engine) => ({
     id: engine.id,
     label: engine.name,
-    icon:
-      getDropdownIconSrc(engine.imageUrl) || getDropdownIconSrc(engine.image),
+    icon: getDropdownIconSrc(engine.imageUrl) || getDropdownIconSrc(engine.image),
   }));
 
   return (
@@ -1387,17 +1180,12 @@ function Phase2DbEngine({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-        Provision a database
-      </h3>
+      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Provision a database</h3>
       <p className="mb-4 text-sm text-dash-text-faded">
-        Select a database engine, then configure compute, storage, and access in
-        one step.
+        Select a database engine, then configure compute, storage, and access in one step.
       </p>
       <div className="rounded-[4px] border-[0.5px] border-dash-border p-4">
-        <label className="mb-2 block text-xs font-medium uppercase tracking-[0.08em] text-dash-text-faded">
-          Database engine
-        </label>
+        <label className="mb-2 block text-xs font-medium uppercase tracking-[0.08em] text-dash-text-faded">Database engine</label>
         <Dropdown
           value={selectedEngineId}
           options={engineOptions}
@@ -1410,9 +1198,7 @@ function Phase2DbEngine({
           <div className="mt-3 flex items-center gap-2 text-xs text-dash-text-faded">
             {renderEngineIcon(selectedEngine)}
             <span>
-              {selectedEngine.protocol
-                ? `${selectedEngine.protocol.toUpperCase()} database`
-                : "Managed database service"}
+              {selectedEngine.protocol ? `${selectedEngine.protocol.toUpperCase()} database` : "Managed database service"}
               {selectedEngine.version ? ` • v${selectedEngine.version}` : ""}
             </span>
           </div>
@@ -1470,9 +1256,7 @@ function CredentialRow({
 
   return (
     <div className="flex items-center gap-3">
-      <span className="shrink-0 font-family-mono text-xs text-dash-text-faded">
-        {label}
-      </span>
+      <span className="shrink-0 font-family-mono text-xs text-dash-text-faded">{label}</span>
       <input
         type={sensitive && !revealed ? "password" : "text"}
         value={value}
@@ -1492,22 +1276,14 @@ function CredentialRow({
             onClick={() => setRevealed(!revealed)}
             className="flex size-7 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
           >
-            {revealed ? (
-              <EyeOff className="size-3.5" />
-            ) : (
-              <Eye className="size-3.5" />
-            )}
+            {revealed ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
           </button>
         )}
         <button
           onClick={handleCopy}
           className="flex size-7 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
         >
-          {copied ? (
-            <Check className="size-3.5 text-[#34d399]" />
-          ) : (
-            <Copy className="size-3.5" />
-          )}
+          {copied ? <Check className="size-3.5 text-[#34d399]" /> : <Copy className="size-3.5" />}
         </button>
       </div>
     </div>
@@ -1537,24 +1313,16 @@ function Phase3DatabaseConfigure({
     environments: Array<{ name: string; value: string }>;
   }) => void | Promise<void>;
 }) {
-  const [dbName, setDbName] = useState(
-    `${engine.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-db-${generateMockCredential(4)}`,
-  );
+  const [dbName, setDbName] = useState(`${engine.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-db-${generateMockCredential(4)}`);
   const [region, setRegion] = useState(regionOptions[0]?.id ?? "");
   const [cpuIdx, setCpuIdx] = useState(() => {
     const recommendedCpu = engine.recommendations?.[0]?.compute?.cpu;
-    const exactIndex =
-      typeof recommendedCpu === "number"
-        ? cpuSteps.indexOf(recommendedCpu)
-        : -1;
+    const exactIndex = typeof recommendedCpu === "number" ? cpuSteps.indexOf(recommendedCpu) : -1;
     return exactIndex >= 0 ? exactIndex : 0;
   });
   const [memIdx, setMemIdx] = useState(() => {
     const recommendedMemory = engine.recommendations?.[0]?.compute?.memory;
-    const exactIndex =
-      typeof recommendedMemory === "number"
-        ? memorySteps.indexOf(recommendedMemory)
-        : -1;
+    const exactIndex = typeof recommendedMemory === "number" ? memorySteps.indexOf(recommendedMemory) : -1;
     return exactIndex >= 0 ? exactIndex : 1;
   });
   const [dbDiskSize, setDbDiskSize] = useState(() => {
@@ -1563,19 +1331,14 @@ function Phase3DatabaseConfigure({
       const match = diskSizes.find((d) => Number(d.id) === recommendedStorage);
       if (match) return match.id;
       const closest = diskSizes.reduce((prev, curr) =>
-        Math.abs(Number(curr.id) - recommendedStorage) <
-        Math.abs(Number(prev.id) - recommendedStorage)
-          ? curr
-          : prev,
+        Math.abs(Number(curr.id) - recommendedStorage) < Math.abs(Number(prev.id) - recommendedStorage) ? curr : prev,
       );
       return closest.id;
     }
     return "10";
   });
   const [publicAccess, setPublicAccess] = useState(false);
-  const [whitelistIps, setWhitelistIps] = useState<
-    { id: number; value: string }[]
-  >([]);
+  const [whitelistIps, setWhitelistIps] = useState<{ id: number; value: string }[]>([]);
   const [envDrafts, setEnvDrafts] = useState<DatabaseEnvDraft[]>([]);
 
   const recommendation = engine.recommendations?.[0]?.compute;
@@ -1585,12 +1348,8 @@ function Phase3DatabaseConfigure({
   const limitReached = projectLimit !== null && projectCount > projectLimit;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const nextPlanName = useMemo(() => {
-    const currentIdx = pricing.plans.findIndex(
-      (p) => p.id === planKey || p.name.toLowerCase() === planKey,
-    );
-    return currentIdx >= 0 && currentIdx < pricing.plans.length - 1
-      ? pricing.plans[currentIdx + 1].name
-      : undefined;
+    const currentIdx = pricing.plans.findIndex((p) => p.id === planKey || p.name.toLowerCase() === planKey);
+    return currentIdx >= 0 && currentIdx < pricing.plans.length - 1 ? pricing.plans[currentIdx + 1].name : undefined;
   }, [pricing.plans, planKey]);
 
   const costBreakdown = useMemo(
@@ -1622,32 +1381,18 @@ function Phase3DatabaseConfigure({
 
       if (lowerType.includes("user") || lowerKey.includes("user")) {
         value = `brimble_${generateMockCredential(6)}`;
-      } else if (
-        lowerType.includes("password") ||
-        lowerKey.includes("password") ||
-        lowerKey.includes("pass")
-      ) {
+      } else if (lowerType.includes("password") || lowerKey.includes("password") || lowerKey.includes("pass")) {
         value = generateSecureCredential(24);
-      } else if (
-        lowerType.includes("database") ||
-        lowerKey.includes("database") ||
-        lowerKey.endsWith("_db")
-      ) {
+      } else if (lowerType.includes("database") || lowerKey.includes("database") || lowerKey.endsWith("_db")) {
         value = dbName.replace(/-/g, "_");
-      } else if (
-        lowerType.includes("license") ||
-        lowerKey.includes("license")
-      ) {
+      } else if (lowerType.includes("license") || lowerKey.includes("license")) {
         value = "yes";
       } else if (lowerType.includes("auth") || lowerKey.includes("auth")) {
         value = `neo4j/${generateSecureCredential(18)}`;
       }
 
       const sensitive =
-        lowerType.includes("password") ||
-        lowerKey.includes("password") ||
-        lowerKey.includes("pass") ||
-        lowerType.includes("auth");
+        lowerType.includes("password") || lowerKey.includes("password") || lowerKey.includes("pass") || lowerType.includes("auth");
 
       return {
         id: dbEnvNextId++,
@@ -1660,9 +1405,7 @@ function Phase3DatabaseConfigure({
   }, [engine.id, dbName]);
 
   function updateEnvDraft(id: number, value: string) {
-    setEnvDrafts((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, value } : row)),
-    );
+    setEnvDrafts((prev) => prev.map((row) => (row.id === id ? { ...row, value } : row)));
   }
 
   function addWhitelistIp() {
@@ -1674,9 +1417,7 @@ function Phase3DatabaseConfigure({
   }
 
   function updateWhitelistIp(id: number, value: string) {
-    setWhitelistIps((prev) =>
-      prev.map((ip) => (ip.id === id ? { ...ip, value } : ip)),
-    );
+    setWhitelistIps((prev) => prev.map((ip) => (ip.id === id ? { ...ip, value } : ip)));
   }
 
   return (
@@ -1686,9 +1427,7 @@ function Phase3DatabaseConfigure({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-4 text-sm font-medium text-dash-text-strong">
-        Configure {engine.name}
-      </h3>
+      <h3 className="mb-4 text-sm font-medium text-dash-text-strong">Configure {engine.name}</h3>
 
       {limitReached && (
         <div className="mb-4 flex items-center gap-3 rounded-[6px] bg-[#f5a623]/5 px-3.5 py-3 dark:bg-[#f5a623]/15">
@@ -1709,34 +1448,20 @@ function Phase3DatabaseConfigure({
 
       <div className="flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-sm text-dash-text-body">
-            Database name
-          </label>
-          <input
-            type="text"
-            value={dbName}
-            onChange={(e) => setDbName(e.target.value)}
-            className={inputClass}
-          />
+          <label className="mb-1.5 block text-sm text-dash-text-body">Database name</label>
+          <input type="text" value={dbName} onChange={(e) => setDbName(e.target.value)} className={inputClass} />
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm text-dash-text-body">
-            Region
-          </label>
-          <Dropdown
-            value={region}
-            options={regionOptions}
-            onChange={setRegion}
-          />
+          <label className="mb-1.5 block text-sm text-dash-text-body">Region</label>
+          <Dropdown value={region} options={regionOptions} onChange={setRegion} />
         </div>
       </div>
 
       {recommendation ? (
         <div className="mt-4 rounded-[4px] bg-[#f59e0b]/[0.06] px-3 py-2.5 dark:bg-[#f59e0b]/[0.08]">
           <p className="text-xs leading-relaxed text-dash-text-body">
-            Recommended for {engine.name}: {recommendation.cpu ?? "?"} vCPU,{" "}
-            {recommendation.memory ?? "?"} GB RAM,{" "}
+            Recommended for {engine.name}: {recommendation.cpu ?? "?"} vCPU, {recommendation.memory ?? "?"} GB RAM,{" "}
             {recommendation.storage ?? "?"} GB storage.
           </p>
           <button
@@ -1752,9 +1477,7 @@ function Phase3DatabaseConfigure({
                 if (nextMemIdx >= 0) setMemIdx(nextMemIdx);
               }
               if (typeof recommendation.storage === "number") {
-                const match = diskSizes.find(
-                  (d) => Number(d.id) === recommendation.storage,
-                );
+                const match = diskSizes.find((d) => Number(d.id) === recommendation.storage);
                 if (match) setDbDiskSize(match.id);
               }
             }}
@@ -1768,29 +1491,11 @@ function Phase3DatabaseConfigure({
 
       {/* Compute resources */}
       <div>
-        <h4 className="mb-4 text-sm font-medium text-dash-text-strong">
-          Compute
-        </h4>
+        <h4 className="mb-4 text-sm font-medium text-dash-text-strong">Compute</h4>
         <div className="flex flex-col gap-5">
-          <ComputeSliderField
-            label="CPU"
-            value={cpuIdx}
-            steps={cpuSteps}
-            formatValue={formatCpu}
-            onCommit={setCpuIdx}
-          />
-          <ComputeSliderField
-            label="Memory"
-            value={memIdx}
-            steps={memorySteps}
-            formatValue={formatMemory}
-            onCommit={setMemIdx}
-          />
-          <DiskSizeSelect
-            label="Storage"
-            value={dbDiskSize}
-            onChange={setDbDiskSize}
-          />
+          <ComputeSliderField label="CPU" value={cpuIdx} steps={cpuSteps} formatValue={formatCpu} onCommit={setCpuIdx} />
+          <ComputeSliderField label="Memory" value={memIdx} steps={memorySteps} formatValue={formatMemory} onCommit={setMemIdx} />
+          <DiskSizeSelect label="Storage" value={dbDiskSize} onChange={setDbDiskSize} />
         </div>
       </div>
 
@@ -1798,9 +1503,7 @@ function Phase3DatabaseConfigure({
 
       {/* Credentials */}
       <div>
-        <h4 className="mb-3 text-sm font-medium text-dash-text-strong">
-          Database credentials
-        </h4>
+        <h4 className="mb-3 text-sm font-medium text-dash-text-strong">Database credentials</h4>
         <div className="rounded-[4px] border-[0.5px] border-dash-border p-4">
           <div className="flex flex-col gap-2.5">
             {envDrafts.length > 0 ? (
@@ -1814,15 +1517,12 @@ function Phase3DatabaseConfigure({
                 />
               ))
             ) : (
-              <p className="text-xs text-dash-text-faded">
-                No engine environment variables required.
-              </p>
+              <p className="text-xs text-dash-text-faded">No engine environment variables required.</p>
             )}
           </div>
         </div>
         <p className="mt-2 text-xs text-dash-text-extra-faded">
-          Credentials are auto-generated but can be customised. Store them
-          securely after provisioning.
+          Credentials are auto-generated but can be customised. Store them securely after provisioning.
         </p>
       </div>
 
@@ -1832,12 +1532,8 @@ function Phase3DatabaseConfigure({
       <div>
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="text-sm font-medium text-dash-text-strong">
-              Public access
-            </h4>
-            <p className="mt-0.5 text-xs text-dash-text-faded">
-              Allow connections from any IP address
-            </p>
+            <h4 className="text-sm font-medium text-dash-text-strong">Public access</h4>
+            <p className="mt-0.5 text-xs text-dash-text-faded">Allow connections from any IP address</p>
           </div>
           <ToggleSwitch checked={publicAccess} onChange={setPublicAccess} />
         </div>
@@ -1853,8 +1549,7 @@ function Phase3DatabaseConfigure({
               <div className="mt-3 flex items-start gap-2 rounded-[4px] bg-[#f59e0b]/[0.06] px-3 py-2.5">
                 <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-[#f59e0b]" />
                 <p className="text-xs leading-relaxed text-dash-text-body">
-                  Public access exposes your database to the internet. Use
-                  strong credentials and consider IP whitelisting in production.
+                  Public access exposes your database to the internet. Use strong credentials and consider IP whitelisting in production.
                 </p>
               </div>
             </motion.div>
@@ -1874,9 +1569,7 @@ function Phase3DatabaseConfigure({
                   ips={whitelistIps}
                   onAdd={addWhitelistIp}
                   onRemove={(id) => removeWhitelistIp(id as number)}
-                  onUpdate={(id, value) =>
-                    updateWhitelistIp(id as number, value)
-                  }
+                  onUpdate={(id, value) => updateWhitelistIp(id as number, value)}
                   inputClassName={`${inputClass} flex-1 font-family-mono text-[13px]`}
                 />
               </div>
@@ -1889,19 +1582,14 @@ function Phase3DatabaseConfigure({
 
       {/* Estimated Billing */}
       <div>
-        <h4 className="text-sm font-medium text-dash-text-strong">
-          Estimated Billing
-        </h4>
-        <p className="mt-0.5 text-xs text-dash-text-faded">
-          Monthly cost based on your current plan
-        </p>
+        <h4 className="text-sm font-medium text-dash-text-strong">Estimated Billing</h4>
+        <p className="mt-0.5 text-xs text-dash-text-faded">Monthly cost based on your current plan</p>
 
         <div className="mt-3 flex flex-col">
           {costBreakdown.cpu.excess > 0 && (
             <div className="flex items-center justify-between py-1.5 text-xs text-dash-text-body">
               <span>
-                CPU ({costBreakdown.cpu.excess} vCPU &times;{" "}
-                {formatUsdMonthly(costBreakdown.cpu.rate)})
+                CPU ({costBreakdown.cpu.excess} vCPU &times; {formatUsdMonthly(costBreakdown.cpu.rate)})
               </span>
               <span>{formatUsdMonthly(costBreakdown.cpu.cost)}</span>
             </div>
@@ -1909,16 +1597,14 @@ function Phase3DatabaseConfigure({
           {costBreakdown.memory.excess > 0 && (
             <div className="flex items-center justify-between py-1.5 text-xs text-dash-text-body">
               <span>
-                Memory ({costBreakdown.memory.excess} GB &times;{" "}
-                {formatUsdMonthly(costBreakdown.memory.rate)})
+                Memory ({costBreakdown.memory.excess} GB &times; {formatUsdMonthly(costBreakdown.memory.rate)})
               </span>
               <span>{formatUsdMonthly(costBreakdown.memory.cost)}</span>
             </div>
           )}
           <div className="flex items-center justify-between py-1.5 text-xs text-dash-text-body">
             <span>
-              Storage ({costBreakdown.storage.amount} GB &times;{" "}
-              {formatUsdMonthly(costBreakdown.storage.rate)})
+              Storage ({costBreakdown.storage.amount} GB &times; {formatUsdMonthly(costBreakdown.storage.rate)})
             </span>
             <span>{formatUsdMonthly(costBreakdown.storage.cost)}</span>
           </div>
@@ -1943,15 +1629,9 @@ function Phase3DatabaseConfigure({
               setShowUpgradeModal(true);
               return;
             }
-            const hasInvalidIp = !publicAccess
-              ? whitelistIps.some(
-                  (ip) => ip.value.trim() && !isValidCidr(ip.value),
-                )
-              : false;
+            const hasInvalidIp = !publicAccess ? whitelistIps.some((ip) => ip.value.trim() && !isValidCidr(ip.value)) : false;
             if (hasInvalidIp) {
-              toast.error(
-                "Please fix invalid IP addresses before provisioning.",
-              );
+              toast.error("Please fix invalid IP addresses before provisioning.");
               return;
             }
 
@@ -1967,9 +1647,7 @@ function Phase3DatabaseConfigure({
               cpu: cpuSteps[cpuIdx],
               memory: memorySteps[memIdx],
               storage: Number(dbDiskSize),
-              whitelistedIps: publicAccess
-                ? ["0.0.0.0/0"]
-                : whitelistIps.map((ip) => ip.value.trim()).filter(Boolean),
+              whitelistedIps: publicAccess ? ["0.0.0.0/0"] : whitelistIps.map((ip) => ip.value.trim()).filter(Boolean),
               environments: envDrafts.map((row) => ({
                 name: row.key,
                 value: row.value.trim(),
@@ -2065,14 +1743,11 @@ function Phase3Configure({
       : (sourceName.split(":")[0].split("/").pop() ?? sourceName);
   const lastAppliedSourceRef = useRef<string>("");
 
-  const [projectName, setProjectName] = useState(
-    defaultName.toLowerCase().replace(/[^a-z-]/g, ""),
-  );
+  const [projectName, setProjectName] = useState(defaultName.toLowerCase().replace(/[^a-z-]/g, ""));
 
   const projectNameError = (() => {
     if (!projectName.trim()) return null;
-    if (/[^a-z-]/.test(projectName))
-      return "Project name can only contain lowercase letters and hyphens.";
+    if (/[^a-z-]/.test(projectName)) return "Project name can only contain lowercase letters and hyphens.";
     return null;
   })();
   const hasProjectNameError = projectNameError !== null;
@@ -2087,28 +1762,22 @@ function Phase3Configure({
   const limitReached = projectLimit !== null && projectCount > projectLimit;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const nextPlanName = useMemo(() => {
-    const currentIdx = pricing.plans.findIndex(
-      (p) => p.id === planKey || p.name.toLowerCase() === planKey,
-    );
-    return currentIdx >= 0 && currentIdx < pricing.plans.length - 1
-      ? pricing.plans[currentIdx + 1].name
-      : undefined;
+    const currentIdx = pricing.plans.findIndex((p) => p.id === planKey || p.name.toLowerCase() === planKey);
+    return currentIdx >= 0 && currentIdx < pricing.plans.length - 1 ? pricing.plans[currentIdx + 1].name : undefined;
   }, [pricing.plans, planKey]);
   const serviceTypeOptions = useMemo(
     () => [
       {
         id: ServiceType.WebService,
         label: "Web Service",
-        description:
-          "Run server-side code that handles requests. Ideal for dynamic apps and APIs.",
+        description: "Run server-side code that handles requests. Ideal for dynamic apps and APIs.",
         disabled: isFreePlan,
         asideText: isFreePlan ? "Upgrade to access" : undefined,
       },
       {
         id: ServiceType.Static,
         label: "Static Site",
-        description:
-          "Serve fixed content like HTML, CSS, JS, and images. No server-side code.",
+        description: "Serve fixed content like HTML, CSS, JS, and images. No server-side code.",
         disabled: false,
       },
       {
@@ -2156,18 +1825,14 @@ function Phase3Configure({
   const [diskEnabled, setDiskEnabled] = useState(false);
   const [diskSize, setDiskSize] = useState("10");
   const [mountPath, setMountPath] = useState("/mnt/data");
-  const [serviceTypeManuallySelected, setServiceTypeManuallySelected] =
-    useState(false);
-  const [serviceType, setServiceType] = useState<string>(() =>
-    getLegacyServiceType(sourceType, defaultFrameworkId),
-  );
+  const [serviceTypeManuallySelected, setServiceTypeManuallySelected] = useState(false);
+  const [serviceType, setServiceType] = useState<string>(() => getLegacyServiceType(sourceType, defaultFrameworkId));
   const [mcpAuthEnabled, setMcpAuthEnabled] = useState(false);
   const selectedServiceTypeOption = useMemo(
     () => serviceTypeOptions.find((option) => option.id === serviceType),
     [serviceType, serviceTypeOptions],
   );
-  const hideStorageSettings =
-    isNoBuildFramework(framework) || serviceType === ServiceType.Static;
+  const hideStorageSettings = isNoBuildFramework(framework) || serviceType === ServiceType.Static;
   const showMcpAuthToggle = serviceType === ServiceType.Mcp;
 
   useEffect(() => {
@@ -2243,9 +1908,7 @@ function Phase3Configure({
     }
 
     const detectedSlug = detectedFramework?.slug?.trim();
-    const matchedFramework = detectedSlug
-      ? frameworkOptions.find((f) => f.id === detectedSlug)
-      : undefined;
+    const matchedFramework = detectedSlug ? frameworkOptions.find((f) => f.id === detectedSlug) : undefined;
     const fallbackFramework = matchedFramework ?? frameworkOptions[0];
 
     if (matchedFramework?.id) {
@@ -2254,30 +1917,10 @@ function Phase3Configure({
       setFramework(fallbackFramework.id);
     }
 
-    setBuildCmd(
-      detectedFramework?.buildCommand ??
-        matchedFramework?.buildCmd ??
-        fallbackFramework?.buildCmd ??
-        "",
-    );
-    setStartCmd(
-      detectedFramework?.startCommand ??
-        matchedFramework?.start ??
-        fallbackFramework?.start ??
-        "",
-    );
-    setOutputDir(
-      detectedFramework?.outputDirectory ??
-        matchedFramework?.output ??
-        fallbackFramework?.output ??
-        "",
-    );
-    setInstallCmd(
-      detectedFramework?.installCommand ??
-        matchedFramework?.install ??
-        fallbackFramework?.install ??
-        "",
-    );
+    setBuildCmd(detectedFramework?.buildCommand ?? matchedFramework?.buildCmd ?? fallbackFramework?.buildCmd ?? "");
+    setStartCmd(detectedFramework?.startCommand ?? matchedFramework?.start ?? fallbackFramework?.start ?? "");
+    setOutputDir(detectedFramework?.outputDirectory ?? matchedFramework?.output ?? fallbackFramework?.output ?? "");
+    setInstallCmd(detectedFramework?.installCommand ?? matchedFramework?.install ?? fallbackFramework?.install ?? "");
 
     lastAppliedSourceRef.current = sourceName;
   }, [detectedFramework, frameworkOptions, isGit, sourceName]);
@@ -2291,8 +1934,7 @@ function Phase3Configure({
     setInstallCmd(newFw?.install ?? "");
   }
 
-  const canBrowseRootDir =
-    isGit && Boolean(repoBrowser?.repoName) && Boolean(branch?.trim());
+  const canBrowseRootDir = isGit && Boolean(repoBrowser?.repoName) && Boolean(branch?.trim());
 
   function addEnvVar() {
     setEnvVars((prev) => [...prev, { id: envNextId++, key: "", value: "" }]);
@@ -2304,19 +1946,12 @@ function Phase3Configure({
   }
 
   function updateEnvVar(id: number, field: "key" | "value", val: string) {
-    setEnvVars((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, [field]: val } : v)),
-    );
+    setEnvVars((prev) => prev.map((v) => (v.id === id ? { ...v, [field]: val } : v)));
   }
 
-  function handleEnvPaste(
-    id: number,
-    e: React.ClipboardEvent<HTMLInputElement>,
-  ) {
+  function handleEnvPaste(id: number, e: React.ClipboardEvent<HTMLInputElement>) {
     const text = e.clipboardData.getData("text");
-    const lines = text
-      .split(/\r?\n/)
-      .filter((l) => l.trim() && !l.trim().startsWith("#"));
+    const lines = text.split(/\r?\n/).filter((l) => l.trim() && !l.trim().startsWith("#"));
     if (lines.length < 2 && !text.includes("=")) return;
     e.preventDefault();
     const parsed: Array<{ key: string; value: string }> = [];
@@ -2325,19 +1960,14 @@ function Phase3Configure({
       if (eqIdx === -1) continue;
       const key = line.slice(0, eqIdx).trim();
       let value = line.slice(eqIdx + 1).trim();
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
         value = value.slice(1, -1);
       }
       if (key) parsed.push({ key, value });
     }
     if (!parsed.length) return;
     setEnvVars((prev) => {
-      const withoutCurrent = prev.filter(
-        (v) => v.id !== id || v.key || v.value,
-      );
+      const withoutCurrent = prev.filter((v) => v.id !== id || v.key || v.value);
       const newVars = parsed.map((p) => ({ id: envNextId++, ...p }));
       return [...withoutCurrent, ...newVars];
     });
@@ -2345,9 +1975,7 @@ function Phase3Configure({
   }
 
   function buildDeployInput(): Phase3DeployInput | null {
-    const cleanedEnvVars = envVars
-      .map((v) => ({ key: v.key.trim(), value: v.value }))
-      .filter((v) => v.key || v.value);
+    const cleanedEnvVars = envVars.map((v) => ({ key: v.key.trim(), value: v.value })).filter((v) => v.key || v.value);
 
     const invalidEnv = cleanedEnvVars.find((v) => !v.key || !v.value);
     if (invalidEnv) {
@@ -2382,19 +2010,14 @@ function Phase3Configure({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-4 text-sm font-medium text-dash-text-strong">
-        Configure Project
-      </h3>
-      <p className="mb-4 text-xs text-dash-text-faded">
-        Project limits are counted across all environments in this workspace.
-      </p>
+      <h3 className="mb-4 text-sm font-medium text-dash-text-strong">Configure Project</h3>
+      <p className="mb-4 text-xs text-dash-text-faded">Project limits are counted across all environments in this workspace.</p>
 
       {limitReached && (
         <div className="mb-4 flex items-center gap-3 rounded-[6px] bg-[#f5a623]/5 px-3.5 py-3 dark:bg-[#f5a623]/15">
           <AlertTriangle className="size-4 shrink-0 text-[#f5a623]" />
           <span className="text-sm text-dash-text-body dark:text-dash-text-strong">
-            You've reached your project limit across this workspace (
-            {projectCount}/{projectLimit}).{" "}
+            You've reached your project limit across this workspace ({projectCount}/{projectLimit}).{" "}
             <button
               type="button"
               onClick={() => setShowUpgradeModal(true)}
@@ -2411,9 +2034,7 @@ function Phase3Configure({
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-sm text-dash-text-body">
-              Project name
-            </label>
+            <label className="mb-1.5 block text-sm text-dash-text-body">Project name</label>
             <input
               type="text"
               value={projectName}
@@ -2421,9 +2042,7 @@ function Phase3Configure({
               className={inputClass}
               style={{
                 transition: "box-shadow 0.2s ease",
-                boxShadow: hasProjectNameError
-                  ? "0px 1px 2px rgba(239,47,31,0.3), 0px 0px 0px 1px #ef2f1f"
-                  : undefined,
+                boxShadow: hasProjectNameError ? "0px 1px 2px rgba(239,47,31,0.3), 0px 0px 0px 1px #ef2f1f" : undefined,
               }}
             />
             <AnimatePresence>
@@ -2441,21 +2060,13 @@ function Phase3Configure({
             </AnimatePresence>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm text-dash-text-body">
-              Region
-            </label>
-            <Dropdown
-              value={region}
-              options={regionOptions}
-              onChange={setRegion}
-            />
+            <label className="mb-1.5 block text-sm text-dash-text-body">Region</label>
+            <Dropdown value={region} options={regionOptions} onChange={setRegion} />
           </div>
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm text-dash-text-body">
-            Deployment type
-          </label>
+          <label className="mb-1.5 block text-sm text-dash-text-body">Deployment type</label>
           <Dropdown
             value={serviceType}
             options={serviceTypeOptions.map((option) => ({
@@ -2465,9 +2076,7 @@ function Phase3Configure({
               asideText: option.asideText,
             }))}
             onChange={(nextServiceType) => {
-              const nextOption = serviceTypeOptions.find(
-                (option) => option.id === nextServiceType,
-              );
+              const nextOption = serviceTypeOptions.find((option) => option.id === nextServiceType);
               if (nextOption?.disabled) {
                 return;
               }
@@ -2476,30 +2085,22 @@ function Phase3Configure({
             }}
           />
           {selectedServiceTypeOption?.description && (
-            <p className="mt-2 text-xs text-dash-text-extra-faded">
-              {selectedServiceTypeOption.description}
-            </p>
+            <p className="mt-2 text-xs text-dash-text-extra-faded">{selectedServiceTypeOption.description}</p>
           )}
         </div>
 
         {isGit && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-sm text-dash-text-body">
-                Branch
-              </label>
+              <label className="mb-1.5 block text-sm text-dash-text-body">Branch</label>
               <Dropdown
                 value={branch}
-                options={(branchOptions?.length ? branchOptions : ["main"]).map(
-                  (b) => ({ id: b, label: b }),
-                )}
+                options={(branchOptions?.length ? branchOptions : ["main"]).map((b) => ({ id: b, label: b }))}
                 onChange={setBranch}
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm text-dash-text-body">
-                Root directory
-              </label>
+              <label className="mb-1.5 block text-sm text-dash-text-body">Root directory</label>
               <RootDirectoryTrigger
                 value={rootDir || "./"}
                 disabled={!canBrowseRootDir}
@@ -2508,9 +2109,7 @@ function Phase3Configure({
                   setRootDirDrawerOpen(true);
                 }}
               />
-              <p className="mt-2 text-xs text-dash-text-extra-faded">
-                Select the folder in your repository to deploy.
-              </p>
+              <p className="mt-2 text-xs text-dash-text-extra-faded">Select the folder in your repository to deploy.</p>
             </div>
           </div>
         )}
@@ -2519,19 +2118,12 @@ function Phase3Configure({
           <div>
             <div className="flex items-center justify-between rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated px-3 py-2.5">
               <div className="pr-4">
-                <p className="text-sm font-medium text-dash-text-strong">
-                  Enable MCP authentication
-                </p>
+                <p className="text-sm font-medium text-dash-text-strong">Enable MCP authentication</p>
                 <p className="mt-1 text-xs text-dash-text-faded">
-                  Require an API key in the <code>x-brimble-key</code> header
-                  for this MCP server.
+                  Require an API key in the <code>x-brimble-key</code> header for this MCP server.
                 </p>
               </div>
-              <ToggleSwitch
-                checked={mcpAuthEnabled}
-                onChange={setMcpAuthEnabled}
-                size="sm"
-              />
+              <ToggleSwitch checked={mcpAuthEnabled} onChange={setMcpAuthEnabled} size="sm" />
             </div>
           </div>
         )}
@@ -2543,17 +2135,13 @@ function Phase3Configure({
       {/* Build settings */}
       {isGit && (
         <>
-          <h4 className="mb-4 text-sm font-medium text-dash-text-strong">
-            Build Settings
-          </h4>
+          <h4 className="mb-4 text-sm font-medium text-dash-text-strong">Build Settings</h4>
 
           <div className="flex flex-col gap-4">
             <div>
               <label className="mb-1.5 flex items-center gap-2 text-sm text-dash-text-body">
                 Framework
-                <span className="rounded-full bg-[#4879f8]/10 px-2 py-0.5 text-[11px] font-medium text-[#4879f8]">
-                  Auto-detected
-                </span>
+                <span className="rounded-full bg-[#4879f8]/10 px-2 py-0.5 text-[11px] font-medium text-[#4879f8]">Auto-detected</span>
               </label>
               <Dropdown
                 value={framework}
@@ -2572,9 +2160,7 @@ function Phase3Configure({
             {!isNoBuildFramework(framework) && (
               <>
                 <div>
-                  <label className="mb-1.5 block text-sm text-dash-text-body">
-                    Build command
-                  </label>
+                  <label className="mb-1.5 block text-sm text-dash-text-body">Build command</label>
                   <input
                     type="text"
                     value={buildCmd}
@@ -2585,9 +2171,7 @@ function Phase3Configure({
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm text-dash-text-body">
-                    Start command
-                  </label>
+                  <label className="mb-1.5 block text-sm text-dash-text-body">Start command</label>
                   <input
                     type="text"
                     value={startCmd}
@@ -2599,9 +2183,7 @@ function Phase3Configure({
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-sm text-dash-text-body">
-                      Output directory
-                    </label>
+                    <label className="mb-1.5 block text-sm text-dash-text-body">Output directory</label>
                     <input
                       type="text"
                       value={outputDir}
@@ -2611,9 +2193,7 @@ function Phase3Configure({
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm text-dash-text-body">
-                      Install command
-                    </label>
+                    <label className="mb-1.5 block text-sm text-dash-text-body">Install command</label>
                     <input
                       type="text"
                       value={installCmd}
@@ -2627,23 +2207,17 @@ function Phase3Configure({
             )}
           </div>
 
-          {!isNoBuildFramework(framework) && (
-            <hr className="my-6 border-dash-border-soft" />
-          )}
+          {!isNoBuildFramework(framework) && <hr className="my-6 border-dash-border-soft" />}
         </>
       )}
 
       {!isGit && sourceType === SourceType.Docker && (
         <>
-          <h4 className="mb-4 text-sm font-medium text-dash-text-strong">
-            Runtime Settings
-          </h4>
+          <h4 className="mb-4 text-sm font-medium text-dash-text-strong">Runtime Settings</h4>
 
           <div className="flex flex-col gap-4">
             <div>
-              <label className="mb-1.5 block text-sm text-dash-text-body">
-                Pre-start command
-              </label>
+              <label className="mb-1.5 block text-sm text-dash-text-body">Pre-start command</label>
               <input
                 type="text"
                 value={preStartCmd}
@@ -2651,9 +2225,7 @@ function Phase3Configure({
                 placeholder="e.g. node scripts/migrate.js"
                 className={`${inputClass} font-family-mono text-[13px]`}
               />
-              <p className="mt-2 text-xs text-dash-text-extra-faded">
-                Optional. Runs before your container start command.
-              </p>
+              <p className="mt-2 text-xs text-dash-text-extra-faded">Optional. Runs before your container start command.</p>
             </div>
           </div>
 
@@ -2664,19 +2236,11 @@ function Phase3Configure({
       {/* Environment variables — hidden for no-build frameworks (HTML, Static) */}
       {!isNoBuildFramework(framework) && (
         <div>
-          <button
-            onClick={() => setEnvExpanded(!envExpanded)}
-            className="flex w-full items-center justify-between text-sm"
-          >
-            <span className="font-medium text-dash-text-strong">
-              Environment Variables
-            </span>
+          <button onClick={() => setEnvExpanded(!envExpanded)} className="flex w-full items-center justify-between text-sm">
+            <span className="font-medium text-dash-text-strong">Environment Variables</span>
             <span className="flex items-center gap-2 text-xs text-dash-text-faded">
               {envVars.length} variable{envVars.length !== 1 ? "s" : ""}
-              <motion.span
-                animate={{ rotate: envExpanded ? 180 : 0 }}
-                transition={{ duration: 0.2, ease }}
-              >
+              <motion.span animate={{ rotate: envExpanded ? 180 : 0 }} transition={{ duration: 0.2, ease }}>
                 <ChevronDown className="size-3.5" />
               </motion.span>
             </span>
@@ -2698,9 +2262,7 @@ function Phase3Configure({
                         type="text"
                         placeholder="KEY"
                         value={v.key}
-                        onChange={(e) =>
-                          updateEnvVar(v.id, "key", e.target.value)
-                        }
+                        onChange={(e) => updateEnvVar(v.id, "key", e.target.value)}
                         onPaste={(e) => handleEnvPaste(v.id, e)}
                         className={`${inputClass} flex-1 font-family-mono text-[13px] uppercase`}
                       />
@@ -2708,9 +2270,7 @@ function Phase3Configure({
                         type="text"
                         placeholder="value"
                         value={v.value}
-                        onChange={(e) =>
-                          updateEnvVar(v.id, "value", e.target.value)
-                        }
+                        onChange={(e) => updateEnvVar(v.id, "value", e.target.value)}
                         onPaste={(e) => handleEnvPaste(v.id, e)}
                         className={`${inputClass} flex-1 font-family-mono text-[13px]`}
                       />
@@ -2745,19 +2305,11 @@ function Phase3Configure({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <HardDrive className="size-4 text-dash-text-faded" />
-                <span className="text-sm font-medium text-dash-text-strong">
-                  Persistent Storage
-                </span>
+                <span className="text-sm font-medium text-dash-text-strong">Persistent Storage</span>
               </div>
-              <ToggleSwitch
-                checked={diskEnabled}
-                onChange={setDiskEnabled}
-                size="sm"
-              />
+              <ToggleSwitch checked={diskEnabled} onChange={setDiskEnabled} size="sm" />
             </div>
-            <p className="mt-1 ml-6 text-xs text-dash-text-faded">
-              Attach a volume that persists across restarts and deployments.
-            </p>
+            <p className="mt-1 ml-6 text-xs text-dash-text-faded">Attach a volume that persists across restarts and deployments.</p>
 
             <AnimatePresence>
               {diskEnabled && (
@@ -2775,9 +2327,7 @@ function Phase3Configure({
                     <div className="grid grid-cols-1 gap-3 px-px pb-px sm:grid-cols-2">
                       <DiskSizeSelect value={diskSize} onChange={setDiskSize} />
                       <div>
-                        <label className="mb-1.5 block text-xs text-dash-text-faded">
-                          Mount path
-                        </label>
+                        <label className="mb-1.5 block text-xs text-dash-text-faded">Mount path</label>
                         <input
                           type="text"
                           value={mountPath}
@@ -2790,11 +2340,8 @@ function Phase3Configure({
 
                     <div className="rounded-[4px] bg-[#f59e0b]/[0.06] px-3 py-2.5 dark:bg-[#f59e0b]/[0.08]">
                       <p className="text-xs leading-relaxed text-dash-text-body">
-                        <span className="font-medium text-dash-text-strong">
-                          $0.25/GB per month.
-                        </span>{" "}
-                        Data persists across container restarts and deployments.
-                        The volume mounts at{" "}
+                        <span className="font-medium text-dash-text-strong">$0.25/GB per month.</span> Data persists across container
+                        restarts and deployments. The volume mounts at{" "}
                         <code className="rounded bg-dash-bg-elevated px-1 py-0.5 font-family-mono text-[11px] text-dash-text-strong">
                           {mountPath || "/mnt/data"}
                         </code>{" "}
@@ -2817,14 +2364,7 @@ function Phase3Configure({
             className="sm:min-w-[190px]"
             loading={saving}
             loadingLabel="Saving..."
-            disabled={
-              deploying ||
-              saving ||
-              !projectName.trim() ||
-              !region ||
-              limitReached ||
-              hasProjectNameError
-            }
+            disabled={deploying || saving || !projectName.trim() || !region || limitReached || hasProjectNameError}
             onClick={() => {
               if (limitReached) {
                 setShowUpgradeModal(true);
@@ -2846,14 +2386,7 @@ function Phase3Configure({
             fullWidth
             loading={deploying}
             loadingLabel="Deploying..."
-            disabled={
-              deploying ||
-              saving ||
-              !projectName.trim() ||
-              !region ||
-              limitReached ||
-              hasProjectNameError
-            }
+            disabled={deploying || saving || !projectName.trim() || !region || limitReached || hasProjectNameError}
             onClick={() => {
               if (limitReached) {
                 setShowUpgradeModal(true);
@@ -2883,9 +2416,7 @@ function Phase3Configure({
         <RootDirectoryDrawer
           open={rootDirDrawerOpen}
           onOpenChange={setRootDirDrawerOpen}
-          provider={
-            (sourceType as "github" | "gitlab" | "bitbucket") ?? "github"
-          }
+          provider={(sourceType as "github" | "gitlab" | "bitbucket") ?? "github"}
           repoName={repoBrowser?.repoName}
           installationId={repoBrowser?.installationId}
           branch={branch}
@@ -2894,29 +2425,13 @@ function Phase3Configure({
             setRootDir(path || "./");
 
             if (detectedFrameworkFromPath?.slug) {
-              const matched = frameworkOptions.find(
-                (f) => f.id === detectedFrameworkFromPath.slug,
-              );
+              const matched = frameworkOptions.find((f) => f.id === detectedFrameworkFromPath.slug);
               if (matched) {
                 setFramework(matched.id);
-                setBuildCmd(
-                  detectedFrameworkFromPath.buildCommand ??
-                    matched.buildCmd ??
-                    "",
-                );
-                setStartCmd(
-                  detectedFrameworkFromPath.startCommand ?? matched.start ?? "",
-                );
-                setOutputDir(
-                  detectedFrameworkFromPath.outputDirectory ??
-                    matched.output ??
-                    "",
-                );
-                setInstallCmd(
-                  detectedFrameworkFromPath.installCommand ??
-                    matched.install ??
-                    "",
-                );
+                setBuildCmd(detectedFrameworkFromPath.buildCommand ?? matched.buildCmd ?? "");
+                setStartCmd(detectedFrameworkFromPath.startCommand ?? matched.start ?? "");
+                setOutputDir(detectedFrameworkFromPath.outputDirectory ?? matched.output ?? "");
+                setInstallCmd(detectedFrameworkFromPath.installCommand ?? matched.install ?? "");
               }
             }
           }}
@@ -2951,9 +2466,7 @@ function NewProjectPage() {
     return raw;
   }, [searchStr]);
 
-  const [freshProjectCount, setFreshProjectCount] = useState<number | null>(
-    null,
-  );
+  const [freshProjectCount, setFreshProjectCount] = useState<number | null>(null);
   const getOverview = useServerFn(getHomeOverviewServerFn as any) as (args: {
     data: { workspace?: string };
   }) => Promise<{ total: { project: number } }>;
@@ -2970,27 +2483,17 @@ function NewProjectPage() {
     };
   }, [workspace, getOverview]);
 
-  const currentProjectCount =
-    freshProjectCount ??
-    onboardingProjects?.total ??
-    onboardingProjects?.items?.length ??
-    0;
+  const currentProjectCount = freshProjectCount ?? onboardingProjects?.total ?? onboardingProjects?.items?.length ?? 0;
 
-  const listFrameworks = useServerFn(
-    listFrameworksServerFn as any,
-  ) as () => Promise<FrameworkOption[]>;
+  const listFrameworks = useServerFn(listFrameworksServerFn as any) as () => Promise<FrameworkOption[]>;
   const listRegions = useServerFn(listRegionsServerFn as any) as (args: {
     data?: { type?: "web" | "database"; enabled?: boolean; workspace?: string };
   }) => Promise<Region[]>;
-  const listGithubAccounts = useServerFn(
-    listGithubAccountsServerFn as any,
-  ) as () => Promise<GithubAccount[] | { accounts?: GithubAccount[] }>;
-  const getGithubInstallUrl = useServerFn(
-    getGithubInstallUrlServerFn as any,
-  ) as () => Promise<{ url: string }>;
-  const listGithubRepos = useServerFn(
-    listGithubReposServerFn as any,
-  ) as (args: {
+  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<
+    GithubAccount[] | { accounts?: GithubAccount[] }
+  >;
+  const getGithubInstallUrl = useServerFn(getGithubInstallUrlServerFn as any) as () => Promise<{ url: string }>;
+  const listGithubRepos = useServerFn(listGithubReposServerFn as any) as (args: {
     data?: {
       q?: string;
       page?: number;
@@ -3001,15 +2504,13 @@ function NewProjectPage() {
   const getGithubRepo = useServerFn(getGithubRepoServerFn as any) as (args: {
     data: { repoName: string; installationId?: number | string };
   }) => Promise<RepositoryMetadata>;
-  const listGitlabAccounts = useServerFn(
-    listGitlabAccountsServerFn as any,
-  ) as () => Promise<GithubAccount[] | { accounts?: GithubAccount[] }>;
-  const getGitlabConnectUrl = useServerFn(
-    getGitlabConnectUrlServerFn as any,
-  ) as (args: { data?: { device?: string } }) => Promise<{ url: string }>;
-  const listGitlabRepos = useServerFn(
-    listGitlabReposServerFn as any,
-  ) as (args: {
+  const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn as any) as () => Promise<
+    GithubAccount[] | { accounts?: GithubAccount[] }
+  >;
+  const getGitlabConnectUrl = useServerFn(getGitlabConnectUrlServerFn as any) as (args: {
+    data?: { device?: string };
+  }) => Promise<{ url: string }>;
+  const listGitlabRepos = useServerFn(listGitlabReposServerFn as any) as (args: {
     data?: {
       q?: string;
       page?: number;
@@ -3020,15 +2521,13 @@ function NewProjectPage() {
   const getGitlabRepo = useServerFn(getGitlabRepoServerFn as any) as (args: {
     data: { repoName: string; installationId?: number | string };
   }) => Promise<RepositoryMetadata>;
-  const listBitbucketAccounts = useServerFn(
-    listBitbucketAccountsServerFn as any,
-  ) as () => Promise<GithubAccount[] | { accounts?: GithubAccount[] }>;
-  const getBitbucketConnectUrl = useServerFn(
-    getBitbucketConnectUrlServerFn as any,
-  ) as (args: { data?: { device?: string } }) => Promise<{ url: string }>;
-  const listBitbucketRepos = useServerFn(
-    listBitbucketReposServerFn as any,
-  ) as (args: {
+  const listBitbucketAccounts = useServerFn(listBitbucketAccountsServerFn as any) as () => Promise<
+    GithubAccount[] | { accounts?: GithubAccount[] }
+  >;
+  const getBitbucketConnectUrl = useServerFn(getBitbucketConnectUrlServerFn as any) as (args: {
+    data?: { device?: string };
+  }) => Promise<{ url: string }>;
+  const listBitbucketRepos = useServerFn(listBitbucketReposServerFn as any) as (args: {
     data?: {
       q?: string;
       page?: number;
@@ -3036,20 +2535,12 @@ function NewProjectPage() {
       installationId?: number | string;
     };
   }) => Promise<{ repositories: GithubRepoListItem[] }>;
-  const getBitbucketRepo = useServerFn(
-    getBitbucketRepoServerFn as any,
-  ) as (args: {
+  const getBitbucketRepo = useServerFn(getBitbucketRepoServerFn as any) as (args: {
     data: { repoName: string; installationId?: number | string };
   }) => Promise<RepositoryMetadata>;
-  const createProject = useServerFn(createProjectServerFn as any) as (args: {
-    data: Record<string, unknown>;
-  }) => Promise<Project>;
-  const listAvailableDatabases = useServerFn(
-    listAvailableDatabasesServerFn as any,
-  ) as () => Promise<DatabaseEngineOption[]>;
-  const createDatabaseProject = useServerFn(
-    createDatabaseProjectServerFn as any,
-  ) as (args: {
+  const createProject = useServerFn(createProjectServerFn as any) as (args: { data: Record<string, unknown> }) => Promise<Project>;
+  const listAvailableDatabases = useServerFn(listAvailableDatabasesServerFn as any) as () => Promise<DatabaseEngineOption[]>;
+  const createDatabaseProject = useServerFn(createDatabaseProjectServerFn as any) as (args: {
     data: {
       workspace?: string;
       name: string;
@@ -3064,9 +2555,7 @@ function NewProjectPage() {
       environments?: Array<{ name: string; value: string }>;
     };
   }) => Promise<DatabaseProvisionResult>;
-  const validateDockerImage = useServerFn(
-    validateDockerImageServerFn as any,
-  ) as (args: {
+  const validateDockerImage = useServerFn(validateDockerImageServerFn as any) as (args: {
     data: {
       imageUri: string;
       credentials?: {
@@ -3079,9 +2568,7 @@ function NewProjectPage() {
   const [phase, setPhase] = useState<Phase>(1);
   const [sourceType, setSourceType] = useState<SourceType | null>(null);
   const [sourceName, setSourceName] = useState("");
-  const [connectedProviders, setConnectedProviders] = useState<Set<string>>(
-    new Set(),
-  );
+  const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
   const [frameworkOptions, setFrameworkOptions] = useState<
     Array<{
       id: string;
@@ -3105,15 +2592,9 @@ function NewProjectPage() {
       install: f.install,
     })),
   );
-  const [regionOptions, setRegionOptions] = useState<RegionOption[]>(() =>
-    regions.map((r) => ({ id: r, label: r })),
-  );
-  const [databaseRegionOptions, setDatabaseRegionOptions] = useState<
-    RegionOption[]
-  >(() => regions.map((r) => ({ id: r, label: r })));
-  const [databaseEngineOptions, setDatabaseEngineOptions] = useState<
-    DatabaseEngineOption[]
-  >(() =>
+  const [regionOptions, setRegionOptions] = useState<RegionOption[]>(() => regions.map((r) => ({ id: r, label: r })));
+  const [databaseRegionOptions, setDatabaseRegionOptions] = useState<RegionOption[]>(() => regions.map((r) => ({ id: r, label: r })));
+  const [databaseEngineOptions, setDatabaseEngineOptions] = useState<DatabaseEngineOption[]>(() =>
     fallbackDbEngines.map((engine) => ({
       id: engine.id,
       name: engine.name,
@@ -3196,12 +2677,9 @@ function NewProjectPage() {
     bitbucket,
   };
 
-  const [selectedDockerSource, setSelectedDockerSource] =
-    useState<DockerSourceSelection | null>(null);
+  const [selectedDockerSource, setSelectedDockerSource] = useState<DockerSourceSelection | null>(null);
   const [validatingDockerImage, setValidatingDockerImage] = useState(false);
-  const [dockerImageValidationError, setDockerImageValidationError] = useState<
-    string | null
-  >(null);
+  const [dockerImageValidationError, setDockerImageValidationError] = useState<string | null>(null);
   const [deployingProject, setDeployingProject] = useState(false);
   const [savingProject, setSavingProject] = useState(false);
   const [provisioningDatabase, setProvisioningDatabase] = useState(false);
@@ -3317,9 +2795,7 @@ function NewProjectPage() {
       });
 
       if (!isValid) {
-        setDockerImageValidationError(
-          "Docker image is not valid. Check the image name/tag and registry credentials.",
-        );
+        setDockerImageValidationError("Docker image is not valid. Check the image name/tag and registry credentials.");
         return;
       }
 
@@ -3331,10 +2807,7 @@ function NewProjectPage() {
       setDockerImageValidationError(null);
       handleSourceSelect(imageUri);
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to validate Docker image";
+      const message = error instanceof Error ? error.message : "Failed to validate Docker image";
       const normalizedMessage = message.trim().toLowerCase();
       const isInvalidImageError =
         normalizedMessage.includes("invalid docker image") ||
@@ -3342,9 +2815,7 @@ function NewProjectPage() {
         normalizedMessage.includes("invalid image");
 
       if (isInvalidImageError) {
-        setDockerImageValidationError(
-          "Docker image is not valid. Check the image name/tag and registry credentials.",
-        );
+        setDockerImageValidationError("Docker image is not valid. Check the image name/tag and registry credentials.");
       } else {
         toast.error(message);
       }
@@ -3379,10 +2850,7 @@ function NewProjectPage() {
     }
   }
 
-  async function handleCreateProject(
-    input: Phase3DeployInput,
-    options: { deploy: boolean },
-  ): Promise<boolean> {
+  async function handleCreateProject(input: Phase3DeployInput, options: { deploy: boolean }): Promise<boolean> {
     const { deploy } = options;
     const normalizedName = slugifyProjectName(input.name) || input.name.trim();
     if (!normalizedName) {
@@ -3398,11 +2866,7 @@ function NewProjectPage() {
 
     let payload: Record<string, unknown>;
 
-    if (
-      sourceType === SourceType.Github ||
-      sourceType === SourceType.Gitlab ||
-      sourceType === SourceType.Bitbucket
-    ) {
+    if (sourceType === SourceType.Github || sourceType === SourceType.Gitlab || sourceType === SourceType.Bitbucket) {
       const providerState = gitProviders_[sourceType];
       const selectedRepo = providerState?.selectedRepo ?? null;
       const gitTag = sourceType.toUpperCase();
@@ -3412,20 +2876,14 @@ function NewProjectPage() {
         return false;
       }
 
-      const branch =
-        input.branch?.trim() ||
-        selectedRepo.metadata.branches?.[0] ||
-        selectedRepo.repo.branch ||
-        "main";
+      const branch = input.branch?.trim() || selectedRepo.metadata.branches?.[0] || selectedRepo.repo.branch || "main";
 
       payload = {
         workspace,
         name: normalizedName,
         git: gitTag,
         branch,
-        installationId:
-          selectedRepo.metadata.installationId ??
-          selectedRepo.repo.installationId,
+        installationId: selectedRepo.metadata.installationId ?? selectedRepo.repo.installationId,
         healthCheckPath: "",
         preStartCommand: "",
         framework: input.framework,
@@ -3533,8 +2991,7 @@ function NewProjectPage() {
       }
       const created = await createProject({ data: payload });
       const targetProjectId = created.slug || created.name || normalizedName;
-      const createdLogId =
-        typeof created.logId === "string" ? created.logId : undefined;
+      const createdLogId = typeof created.logId === "string" ? created.logId : undefined;
 
       if (deploy && typeof window !== "undefined") {
         try {
@@ -3555,9 +3012,7 @@ function NewProjectPage() {
       if (deploy) {
         toast.success("Your project is deploying!");
       } else {
-        toast.success(
-          "Project saved. You can continue configuring it anytime.",
-        );
+        toast.success("Project saved. You can continue configuring it anytime.");
       }
       await router.invalidate();
       navigate({
@@ -3570,13 +3025,7 @@ function NewProjectPage() {
       });
       return true;
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : deploy
-            ? "Failed to deploy project"
-            : "Failed to save project",
-      );
+      toast.error(error instanceof Error ? error.message : deploy ? "Failed to deploy project" : "Failed to save project");
       if (deploy) {
         setDeployingProject(false);
       } else {
@@ -3586,15 +3035,11 @@ function NewProjectPage() {
     }
   }
 
-  async function handleDeployProject(
-    input: Phase3DeployInput,
-  ): Promise<boolean> {
+  async function handleDeployProject(input: Phase3DeployInput): Promise<boolean> {
     return handleCreateProject(input, { deploy: true });
   }
 
-  async function handleSaveProjectForLater(
-    input: Phase3DeployInput,
-  ): Promise<boolean> {
+  async function handleSaveProjectForLater(input: Phase3DeployInput): Promise<boolean> {
     return handleCreateProject(input, { deploy: false });
   }
 
@@ -3642,17 +3087,12 @@ function NewProjectPage() {
         }) as any,
       });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to provision database",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to provision database");
       setProvisioningDatabase(false);
     }
   }
 
-  const backToProjectsHref = useMemo(
-    () => withWorkspaceQuery({ pathname: "/projects", searchStr }),
-    [searchStr],
-  );
+  const backToProjectsHref = useMemo(() => withWorkspaceQuery({ pathname: "/projects", searchStr }), [searchStr]);
 
   if (!canWrite) {
     return <AccessDenied {...accessDeniedForbidden} />;
@@ -3670,12 +3110,8 @@ function NewProjectPage() {
             <ArrowLeft className="size-4" />
             Back to projects
           </Link>
-          <h1 className="text-xl font-medium text-dash-text-strong">
-            New Project
-          </h1>
-          <p className="mt-1 text-sm text-dash-text-faded">
-            Import a repository, deploy an image, or provision a database.
-          </p>
+          <h1 className="text-xl font-medium text-dash-text-strong">New Project</h1>
+          <p className="mt-1 text-sm text-dash-text-faded">Import a repository, deploy an image, or provision a database.</p>
         </div>
 
         {/* Phase 1 */}
@@ -3688,8 +3124,7 @@ function NewProjectPage() {
                   const { Icon } = provider;
                   return <Icon className="size-3" />;
                 }
-                if (sourceType === SourceType.Database)
-                  return <Database className="size-3" />;
+                if (sourceType === SourceType.Database) return <Database className="size-3" />;
                 return <Cube className="size-3" />;
               })()}
               label={(() => {
@@ -3704,10 +3139,7 @@ function NewProjectPage() {
         ) : (
           phase === 1 && (
             <AnimatePresence mode="wait">
-              <Phase1SourceType
-                key="phase1"
-                onSelect={handleSourceTypeSelect}
-              />
+              <Phase1SourceType key="phase1" onSelect={handleSourceTypeSelect} />
             </AnimatePresence>
           )
         )}
@@ -3716,25 +3148,14 @@ function NewProjectPage() {
         {phase > 2 && sourceName ? (
           <div className="mb-6">
             <SummaryChip
-              icon={
-                sourceType === SourceType.Database ? (
-                  <Database className="size-3" />
-                ) : (
-                  <Check className="size-3" />
-                )
-              }
+              icon={sourceType === SourceType.Database ? <Database className="size-3" /> : <Check className="size-3" />}
               label={
                 sourceType === SourceType.Database
-                  ? (databaseEngineOptions.find((e) => e.id === sourceName)
-                      ?.name ?? sourceName)
+                  ? (databaseEngineOptions.find((e) => e.id === sourceName)?.name ?? sourceName)
                   : sourceName
               }
               onChangeClick={() => handleChangePhase(2)}
-              externalUrl={
-                sourceType && GIT_BASE_URLS[sourceType]
-                  ? `${GIT_BASE_URLS[sourceType]}/${sourceName}`
-                  : undefined
-              }
+              externalUrl={sourceType && GIT_BASE_URLS[sourceType] ? `${GIT_BASE_URLS[sourceType]}/${sourceName}` : undefined}
             />
           </div>
         ) : (
@@ -3753,9 +3174,7 @@ function NewProjectPage() {
                       submitting={provisioningDatabase}
                       projectCount={currentProjectCount}
                       onSelect={setSourceName}
-                      onProvision={(payload) =>
-                        handleProvisionDatabase(payload)
-                      }
+                      onProvision={(payload) => handleProvisionDatabase(payload)}
                     />
                   );
                 }
@@ -3769,9 +3188,7 @@ function NewProjectPage() {
                       onConnected={ps.handleConnect}
                       connecting={ps.connectOpening}
                       polling={ps.connectPolling}
-                      checkingConnection={
-                        !ps.accountsChecked || ps.accountsLoading
-                      }
+                      checkingConnection={!ps.accountsChecked || ps.accountsLoading}
                       errorMessage={ps.connectError}
                     />
                   );
@@ -3818,9 +3235,7 @@ function NewProjectPage() {
           <AnimatePresence mode="wait">
             {sourceType === SourceType.Database
               ? (() => {
-                  const selectedEngine = databaseEngineOptions.find(
-                    (engine) => engine.id === sourceName,
-                  );
+                  const selectedEngine = databaseEngineOptions.find((engine) => engine.id === sourceName);
                   if (!selectedEngine) {
                     return (
                       <motion.div
@@ -3831,8 +3246,7 @@ function NewProjectPage() {
                         transition={{ duration: 0.25, ease }}
                         className="rounded-[4px] border-[0.5px] border-dash-border p-4 text-sm text-dash-text-faded"
                       >
-                        Unable to load the selected database engine. Please go
-                        back and choose an engine again.
+                        Unable to load the selected database engine. Please go back and choose an engine again.
                       </motion.div>
                     );
                   }
@@ -3854,9 +3268,7 @@ function NewProjectPage() {
                   );
                 })()
               : (() => {
-                  const activeRepo = sourceType
-                    ? (gitProviders_[sourceType]?.selectedRepo ?? null)
-                    : null;
+                  const activeRepo = sourceType ? (gitProviders_[sourceType]?.selectedRepo ?? null) : null;
                   return (
                     <Phase3Configure
                       key="phase3"
@@ -3866,12 +3278,8 @@ function NewProjectPage() {
                       repoBrowser={
                         activeRepo
                           ? {
-                              repoName:
-                                activeRepo.metadata.fullName ||
-                                activeRepo.repo.fullName,
-                              installationId:
-                                activeRepo.metadata.installationId ??
-                                activeRepo.repo.installationId,
+                              repoName: activeRepo.metadata.fullName || activeRepo.repo.fullName,
+                              installationId: activeRepo.metadata.installationId ?? activeRepo.repo.installationId,
                             }
                           : undefined
                       }

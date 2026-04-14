@@ -69,12 +69,7 @@ export function RangeSlider({
   }
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3",
-        disabled && "pointer-events-none opacity-40",
-      )}
-    >
+    <div className={cn("flex items-center gap-3", disabled && "pointer-events-none opacity-40")}>
       <Slider.Root
         className="relative flex h-5 flex-1 touch-none select-none items-center"
         value={[visual]}

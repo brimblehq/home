@@ -31,7 +31,12 @@ import type { FrameworkOption } from "@/backend/frameworks";
 import { listFrameworksServerFn } from "@/server/frameworks/actions";
 import { formatRelativeTime } from "@/utils/dashboard";
 import { resolveEnvironmentId } from "@/utils/environment-selection";
-import { parsePositivePageSearchValue, parseTextSearchValue, parseWorkspaceSearchValue, workspacePageLoaderDeps } from "@/utils/workspace-route-search";
+import {
+  parsePositivePageSearchValue,
+  parseTextSearchValue,
+  parseWorkspaceSearchValue,
+  workspacePageLoaderDeps,
+} from "@/utils/workspace-route-search";
 import { useTagsStore } from "@/hooks/use-tags-store";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 
@@ -49,10 +54,7 @@ const deleteEnvironmentFormSchema = Yup.object({
   moveTo: Yup.string().trim().required("Move target is required"),
 });
 
-function mapBackendProject(
-  project: BackendProject,
-  frameworkLogoMap?: Map<string, string>,
-): Project {
+function mapBackendProject(project: BackendProject, frameworkLogoMap?: Map<string, string>): Project {
   const framework = project.framework?.toLowerCase();
   return {
     name: project.name,
@@ -139,18 +141,13 @@ export const Route = createFileRoute("/projects/")({
   }),
   loader: async ({ deps }) => {
     const [environments, persistedEnvironmentId, frameworks] = await Promise.all([
-      (listProjectEnvironmentsServerFn as unknown as (input: {
-        data?: { workspace?: string };
-      }) => Promise<ProjectEnvironment[]>)({
+      (listProjectEnvironmentsServerFn as unknown as (input: { data?: { workspace?: string } }) => Promise<ProjectEnvironment[]>)({
         data: { workspace: deps.workspace },
       }),
-      (getActiveEnvironmentPreferenceServerFn as unknown as (input: {
-        data?: { workspace?: string };
-      }) => Promise<string | null>)({
+      (getActiveEnvironmentPreferenceServerFn as unknown as (input: { data?: { workspace?: string } }) => Promise<string | null>)({
         data: { workspace: deps.workspace },
       }).catch(() => null),
-      (listFrameworksServerFn as unknown as () => Promise<FrameworkOption[]>)()
-        .catch(() => [] as FrameworkOption[]),
+      (listFrameworksServerFn as unknown as () => Promise<FrameworkOption[]>)().catch(() => [] as FrameworkOption[]),
     ]);
     const resolvedEnvironmentId = resolveEnvironmentId({
       requestedEnvironmentId: deps.environmentId,
@@ -158,16 +155,18 @@ export const Route = createFileRoute("/projects/")({
       environments,
     });
 
-    const result = await (listProjectsPageServerFn as unknown as (input: {
-      data: {
-        page?: number;
-        workspace?: string;
-        q?: string;
-        serviceType?: string;
-        status?: string;
-        environmentId?: string;
-      };
-    }) => Promise<PaginatedProjectsResponse>)({
+    const result = await (
+      listProjectsPageServerFn as unknown as (input: {
+        data: {
+          page?: number;
+          workspace?: string;
+          q?: string;
+          serviceType?: string;
+          status?: string;
+          environmentId?: string;
+        };
+      }) => Promise<PaginatedProjectsResponse>
+    )({
       data: {
         page: deps.page,
         workspace: deps.workspace,
@@ -221,14 +220,10 @@ function EnvironmentManagerModal({
   canWrite?: boolean;
 }) {
   const router = useRouter();
-  const createEnvironment = useServerFn(
-    createProjectEnvironmentServerFn as any,
-  ) as (args: {
+  const createEnvironment = useServerFn(createProjectEnvironmentServerFn as any) as (args: {
     data: { name: string; workspace?: string; inheritFrom?: string };
   }) => Promise<ProjectEnvironment>;
-  const updateEnvironment = useServerFn(
-    updateProjectEnvironmentServerFn as any,
-  ) as (args: {
+  const updateEnvironment = useServerFn(updateProjectEnvironmentServerFn as any) as (args: {
     data: {
       environmentId: string;
       workspace?: string;
@@ -236,20 +231,14 @@ function EnvironmentManagerModal({
       inheritFrom?: string | null;
     };
   }) => Promise<ProjectEnvironment>;
-  const deleteEnvironment = useServerFn(
-    deleteProjectEnvironmentServerFn as any,
-  ) as (args: {
+  const deleteEnvironment = useServerFn(deleteProjectEnvironmentServerFn as any) as (args: {
     data: { environmentId: string; moveTo: string; workspace?: string };
   }) => Promise<{ success: boolean }>;
-  const getEnvironmentDetails = useServerFn(
-    getProjectEnvironmentDetailsServerFn as any,
-  ) as (args: {
+  const getEnvironmentDetails = useServerFn(getProjectEnvironmentDetailsServerFn as any) as (args: {
     data: { environmentId: string; workspace?: string };
   }) => Promise<ProjectEnvironment>;
 
-  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string | null>(
-    null,
-  );
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [envProjectCounts, setEnvProjectCounts] = useState<Record<string, number>>({});
@@ -273,47 +262,39 @@ function EnvironmentManagerModal({
     if (!open || environments.length === 0) return;
     let cancelled = false;
 
-    void Promise.allSettled(
-      environments.map((env) =>
-        getEnvironmentDetails({ data: { environmentId: env._id, workspace } }),
-      ),
-    ).then((results) => {
-      if (cancelled) return;
-      const counts: Record<string, number> = {};
-      results.forEach((result, index) => {
-        if (result.status === "fulfilled" && result.value?.projectCount != null) {
-          counts[environments[index]._id] = result.value.projectCount;
-        }
-      });
-      setEnvProjectCounts(counts);
-    });
+    void Promise.allSettled(environments.map((env) => getEnvironmentDetails({ data: { environmentId: env._id, workspace } }))).then(
+      (results) => {
+        if (cancelled) return;
+        const counts: Record<string, number> = {};
+        results.forEach((result, index) => {
+          if (result.status === "fulfilled" && result.value?.projectCount != null) {
+            counts[environments[index]._id] = result.value.projectCount;
+          }
+        });
+        setEnvProjectCounts(counts);
+      },
+    );
 
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, environments.length]);
 
-  const selectedEnvironment =
-    environments.find((env) => env._id === selectedEnvironmentId) ?? null;
+  const selectedEnvironment = environments.find((env) => env._id === selectedEnvironmentId) ?? null;
 
   const formInitialValues = {
     name: selectedEnvironment?.name ?? "",
     inheritFrom: selectedEnvironment?.inherit_from ?? "",
   };
 
-  const inheritOptions = environments.filter(
-    (env) => env._id !== selectedEnvironment?._id,
-  );
+  const inheritOptions = environments.filter((env) => env._id !== selectedEnvironment?._id);
 
-  const moveOptions = environments.filter(
-    (env) => env._id !== selectedEnvironment?._id,
-  );
+  const moveOptions = environments.filter((env) => env._id !== selectedEnvironment?._id);
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} width={860}>
-      <ModalHeader
-        title="Environment Manager"
-        description="Create, edit, and delete project environments with validation checks."
-      />
+      <ModalHeader title="Environment Manager" description="Create, edit, and delete project environments with validation checks." />
       <div className="grid min-h-[460px] grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)]">
         <div className="border-b border-dash-border p-4 md:border-b-0 md:border-r">
           {canWrite !== false && (
@@ -338,13 +319,9 @@ function EnvironmentManagerModal({
                 }`}
               >
                 <span>{environment.name}</span>
-                {environment.isDefault ? (
-                  <span className="ml-1 text-xs text-dash-text-faded">(default)</span>
-                ) : null}
+                {environment.isDefault ? <span className="ml-1 text-xs text-dash-text-faded">(default)</span> : null}
                 {envProjectCounts[environment._id] != null && (
-                  <span className="ml-auto text-xs text-dash-text-faded">
-                    {envProjectCounts[environment._id]}
-                  </span>
+                  <span className="ml-auto text-xs text-dash-text-faded">{envProjectCounts[environment._id]}</span>
                 )}
               </button>
             ))}
@@ -374,11 +351,7 @@ function EnvironmentManagerModal({
                     },
                   });
 
-                  onEnvironmentListChange(
-                    environments.map((env) =>
-                      env._id === selectedEnvironment._id ? nextEnvironment : env,
-                    ),
-                  );
+                  onEnvironmentListChange(environments.map((env) => (env._id === selectedEnvironment._id ? nextEnvironment : env)));
                   toast.success("Environment updated");
                   router.invalidate();
                 } else {
@@ -396,11 +369,7 @@ function EnvironmentManagerModal({
                   router.invalidate();
                 }
               } catch (error) {
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : "Failed to save environment",
-                );
+                toast.error(error instanceof Error ? error.message : "Failed to save environment");
               } finally {
                 setSaving(false);
               }
@@ -409,9 +378,7 @@ function EnvironmentManagerModal({
             {({ values, errors, touched, handleChange, handleBlur, submitForm }) => (
               <FormikForm className="space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm text-dash-text-body">
-                    Environment name
-                  </label>
+                  <label className="mb-1 block text-sm text-dash-text-body">Environment name</label>
                   <input
                     name="name"
                     value={values.name}
@@ -420,15 +387,11 @@ function EnvironmentManagerModal({
                     placeholder="e.g. Staging"
                     className={`w-full input-base px-3 py-2.5 text-sm text-dash-text-strong placeholder:text-[#9ca3af] ${touched.name && errors.name ? "border-[#f05252] focus:border-[#f05252] focus:ring-[#f05252]/20" : "input-focus"}`}
                   />
-                  {touched.name && errors.name ? (
-                    <p className="mt-1 text-xs text-[#f05252]">{errors.name}</p>
-                  ) : null}
+                  {touched.name && errors.name ? <p className="mt-1 text-xs text-[#f05252]">{errors.name}</p> : null}
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm text-dash-text-body">
-                    Inherit from
-                  </label>
+                  <label className="mb-1 block text-sm text-dash-text-body">Inherit from</label>
                   <select
                     name="inheritFrom"
                     value={values.inheritFrom}
@@ -449,8 +412,8 @@ function EnvironmentManagerModal({
                       const grandparent = environments.find((e) => e._id === parent.inherit_from);
                       return (
                         <p className="mt-1 text-xs text-[#f59e0b]">
-                          {parent.name} already inherits from {grandparent?.name ?? "another environment"}.
-                          Only one level of inheritance is supported.
+                          {parent.name} already inherits from {grandparent?.name ?? "another environment"}. Only one level of inheritance is
+                          supported.
                         </p>
                       );
                     }
@@ -460,12 +423,7 @@ function EnvironmentManagerModal({
 
                 {canWrite !== false && (
                   <div className="flex items-center gap-2">
-                    <GlossyButton
-                      type="button"
-                      onClick={() => void submitForm()}
-                      loading={saving}
-                      loadingLabel="Saving..."
-                    >
+                    <GlossyButton type="button" onClick={() => void submitForm()} loading={saving} loadingLabel="Saving...">
                       {selectedEnvironment ? "Update Environment" : "Create Environment"}
                     </GlossyButton>
                   </div>
@@ -476,12 +434,8 @@ function EnvironmentManagerModal({
 
           {canWrite !== false && selectedEnvironment && !selectedEnvironment.isDefault ? (
             <div className="mt-8 border-t border-dash-border-soft pt-5">
-              <h4 className="mb-2 text-sm font-medium text-dash-text-strong">
-                Delete Environment
-              </h4>
-              <p className="mb-3 text-xs text-dash-text-faded">
-                Projects in this environment will be moved before deletion.
-              </p>
+              <h4 className="mb-2 text-sm font-medium text-dash-text-strong">Delete Environment</h4>
+              <p className="mb-3 text-xs text-dash-text-faded">Projects in this environment will be moved before deletion.</p>
 
               <Formik
                 initialValues={{ moveTo: moveOptions[0]?._id ?? "" }}
@@ -498,9 +452,7 @@ function EnvironmentManagerModal({
                       },
                     });
 
-                    const nextEnvironments = environments.filter(
-                      (env) => env._id !== selectedEnvironment._id,
-                    );
+                    const nextEnvironments = environments.filter((env) => env._id !== selectedEnvironment._id);
                     onEnvironmentListChange(nextEnvironments);
 
                     if (activeEnvironmentId === selectedEnvironment._id) {
@@ -511,11 +463,7 @@ function EnvironmentManagerModal({
                     toast.success("Environment deleted");
                     router.invalidate();
                   } catch (error) {
-                    toast.error(
-                      error instanceof Error
-                        ? error.message
-                        : "Failed to delete environment",
-                    );
+                    toast.error(error instanceof Error ? error.message : "Failed to delete environment");
                   } finally {
                     setDeleting(false);
                   }
@@ -524,9 +472,7 @@ function EnvironmentManagerModal({
                 {({ values, errors, touched, handleChange, handleBlur, submitForm }) => (
                   <FormikForm className="space-y-3">
                     <div>
-                      <label className="mb-1 block text-sm text-dash-text-body">
-                        Move projects to
-                      </label>
+                      <label className="mb-1 block text-sm text-dash-text-body">Move projects to</label>
                       <select
                         name="moveTo"
                         value={values.moveTo}
@@ -541,9 +487,7 @@ function EnvironmentManagerModal({
                           </option>
                         ))}
                       </select>
-                      {touched.moveTo && errors.moveTo ? (
-                        <p className="mt-1 text-xs text-[#f05252]">{errors.moveTo}</p>
-                      ) : null}
+                      {touched.moveTo && errors.moveTo ? <p className="mt-1 text-xs text-[#f05252]">{errors.moveTo}</p> : null}
                     </div>
 
                     <GlossyButton
@@ -619,12 +563,9 @@ function ProjectsPage() {
   const [isStatusFilterChanging, setIsStatusFilterChanging] = useState(false);
   const activeProjectType = search.type ?? "all";
   const activeStatus = search.status ?? "all";
-  const activeEnvironmentId =
-    search.environmentId ?? loaderData.resolvedEnvironmentId ?? "all";
+  const activeEnvironmentId = search.environmentId ?? loaderData.resolvedEnvironmentId ?? "all";
   const effectiveEnvironmentId =
-    search.environmentId && search.environmentId !== "all"
-      ? search.environmentId
-      : loaderData.resolvedEnvironmentId;
+    search.environmentId && search.environmentId !== "all" ? search.environmentId : loaderData.resolvedEnvironmentId;
   const requestedWorkspace = search.workspace?.trim().toLowerCase() || undefined;
   const loadedWorkspace = loaderData.workspace?.trim().toLowerCase() || undefined;
   const isWorkspaceSwitching = requestedWorkspace !== loadedWorkspace;
@@ -632,9 +573,7 @@ function ProjectsPage() {
   const pendingPage = useRouterState({
     select: (s) => {
       const pending = s.pendingLocation ?? s.location;
-      return parsePositivePageSearchValue(
-        (pending.search as Record<string, unknown>)?.page,
-      ) ?? 1;
+      return parsePositivePageSearchValue((pending.search as Record<string, unknown>)?.page) ?? 1;
     },
   });
 
@@ -734,16 +673,18 @@ function ProjectsPage() {
 
     void (async () => {
       try {
-        const result = await (listProjectsPageServerFn as unknown as (input: {
-          data: {
-            page?: number;
-            workspace?: string;
-            q?: string;
-            serviceType?: string;
-            status?: string;
-            environmentId?: string;
-          };
-        }) => Promise<PaginatedProjectsResponse>)({
+        const result = await (
+          listProjectsPageServerFn as unknown as (input: {
+            data: {
+              page?: number;
+              workspace?: string;
+              q?: string;
+              serviceType?: string;
+              status?: string;
+              environmentId?: string;
+            };
+          }) => Promise<PaginatedProjectsResponse>
+        )({
           data: {
             page: search.page,
             workspace: search.workspace,
@@ -765,22 +706,9 @@ function ProjectsPage() {
         // Keep previous project list if refresh fails.
       }
     })();
-  }, [
-    refreshSignal,
-    search.environmentId,
-    effectiveEnvironmentId,
-    search.page,
-    search.q,
-    search.status,
-    search.type,
-    search.workspace,
-  ]);
+  }, [refreshSignal, search.environmentId, effectiveEnvironmentId, search.page, search.q, search.status, search.type, search.workspace]);
 
-  const filteredProjects = activeTagId
-    ? projects.filter((p) =>
-        p.tags?.some((t) => t.id === activeTagId),
-      )
-    : projects;
+  const filteredProjects = activeTagId ? projects.filter((p) => p.tags?.some((t) => t.id === activeTagId)) : projects;
   const hasSearchQuery = Boolean(search.q?.trim());
   const settledSearchQuery = search.q?.trim() ?? "";
   const pendingSearchQuery = searchQuery.trim();
@@ -815,20 +743,13 @@ function ProjectsPage() {
 
   function handleProjectTagsChange(projectId: string | undefined, nextTags: Project["tags"]) {
     if (!projectId) return;
-    setProjects((prev) =>
-      prev.map((project) =>
-        project.id === projectId
-          ? { ...project, tags: nextTags }
-          : project,
-      ),
-    );
+    setProjects((prev) => prev.map((project) => (project.id === projectId ? { ...project, tags: nextTags } : project)));
   }
 
   return (
     <div className="max-w-[1000px]">
       <PageHeader title="Projects" image="/images/bee.svg">
-        Manage your deployed projects from one place. Track recent updates, jump
-        into configurations, and spin up new deployments quickly.
+        Manage your deployed projects from one place. Track recent updates, jump into configurations, and spin up new deployments quickly.
       </PageHeader>
 
       <hr className="border-dash-border-soft mb-8 -mx-4 md:-mx-10" />
@@ -841,58 +762,58 @@ function ProjectsPage() {
           onChange={setSearchQuery}
           placeholder="Search projects"
           loading={isSearchSettling}
-          rightSlot={(
+          rightSlot={
             <>
-            <FilterDropdown
-              value={activeStatus}
-              onChange={(value) => {
-                const nextStatus = value === "all" ? undefined : value;
-                if ((search.status ?? undefined) === nextStatus) {
-                  return;
-                }
-                setIsStatusFilterChanging(true);
-                navigate({
-                  to: "/projects",
-                  search: buildProjectsSearch({
-                    workspace: search.workspace,
-                    q: search.q,
-                    type: search.type,
-                    status: nextStatus,
-                    page: undefined,
-                  }),
-                });
-              }}
-              loading={isStatusFilterChanging}
-              options={PROJECT_STATUS_FILTER_OPTIONS}
-              placeholder="All Statuses"
-              dropdownWidth={180}
-            />
-            <FilterDropdown
-              value={activeProjectType}
-              onChange={(value) => {
-                const nextType = value === "all" ? undefined : value;
-                if ((search.type ?? undefined) === nextType) {
-                  return;
-                }
-                setIsFilterChanging(true);
-                navigate({
-                  to: "/projects",
-                  search: buildProjectsSearch({
-                    workspace: search.workspace,
-                    q: search.q,
-                    type: nextType,
-                    status: search.status,
-                    environmentId: search.environmentId,
-                    page: undefined,
-                  }),
-                });
-              }}
-              loading={isFilterChanging}
-              options={PROJECT_TYPE_FILTER_OPTIONS}
-              placeholder="All Projects"
-            />
+              <FilterDropdown
+                value={activeStatus}
+                onChange={(value) => {
+                  const nextStatus = value === "all" ? undefined : value;
+                  if ((search.status ?? undefined) === nextStatus) {
+                    return;
+                  }
+                  setIsStatusFilterChanging(true);
+                  navigate({
+                    to: "/projects",
+                    search: buildProjectsSearch({
+                      workspace: search.workspace,
+                      q: search.q,
+                      type: search.type,
+                      status: nextStatus,
+                      page: undefined,
+                    }),
+                  });
+                }}
+                loading={isStatusFilterChanging}
+                options={PROJECT_STATUS_FILTER_OPTIONS}
+                placeholder="All Statuses"
+                dropdownWidth={180}
+              />
+              <FilterDropdown
+                value={activeProjectType}
+                onChange={(value) => {
+                  const nextType = value === "all" ? undefined : value;
+                  if ((search.type ?? undefined) === nextType) {
+                    return;
+                  }
+                  setIsFilterChanging(true);
+                  navigate({
+                    to: "/projects",
+                    search: buildProjectsSearch({
+                      workspace: search.workspace,
+                      q: search.q,
+                      type: nextType,
+                      status: search.status,
+                      environmentId: search.environmentId,
+                      page: undefined,
+                    }),
+                  });
+                }}
+                loading={isFilterChanging}
+                options={PROJECT_TYPE_FILTER_OPTIONS}
+                placeholder="All Projects"
+              />
             </>
-          )}
+          }
         />
       </div>
 
@@ -928,10 +849,7 @@ function ProjectsPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredProjects.map((project, i) => (
                 <motion.div layout key={`${project.name}-${i}`}>
-                  <ProjectCard
-                    project={project}
-                    onTagsChange={(nextTags) => handleProjectTagsChange(project.id, nextTags)}
-                  />
+                  <ProjectCard project={project} onTagsChange={(nextTags) => handleProjectTagsChange(project.id, nextTags)} />
                 </motion.div>
               ))}
             </div>

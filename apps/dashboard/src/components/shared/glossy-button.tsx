@@ -64,11 +64,7 @@ export function GlossyButton({
         className,
       )}
     >
-      <LoadingButtonContent
-        loading={loading}
-        loadingLabel={loadingLabel}
-        spinnerClassName="text-current"
-      >
+      <LoadingButtonContent loading={loading} loadingLabel={loadingLabel} spinnerClassName="text-current">
         {children}
       </LoadingButtonContent>
     </button>

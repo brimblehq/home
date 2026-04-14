@@ -74,9 +74,7 @@ export function CookieBanner() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const hasAuthToken = document.cookie
-      .split(";")
-      .some((c) => c.trim().startsWith("brimble_access_token="));
+    const hasAuthToken = document.cookie.split(";").some((c) => c.trim().startsWith("brimble_access_token="));
     setOpen(hasAuthToken && readCookieConsent() === null);
   }, []);
 
@@ -100,8 +98,7 @@ export function CookieBanner() {
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <p className="max-w-[520px] text-sm leading-6 tracking-[-0.02em] text-brimble-black/70 dark:text-white/70">
-              We use cookies to remember your preferences and improve the
-              website experience. See our{" "}
+              We use cookies to remember your preferences and improve the website experience. See our{" "}
               <Link
                 to="/legal/$slug"
                 params={{ slug: "privacy" }}
@@ -112,20 +109,10 @@ export function CookieBanner() {
               .
             </p>
             <div className="flex items-center gap-2">
-              <Button
-                variant="pill-light"
-                size="sm"
-                className="px-3"
-                onClick={() => handleChoice("declined")}
-              >
+              <Button variant="pill-light" size="sm" className="px-3" onClick={() => handleChoice("declined")}>
                 Decline
               </Button>
-              <Button
-                variant="pill"
-                size="sm"
-                className="px-3"
-                onClick={() => handleChoice("accepted")}
-              >
+              <Button variant="pill" size="sm" className="px-3" onClick={() => handleChoice("accepted")}>
                 Accept
               </Button>
             </div>

@@ -148,9 +148,7 @@ export function mapMcpTemplateToAddonDetail(template: McpServerTemplate): Discov
     deployTemplateToken: getMcpTemplateDeployToken(template),
     name: template.name,
     description: template.description || "MCP server for AI and workflow integrations.",
-    longDescription:
-      template.description ||
-      "This MCP server can be deployed on Brimble and connected to your clients and AI workflows.",
+    longDescription: template.description || "This MCP server can be deployed on Brimble and connected to your clients and AI workflows.",
     developer: template.author || "Unknown author",
     category: template.category || "MCP Server",
     language: template.language,
@@ -174,9 +172,7 @@ export function mapMcpTemplateToAddonDetail(template: McpServerTemplate): Discov
       };
     }),
     connections: template.connections.map((connection) => {
-      const requiredRaw = Array.isArray(connection.configSchema?.required)
-        ? connection.configSchema.required
-        : [];
+      const requiredRaw = Array.isArray(connection.configSchema?.required) ? connection.configSchema.required : [];
       return {
         type: connection.type,
         requiredFields: requiredRaw.filter((item): item is string => typeof item === "string"),

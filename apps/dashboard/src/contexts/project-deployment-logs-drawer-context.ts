@@ -8,15 +8,12 @@ export type ProjectDeploymentLogsDrawerContextValue = {
   closeDeploymentDrawer: () => void;
 };
 
-export const ProjectDeploymentLogsDrawerContext =
-  createContext<ProjectDeploymentLogsDrawerContextValue | null>(null);
+export const ProjectDeploymentLogsDrawerContext = createContext<ProjectDeploymentLogsDrawerContextValue | null>(null);
 
 export function useProjectDeploymentLogsDrawer() {
   const context = useContext(ProjectDeploymentLogsDrawerContext);
   if (!context) {
-    throw new Error(
-      "useProjectDeploymentLogsDrawer must be used within ProjectLayout",
-    );
+    throw new Error("useProjectDeploymentLogsDrawer must be used within ProjectLayout");
   }
 
   return context;

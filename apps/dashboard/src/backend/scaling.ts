@@ -69,10 +69,7 @@ function mapScalingGroup(group: any): ScalingGroup {
   }
 
   let minApplicationResponseTime: number | undefined;
-  if (
-    typeof group?.min_application_response_time === "number" &&
-    Number.isFinite(group.min_application_response_time)
-  ) {
+  if (typeof group?.min_application_response_time === "number" && Number.isFinite(group.min_application_response_time)) {
     minApplicationResponseTime = group.min_application_response_time;
   }
 

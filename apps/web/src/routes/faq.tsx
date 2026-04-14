@@ -4,12 +4,7 @@ import { motion, useInView } from "motion/react";
 import { siteConfig } from "@/config/site";
 import { buildSeoHead } from "@/config/seo";
 import { Navbar } from "@/components/layout/navbar";
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@brimble/ui";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@brimble/ui";
 import { Cta } from "@/components/sections/cta";
 import trainStation from "@/assets/images/train-station.svg";
 
@@ -96,15 +91,9 @@ function FaqCategories() {
               className="overflow-hidden rounded-lg border border-[rgba(152,157,164,0.3)] bg-brimble-surface shadow-[var(--shadow-big)] dark:border-white/10 dark:bg-[#1e2023]"
             >
               {category.items.map((item, i) => (
-                <AccordionItem
-                  key={i}
-                  value={`${category.label}-${i}`}
-                  className="px-4"
-                >
+                <AccordionItem key={i} value={`${category.label}-${i}`} className="px-4">
                   {i === 0 && (
-                    <p className="pt-6 pb-2 font-mono text-xs uppercase tracking-[1.2px] text-brimble-black/50">
-                      {category.label}
-                    </p>
+                    <p className="pt-6 pb-2 font-mono text-xs uppercase tracking-[1.2px] text-brimble-black/50">{category.label}</p>
                   )}
                   <AccordionTrigger>{item.title}</AccordionTrigger>
                   <AccordionContent>{item.description}</AccordionContent>

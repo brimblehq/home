@@ -7,13 +7,7 @@ import { invalidateSessionCache } from "../lib/auth-guards";
 import { getClientGeo } from "@/lib/client-geo";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
-import {
-  AuthDivider,
-  AuthField,
-  AuthProviderButton,
-  AuthSplitLayout,
-  OtpInput,
-} from "../components/auth/auth-split-layout";
+import { AuthDivider, AuthField, AuthProviderButton, AuthSplitLayout, OtpInput } from "../components/auth/auth-split-layout";
 import {
   finalizeOauthSessionServerFn,
   getPasskeyAuthOptionsServerFn,
@@ -59,12 +53,7 @@ function GoogleIcon() {
 
 function GitlabIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      className="size-4"
-      fill="currentColor"
-    >
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="currentColor">
       <path d="M23.955 13.587l-1.342-4.135-2.664-8.189a.455.455 0 0 0-.867 0L16.418 9.45H7.582L4.918 1.263a.455.455 0 0 0-.867 0L1.387 9.452.045 13.587a.924.924 0 0 0 .331 1.023L12 23.054l11.624-8.443a.92.92 0 0 0 .331-1.024" />
     </svg>
   );
@@ -72,12 +61,7 @@ function GitlabIcon() {
 
 function BitbucketIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      className="size-4"
-      fill="currentColor"
-    >
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4" fill="currentColor">
       <path d="M.778 1.213a.768.768 0 0 0-.768.892l3.263 19.81c.084.5.515.868 1.022.873H19.95a.772.772 0 0 0 .77-.646l3.27-20.03a.768.768 0 0 0-.768-.891zM14.52 15.53H9.522L8.17 8.466h7.561z" />
     </svg>
   );
@@ -124,22 +108,14 @@ function EmailStep({
       <div className="space-y-2.5">
         <AuthProviderButton
           icon={<Github className="size-4" />}
-          label={
-            oauthLoadingProvider === "github"
-              ? "Connecting GitHub..."
-              : "Continue with GitHub"
-          }
+          label={oauthLoadingProvider === "github" ? "Connecting GitHub..." : "Continue with GitHub"}
           onClick={onGithub}
           disabled={loading || oauthLoadingProvider !== null}
           lastUsed={lastAuthMethod === "github"}
         />
         <AuthProviderButton
           icon={<GoogleIcon />}
-          label={
-            oauthLoadingProvider === "google"
-              ? "Connecting Google..."
-              : "Continue with Google"
-          }
+          label={oauthLoadingProvider === "google" ? "Connecting Google..." : "Continue with Google"}
           onClick={onGoogle}
           disabled={loading || oauthLoadingProvider !== null}
           lastUsed={lastAuthMethod === "google"}
@@ -154,11 +130,7 @@ function EmailStep({
           />
           <AuthProviderButton
             icon={<BitbucketIcon />}
-            label={
-              oauthLoadingProvider === "bitbucket"
-                ? "Bitbucket..."
-                : "Bitbucket"
-            }
+            label={oauthLoadingProvider === "bitbucket" ? "Bitbucket..." : "Bitbucket"}
             onClick={onBitbucket}
             disabled={loading || oauthLoadingProvider !== null}
             lastUsed={lastAuthMethod === "bitbucket"}
@@ -192,15 +164,9 @@ function EmailStep({
           disabled={!email.trim() || loading}
           className="relative flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#006fff] text-sm font-semibold text-white shadow-[0_1px_2px_rgba(0,80,200,0.3)] transition-all hover:bg-[#0060e0] disabled:opacity-40 disabled:hover:bg-[#006fff]"
         >
-          {loading ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            "Continue with email"
-          )}
+          {loading ? <Loader2 className="size-4 animate-spin" /> : "Continue with email"}
           {lastAuthMethod === "email" && !loading && (
-            <span className="absolute right-3 rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] font-normal">
-              Last used
-            </span>
+            <span className="absolute right-3 rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] font-normal">Last used</span>
           )}
         </button>
 
@@ -208,9 +174,7 @@ function EmailStep({
           <button
             type="button"
             onClick={onPasskey}
-            disabled={
-              passkeyLoading || loading || oauthLoadingProvider !== null
-            }
+            disabled={passkeyLoading || loading || oauthLoadingProvider !== null}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-dash-border bg-dash-bg text-sm font-medium text-dash-text-strong transition-colors hover:bg-dash-bg-elevated disabled:opacity-40"
           >
             {passkeyLoading ? (
@@ -227,10 +191,7 @@ function EmailStep({
         {passkeyEnabled && (
           <p className="text-center text-[12px] text-dash-text-faded">
             Lost your passkey?{" "}
-            <a
-              href="/passkey-recovery"
-              className="font-medium text-[#006fff] transition-colors hover:text-[#0060e0] dark:text-[#4879f8]"
-            >
+            <a href="/passkey-recovery" className="font-medium text-[#006fff] transition-colors hover:text-[#0060e0] dark:text-[#4879f8]">
               Use a recovery code
             </a>
           </p>
@@ -283,12 +244,9 @@ function OtpStep({
 
       <div className="mb-6">
         <p className="text-sm text-dash-text-body">
-          We sent a 6-digit code to{" "}
-          <span className="font-medium text-dash-text-strong">{email}</span>
+          We sent a 6-digit code to <span className="font-medium text-dash-text-strong">{email}</span>
         </p>
-        <p className="mt-1 text-[13px] text-dash-text-faded">
-          Check your inbox and enter the code below.
-        </p>
+        <p className="mt-1 text-[13px] text-dash-text-faded">Check your inbox and enter the code below.</p>
       </div>
 
       <form
@@ -305,31 +263,20 @@ function OtpStep({
           disabled={otp.length < 6 || loading}
           className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#006fff] text-sm font-semibold text-white shadow-[0_1px_2px_rgba(0,80,200,0.3)] transition-all hover:bg-[#0060e0] disabled:opacity-40 disabled:hover:bg-[#006fff]"
         >
-          {loading ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            "Verify & sign in"
-          )}
+          {loading ? <Loader2 className="size-4 animate-spin" /> : "Verify & sign in"}
         </button>
       </form>
 
       <p className="mt-4 text-center text-[13px] text-dash-text-faded">
         Didn&apos;t receive it?{" "}
-        <button
-          onClick={onResend}
-          className="font-medium text-[#006fff] transition-colors hover:text-[#0060e0] dark:text-[#4879f8]"
-        >
+        <button onClick={onResend} className="font-medium text-[#006fff] transition-colors hover:text-[#0060e0] dark:text-[#4879f8]">
           Resend code
         </button>
       </p>
 
       <p className="mt-3 text-center text-xs leading-relaxed text-dash-text-faded">
-        Verification codes are only sent to emails linked to an existing Brimble
-        account. Don&apos;t have one?{" "}
-        <a
-          href="/signup"
-          className="font-medium text-[#006fff] transition-colors hover:text-[#0060e0] dark:text-[#4879f8]"
-        >
+        Verification codes are only sent to emails linked to an existing Brimble account. Don&apos;t have one?{" "}
+        <a href="/signup" className="font-medium text-[#006fff] transition-colors hover:text-[#0060e0] dark:text-[#4879f8]">
           Create an account
         </a>
       </p>
@@ -377,14 +324,10 @@ function LoginPage() {
   const resendAuthCode = useServerFn(resendAuthCodeServerFn);
   const verifyEmailCode = useServerFn(verifyEmailCodeServerFn);
   const finalizeOauthSession = useServerFn(finalizeOauthSessionServerFn);
-  const getPasskeyAuthOptions = useServerFn(
-    getPasskeyAuthOptionsServerFn as any,
-  ) as (args: {
+  const getPasskeyAuthOptions = useServerFn(getPasskeyAuthOptionsServerFn as any) as (args: {
     data: { email?: string };
   }) => Promise<{ options: Record<string, unknown>; challengeToken: string }>;
-  const verifyPasskeyAuth = useServerFn(
-    verifyPasskeyAuthServerFn as any,
-  ) as (args: {
+  const verifyPasskeyAuth = useServerFn(verifyPasskeyAuthServerFn as any) as (args: {
     data: { challengeToken: string; credential: unknown; geo?: any };
   }) => Promise<{ ok: true; user: { firstName?: string } }>;
   const passkeyFeature = usePasskeyFeature();
@@ -397,11 +340,8 @@ function LoginPage() {
   const otpRef = useRef(otp);
   otpRef.current = otp;
   const [loading, setLoading] = useState(false);
-  const [oauthLoadingProvider, setOauthLoadingProvider] =
-    useState<OauthProvider | null>(null);
-  const [lastAuthMethod] = useState<AuthMethod | null>(() =>
-    getLastAuthMethod(),
-  );
+  const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OauthProvider | null>(null);
+  const [lastAuthMethod] = useState<AuthMethod | null>(() => getLastAuthMethod());
 
   async function handleOauth(provider: OauthProvider) {
     if (oauthLoadingProvider) {
@@ -412,10 +352,7 @@ function LoginPage() {
     setOauthLoadingProvider(provider);
 
     try {
-      const [{ startOauthPopup }, twoFactor] = await Promise.all([
-        loadOauthPopup(),
-        loadTwoFactor(),
-      ]);
+      const [{ startOauthPopup }, twoFactor] = await Promise.all([loadOauthPopup(), loadTwoFactor()]);
       const data = await startOauthPopup(provider);
       const challenge = twoFactor.extractTwoFactorChallenge(data);
       if (challenge) {
@@ -448,16 +385,12 @@ function LoginPage() {
       });
 
       saveLastAuthMethod(provider);
-      toast.success(
-        `Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
-      );
+      toast.success(`Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`);
       invalidateSessionCache();
       window.location.replace(getNextUrl());
       return;
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "OAuth sign in failed",
-      );
+      toast.error(error instanceof Error ? error.message : "OAuth sign in failed");
       setOauthLoadingProvider(null);
     }
   }
@@ -471,9 +404,7 @@ function LoginPage() {
       },
     });
     saveLastAuthMethod("email");
-    toast.success(
-      `Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
-    );
+    toast.success(`Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`);
     invalidateSessionCache();
     window.location.replace(getNextUrl());
   }
@@ -509,8 +440,7 @@ function LoginPage() {
 
     void (async () => {
       try {
-        const { isPasskeyAutofillSupported, runAuthentication } =
-          await loadPasskey();
+        const { isPasskeyAutofillSupported, runAuthentication } = await loadPasskey();
         const supportsAutofill = await isPasskeyAutofillSupported();
         if (cancelled || !supportsAutofill) return;
         const { options, challengeToken } = await getPasskeyAuthOptions({
@@ -549,9 +479,7 @@ function LoginPage() {
       toast.success("Verification code sent");
       setStep("otp");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to send code",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to send code");
     } finally {
       setLoading(false);
     }
@@ -580,16 +508,12 @@ function LoginPage() {
       }
 
       saveLastAuthMethod("email");
-      toast.success(
-        `Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`,
-      );
+      toast.success(`Welcome back${response.user.firstName ? `, ${response.user.firstName}` : ""}`);
       invalidateSessionCache();
       window.location.replace(getNextUrl());
       return;
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Verification failed",
-      );
+      toast.error(error instanceof Error ? error.message : "Verification failed");
       setLoading(false);
     }
   }
@@ -603,9 +527,7 @@ function LoginPage() {
       await resendAuthCode({ data: { email, geo: await getClientGeo() } });
       toast.success("Code resent");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to resend code",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to resend code");
     } finally {
       setLoading(false);
     }

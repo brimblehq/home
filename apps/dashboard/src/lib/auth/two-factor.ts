@@ -27,12 +27,8 @@ export function extractTwoFactorChallenge(payload: unknown): TwoFactorChallenge 
     | null
     | undefined;
 
-  const challengeToken = String(
-    data?.challenge_token ?? data?.challengeToken ?? "",
-  ).trim();
-  const requiresTwoFactor = Boolean(
-    data?.requires_2fa ?? data?.requires2fa ?? data?.requiresTwoFactor,
-  );
+  const challengeToken = String(data?.challenge_token ?? data?.challengeToken ?? "").trim();
+  const requiresTwoFactor = Boolean(data?.requires_2fa ?? data?.requires2fa ?? data?.requiresTwoFactor);
 
   if (!requiresTwoFactor && !challengeToken) {
     return null;
@@ -66,10 +62,7 @@ export function parseTwoFactorChallengeHash(hash: string): TwoFactorChallenge | 
   };
 }
 
-export function buildTwoFactorChallengeUrl(
-  challenge: TwoFactorChallenge,
-  opts?: { next?: string | null },
-): string {
+export function buildTwoFactorChallengeUrl(challenge: TwoFactorChallenge, opts?: { next?: string | null }): string {
   const next = opts?.next?.trim();
   const search = next ? `?next=${encodeURIComponent(next)}` : "";
   const hash = new URLSearchParams({

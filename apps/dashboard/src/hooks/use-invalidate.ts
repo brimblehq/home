@@ -9,10 +9,7 @@ export function useInvalidate() {
   }, [router]);
 }
 
-export function useInvalidatingServerFn<
-  TArgs extends { data?: unknown },
-  TResult,
->(serverFn: (args: TArgs) => Promise<TResult>) {
+export function useInvalidatingServerFn<TArgs extends { data?: unknown }, TResult>(serverFn: (args: TArgs) => Promise<TResult>) {
   const router = useRouter();
   const routerRef = useRef(router);
   routerRef.current = router;

@@ -29,7 +29,7 @@ export function Steps() {
                     "relative flex w-full items-center gap-3.5 rounded-3xl p-4 shadow-[0px_0px_1px_0px_rgba(0,0,0,0.3),0px_2px_2px_0px_rgba(0,0,0,0.08)] dark:shadow-[0px_0px_1px_0px_rgba(255,255,255,0.1),0px_2px_2px_0px_rgba(0,0,0,0.3)]",
                     i === 0 && "z-30 bg-brimble-surface dark:bg-[#1e2023]",
                     i === 1 && "z-20 bg-[#fafafa] dark:bg-[#1a1c1e]",
-                    i === 2 && "z-10 bg-[#f7f7f7] dark:bg-[#161819]"
+                    i === 2 && "z-10 bg-[#f7f7f7] dark:bg-[#161819]",
                   )}
                   initial={{ opacity: 0, y: 20 + i * 8 }}
                   animate={
@@ -38,9 +38,7 @@ export function Steps() {
                           opacity: 1,
                           y: 0,
                           marginTop: isStacked ? -76 : i === 0 ? 0 : 12,
-                          width: isStacked
-                            ? `${100 - i * 7}%`
-                            : "100%",
+                          width: isStacked ? `${100 - i * 7}%` : "100%",
                         }
                       : {}
                   }
@@ -51,11 +49,7 @@ export function Steps() {
                     marginTop: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
                     width: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
                   }}
-                  whileHover={
-                    !isStacked
-                      ? { scale: 1.01, transition: { duration: 0.2 } }
-                      : undefined
-                  }
+                  whileHover={!isStacked ? { scale: 1.01, transition: { duration: 0.2 } } : undefined}
                 >
                   <motion.div
                     className="flex size-[60px] shrink-0 items-center justify-center rounded-2xl bg-[#222528] dark:bg-white/15"

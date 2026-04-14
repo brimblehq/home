@@ -66,10 +66,7 @@ export function TeamInviteModal({
           fetchPriority="high"
           decoding="async"
         />
-        <motion.div
-          animate={{ x: [0, 6, 0] }}
-          transition={{ duration: 1.5, ease: "easeInOut", repeat: Infinity, repeatDelay: 0.5 }}
-        >
+        <motion.div animate={{ x: [0, 6, 0] }} transition={{ duration: 1.5, ease: "easeInOut", repeat: Infinity, repeatDelay: 0.5 }}>
           <ArrowRight className="size-4 shrink-0 text-dash-text-faded" />
         </motion.div>
         <Avatar
@@ -93,7 +90,8 @@ export function TeamInviteModal({
           Hello {firstName},
         </Dialog.Title>
         <Dialog.Description className="mt-1 text-sm leading-5 text-dash-text-faded">
-          You've been invited to <span className="font-medium text-dash-text-strong">{workspaceName}</span> as a workspace {role || "member"}
+          You've been invited to <span className="font-medium text-dash-text-strong">{workspaceName}</span> as a workspace{" "}
+          {role || "member"}
         </Dialog.Description>
         <a
           href="https://docs.brimble.io/team-workspaces"

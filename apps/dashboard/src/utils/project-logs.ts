@@ -129,9 +129,7 @@ export function mapApiRequestLogToUiRow(log: ApiRequestLogEntry): UiRequestLogEn
 
   const isoTimestamp = log.timestamp || new Date().toISOString();
   const date = new Date(isoTimestamp);
-  const timestamp = Number.isNaN(date.getTime())
-    ? ""
-    : format(date, "MMM d yyyy HH:mm:ss");
+  const timestamp = Number.isNaN(date.getTime()) ? "" : format(date, "MMM d yyyy HH:mm:ss");
 
   let duration = "—";
   const durationMatch = log.message.match(/(\d+(?:\.\d+)?)\s*ms/i);

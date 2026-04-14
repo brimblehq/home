@@ -74,14 +74,8 @@ export interface GetLogTrendsInput {
 }
 
 export interface LogsApi {
-  listRequestLogs(
-    projectId: string,
-    input?: ListRequestLogsInput,
-  ): Promise<RequestLogsPage>;
-  getLogTrends(
-    projectId: string,
-    input?: GetLogTrendsInput,
-  ): Promise<LogTrendsResponse>;
+  listRequestLogs(projectId: string, input?: ListRequestLogsInput): Promise<RequestLogsPage>;
+  getLogTrends(projectId: string, input?: GetLogTrendsInput): Promise<LogTrendsResponse>;
 }
 
 function toStringRecord(value: unknown): Record<string, string> {
@@ -147,10 +141,7 @@ function mapRequestLogEntry(log: any): RequestLogEntry {
     hostname: String(log?.hostname ?? log?.host ?? ""),
     project: typeof log?.project === "string" ? log.project : undefined,
     headers: toStringRecord(log?.headers),
-    query:
-      log?.query && typeof log.query === "object"
-        ? toStringRecord(log.query)
-        : undefined,
+    query: log?.query && typeof log.query === "object" ? toStringRecord(log.query) : undefined,
     method: String(log?.method ?? "").toUpperCase(),
     message: String(log?.message ?? log?.response ?? ""),
   };
@@ -159,24 +150,21 @@ function mapRequestLogEntry(log: any): RequestLogEntry {
 export function createLogsApi(client: ApiClient): LogsApi {
   return {
     async listRequestLogs(projectId, input) {
-      const response = await client.request<any>(
-        `/core/v1/logs/requests/${encodeURIComponent(projectId)}`,
-        {
-          method: "GET",
-          query: {
-            limit: input?.limit,
-            cursor: input?.cursor || undefined,
-            direction: input?.direction,
-            start: input?.start,
-            end: input?.end,
-            statuses: input?.statuses,
-            methods: input?.methods,
-            search: input?.search?.trim() || undefined,
-            level: input?.level,
-            sort: input?.sort,
-          },
+      const response = await client.request<any>(`/core/v1/logs/requests/${encodeURIComponent(projectId)}`, {
+        method: "GET",
+        query: {
+          limit: input?.limit,
+          cursor: input?.cursor || undefined,
+          direction: input?.direction,
+          start: input?.start,
+          end: input?.end,
+          statuses: input?.statuses,
+          methods: input?.methods,
+          search: input?.search?.trim() || undefined,
+          level: input?.level,
+          sort: input?.sort,
         },
-      );
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rawLogs: any[] = Array.isArray(root.logs) ? root.logs : [];
@@ -192,20 +180,17 @@ export function createLogsApi(client: ApiClient): LogsApi {
       };
     },
     async getLogTrends(projectId, input) {
-      const response = await client.request<any>(
-        `/core/v1/logs/trends/${encodeURIComponent(projectId)}`,
-        {
-          method: "GET",
-          query: {
-            from: input?.from,
-            to: input?.to,
-            step: input?.step,
-            interval: input?.interval,
-            search: input?.search?.trim() || undefined,
-            container: input?.container?.trim() || undefined,
-          },
+      const response = await client.request<any>(`/core/v1/logs/trends/${encodeURIComponent(projectId)}`, {
+        method: "GET",
+        query: {
+          from: input?.from,
+          to: input?.to,
+          step: input?.step,
+          interval: input?.interval,
+          search: input?.search?.trim() || undefined,
+          container: input?.container?.trim() || undefined,
         },
-      );
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       return mapLogTrendsResponse(root);

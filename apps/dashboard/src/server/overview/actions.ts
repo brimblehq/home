@@ -5,10 +5,12 @@ import { withTokenRefresh } from "@/server/shared/backend";
 export const getHomeOverviewServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
-  const payload = data as unknown as {
-    workspace?: string;
-    environmentId?: string;
-  } | undefined;
+  const payload = data as unknown as
+    | {
+        workspace?: string;
+        environmentId?: string;
+      }
+    | undefined;
   const workspaceSlug = payload?.workspace?.trim().toLowerCase();
   const environmentId = payload?.environmentId?.trim();
 

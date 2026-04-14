@@ -73,4 +73,3 @@ export function createMessagesApi(client: ApiClient): MessagesApi {
     },
   };
 }
-

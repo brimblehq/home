@@ -15,10 +15,7 @@ export const listRegionsServerFn = createServerFn({
 
   let teamId = payload?.teamId;
 
-  const workspaceSlug =
-    typeof payload?.workspace === "string"
-      ? payload.workspace.trim().toLowerCase()
-      : undefined;
+  const workspaceSlug = typeof payload?.workspace === "string" ? payload.workspace.trim().toLowerCase() : undefined;
 
   return withTokenRefresh(async (api) => {
     if (!teamId && workspaceSlug) {

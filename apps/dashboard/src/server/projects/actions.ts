@@ -2,11 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { withTokenRefresh } from "@/server/shared/backend";
 import { projectsLogger } from "@/server/shared/logger";
 
-function assignFiniteNumber(
-  target: Record<string, unknown>,
-  key: string,
-  value: unknown,
-) {
+function assignFiniteNumber(target: Record<string, unknown>, key: string, value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) {
     target[key] = value;
   }
@@ -98,10 +94,7 @@ export const createProjectServerFn = createServerFn({
       } & Record<string, unknown>)
     | undefined;
 
-  const workspaceSlug =
-    typeof payload?.workspace === "string"
-      ? payload.workspace.trim().toLowerCase()
-      : undefined;
+  const workspaceSlug = typeof payload?.workspace === "string" ? payload.workspace.trim().toLowerCase() : undefined;
 
   const body: Record<string, unknown> = { ...(payload ?? {}) };
   delete body.workspace;
@@ -133,10 +126,7 @@ export const createProjectServerFn = createServerFn({
         const row = env as Record<string, unknown>;
         return {
           ...row,
-          value:
-            typeof row.value === "string" && row.value.length > 0
-              ? "[REDACTED]"
-              : row.value,
+          value: typeof row.value === "string" && row.value.length > 0 ? "[REDACTED]" : row.value,
         };
       });
     }
@@ -259,9 +249,7 @@ export const createDatabaseProjectServerFn = createServerFn({
         .filter((env) => env.name && env.value)
     : [];
 
-  const whitelistedIps = Array.isArray(payload?.whitelistedIps)
-    ? payload!.whitelistedIps.map((ip) => ip.trim()).filter(Boolean)
-    : [];
+  const whitelistedIps = Array.isArray(payload?.whitelistedIps) ? payload!.whitelistedIps.map((ip) => ip.trim()).filter(Boolean) : [];
 
   return withTokenRefresh(async (api) => {
     let teamId: string | undefined;
@@ -772,9 +760,7 @@ export const linkRepoServerFn = createServerFn({
 export const unlinkRepoServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {
-  const payload = data as
-    | { projectId: string; workspace?: string }
-    | undefined;
+  const payload = data as { projectId: string; workspace?: string } | undefined;
 
   const projectId = payload?.projectId?.trim();
   if (!projectId) throw new Error("Project ID is required");

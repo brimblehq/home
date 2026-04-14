@@ -1,8 +1,4 @@
-export function buildWorkspaceSwitchUrl(input: {
-  pathname: string;
-  searchStr?: string;
-  workspaceSlug?: string;
-}): string {
+export function buildWorkspaceSwitchUrl(input: { pathname: string; searchStr?: string; workspaceSlug?: string }): string {
   const params = new URLSearchParams(input.searchStr || "");
 
   if (input.workspaceSlug) {
@@ -73,19 +69,12 @@ export function getWorkspaceSearch(input: { searchStr?: string }): string {
   return `?${query}`;
 }
 
-export function getWorkspaceFromSearch(input: {
-  searchStr?: string;
-}): string | undefined {
-  const workspace = new URLSearchParams(input.searchStr || "")
-    .get("workspace")
-    ?.trim();
+export function getWorkspaceFromSearch(input: { searchStr?: string }): string | undefined {
+  const workspace = new URLSearchParams(input.searchStr || "").get("workspace")?.trim();
   return workspace || undefined;
 }
 
-export function withWorkspaceQuery(input: {
-  pathname: string;
-  searchStr?: string;
-}): string {
+export function withWorkspaceQuery(input: { pathname: string; searchStr?: string }): string {
   const workspaceSearch = getWorkspaceSearch({ searchStr: input.searchStr });
   if (!workspaceSearch) {
     return input.pathname;
@@ -94,11 +83,7 @@ export function withWorkspaceQuery(input: {
   return `${input.pathname}${workspaceSearch}`;
 }
 
-export function buildProjectSwitchUrl(input: {
-  pathname: string;
-  searchStr?: string;
-  targetProjectId: string;
-}): string {
+export function buildProjectSwitchUrl(input: { pathname: string; searchStr?: string; targetProjectId: string }): string {
   const targetProjectId = input.targetProjectId.trim();
   if (!targetProjectId) {
     return input.pathname;

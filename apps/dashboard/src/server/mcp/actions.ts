@@ -35,18 +35,11 @@ export const listMcpTemplatesServerFn = createServerFn({
   } as const;
 
   try {
-    return await withTokenRefresh(
-      (api) => api.mcp.listTemplates(request) as Promise<McpServerListResult>,
-    );
+    return await withTokenRefresh((api) => api.mcp.listTemplates(request) as Promise<McpServerListResult>);
   } catch (error) {
-    mcpLogger.debug(
-      "listMcpTemplates: auth-backed request failed, retrying without auth",
-      error,
-    );
+    mcpLogger.debug("listMcpTemplates: auth-backed request failed, retrying without auth", error);
 
-    return getPublicBackendApi().mcp.listTemplates(
-      request,
-    ) as Promise<McpServerListResult>;
+    return getPublicBackendApi().mcp.listTemplates(request) as Promise<McpServerListResult>;
   }
 });
 
@@ -72,21 +65,11 @@ export const listRecommendedMcpTemplatesServerFn = createServerFn({
   } as const;
 
   try {
-    return await withTokenRefresh(
-      (api) =>
-        api.mcp.listRecommendedTemplates(
-          request,
-        ) as Promise<McpServerListResult>,
-    );
+    return await withTokenRefresh((api) => api.mcp.listRecommendedTemplates(request) as Promise<McpServerListResult>);
   } catch (error) {
-    mcpLogger.debug(
-      "listRecommendedMcpTemplates: auth-backed request failed, retrying without auth",
-      error,
-    );
+    mcpLogger.debug("listRecommendedMcpTemplates: auth-backed request failed, retrying without auth", error);
 
-    return getPublicBackendApi().mcp.listRecommendedTemplates(
-      request,
-    ) as Promise<McpServerListResult>;
+    return getPublicBackendApi().mcp.listRecommendedTemplates(request) as Promise<McpServerListResult>;
   }
 });
 
@@ -100,9 +83,7 @@ export const getMcpTemplateServerFn = createServerFn({
     throw new Error("MCP template id is required");
   }
 
-  const result = await withTokenRefresh(
-    (api) => api.mcp.getTemplate(id) as Promise<McpServerTemplate | null>,
-  );
+  const result = await withTokenRefresh((api) => api.mcp.getTemplate(id) as Promise<McpServerTemplate | null>);
 
   return result;
 });
@@ -142,12 +123,7 @@ export const deployMcpTemplateServerFn = createServerFn({
     throw new Error("Template name is required");
   }
 
-  if (
-    !(
-      typeof installationId === "number" ||
-      (typeof installationId === "string" && installationId.trim())
-    )
-  ) {
+  if (!(typeof installationId === "number" || (typeof installationId === "string" && installationId.trim()))) {
     throw new Error("GitHub installation is required");
   }
 

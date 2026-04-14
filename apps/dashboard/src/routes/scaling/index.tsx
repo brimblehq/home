@@ -31,9 +31,11 @@ export const Route = createFileRoute("/scaling/")({
   validateSearch: (search: Record<string, unknown>) => workspaceLoaderDeps(search),
   loaderDeps: ({ search }) => workspaceLoaderDeps(search),
   loader: async ({ deps }) => {
-    const result = await (listScalingGroupsServerFn as unknown as (input: {
-      data: { workspace?: string };
-    }) => Promise<{ items: BackendScalingGroup[]; message?: string }>)({
+    const result = await (
+      listScalingGroupsServerFn as unknown as (input: {
+        data: { workspace?: string };
+      }) => Promise<{ items: BackendScalingGroup[]; message?: string }>
+    )({
       data: { workspace: deps.workspace },
     });
 
@@ -93,9 +95,7 @@ function clampInt(value: number, min: number, max: number) {
 
 function mapGroupToUi(group: BackendScalingGroup): UiScalingGroup {
   const createdAtSource = group.createdAt || group.updatedAt;
-  const createdAtLabel = createdAtSource
-    ? formatRelativeTime(createdAtSource)
-    : "just now";
+  const createdAtLabel = createdAtSource ? formatRelativeTime(createdAtSource) : "just now";
 
   const runningInstances = group.active ? group.minContainers : group.replicas;
 
@@ -147,12 +147,7 @@ function ThresholdBar({ label, value }: { label: string; value: number }) {
       <span className="w-[28px] text-xs text-dash-text-faded">{label}</span>
       <div className="flex gap-[2px]">
         {Array.from({ length: totalBlocks }).map((_, i) => (
-          <div
-            key={i}
-            className={`h-[8px] w-[6px] rounded-[1px] ${
-              i < filledBlocks ? "bg-[#4879f8]" : "bg-dash-border"
-            }`}
-          />
+          <div key={i} className={`h-[8px] w-[6px] rounded-[1px] ${i < filledBlocks ? "bg-[#4879f8]" : "bg-dash-border"}`} />
         ))}
       </div>
       <span className="text-xs font-medium text-dash-text-body">{value}%</span>
@@ -182,14 +177,10 @@ function ScalingGroupCard({
       whileHover={{ y: -3, scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className={`flex flex-col overflow-clip rounded-[4px] border-[0.5px] border-dash-border ${
-        !group.active ? "opacity-70" : ""
-      }`}
+      className={`flex flex-col overflow-clip rounded-[4px] border-[0.5px] border-dash-border ${!group.active ? "opacity-70" : ""}`}
     >
       <div className="flex items-center justify-between px-3.5 pb-1 pt-3">
-        <span className="text-sm font-medium leading-5 text-dash-text-strong">
-          {group.name}
-        </span>
+        <span className="text-sm font-medium leading-5 text-dash-text-strong">{group.name}</span>
         <div className="flex items-center gap-2">
           {canWrite && (
             <button
@@ -223,29 +214,19 @@ function ScalingGroupCard({
       </div>
 
       <div className="px-3.5 pb-3">
-        <span className="text-xs text-dash-text-faded">
-          {group.active ? "Auto-scaling enabled" : "Fixed replicas mode"}
-        </span>
+        <span className="text-xs text-dash-text-faded">{group.active ? "Auto-scaling enabled" : "Fixed replicas mode"}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 px-3.5 pb-3">
         <div>
-          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-dash-text-extra-faded">
-            Instances
-          </span>
+          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-dash-text-extra-faded">Instances</span>
           <span className="text-sm font-medium text-dash-text-strong">
-            {group.active
-              ? `${group.minInstances} → ${group.maxInstances}`
-              : `${group.runningInstances} fixed`}
+            {group.active ? `${group.minInstances} → ${group.maxInstances}` : `${group.runningInstances} fixed`}
           </span>
-          <span className="mt-0.5 block text-xs text-dash-text-faded">
-            {group.runningInstances} running
-          </span>
+          <span className="mt-0.5 block text-xs text-dash-text-faded">{group.runningInstances} running</span>
         </div>
         <div>
-          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-dash-text-extra-faded">
-            Thresholds
-          </span>
+          <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-dash-text-extra-faded">Thresholds</span>
           <div className="flex flex-col gap-1">
             <ThresholdBar label="CPU" value={group.cpuThreshold} />
             <ThresholdBar label="Mem" value={group.memoryThreshold} />
@@ -371,21 +352,15 @@ function CreationForm({
 
         <div className="mb-5 flex items-center justify-between">
           <div>
-            <span className="block text-sm font-medium text-dash-text-strong">
-              Auto-scaling
-            </span>
-            <span className="text-xs text-dash-text-faded">
-              Automatically adjust instances based on load
-            </span>
+            <span className="block text-sm font-medium text-dash-text-strong">Auto-scaling</span>
+            <span className="text-xs text-dash-text-faded">Automatically adjust instances based on load</span>
           </div>
           <ToggleSwitch checked={autoScaling} onChange={setAutoScaling} />
         </div>
 
         {!autoScaling ? (
           <div className="mb-4">
-            <label className="mb-1.5 block text-sm text-dash-text-body">
-              Number of instances
-            </label>
+            <label className="mb-1.5 block text-sm text-dash-text-body">Number of instances</label>
             <input
               type="number"
               min={1}
@@ -397,9 +372,7 @@ function CreationForm({
           </div>
         ) : (
           <div className="mb-4">
-            <label className="mb-1.5 block text-sm text-dash-text-body">
-              Instance range
-            </label>
+            <label className="mb-1.5 block text-sm text-dash-text-body">Instance range</label>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-xs text-dash-text-faded">Min</label>
@@ -437,35 +410,19 @@ function CreationForm({
               </div>
             </div>
             {invalidAutoscalingRange ? (
-              <p className="mt-1 text-sm text-[#f5a623]">
-                For auto-scaling to work, max instances must be greater than min instances.
-              </p>
+              <p className="mt-1 text-sm text-[#f5a623]">For auto-scaling to work, max instances must be greater than min instances.</p>
             ) : null}
           </div>
         )}
 
         <div className="mb-4">
           <label className="mb-1.5 block text-sm text-dash-text-body">CPU threshold</label>
-          <RangeSlider
-            value={cpuThreshold}
-            onChange={setCpuThreshold}
-            min={1}
-            max={100}
-            step={1}
-            disabled={!autoScaling}
-          />
+          <RangeSlider value={cpuThreshold} onChange={setCpuThreshold} min={1} max={100} step={1} disabled={!autoScaling} />
         </div>
 
         <div className="mb-5">
           <label className="mb-1.5 block text-sm text-dash-text-body">Memory threshold</label>
-          <RangeSlider
-            value={memThreshold}
-            onChange={setMemThreshold}
-            min={10}
-            max={100}
-            step={5}
-            disabled={!autoScaling}
-          />
+          <RangeSlider value={memThreshold} onChange={setMemThreshold} min={10} max={100} step={5} disabled={!autoScaling} />
         </div>
 
         <div className="flex items-center justify-end gap-3">
@@ -497,15 +454,10 @@ function EmptyState({ onCreateClick, canWrite = true }: { onCreateClick: () => v
       transition={{ duration: 0.3, ease }}
       className="flex flex-col items-center justify-center py-20"
     >
-      <img
-        src="/icons/scaling.svg"
-        alt=""
-        className="mb-4 size-10 opacity-30 dark:invert dark:opacity-35"
-      />
+      <img src="/icons/scaling.svg" alt="" className="mb-4 size-10 opacity-30 dark:invert dark:opacity-35" />
       <h3 className="mb-1 text-sm font-medium text-dash-text-strong">No scaling groups yet</h3>
       <p className="mb-5 max-w-[320px] text-center text-sm text-dash-text-faded">
-        Create a scaling group to automatically manage instance counts based on CPU and
-        memory usage.
+        Create a scaling group to automatically manage instance counts based on CPU and memory usage.
       </p>
       {canWrite && (
         <GlossyButton variant="blue" onClick={onCreateClick}>
@@ -732,14 +684,11 @@ function ScalingPage() {
     return (
       <div className="max-w-[1000px]">
         <PageHeader title="Scaling" image="/images/scaling-tab.svg">
-          Configure auto-scaling groups to automatically adjust the number of running
-          instances for your projects based on CPU and memory thresholds.
+          Configure auto-scaling groups to automatically adjust the number of running instances for your projects based on CPU and memory
+          thresholds.
         </PageHeader>
         <hr className="-ml-4 mb-6 border-dash-border-soft md:-ml-10" />
-        <PlanUpgradePrompt
-          feature="Autoscaling"
-          description="Upgrade your plan to enable autoscaling."
-        />
+        <PlanUpgradePrompt feature="Autoscaling" description="Upgrade your plan to enable autoscaling." />
       </div>
     );
   }
@@ -747,8 +696,8 @@ function ScalingPage() {
   return (
     <div className="max-w-[1000px]">
       <PageHeader title="Scaling" image="/images/scaling-tab.svg">
-        Configure auto-scaling groups to automatically adjust the number of running
-        instances for your projects based on CPU and memory thresholds.
+        Configure auto-scaling groups to automatically adjust the number of running instances for your projects based on CPU and memory
+        thresholds.
       </PageHeader>
 
       <hr className="-ml-4 mb-6 border-dash-border-soft md:-ml-10" />
@@ -765,11 +714,7 @@ function ScalingPage() {
           />
         </div>
         {canWrite && (
-          <GlossyButton
-            variant="blue"
-            onClick={handleNewGroup}
-            className="shrink-0 gap-1.5"
-          >
+          <GlossyButton variant="blue" onClick={handleNewGroup} className="shrink-0 gap-1.5">
             <Plus className="size-3.5" />
             New Scaling Group
           </GlossyButton>
@@ -791,9 +736,7 @@ function ScalingPage() {
       {rows.length === 0 ? (
         <EmptyState onCreateClick={handleNewGroup} canWrite={canWrite} />
       ) : filtered.length === 0 ? (
-        <div className="py-12 text-center text-sm text-dash-text-faded">
-          No scaling groups match your search.
-        </div>
+        <div className="py-12 text-center text-sm text-dash-text-faded">No scaling groups match your search.</div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {filtered.map((group, i) => (

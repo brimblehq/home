@@ -1,27 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  createFileRoute,
-  Outlet,
-  redirect,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ProjectSubnav } from "../../components/project/project-subnav";
 import { DeploymentLogsDrawer } from "../../components/shared/deployment-logs-drawer";
 import { getProjectDetailsServerFn, listHomeProjectsServerFn } from "@/server/projects/actions";
-import {
-  getActiveEnvironmentPreferenceServerFn,
-  listProjectEnvironmentsServerFn,
-} from "@/server/environments/actions";
+import { getActiveEnvironmentPreferenceServerFn, listProjectEnvironmentsServerFn } from "@/server/environments/actions";
 import { listDeploymentRunLogsServerFn } from "@/server/deployments/actions";
 import type { Project as BackendProject } from "@/backend/projects";
 import type { ApiListResponse } from "@/backend";
 import type { DeploymentLog } from "@/backend/deployments";
 import type { DeploymentDrawerLogEntry } from "@/utils/deployment-logs";
-import {
-  hasExplicitEnvironmentSelection,
-  resolveEnvironmentId,
-} from "@/utils/environment-selection";
+import { hasExplicitEnvironmentSelection, resolveEnvironmentId } from "@/utils/environment-selection";
 import {
   ProjectDeploymentLogsDrawerContext,
   type ProjectDeploymentLogsDrawerContextValue,
@@ -48,14 +37,9 @@ export const Route = createFileRoute("/projects/$projectId")({
   loaderDeps: ({ search }) => {
     const rawSearch = search as Record<string, unknown>;
     const workspace =
-      typeof rawSearch.workspace === "string" && rawSearch.workspace.trim().length > 0
-        ? rawSearch.workspace.trim()
-        : undefined;
+      typeof rawSearch.workspace === "string" && rawSearch.workspace.trim().length > 0 ? rawSearch.workspace.trim() : undefined;
     const environmentId =
-      typeof rawSearch.environmentId === "string" &&
-      rawSearch.environmentId.trim().length > 0
-        ? rawSearch.environmentId.trim()
-        : undefined;
+      typeof rawSearch.environmentId === "string" && rawSearch.environmentId.trim().length > 0 ? rawSearch.environmentId.trim() : undefined;
 
     return {
       workspace,
@@ -65,9 +49,7 @@ export const Route = createFileRoute("/projects/$projectId")({
   beforeLoad: async ({ params, search }) => {
     const rawSearch = search as Record<string, unknown>;
     const workspace =
-      typeof rawSearch.workspace === "string" && rawSearch.workspace.trim().length > 0
-        ? rawSearch.workspace.trim()
-        : undefined;
+      typeof rawSearch.workspace === "string" && rawSearch.workspace.trim().length > 0 ? rawSearch.workspace.trim() : undefined;
 
     const cacheKey = `${params.projectId}:${workspace ?? ""}`;
     const cached = projectCache.get(cacheKey);
@@ -76,9 +58,9 @@ export const Route = createFileRoute("/projects/$projectId")({
       return { project: cached.data, workspace };
     }
 
-    const project = await (getProjectDetailsServerFn as unknown as (input: {
-      data: { projectId: string; workspace?: string };
-    }) => Promise<BackendProject>)({
+    const project = await (
+      getProjectDetailsServerFn as unknown as (input: { data: { projectId: string; workspace?: string } }) => Promise<BackendProject>
+    )({
       data: {
         projectId: params.projectId,
         workspace,
@@ -98,19 +80,21 @@ export const Route = createFileRoute("/projects/$projectId")({
     const hasExplicitEnvironment = hasExplicitEnvironmentSelection(searchEnvironmentId);
 
     const [environments, persistedEnvironmentId, allProjects] = await Promise.all([
-      (listProjectEnvironmentsServerFn as unknown as (input: {
-        data: { workspace?: string };
-      }) => Promise<Array<{ _id: string; isDefault?: boolean }>>)({
+      (
+        listProjectEnvironmentsServerFn as unknown as (input: {
+          data: { workspace?: string };
+        }) => Promise<Array<{ _id: string; isDefault?: boolean }>>
+      )({
         data: { workspace },
       }).catch(() => []),
-      (getActiveEnvironmentPreferenceServerFn as unknown as (input: {
-        data?: { workspace?: string };
-      }) => Promise<string | null>)({
+      (getActiveEnvironmentPreferenceServerFn as unknown as (input: { data?: { workspace?: string } }) => Promise<string | null>)({
         data: { workspace },
       }).catch(() => null),
-      (listHomeProjectsServerFn as unknown as (input: {
-        data: { workspace?: string; environmentId?: string };
-      }) => Promise<ApiListResponse<BackendProject>>)({
+      (
+        listHomeProjectsServerFn as unknown as (input: {
+          data: { workspace?: string; environmentId?: string };
+        }) => Promise<ApiListResponse<BackendProject>>
+      )({
         data: { workspace, environmentId: searchEnvironmentId },
       }),
     ]);
@@ -123,9 +107,11 @@ export const Route = createFileRoute("/projects/$projectId")({
 
     let projectSwitcherProjects = allProjects;
     if (environmentId && environmentId !== searchEnvironmentId) {
-      projectSwitcherProjects = await (listHomeProjectsServerFn as unknown as (input: {
-        data: { workspace?: string; environmentId?: string };
-      }) => Promise<ApiListResponse<BackendProject>>)({
+      projectSwitcherProjects = await (
+        listHomeProjectsServerFn as unknown as (input: {
+          data: { workspace?: string; environmentId?: string };
+        }) => Promise<ApiListResponse<BackendProject>>
+      )({
         data: { workspace, environmentId },
       });
     }
@@ -142,9 +128,7 @@ export const Route = createFileRoute("/projects/$projectId")({
         to: "/projects",
         search: {
           ...(workspace ? { workspace } : {}),
-          ...(hasExplicitEnvironment && environmentId
-            ? { environmentId }
-            : {}),
+          ...(hasExplicitEnvironment && environmentId ? { environmentId } : {}),
         } as any,
       });
     }
@@ -164,9 +148,7 @@ function ProjectLayout() {
   const { projectId } = Route.useParams();
   const { project, workspace } = Route.useLoaderData();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const getDeploymentRunLogs = useServerFn(
-    listDeploymentRunLogsServerFn as any,
-  ) as (args: {
+  const getDeploymentRunLogs = useServerFn(listDeploymentRunLogsServerFn as any) as (args: {
     data: {
       logId: string;
       workspace?: string;
@@ -175,21 +157,14 @@ function ProjectLayout() {
 
   const { sendNotification } = usePushNotification(workspace);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedDeployment, setSelectedDeployment] =
-    useState<DeploymentLog | null>(null);
-  const [drawerLogsByDeploymentId, setDrawerLogsByDeploymentId] = useState<
-    Record<string, DeploymentDrawerLogEntry[]>
-  >({});
+  const [selectedDeployment, setSelectedDeployment] = useState<DeploymentLog | null>(null);
+  const [drawerLogsByDeploymentId, setDrawerLogsByDeploymentId] = useState<Record<string, DeploymentDrawerLogEntry[]>>({});
   const [drawerLogsLoading, setDrawerLogsLoading] = useState(false);
   const [drawerLogsError, setDrawerLogsError] = useState<string | null>(null);
 
-  const isDomainSettings = new RegExp(
-    `^/projects/[^/]+/domains/[^/]+`,
-  ).test(pathname);
+  const isDomainSettings = new RegExp(`^/projects/[^/]+/domains/[^/]+`).test(pathname);
 
-  const selectedDeploymentLogs = selectedDeployment
-    ? drawerLogsByDeploymentId[selectedDeployment.id] ?? []
-    : [];
+  const selectedDeploymentLogs = selectedDeployment ? (drawerLogsByDeploymentId[selectedDeployment.id] ?? []) : [];
 
   let drawerStatus: "Successful" | "Failed" | "Pending" = "Pending";
   const selectedStatus = selectedDeployment?.status?.toLowerCase();
@@ -311,14 +286,18 @@ function ProjectLayout() {
         eventName === "deployment:failed" ||
         eventName.startsWith("deployment:")
       ) {
-        window.dispatchEvent(new CustomEvent("brimble:deployment-updated", {
-          detail: { projectId: backendProjectId, ...(message.data ?? {}) },
-        }));
+        window.dispatchEvent(
+          new CustomEvent("brimble:deployment-updated", {
+            detail: { projectId: backendProjectId, ...(message.data ?? {}) },
+          }),
+        );
       }
     });
 
     return () => {
-      try { ably.close(); } catch {}
+      try {
+        ably.close();
+      } catch {}
     };
   }, [(project as BackendProject)?.id]);
 

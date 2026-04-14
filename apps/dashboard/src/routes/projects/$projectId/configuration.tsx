@@ -1,22 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { IpWhitelist } from "@/components/shared/ip-whitelist";
-import {
-  createFileRoute,
-  getRouteApi,
-  useNavigate,
-  useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  GearSix,
-  Hammer,
-  Cpu,
-  Warning,
-  DatabaseIcon,
-  MagnifyingGlass,
-  GithubLogo,
-} from "@phosphor-icons/react";
+import { GearSix, Hammer, Cpu, Warning, DatabaseIcon, MagnifyingGlass, GithubLogo } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
@@ -49,11 +36,7 @@ import type { Region } from "@/backend/regions";
 import { listFrameworksServerFn } from "@/server/frameworks/actions";
 import { getGithubRepoServerFn } from "@/server/repositories/actions";
 import { mapFrameworksToDropdownOptions } from "@/utils/framework-dropdown";
-import {
-  formatMemory,
-  normalizeCpuValue,
-  normalizeMemoryGbValue,
-} from "@/utils/project-configuration";
+import { formatMemory, normalizeCpuValue, normalizeMemoryGbValue } from "@/utils/project-configuration";
 import {
   getConfigurationDescription,
   isDatabaseProject,
@@ -69,10 +52,7 @@ import {
 } from "@/utils/project-capabilities";
 import { isNoBuildFramework } from "@/utils/project-deploy";
 import { useFeatureFlag, FeatureFlags } from "@/lib/feature-flags";
-import {
-  linkRepoServerFn,
-  unlinkRepoServerFn,
-} from "@/server/projects/actions";
+import { linkRepoServerFn, unlinkRepoServerFn } from "@/server/projects/actions";
 import {
   listGithubAccountsServerFn,
   listGithubReposServerFn,
@@ -82,16 +62,8 @@ import {
   listBitbucketReposServerFn,
 } from "@/server/repositories/actions";
 import type { GithubRepoListItem } from "@/backend/repositories";
-import {
-  generalConfigSchema,
-  databaseConfigSchema,
-  resourcesConfigSchema,
-} from "@/utils/configuration-schemas";
-import type {
-  GeneralConfigValues,
-  DatabaseConfigValues,
-  ResourcesConfigValues,
-} from "@/utils/configuration-schemas";
+import { generalConfigSchema, databaseConfigSchema, resourcesConfigSchema } from "@/utils/configuration-schemas";
+import type { GeneralConfigValues, DatabaseConfigValues, ResourcesConfigValues } from "@/utils/configuration-schemas";
 import { markDeploymentHistoryForRefresh } from "@/utils/deployment-history-refresh";
 
 const parentRoute = getRouteApi("/projects/$projectId");
@@ -116,10 +88,7 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
       (
         listFrameworksServerFn as unknown as (input: {
           data?: undefined;
-        }) => Promise<
-          | FrameworkOption[]
-          | { result?: FrameworkOption[]; data?: FrameworkOption[] }
-        >
+        }) => Promise<FrameworkOption[] | { result?: FrameworkOption[]; data?: FrameworkOption[] }>
       )({
         data: undefined,
       })
@@ -149,9 +118,7 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
 
     tasks.push(
       (
-        listScalingGroupsServerFn as unknown as (input: {
-          data?: { workspace?: string };
-        }) => Promise<
+        listScalingGroupsServerFn as unknown as (input: { data?: { workspace?: string } }) => Promise<
           | { items: ScalingGroup[]; message?: string }
           | {
               result?: { items?: ScalingGroup[]; message?: string };
@@ -187,11 +154,7 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
     );
 
     tasks.push(
-      (
-        listRegionsServerFn as unknown as (input: {
-          data?: { type?: string; enabled?: boolean; teamId?: string };
-        }) => Promise<Region[]>
-      )({
+      (listRegionsServerFn as unknown as (input: { data?: { type?: string; enabled?: boolean; teamId?: string } }) => Promise<Region[]>)({
         data: { type: "web", enabled: true },
       })
         .then((items) => {
@@ -203,11 +166,7 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
     );
 
     tasks.push(
-      (
-        listProjectEnvironmentsServerFn as unknown as (input: {
-          data?: { workspace?: string };
-        }) => Promise<ProjectEnvironment[]>
-      )({
+      (listProjectEnvironmentsServerFn as unknown as (input: { data?: { workspace?: string } }) => Promise<ProjectEnvironment[]>)({
         data: { workspace },
       })
         .then((items) => {
@@ -255,8 +214,7 @@ export const Route = createFileRoute("/projects/$projectId/configuration")({
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
-const inputClass =
-  "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+const inputClass = "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 const PERSISTENT_STORAGE_PRICE_PER_GB = 0.25;
 
@@ -309,43 +267,35 @@ const allSections: {
 function EnvironmentSection({
   projectId,
   currentEnvironmentId,
+  currentInheritEnvVars,
   workspace,
   initialEnvironments = [],
   canWrite = true,
 }: {
   projectId: string;
   currentEnvironmentId?: string | null;
+  currentInheritEnvVars?: boolean;
   workspace?: string;
   initialEnvironments?: ProjectEnvironment[];
   canWrite?: boolean;
 }) {
   const router = useRouter();
-  const [environments, setEnvironments] =
-    useState<ProjectEnvironment[]>(initialEnvironments);
+  const [environments, setEnvironments] = useState<ProjectEnvironment[]>(initialEnvironments);
   const [selectedId, setSelectedId] = useState(() => {
-    if (
-      currentEnvironmentId &&
-      initialEnvironments.some((env) => env._id === currentEnvironmentId)
-    ) {
+    if (currentEnvironmentId && initialEnvironments.some((env) => env._id === currentEnvironmentId)) {
       return currentEnvironmentId;
     }
 
-    const defaultEnvironment =
-      initialEnvironments.find((env) => env.isDefault) ??
-      initialEnvironments[0];
+    const defaultEnvironment = initialEnvironments.find((env) => env.isDefault) ?? initialEnvironments[0];
     return defaultEnvironment?._id ?? "";
   });
-  const [inheritEnvVars, setInheritEnvVars] = useState(true);
+  const [inheritEnvVars, setInheritEnvVars] = useState(currentInheritEnvVars !== false);
   const [saving, setSaving] = useState(false);
 
-  const listEnvironments = useServerFn(
-    listProjectEnvironmentsServerFn as any,
-  ) as (args: {
+  const listEnvironments = useServerFn(listProjectEnvironmentsServerFn as any) as (args: {
     data: { workspace?: string };
   }) => Promise<ProjectEnvironment[]>;
-  const moveProject = useServerFn(
-    moveProjectEnvironmentServerFn as any,
-  ) as (args: {
+  const moveProject = useServerFn(moveProjectEnvironmentServerFn as any) as (args: {
     data: {
       projectId: string;
       environmentId: string;
@@ -365,10 +315,7 @@ function EnvironmentSection({
         const envs = await listEnvironments({ data: { workspace } });
         if (!cancelled && Array.isArray(envs)) {
           setEnvironments(envs);
-          if (
-            !selectedId ||
-            !envs.some((environment) => environment._id === selectedId)
-          ) {
+          if (!selectedId || !envs.some((environment) => environment._id === selectedId)) {
             const defaultEnv = envs.find((e) => e.isDefault);
             setSelectedId(defaultEnv?._id ?? envs[0]?._id ?? "");
           }
@@ -384,31 +331,24 @@ function EnvironmentSection({
   }, [workspace]);
 
   useEffect(() => {
-    if (
-      currentEnvironmentId &&
-      environments.some(
-        (environment) => environment._id === currentEnvironmentId,
-      )
-    ) {
+    if (currentEnvironmentId && environments.some((environment) => environment._id === currentEnvironmentId)) {
       setSelectedId(currentEnvironmentId);
     }
   }, [currentEnvironmentId, environments]);
 
   useEffect(() => {
-    setInheritEnvVars(true);
-  }, [selectedId]);
+    setInheritEnvVars(currentInheritEnvVars !== false);
+  }, [currentInheritEnvVars, currentEnvironmentId]);
 
   const isDirty =
-    environments.length > 0 && selectedId !== (currentEnvironmentId ?? "");
+    environments.length > 0 && (selectedId !== (currentEnvironmentId ?? "") || inheritEnvVars !== (currentInheritEnvVars !== false));
   const options = environments.map((e) => ({ id: e._id, label: e.name }));
 
   return (
     <div className="mb-6 rounded-[4px] border-[0.5px] border-dash-border">
       <div className="flex items-center justify-between gap-4 px-4 py-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <label className="text-sm font-medium text-dash-text-strong">
-            Environment
-          </label>
+          <label className="text-sm font-medium text-dash-text-strong">Environment</label>
           <Dropdown
             value={selectedId}
             options={options}
@@ -447,14 +387,11 @@ function EnvironmentSection({
                   },
                 });
                 setSelectedId(result.environmentId);
+                setInheritEnvVars(result.inheritEnvVars);
                 toast.success("Environment updated successfully");
                 await router.invalidate();
               } catch (error) {
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : "Failed to update environment",
-                );
+                toast.error(error instanceof Error ? error.message : "Failed to update environment");
               } finally {
                 setSaving(false);
               }
@@ -515,45 +452,28 @@ function RepoSection({
     data: { projectId: string; workspace?: string };
   }) => Promise<{ message?: string }>;
 
-  const listGithubAccounts = useServerFn(
-    listGithubAccountsServerFn as any,
-  ) as () => Promise<any>;
-  const listGithubRepos = useServerFn(
-    listGithubReposServerFn as any,
-  ) as (args: {
+  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<any>;
+  const listGithubRepos = useServerFn(listGithubReposServerFn as any) as (args: {
     data: { q?: string; installationId?: number | string };
   }) => Promise<any>;
-  const listGitlabAccounts = useServerFn(
-    listGitlabAccountsServerFn as any,
-  ) as () => Promise<any>;
-  const listGitlabRepos = useServerFn(
-    listGitlabReposServerFn as any,
-  ) as (args: {
+  const listGitlabAccounts = useServerFn(listGitlabAccountsServerFn as any) as () => Promise<any>;
+  const listGitlabRepos = useServerFn(listGitlabReposServerFn as any) as (args: {
     data: { q?: string; installationId?: number | string };
   }) => Promise<any>;
-  const listBitbucketAccounts = useServerFn(
-    listBitbucketAccountsServerFn as any,
-  ) as () => Promise<any>;
-  const listBitbucketRepos = useServerFn(
-    listBitbucketReposServerFn as any,
-  ) as (args: {
+  const listBitbucketAccounts = useServerFn(listBitbucketAccountsServerFn as any) as () => Promise<any>;
+  const listBitbucketRepos = useServerFn(listBitbucketReposServerFn as any) as (args: {
     data: { q?: string; installationId?: number | string };
   }) => Promise<any>;
 
   const connectedRepo = project?.repo;
-  const [localConnectedRepo, setLocalConnectedRepo] = useState<any>(
-    connectedRepo ?? null,
-  );
+  const [localConnectedRepo, setLocalConnectedRepo] = useState<any>(connectedRepo ?? null);
 
   useEffect(() => {
     setLocalConnectedRepo(connectedRepo ?? null);
   }, [project?.id]);
 
-  const hasRepo = Boolean(
-    localConnectedRepo?.fullName || localConnectedRepo?.name,
-  );
-  const repoDisplay =
-    localConnectedRepo?.fullName || localConnectedRepo?.name || "";
+  const hasRepo = Boolean(localConnectedRepo?.fullName || localConnectedRepo?.name);
+  const repoDisplay = localConnectedRepo?.fullName || localConnectedRepo?.name || "";
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -561,9 +481,7 @@ function RepoSection({
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerRepos, setPickerRepos] = useState<GithubRepoListItem[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
-  const [pickerAccounts, setPickerAccounts] = useState<
-    Array<{ id?: string; name?: string; installationId?: number | string }>
-  >([]);
+  const [pickerAccounts, setPickerAccounts] = useState<Array<{ id?: string; name?: string; installationId?: number | string }>>([]);
   const [pickerAccount, setPickerAccount] = useState<string>("");
   const [connecting, setConnecting] = useState<string | null>(null);
 
@@ -571,18 +489,12 @@ function RepoSection({
     async (provider: GitProviderId) => {
       try {
         const listAccounts =
-          provider === "github"
-            ? listGithubAccounts
-            : provider === "gitlab"
-              ? listGitlabAccounts
-              : listBitbucketAccounts;
+          provider === "github" ? listGithubAccounts : provider === "gitlab" ? listGitlabAccounts : listBitbucketAccounts;
         const result = await listAccounts();
         const accounts = result?.accounts || [];
         setPickerAccounts(accounts);
         if (accounts.length > 0) {
-          setPickerAccount(
-            String(accounts[0].installationId || accounts[0].id || ""),
-          );
+          setPickerAccount(String(accounts[0].installationId || accounts[0].id || ""));
         }
         return accounts;
       } catch {
@@ -594,19 +506,10 @@ function RepoSection({
   );
 
   const fetchRepos = useCallback(
-    async (
-      provider: GitProviderId,
-      installationId?: string,
-      search?: string,
-    ) => {
+    async (provider: GitProviderId, installationId?: string, search?: string) => {
       setPickerLoading(true);
       try {
-        const listRepos =
-          provider === "github"
-            ? listGithubRepos
-            : provider === "gitlab"
-              ? listGitlabRepos
-              : listBitbucketRepos;
+        const listRepos = provider === "github" ? listGithubRepos : provider === "gitlab" ? listGitlabRepos : listBitbucketRepos;
         const result = await listRepos({
           data: {
             q: search || undefined,
@@ -629,9 +532,7 @@ function RepoSection({
     setPickerRepos([]);
     const accounts = await fetchAccounts(pickerProvider);
     if (accounts.length > 0) {
-      const installId = String(
-        accounts[0].installationId || accounts[0].id || "",
-      );
+      const installId = String(accounts[0].installationId || accounts[0].id || "");
       await fetchRepos(pickerProvider, installId);
     }
   }, [fetchAccounts, fetchRepos, pickerProvider]);
@@ -643,9 +544,7 @@ function RepoSection({
       setPickerRepos([]);
       const accounts = await fetchAccounts(provider);
       if (accounts.length > 0) {
-        const installId = String(
-          accounts[0].installationId || accounts[0].id || "",
-        );
+        const installId = String(accounts[0].installationId || accounts[0].id || "");
         await fetchRepos(provider, installId);
       }
     },
@@ -696,11 +595,7 @@ function RepoSection({
         setPickerOpen(false);
         onRepoChanged();
       } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to connect repository",
-        );
+        toast.error(error instanceof Error ? error.message : "Failed to connect repository");
       } finally {
         setConnecting(null);
       }
@@ -709,7 +604,6 @@ function RepoSection({
   );
 
   const handleDisconnect = useCallback(async () => {
-
     try {
       await unlinkRepo({ data: { projectId: project?.id, workspace } });
       haptics.success();
@@ -718,13 +612,8 @@ function RepoSection({
       setConfirmOpen(false);
       onRepoChanged();
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to disconnect repository",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to disconnect repository");
     } finally {
-
     }
   }, [unlinkRepo, project?.id, workspace, haptics, onRepoChanged]);
 
@@ -743,32 +632,19 @@ function RepoSection({
       <div className="mb-4 rounded-[4px] border-[0.5px] border-dash-border">
         <div className="flex items-center justify-between px-4 py-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-dash-text-strong">
-              Connected repository
-            </label>
+            <label className="text-sm font-medium text-dash-text-strong">Connected repository</label>
             {hasRepo ? (
               <div className="flex items-center gap-2">
-                <img
-                  src="/icons/git-circle.svg"
-                  alt=""
-                  className="size-5 shrink-0"
-                />
-                <span className="text-sm text-dash-text-body">
-                  {repoDisplay}
-                </span>
+                <img src="/icons/git-circle.svg" alt="" className="size-5 shrink-0" />
+                <span className="text-sm text-dash-text-body">{repoDisplay}</span>
               </div>
             ) : (
-              <span className="text-sm text-dash-text-faded">
-                No repository connected
-              </span>
+              <span className="text-sm text-dash-text-faded">No repository connected</span>
             )}
           </div>
           <div className="flex items-center gap-2">
             {hasRepo && canWrite && (
-              <GlossyButton
-                variant="white"
-                onClick={() => setConfirmOpen(true)}
-              >
+              <GlossyButton variant="white" onClick={() => setConfirmOpen(true)}>
                 Disconnect
               </GlossyButton>
             )}
@@ -794,10 +670,7 @@ function RepoSection({
 
       {/* Repo picker modal */}
       <Modal open={pickerOpen} onOpenChange={setPickerOpen} width={520}>
-        <ModalHeader
-          title="Connect a repository"
-          description="Select a git provider and choose a repository to connect."
-        />
+        <ModalHeader title="Connect a repository" description="Select a git provider and choose a repository to connect." />
 
         <div className="flex flex-col gap-3 px-6 py-4">
           {/* Provider + Account inline */}
@@ -807,11 +680,7 @@ function RepoSection({
               animate={{ width: pickerAccounts.length > 0 ? "30%" : "100%" }}
               transition={{ duration: 0.25, ease }}
             >
-              <Dropdown
-                value={pickerProvider}
-                options={providerOptions}
-                onChange={(id) => handleProviderChange(id as GitProviderId)}
-              />
+              <Dropdown value={pickerProvider} options={providerOptions} onChange={(id) => handleProviderChange(id as GitProviderId)} />
             </motion.div>
             <AnimatePresence>
               {pickerAccounts.length > 0 && (
@@ -822,11 +691,7 @@ function RepoSection({
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.2, ease }}
                 >
-                  <Dropdown
-                    value={pickerAccount}
-                    options={accountOptions}
-                    onChange={handleAccountChange}
-                  />
+                  <Dropdown value={pickerAccount} options={accountOptions} onChange={handleAccountChange} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -853,9 +718,7 @@ function RepoSection({
             }}
           >
             {pickerLoading ? (
-              <div className="px-4 py-8 text-center text-sm text-dash-text-faded">
-                Loading repositories…
-              </div>
+              <div className="px-4 py-8 text-center text-sm text-dash-text-faded">Loading repositories…</div>
             ) : pickerRepos.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-dash-text-faded">
                 {pickerAccounts.length === 0
@@ -869,25 +732,13 @@ function RepoSection({
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: 0.04 * i, ease }}
-                  className={`flex items-center justify-between px-4 py-3 ${
-                    i > 0 ? "border-t-[0.5px] border-dash-border" : ""
-                  }`}
+                  className={`flex items-center justify-between px-4 py-3 ${i > 0 ? "border-t-[0.5px] border-dash-border" : ""}`}
                 >
                   <div className="flex items-center gap-3">
-                    <img
-                      src="/icons/git-circle.svg"
-                      alt=""
-                      className="size-6 shrink-0"
-                    />
-                    <span className="text-sm font-medium text-dash-text-strong">
-                      {repo.name}
-                    </span>
+                    <img src="/icons/git-circle.svg" alt="" className="size-6 shrink-0" />
+                    <span className="text-sm font-medium text-dash-text-strong">{repo.name}</span>
                   </div>
-                  <DashButton
-                    size="sm"
-                    onClick={() => handleConnect(repo)}
-                    disabled={connecting !== null}
-                  >
+                  <DashButton size="sm" onClick={() => handleConnect(repo)} disabled={connecting !== null}>
                     {connecting === repo.fullName ? "Connecting…" : "Connect"}
                   </DashButton>
                 </motion.div>
@@ -938,41 +789,23 @@ function GeneralSection({
       }}
       enableReinitialize
     >
-      {({
-        values,
-        errors,
-        touched,
-        dirty,
-        isSubmitting,
-        handleSubmit,
-        handleChange,
-        handleBlur,
-        setFieldValue,
-      }) => (
-        <form
-          className="rounded-[4px] border-[0.5px] border-dash-border"
-          onSubmit={handleSubmit}
-        >
+      {({ values, errors, touched, dirty, isSubmitting, handleSubmit, handleChange, handleBlur, setFieldValue }) => (
+        <form className="rounded-[4px] border-[0.5px] border-dash-border" onSubmit={handleSubmit}>
           {/* Row 1: Project name */}
           <div className="flex flex-col gap-1.5 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">
-              Project name
-            </label>
+            <label className="text-sm font-medium text-dash-text-strong">Project name</label>
             <div
               className="input-base input-focus-within flex items-stretch overflow-hidden"
               style={
                 touched.name && errors.name
                   ? {
-                      boxShadow:
-                        "0px 1px 2px rgba(239,47,31,0.3), 0px 0px 0px 1px #ef2f1f",
+                      boxShadow: "0px 1px 2px rgba(239,47,31,0.3), 0px 0px 0px 1px #ef2f1f",
                     }
                   : undefined
               }
             >
               <div className="flex items-center border-r border-dash-border px-3">
-                <span className="whitespace-nowrap text-sm leading-6 text-dash-text-faded">
-                  app.brimble.io/projects/
-                </span>
+                <span className="whitespace-nowrap text-sm leading-6 text-dash-text-faded">app.brimble.io/projects/</span>
               </div>
               <input
                 type="text"
@@ -984,9 +817,7 @@ function GeneralSection({
                 className="w-full bg-transparent px-3 py-2.5 text-sm leading-6 text-dash-text-strong outline-none"
               />
             </div>
-            {touched.name && errors.name && (
-              <span className="text-xs text-[#ef2f1f]">{errors.name}</span>
-            )}
+            {touched.name && errors.name && <span className="text-xs text-[#ef2f1f]">{errors.name}</span>}
           </div>
 
           <hr className="border-dash-border" />
@@ -995,9 +826,7 @@ function GeneralSection({
             <>
               {/* Row 2: Branch to deploy */}
               <div className="flex flex-col gap-1.5 px-4 py-4">
-                <label className="text-sm font-medium text-dash-text-strong">
-                  Branch to deploy
-                </label>
+                <label className="text-sm font-medium text-dash-text-strong">Branch to deploy</label>
                 <Dropdown
                   value={values.branch}
                   options={branchOptions}
@@ -1011,22 +840,15 @@ function GeneralSection({
 
               {/* Row 3: Root directory */}
               <div className="flex flex-col gap-1.5 px-4 py-4">
-                <label className="text-sm font-medium text-dash-text-strong">
-                  Root directory
-                </label>
-                <RootDirectoryTrigger
-                  value={rootDir}
-                  onClick={canWrite ? onOpenDrawer : undefined}
-                />
+                <label className="text-sm font-medium text-dash-text-strong">Root directory</label>
+                <RootDirectoryTrigger value={rootDir} onClick={canWrite ? onOpenDrawer : undefined} />
               </div>
 
               <hr className="border-dash-border" />
 
               {/* Row 4: Framework */}
               <div className="flex flex-col gap-1.5 px-4 py-4">
-                <label className="text-sm font-medium text-dash-text-strong">
-                  Framework
-                </label>
+                <label className="text-sm font-medium text-dash-text-strong">Framework</label>
                 <Dropdown
                   value={values.framework}
                   options={frameworkOptions}
@@ -1043,19 +865,12 @@ function GeneralSection({
           ) : (
             <>
               <div className="flex flex-col gap-1.5 px-4 py-4">
-                <label className="text-sm font-medium text-dash-text-strong">
-                  Source image
-                </label>
-                <div
-                  className={`${inputClass} flex items-center font-family-mono text-[13px]`}
-                >
-                  <span className="truncate">
-                    {dockerSourceImage || "Docker source project"}
-                  </span>
+                <label className="text-sm font-medium text-dash-text-strong">Source image</label>
+                <div className={`${inputClass} flex items-center font-family-mono text-[13px]`}>
+                  <span className="truncate">{dockerSourceImage || "Docker source project"}</span>
                 </div>
                 <p className="text-xs text-dash-text-faded">
-                  This project is configured from a Docker image source, so
-                  branch, root directory and framework presets are not used.
+                  This project is configured from a Docker image source, so branch, root directory and framework presets are not used.
                 </p>
               </div>
               <hr className="border-dash-border" />
@@ -1066,9 +881,7 @@ function GeneralSection({
           {regionOptions.length > 0 && (
             <>
               <div className="flex flex-col gap-1.5 px-4 py-4">
-                <label className="text-sm font-medium text-dash-text-strong">
-                  Region
-                </label>
+                <label className="text-sm font-medium text-dash-text-strong">Region</label>
                 <Dropdown
                   value={values.region}
                   options={regionOptions}
@@ -1087,12 +900,9 @@ function GeneralSection({
                 {showBuildCacheControl && (
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-sm font-medium text-dash-text-strong">
-                        Enable Build Cache on Redeploy
-                      </span>
+                      <span className="text-sm font-medium text-dash-text-strong">Enable Build Cache on Redeploy</span>
                       <span className="text-xs text-dash-text-faded">
-                        Reuse the previous build cache to speed up redeploys.
-                        Cache clears automatically after 15 days.
+                        Reuse the previous build cache to speed up redeploys. Cache clears automatically after 15 days.
                       </span>
                     </div>
                     <ToggleSwitch
@@ -1105,18 +915,10 @@ function GeneralSection({
                 {showMcpAuthControl && (
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-sm font-medium text-dash-text-strong">
-                        Enable Authentication
-                      </span>
-                      <span className="text-xs text-dash-text-faded">
-                        Require API key authentication for your MCP server.
-                      </span>
+                      <span className="text-sm font-medium text-dash-text-strong">Enable Authentication</span>
+                      <span className="text-xs text-dash-text-faded">Require API key authentication for your MCP server.</span>
                     </div>
-                    <ToggleSwitch
-                      checked={values.authEnabled}
-                      onChange={(v) => setFieldValue("authEnabled", v)}
-                      disabled={!canWrite}
-                    />
+                    <ToggleSwitch checked={values.authEnabled} onChange={(v) => setFieldValue("authEnabled", v)} disabled={!canWrite} />
                   </div>
                 )}
               </div>
@@ -1125,12 +927,7 @@ function GeneralSection({
           )}
 
           <div className="flex justify-end px-4 py-4">
-            <GlossyButton
-              type="submit"
-              disabled={!canWrite || !dirty || isSubmitting}
-              loading={isSubmitting}
-              loadingLabel="Saving..."
-            >
+            <GlossyButton type="submit" disabled={!canWrite || !dirty || isSubmitting} loading={isSubmitting} loadingLabel="Saving...">
               Save
             </GlossyButton>
           </div>
@@ -1208,34 +1005,24 @@ function BuildSection({
       {showDockerSourceFields && (
         <>
           <div className="flex flex-col gap-1.5 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">
-              PreStart command
-            </label>
+            <label className="text-sm font-medium text-dash-text-strong">PreStart command</label>
             <input
               type="text"
               value={values.preStartCommand}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, preStartCommand: e.target.value }))
-              }
+              onChange={(e) => setValues((v) => ({ ...v, preStartCommand: e.target.value }))}
               placeholder="apk add curl"
               readOnly={!canWrite}
               className={inputClass}
             />
-            <p className="mt-1 text-xs text-dash-text-faded">
-              Runs in an Alpine environment before your container starts.
-            </p>
+            <p className="mt-1 text-xs text-dash-text-faded">Runs in an Alpine environment before your container starts.</p>
           </div>
           <hr className="border-dash-border" />
           <div className="flex flex-col gap-1.5 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">
-              Docker image
-            </label>
+            <label className="text-sm font-medium text-dash-text-strong">Docker image</label>
             <input
               type="text"
               value={values.dockerImage}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, dockerImage: e.target.value }))
-              }
+              onChange={(e) => setValues((v) => ({ ...v, dockerImage: e.target.value }))}
               placeholder="docker.io/library/nginx:latest"
               readOnly={!canWrite}
               className={`${inputClass} font-family-mono text-[13px]`}
@@ -1249,15 +1036,11 @@ function BuildSection({
         <>
           {/* Row 1: Install command */}
           <div className="flex flex-col gap-1.5 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">
-              Install command
-            </label>
+            <label className="text-sm font-medium text-dash-text-strong">Install command</label>
             <input
               type="text"
               value={values.installCommand}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, installCommand: e.target.value }))
-              }
+              onChange={(e) => setValues((v) => ({ ...v, installCommand: e.target.value }))}
               placeholder="npm install"
               readOnly={!canWrite}
               className={inputClass}
@@ -1268,15 +1051,11 @@ function BuildSection({
 
           {/* Row 2: Build command */}
           <div className="flex flex-col gap-1.5 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">
-              Build command
-            </label>
+            <label className="text-sm font-medium text-dash-text-strong">Build command</label>
             <input
               type="text"
               value={values.buildCommand}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, buildCommand: e.target.value }))
-              }
+              onChange={(e) => setValues((v) => ({ ...v, buildCommand: e.target.value }))}
               placeholder="npm run build"
               readOnly={!canWrite}
               className={inputClass}
@@ -1287,15 +1066,11 @@ function BuildSection({
 
           {/* Row 3: Start command */}
           <div className="flex flex-col gap-1.5 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">
-              Start command
-            </label>
+            <label className="text-sm font-medium text-dash-text-strong">Start command</label>
             <input
               type="text"
               value={values.startCommand}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, startCommand: e.target.value }))
-              }
+              onChange={(e) => setValues((v) => ({ ...v, startCommand: e.target.value }))}
               placeholder="npm start"
               readOnly={!canWrite}
               className={inputClass}
@@ -1308,22 +1083,16 @@ function BuildSection({
       {showOutputDirectory && (
         <>
           <div className="flex flex-col gap-1.5 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">
-              Output directory
-            </label>
+            <label className="text-sm font-medium text-dash-text-strong">Output directory</label>
             <input
               type="text"
               value={values.outputDirectory}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, outputDirectory: e.target.value }))
-              }
+              onChange={(e) => setValues((v) => ({ ...v, outputDirectory: e.target.value }))}
               placeholder="dist"
               readOnly={!canWrite}
               className={inputClass}
             />
-            <p className="mt-1 text-xs text-dash-text-faded">
-              The directory where your build output is generated.
-            </p>
+            <p className="mt-1 text-xs text-dash-text-faded">The directory where your build output is generated.</p>
           </div>
           <hr className="border-dash-border" />
         </>
@@ -1331,22 +1100,16 @@ function BuildSection({
 
       {showHealthCheck && (
         <div className="flex flex-col gap-1.5 px-4 py-4">
-          <label className="text-sm font-medium text-dash-text-strong">
-            Health check path
-          </label>
+          <label className="text-sm font-medium text-dash-text-strong">Health check path</label>
           <input
             type="text"
             value={values.healthCheckPath}
-            onChange={(e) =>
-              setValues((v) => ({ ...v, healthCheckPath: e.target.value }))
-            }
+            onChange={(e) => setValues((v) => ({ ...v, healthCheckPath: e.target.value }))}
             placeholder="/api/health"
             readOnly={!canWrite}
             className={inputClass}
           />
-          <p className="mt-1 text-xs text-dash-text-faded">
-            Health check endpoint to monitor your application's status
-          </p>
+          <p className="mt-1 text-xs text-dash-text-faded">Health check endpoint to monitor your application's status</p>
         </div>
       )}
 
@@ -1358,12 +1121,7 @@ function BuildSection({
 
       {/* Footer */}
       <div className="flex justify-end border-t border-dash-border px-4 py-3">
-        <GlossyButton
-          disabled={!canWrite || !dirty || saving}
-          loading={saving}
-          loadingLabel="Saving..."
-          onClick={handleSave}
-        >
+        <GlossyButton disabled={!canWrite || !dirty || saving} loading={saving} loadingLabel="Saving..." onClick={handleSave}>
           Save
         </GlossyButton>
       </div>
@@ -1408,12 +1166,8 @@ function ResourcesSection({
         <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
           {/* Row 1: CPU */}
           <div className="flex flex-col gap-2 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">
-              CPU
-            </label>
-            <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
-              CPU resources allocated to each container
-            </p>
+            <label className="text-sm font-medium text-dash-text-strong">CPU</label>
+            <p className="text-sm font-light leading-[1.3] text-dash-text-faded">CPU resources allocated to each container</p>
             <RangeSlider
               value={values.cpuValue}
               onChange={(v) => setFieldValue("cpuValue", v)}
@@ -1429,12 +1183,8 @@ function ResourcesSection({
 
           {/* Row 2: Memory */}
           <div className="flex flex-col gap-2 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">
-              Memory
-            </label>
-            <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
-              Memory allocated to each container
-            </p>
+            <label className="text-sm font-medium text-dash-text-strong">Memory</label>
+            <p className="text-sm font-light leading-[1.3] text-dash-text-faded">Memory allocated to each container</p>
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <RangeSlider
@@ -1447,9 +1197,7 @@ function ResourcesSection({
                   disabled={!canWrite}
                 />
               </div>
-              <span className="min-w-[52px] text-right text-sm font-medium text-dash-text-strong">
-                {formatMemory(values.memoryValue)}
-              </span>
+              <span className="min-w-[52px] text-right text-sm font-medium text-dash-text-strong">{formatMemory(values.memoryValue)}</span>
             </div>
           </div>
 
@@ -1459,9 +1207,7 @@ function ResourcesSection({
             <>
               {/* Row 3: Scaling group */}
               <div className="flex flex-col gap-1.5 px-4 py-4">
-                <label className="text-sm font-medium text-dash-text-strong">
-                  Scaling group
-                </label>
+                <label className="text-sm font-medium text-dash-text-strong">Scaling group</label>
                 <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
                   Attach to a scaling group for automatic instance management
                 </p>
@@ -1482,14 +1228,8 @@ function ResourcesSection({
             <div className="px-4 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <DatabaseIcon
-                    size={16}
-                    weight="duotone"
-                    className="text-dash-text-faded"
-                  />
-                  <span className="text-sm font-medium text-dash-text-strong">
-                    Persistent Storage
-                  </span>
+                  <DatabaseIcon size={16} weight="duotone" className="text-dash-text-faded" />
+                  <span className="text-sm font-medium text-dash-text-strong">Persistent Storage</span>
                 </div>
                 <ToggleSwitch
                   checked={values.diskEnabled}
@@ -1519,9 +1259,7 @@ function ResourcesSection({
                     <div className="mt-4 flex flex-col gap-4">
                       <div className="grid grid-cols-1 gap-3 px-px pb-px sm:grid-cols-2">
                         <div>
-                          <label className="mb-1.5 block text-xs text-dash-text-faded">
-                            Disk size
-                          </label>
+                          <label className="mb-1.5 block text-xs text-dash-text-faded">Disk size</label>
                           <Dropdown
                             value={values.diskSize}
                             options={diskSizes}
@@ -1530,15 +1268,11 @@ function ResourcesSection({
                           />
                         </div>
                         <div>
-                          <label className="mb-1.5 block text-xs text-dash-text-faded">
-                            Mount path
-                          </label>
+                          <label className="mb-1.5 block text-xs text-dash-text-faded">Mount path</label>
                           <input
                             type="text"
                             value={values.mountPath}
-                            onChange={(e) =>
-                              setFieldValue("mountPath", e.target.value)
-                            }
+                            onChange={(e) => setFieldValue("mountPath", e.target.value)}
                             placeholder="/mnt/data"
                             readOnly={!canWrite}
                             className={`${inputClass} font-family-mono text-[13px]`}
@@ -1548,11 +1282,8 @@ function ResourcesSection({
 
                       <div className="rounded-[4px] bg-[#4879f8]/[0.04] px-3 py-2.5 dark:bg-[#4879f8]/[0.08]">
                         <p className="text-xs leading-relaxed text-dash-text-body">
-                          <span className="font-medium text-[#4879f8]">
-                            ${PERSISTENT_STORAGE_PRICE_PER_GB}/GB per month.
-                          </span>{" "}
-                          Data persists across container restarts and
-                          deployments. The volume mounts at{" "}
+                          <span className="font-medium text-[#4879f8]">${PERSISTENT_STORAGE_PRICE_PER_GB}/GB per month.</span> Data persists
+                          across container restarts and deployments. The volume mounts at{" "}
                           <code className="rounded bg-dash-bg-elevated px-1 py-0.5 font-family-mono text-[11px] text-dash-text-strong">
                             {values.mountPath || "/mnt/data"}
                           </code>{" "}
@@ -1613,29 +1344,16 @@ function DatabaseConfigurationPanel({
       }}
       enableReinitialize
     >
-      {({
-        values,
-        errors,
-        touched,
-        isSubmitting,
-        handleSubmit,
-        handleChange,
-        handleBlur,
-        setFieldValue,
-      }) => {
+      {({ values, errors, touched, isSubmitting, handleSubmit, handleChange, handleBlur, setFieldValue }) => {
         const hasPassword = values.password.trim().length > 0;
         const passwordError = touched.confirmPassword && errors.confirmPassword;
         const canSave = (hasPassword ? !passwordError : true) && !isSubmitting;
-        const isPublicAccess = (values.whitelistIps ?? []).some(
-          (ip) => ip.value === "0.0.0.0/0",
-        );
+        const isPublicAccess = (values.whitelistIps ?? []).some((ip) => ip.value === "0.0.0.0/0");
 
         return (
           <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
             <div className="flex flex-col gap-1.5 px-4 py-4">
-              <label className="text-sm font-medium text-dash-text-strong">
-                Project name
-              </label>
+              <label className="text-sm font-medium text-dash-text-strong">Project name</label>
               <input
                 type="text"
                 name="name"
@@ -1646,40 +1364,25 @@ function DatabaseConfigurationPanel({
                 readOnly={!canWrite}
                 className={inputClass}
               />
-              {touched.name && errors.name && (
-                <span className="text-xs text-[#ef2f1f]">{errors.name}</span>
-              )}
+              {touched.name && errors.name && <span className="text-xs text-[#ef2f1f]">{errors.name}</span>}
             </div>
             <hr className="border-dash-border" />
             <div className="grid grid-cols-1 gap-4 px-4 py-4 md:grid-cols-2">
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-dash-text-strong">
-                  Database engine
-                </span>
-                <span className="text-sm font-light text-dash-text-faded">
-                  {dbImageName || "Unknown"}
-                </span>
+                <span className="text-sm font-medium text-dash-text-strong">Database engine</span>
+                <span className="text-sm font-light text-dash-text-faded">{dbImageName || "Unknown"}</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-dash-text-strong">
-                  Region
-                </span>
-                <span className="text-sm font-light text-dash-text-faded">
-                  {region || "Unknown"}
-                </span>
+                <span className="text-sm font-medium text-dash-text-strong">Region</span>
+                <span className="text-sm font-light text-dash-text-faded">{region || "Unknown"}</span>
               </div>
             </div>
             <hr className="border-dash-border" />
             <div className="flex flex-col gap-3 px-4 py-4">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium text-dash-text-strong">
-                    Public connection
-                  </span>
-                  <span className="text-xs text-dash-text-faded">
-                    Control whether your database can be accessed from any IP
-                    address.
-                  </span>
+                  <span className="text-sm font-medium text-dash-text-strong">Public connection</span>
+                  <span className="text-xs text-dash-text-faded">Control whether your database can be accessed from any IP address.</span>
                 </div>
                 <button
                   type="button"
@@ -1690,9 +1393,7 @@ function DatabaseConfigurationPanel({
                     if (isPublicAccess) {
                       setFieldValue("whitelistIps", []);
                     } else {
-                      setFieldValue("whitelistIps", [
-                        { id: 0, value: "0.0.0.0/0" },
-                      ]);
+                      setFieldValue("whitelistIps", [{ id: 0, value: "0.0.0.0/0" }]);
                     }
                   }}
                   className={`${isPublicAccess ? "bg-[#3b82f6]" : "bg-[#6b7280]"} relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors`}
@@ -1704,22 +1405,15 @@ function DatabaseConfigurationPanel({
               </div>
               {isPublicAccess ? (
                 <p className="text-xs text-[#f59e0b]">
-                  Your database is accessible from any IP address. Only enable
-                  this if you understand the security implications.
+                  Your database is accessible from any IP address. Only enable this if you understand the security implications.
                 </p>
               ) : (
                 <IpWhitelist
                   ips={values.whitelistIps ?? []}
                   onAdd={() => {
                     const current = values.whitelistIps ?? [];
-                    const nextId =
-                      current.length > 0
-                        ? Math.max(...current.map((ip) => ip.id)) + 1
-                        : 0;
-                    setFieldValue("whitelistIps", [
-                      ...current,
-                      { id: nextId, value: "" },
-                    ]);
+                    const nextId = current.length > 0 ? Math.max(...current.map((ip) => ip.id)) + 1 : 0;
+                    setFieldValue("whitelistIps", [...current, { id: nextId, value: "" }]);
                   }}
                   onRemove={(id) => {
                     setFieldValue(
@@ -1730,9 +1424,7 @@ function DatabaseConfigurationPanel({
                   onUpdate={(id, value) => {
                     setFieldValue(
                       "whitelistIps",
-                      (values.whitelistIps ?? []).map((ip) =>
-                        ip.id === id ? { ...ip, value } : ip,
-                      ),
+                      (values.whitelistIps ?? []).map((ip) => (ip.id === id ? { ...ip, value } : ip)),
                     );
                   }}
                   inputClassName={`${inputClass} flex-1 font-family-mono text-[13px]`}
@@ -1742,9 +1434,7 @@ function DatabaseConfigurationPanel({
             <hr className="border-dash-border" />
             <div className="grid grid-cols-1 gap-4 px-4 py-4 md:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-dash-text-strong">
-                  Database password
-                </label>
+                <label className="text-sm font-medium text-dash-text-strong">Database password</label>
                 <input
                   type="password"
                   name="password"
@@ -1756,14 +1446,10 @@ function DatabaseConfigurationPanel({
                   className={inputClass}
                   autoComplete="new-password"
                 />
-                <p className="text-xs text-dash-text-faded">
-                  Set a new password for database connections.
-                </p>
+                <p className="text-xs text-dash-text-faded">Set a new password for database connections.</p>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-dash-text-strong">
-                  Confirm password
-                </label>
+                <label className="text-sm font-medium text-dash-text-strong">Confirm password</label>
                 <input
                   type="password"
                   name="confirmPassword"
@@ -1775,20 +1461,11 @@ function DatabaseConfigurationPanel({
                   className={inputClass}
                   autoComplete="new-password"
                 />
-                {passwordError && (
-                  <p className="text-xs text-[#ef2f1f]">
-                    {errors.confirmPassword}
-                  </p>
-                )}
+                {passwordError && <p className="text-xs text-[#ef2f1f]">{errors.confirmPassword}</p>}
               </div>
             </div>
             <div className="flex justify-end border-t border-dash-border px-4 py-3">
-              <GlossyButton
-                disabled={!canWrite || !canSave}
-                loading={isSubmitting}
-                loadingLabel="Saving..."
-                onClick={() => handleSubmit()}
-              >
+              <GlossyButton disabled={!canWrite || !canSave} loading={isSubmitting} loadingLabel="Saving..." onClick={() => handleSubmit()}>
                 Save
               </GlossyButton>
             </div>
@@ -1829,18 +1506,12 @@ function DangerSection({
         {/* Row 1: Maintenance mode */}
         <div className="flex items-center justify-between gap-4 px-4 py-4">
           <div className="flex flex-col gap-1">
-            <h4 className="text-sm font-medium text-dash-text-strong">
-              Toggle Maintenance mode
-            </h4>
+            <h4 className="text-sm font-medium text-dash-text-strong">Toggle Maintenance mode</h4>
             <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
-              Maintenance mode allows your team perform upgrades and tests
-              without deploying to production.
+              Maintenance mode allows your team perform upgrades and tests without deploying to production.
             </p>
           </div>
-          <ToggleSwitch
-            checked={maintenanceMode}
-            onChange={setMaintenanceMode}
-          />
+          <ToggleSwitch checked={maintenanceMode} onChange={setMaintenanceMode} />
         </div>
 
         <hr className="border-dash-border" />
@@ -1848,15 +1519,10 @@ function DangerSection({
         {/* Row 2: Delete project */}
         <div className="flex items-center justify-between gap-4 px-4 py-4">
           <div className="flex flex-col gap-1">
-            <h4 className="text-sm font-medium text-dash-text-strong">
-              Delete project
-            </h4>
+            <h4 className="text-sm font-medium text-dash-text-strong">Delete project</h4>
             <p className="text-sm font-light leading-[1.3] text-dash-text-faded">
-              Permanently delete{" "}
-              <span className="font-normal text-dash-text-strong">
-                brimble.io/{projectName}
-              </span>{" "}
-              and all its deployments.
+              Permanently delete <span className="font-normal text-dash-text-strong">brimble.io/{projectName}</span> and all its
+              deployments.
             </p>
           </div>
           <button
@@ -1894,11 +1560,7 @@ function DangerSection({
             toast.success("Project deleted successfully");
             deleted = true;
           } catch (error) {
-            toast.error(
-              error instanceof Error
-                ? error.message
-                : "Failed to delete project",
-            );
+            toast.error(error instanceof Error ? error.message : "Failed to delete project");
           } finally {
             await router.invalidate();
             setDeleting(false);
@@ -1914,11 +1576,7 @@ function DangerSection({
       >
         <div className="flex flex-col gap-2 text-left">
           <label className="text-sm leading-5 text-dash-text-faded">
-            Type{" "}
-            <span className="font-medium text-dash-text-strong">
-              {projectName}
-            </span>{" "}
-            to confirm
+            Type <span className="font-medium text-dash-text-strong">{projectName}</span> to confirm
           </label>
           <input
             type="text"
@@ -1939,19 +1597,11 @@ function DangerSection({
 
 function ConfigurationPage() {
   const { project, workspace } = parentRoute.useLoaderData() as any;
-  const {
-    repo,
-    frameworks,
-    scalingGroups,
-    regions,
-    environments: preloadedEnvironments,
-  } = Route.useLoaderData();
+  const { repo, frameworks, scalingGroups, regions, environments: preloadedEnvironments } = Route.useLoaderData();
   const params = Route.useParams();
   const navigate = useNavigate();
   const router = useRouter();
-  const saveGeneralConfig = useServerFn(
-    saveProjectGeneralConfigServerFn as any,
-  ) as (args: {
+  const saveGeneralConfig = useServerFn(saveProjectGeneralConfigServerFn as any) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -1967,9 +1617,7 @@ function ConfigurationPage() {
       buildCacheEnabled?: boolean;
     };
   }) => Promise<{ id?: string; message?: string }>;
-  const saveDatabaseConfig = useServerFn(
-    updateDatabaseProjectConfigServerFn as any,
-  ) as (args: {
+  const saveDatabaseConfig = useServerFn(updateDatabaseProjectConfigServerFn as any) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -1979,9 +1627,7 @@ function ConfigurationPage() {
       whitelistedIps?: string[];
     };
   }) => Promise<{ message?: string }>;
-  const saveBuildConfig = useServerFn(
-    saveProjectBuildConfigServerFn as any,
-  ) as (args: {
+  const saveBuildConfig = useServerFn(saveProjectBuildConfigServerFn as any) as (args: {
     data: {
       projectId: string;
       workspace?: string;
@@ -1993,9 +1639,7 @@ function ConfigurationPage() {
       outputDirectory?: string;
     };
   }) => Promise<{ message?: string }>;
-  const [activeSection, setActiveSection] = useState<ConfigSection>(
-    ConfigSection.General,
-  );
+  const [activeSection, setActiveSection] = useState<ConfigSection>(ConfigSection.General);
   const haptics = useHaptics();
   const { canWrite } = useWorkspaceRole();
 
@@ -2004,12 +1648,8 @@ function ConfigurationPage() {
   const [rootDir, setRootDir] = useState(project?.rootDirectory || "./");
 
   // Maintenance mode
-  const [maintenanceMode, setMaintenanceMode] = useState(
-    Boolean(project?.maintenance),
-  );
-  const [repoMetadata, setRepoMetadata] = useState<RepositoryMetadata | null>(
-    repo ?? null,
-  );
+  const [maintenanceMode, setMaintenanceMode] = useState(Boolean(project?.maintenance));
+  const [repoMetadata, setRepoMetadata] = useState<RepositoryMetadata | null>(repo ?? null);
 
   // Sync when project data changes
   useEffect(() => {
@@ -2022,8 +1662,7 @@ function ConfigurationPage() {
   }, [repo]);
 
   // General section initial values
-  const currentRegionId =
-    project?.specs?.region?.id ?? project?.specs?.region?._id ?? "";
+  const currentRegionId = project?.specs?.region?.id ?? project?.specs?.region?._id ?? "";
 
   const generalInitialValues: GeneralConfigValues = {
     name: project?.name || "",
@@ -2084,9 +1723,7 @@ function ConfigurationPage() {
       return mapped;
     }
 
-    const exists = mapped.some(
-      (item) => item.id === generalInitialValues.framework,
-    );
+    const exists = mapped.some((item) => item.id === generalInitialValues.framework);
     if (exists) {
       return mapped;
     }
@@ -2116,19 +1753,13 @@ function ConfigurationPage() {
     }
 
     // Fallback: show current region even if not in the list
-    const currentRegionName =
-      project?.specs?.region?.name || project?.region || currentRegionId;
+    const currentRegionName = project?.specs?.region?.name || project?.region || currentRegionId;
     return [...mapped, { id: currentRegionId, label: currentRegionName }];
   })();
 
   const scalingGroupOptions = (() => {
     const mapped = (scalingGroups || [])
-      .filter(
-        (group) =>
-          group &&
-          typeof group.id === "string" &&
-          typeof group.name === "string",
-      )
+      .filter((group) => group && typeof group.id === "string" && typeof group.name === "string")
       .map((group) => ({
         id: group.id,
         label: group.name,
@@ -2170,8 +1801,7 @@ function ConfigurationPage() {
   const persistentStorageVisible = shouldShowPersistentStorageField(project);
   const buildCacheToggleVisible = shouldShowBuildCacheToggle(project);
   const mcpServersEnabled = useFeatureFlag(FeatureFlags.ENABLE_MCP_SERVERS);
-  const mcpAuthToggleVisible =
-    mcpServersEnabled && shouldShowMcpAuthToggle(project);
+  const mcpAuthToggleVisible = mcpServersEnabled && shouldShowMcpAuthToggle(project);
 
   const sections = allSections.filter((section) => {
     if (databaseProject && section.id === ConfigSection.Build) {
@@ -2240,9 +1870,7 @@ function ConfigurationPage() {
       toast.success("Configuration saved. Redeploy started.");
       router.invalidate();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to save configuration",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to save configuration");
     }
   }
 
@@ -2267,11 +1895,7 @@ function ConfigurationPage() {
       toast.success("Build configuration saved. Redeploy started.");
       router.invalidate();
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to save build configuration",
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to save build configuration");
     }
   }
 
@@ -2284,12 +1908,8 @@ function ConfigurationPage() {
         workspace,
         name: values.name.trim(),
         password,
-        configurations: project?.specs
-          ? ({ ...project.specs } as Record<string, unknown>)
-          : null,
-        whitelistedIps: (values.whitelistIps ?? [])
-          .map((ip) => ip.value)
-          .filter(Boolean),
+        configurations: project?.specs ? ({ ...project.specs } as Record<string, unknown>) : null,
+        whitelistedIps: (values.whitelistIps ?? []).map((ip) => ip.value).filter(Boolean),
       },
     });
 
@@ -2343,15 +1963,11 @@ function ConfigurationPage() {
       memory: values.memoryValue,
       storage: project?.specs?.storage,
       diskSize: values.diskEnabled ? Number(values.diskSize || 0) : 0,
-      volumeMount: values.diskEnabled
-        ? (values.mountPath || "/mnt/data").trim()
-        : "",
+      volumeMount: values.diskEnabled ? (values.mountPath || "/mnt/data").trim() : "",
     };
 
     // Re-read current whitelist IPs from project data
-    const currentWhitelistIps = Array.isArray(project?.whiteListedIps)
-      ? project.whiteListedIps.filter(Boolean)
-      : [];
+    const currentWhitelistIps = Array.isArray(project?.whiteListedIps) ? project.whiteListedIps.filter(Boolean) : [];
 
     await saveDatabaseConfig({
       data: {
@@ -2396,15 +2012,7 @@ function ConfigurationPage() {
                   : "text-dash-text-faded hover:bg-dash-bg-elevated/50 hover:text-dash-text-body"
               } ${s.id === ConfigSection.Danger ? "text-red-400/80 hover:text-red-400 lg:mt-4" : ""}`}
             >
-              <span
-                className={
-                  s.id === activeSection
-                    ? s.id === ConfigSection.Danger
-                      ? "text-red-400"
-                      : "text-dash-text-strong"
-                    : ""
-                }
-              >
+              <span className={s.id === activeSection ? (s.id === ConfigSection.Danger ? "text-red-400" : "text-dash-text-strong") : ""}>
                 {s.icon}
               </span>
               {s.label}
@@ -2433,15 +2041,11 @@ function ConfigurationPage() {
                   />
                 ) : (
                   <>
-                    <RepoSection
-                      project={project}
-                      workspace={workspace}
-                      canWrite={canWrite}
-                      onRepoChanged={() => router.invalidate()}
-                    />
+                    <RepoSection project={project} workspace={workspace} canWrite={canWrite} onRepoChanged={() => router.invalidate()} />
                     <EnvironmentSection
                       projectId={project?.id || params.projectId}
                       currentEnvironmentId={project?.projectEnvironmentId}
+                      currentInheritEnvVars={project?.inheritEnvironmentVars}
                       workspace={workspace}
                       initialEnvironments={preloadedEnvironments}
                       canWrite={canWrite}
@@ -2504,9 +2108,7 @@ function ConfigurationPage() {
         <RootDirectoryDrawer
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
-          provider={
-            project?.repo?.git?.toLowerCase() === "gitlab" ? "gitlab" : "github"
-          }
+          provider={project?.repo?.git?.toLowerCase() === "gitlab" ? "gitlab" : "github"}
           repoName={project?.repo?.fullName || project?.repo?.name}
           installationId={project?.repo?.installationId}
           branch={generalInitialValues.branch}

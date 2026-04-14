@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Plus } from "lucide-react";
-import {
-  Modal,
-  ModalHeader,
-  ModalFooter,
-  ModalCancelButton,
-  ModalContinueButton,
-} from "../shared/modal";
+import { Modal, ModalHeader, ModalFooter, ModalCancelButton, ModalContinueButton } from "../shared/modal";
 import { RoleDropdown } from "../shared/role-dropdown";
 import { formatUsdMonthly } from "@/utils/billing";
 import { usePricing } from "@/contexts/pricing-context";
@@ -37,15 +31,13 @@ export function InviteMembersModal({
   currentUserEmail,
   onInvite,
 }: InviteMembersModalProps) {
-  const [rows, setRows] = useState<InviteRow[]>([
-    { id: nextId++, email: "", role: "Member" },
-  ]);
+  const [rows, setRows] = useState<InviteRow[]>([{ id: nextId++, email: "", role: "Member" }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const maxRows = 4;
 
   function addRow() {
-    setRows((prev) => prev.length >= maxRows ? prev : [...prev, { id: nextId++, email: "", role: "Member" }]);
+    setRows((prev) => (prev.length >= maxRows ? prev : [...prev, { id: nextId++, email: "", role: "Member" }]));
   }
 
   function removeRow(id: number) {
@@ -53,9 +45,7 @@ export function InviteMembersModal({
   }
 
   function updateRow(id: number, field: "email" | "role", value: string) {
-    setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
-    );
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   }
 
   const pricing = usePricing();
@@ -105,10 +95,7 @@ export function InviteMembersModal({
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} width={520} className="overflow-visible">
-      <ModalHeader
-        title="Invite team members"
-        description="They'll receive an email invitation to join this workspace."
-      />
+      <ModalHeader title="Invite team members" description="They'll receive an email invitation to join this workspace." />
 
       <div className="flex flex-col gap-4 px-6 py-5">
         {/* Invite rows */}
@@ -139,10 +126,7 @@ export function InviteMembersModal({
                       : "input-base input-focus flex-1 px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]"
                   }
                 />
-                <RoleDropdown
-                  value={row.role}
-                  onChange={(v) => updateRow(row.id, "role", v)}
-                />
+                <RoleDropdown value={row.role} onChange={(v) => updateRow(row.id, "role", v)} />
                 <button
                   onClick={() => removeRow(row.id)}
                   className="flex size-[38px] shrink-0 items-center justify-center rounded-[6px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
@@ -151,22 +135,22 @@ export function InviteMembersModal({
                 </button>
               </div>
               {selfInviteRowIds.has(row.id) ? (
-                <p className="text-xs text-[#e1291d]">
-                  You can&apos;t invite yourself to this workspace.
-                </p>
+                <p className="text-xs text-[#e1291d]">You can&apos;t invite yourself to this workspace.</p>
               ) : null}
             </div>
           ))}
         </div>
 
         {/* Add another */}
-        {rows.length < maxRows && <button
-          onClick={addRow}
-          className="flex items-center gap-1.5 self-start text-sm text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
-        >
-          <Plus className="size-3.5" />
-          Add another
-        </button>}
+        {rows.length < maxRows && (
+          <button
+            onClick={addRow}
+            className="flex items-center gap-1.5 self-start text-sm text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
+          >
+            <Plus className="size-3.5" />
+            Add another
+          </button>
+        )}
 
         {/* Cost preview */}
         <AnimatePresence initial={false}>
@@ -185,9 +169,7 @@ export function InviteMembersModal({
                     <span className="text-sm text-dash-text-faded">
                       {newSeats} new {newSeats === 1 ? "seat" : "seats"} (included in plan)
                     </span>
-                    <span className="text-sm font-medium text-dash-text-strong">
-                      No extra cost
-                    </span>
+                    <span className="text-sm font-medium text-dash-text-strong">No extra cost</span>
                   </div>
                 ) : (
                   <>
@@ -196,18 +178,14 @@ export function InviteMembersModal({
                         <span className="text-sm text-dash-text-faded">
                           {remainingFreeSeats} {remainingFreeSeats === 1 ? "seat" : "seats"} (included in plan)
                         </span>
-                        <span className="text-sm font-medium text-dash-text-strong">
-                          Free
-                        </span>
+                        <span className="text-sm font-medium text-dash-text-strong">Free</span>
                       </div>
                     )}
                     <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 ${remainingFreeSeats > 0 ? "mt-1" : ""}`}>
                       <span className="text-sm text-dash-text-faded">
                         {paidSeats} extra {paidSeats === 1 ? "seat" : "seats"} &times; {formatUsdMonthly(seatPrice)}/seat
                       </span>
-                      <span className="text-sm font-medium text-dash-text-strong">
-                        +{formatUsdMonthly(extraCost)}/month
-                      </span>
+                      <span className="text-sm font-medium text-dash-text-strong">+{formatUsdMonthly(extraCost)}/month</span>
                     </div>
                   </>
                 )}
@@ -216,9 +194,7 @@ export function InviteMembersModal({
                     Total seats ({totalMembers} of {Math.max(includedSeats, totalMembers)})
                   </span>
                   <span className="text-xs font-medium text-dash-text-strong">
-                    {extraCost > 0
-                      ? `+${formatUsdMonthly(extraCost)}/month`
-                      : "Included"}
+                    {extraCost > 0 ? `+${formatUsdMonthly(extraCost)}/month` : "Included"}
                   </span>
                 </div>
               </div>

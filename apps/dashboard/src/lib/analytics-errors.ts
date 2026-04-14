@@ -14,8 +14,7 @@ export function friendlyAnalyticsError(error: unknown): FriendlyAnalyticsError {
 
   if (raw.includes("not available for your subscription")) {
     return {
-      message:
-        "Web analytics is not supported on your plan. Upgrade to enable it.",
+      message: "Web analytics is not supported on your plan. Upgrade to enable it.",
       planLocked: true,
       notFound: false,
     };
@@ -36,8 +35,7 @@ export function friendlyAnalyticsError(error: unknown): FriendlyAnalyticsError {
   }
   if (raw.includes("permission") || raw.includes("forbidden")) {
     return {
-      message:
-        "You don't have permission to manage analytics for this project.",
+      message: "You don't have permission to manage analytics for this project.",
       planLocked: false,
       notFound: false,
     };
@@ -60,8 +58,7 @@ export function friendlyAnalyticsError(error: unknown): FriendlyAnalyticsError {
     }
     if (status === 403) {
       return {
-        message:
-          "You don't have permission to manage analytics for this project.",
+        message: "You don't have permission to manage analytics for this project.",
         planLocked: false,
         notFound: false,
       };

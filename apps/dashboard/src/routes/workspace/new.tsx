@@ -4,16 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import { Formik, Form as FormikForm } from "formik";
 import axios from "axios";
-import {
-  ArrowLeft,
-  Plus,
-  Minus,
-  X,
-  Check,
-  Users,
-  Info,
-  Settings,
-} from "lucide-react";
+import { ArrowLeft, Plus, Minus, X, Check, Users, Info, Settings } from "lucide-react";
 import { RoleDropdown } from "../../components/shared/role-dropdown";
 import { ImageSquare } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
@@ -21,10 +12,7 @@ import { GlossyButton } from "../../components/shared/glossy-button";
 import { Dropdown } from "../../components/shared/dropdown";
 import { Route as RootRoute } from "@/routes/__root";
 import config from "@/config";
-import {
-  createWorkspaceServerFn,
-  verifyWorkspacePromoCodeServerFn,
-} from "@/server/workspaces/actions";
+import { createWorkspaceServerFn, verifyWorkspacePromoCodeServerFn } from "@/server/workspaces/actions";
 import { getPaymentMethodsServerFn } from "@/server/payments/actions";
 import {
   buildCreateWorkspacePayload,
@@ -54,8 +42,7 @@ export const Route = createFileRoute("/workspace/new")({
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
-const inputClass =
-  "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
+const inputClass = "w-full input-base input-focus px-3 py-2.5 text-sm leading-6 text-dash-text-strong placeholder:text-[#9ca3af]";
 
 type Phase = 1 | 2 | 3;
 
@@ -63,15 +50,7 @@ const teamSizeOptions = [3, 5, 10, 15, 25, 50];
 
 /* ─── Summary Chip ─── */
 
-function SummaryChip({
-  icon,
-  label,
-  onChangeClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onChangeClick: () => void;
-}) {
+function SummaryChip({ icon, label, onChangeClick }: { icon: React.ReactNode; label: string; onChangeClick: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -83,10 +62,7 @@ function SummaryChip({
         {icon}
         {label}
       </span>
-      <button
-        onClick={onChangeClick}
-        className="text-xs text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
-      >
+      <button onClick={onChangeClick} className="text-xs text-[#4879f8] transition-colors hover:text-[#3a6ae6]">
         Change
       </button>
     </motion.div>
@@ -118,9 +94,7 @@ function Stepper({
       >
         <Minus className="size-4" />
       </button>
-      <span className="flex-1 text-center text-sm font-medium text-dash-text-strong">
-        {renderValue(value)}
-      </span>
+      <span className="flex-1 text-center text-sm font-medium text-dash-text-strong">{renderValue(value)}</span>
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
@@ -139,9 +113,7 @@ function InfoBanner({ children }: { children: React.ReactNode }) {
   return (
     <div className="mt-2 flex items-start gap-2.5 rounded-[4px] bg-[#f59e0b]/[0.06] px-3 py-2.5 dark:bg-[#f59e0b]/[0.08]">
       <Info className="mt-0.5 size-3.5 shrink-0 text-[#f59e0b]" />
-      <div className="text-sm font-light leading-[1.4] text-dash-text-body">
-        {children}
-      </div>
+      <div className="text-sm font-light leading-[1.4] text-dash-text-body">{children}</div>
     </div>
   );
 }
@@ -167,12 +139,8 @@ function Phase1Name({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-        Name your workspace
-      </h3>
-      <p className="mb-4 text-sm text-dash-text-faded">
-        Choose a name and URL for your team workspace.
-      </p>
+      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Name your workspace</h3>
+      <p className="mb-4 text-sm text-dash-text-faded">Choose a name and URL for your team workspace.</p>
 
       <Formik<WorkspaceNameStepValues>
         initialValues={initialValues}
@@ -185,9 +153,7 @@ function Phase1Name({
         {({ values, errors, touched, setFieldValue, handleSubmit }) => (
           <FormikForm onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label className="mb-3 block text-sm text-dash-text-body">
-                Workspace image (optional)
-              </label>
+              <label className="mb-3 block text-sm text-dash-text-body">Workspace image (optional)</label>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -217,9 +183,7 @@ function Phase1Name({
                       toast.error("Upload succeeded but no image URL was returned.");
                     }
                   } catch (error) {
-                    toast.error(
-                      error instanceof Error ? error.message : "Failed to upload image",
-                    );
+                    toast.error(error instanceof Error ? error.message : "Failed to upload image");
                   } finally {
                     setIsUploadingImage(false);
                     if (event.target) event.target.value = "";
@@ -230,11 +194,7 @@ function Phase1Name({
               {values.imageUrl ? (
                 <div className="flex items-center gap-3 rounded-[10px] border border-dashed border-dash-border p-3">
                   <div className="relative size-12 shrink-0 overflow-hidden rounded-full">
-                    <img
-                      src={values.imageUrl}
-                      alt="Workspace preview"
-                      className="h-full w-full object-cover"
-                    />
+                    <img src={values.imageUrl} alt="Workspace preview" className="h-full w-full object-cover" />
                     {isUploadingImage && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/35">
                         <div className="size-4 animate-spin rounded-full border-2 border-white/80 border-t-transparent" />
@@ -285,9 +245,7 @@ function Phase1Name({
 
             <div className="flex flex-col gap-4">
               <div>
-                <label className="mb-1.5 block text-sm text-dash-text-body">
-                  Workspace name
-                </label>
+                <label className="mb-1.5 block text-sm text-dash-text-body">Workspace name</label>
                 <input
                   type="text"
                   placeholder="My workspace"
@@ -300,42 +258,27 @@ function Phase1Name({
                   className={inputClass}
                   autoFocus
                 />
-                {touched.name && errors.name ? (
-                  <p className="mt-1.5 text-xs text-[#ef2f1f]">{errors.name}</p>
-                ) : null}
+                {touched.name && errors.name ? <p className="mt-1.5 text-xs text-[#ef2f1f]">{errors.name}</p> : null}
               </div>
               <div>
-                <label className="mb-1.5 block text-sm text-dash-text-body">
-                  Workspace URL
-                </label>
+                <label className="mb-1.5 block text-sm text-dash-text-body">Workspace URL</label>
                 <div className="flex items-stretch">
                   <div className="flex items-center rounded-l-[6px] border border-r-0 border-dash-border bg-dash-bg-elevated px-3">
-                    <span className="whitespace-nowrap text-sm text-dash-text-faded">
-                      brimble.app/
-                    </span>
+                    <span className="whitespace-nowrap text-sm text-dash-text-faded">brimble.app/</span>
                   </div>
                   <input
                     type="text"
                     value={values.slug}
-                    onChange={(e) =>
-                      setFieldValue("slug", slugifyWorkspaceName(e.target.value))
-                    }
+                    onChange={(e) => setFieldValue("slug", slugifyWorkspaceName(e.target.value))}
                     className={`${inputClass} rounded-l-none`}
                   />
                 </div>
-                {touched.slug && errors.slug ? (
-                  <p className="mt-1.5 text-xs text-[#ef2f1f]">{errors.slug}</p>
-                ) : null}
+                {touched.slug && errors.slug ? <p className="mt-1.5 text-xs text-[#ef2f1f]">{errors.slug}</p> : null}
               </div>
             </div>
 
             <div className="mt-6">
-              <GlossyButton
-                type="submit"
-                variant="blue"
-                fullWidth
-                disabled={disabled || !values.name.trim() || !values.slug.trim()}
-              >
+              <GlossyButton type="submit" variant="blue" fullWidth disabled={disabled || !values.name.trim() || !values.slug.trim()}>
                 Continue
               </GlossyButton>
             </div>
@@ -379,12 +322,8 @@ function Phase2Config({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-        Team configuration
-      </h3>
-      <p className="mb-5 text-sm text-dash-text-faded">
-        Configure your team size and build capacity.
-      </p>
+      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Team configuration</h3>
+      <p className="mb-5 text-sm text-dash-text-faded">Configure your team size and build capacity.</p>
 
       <Formik<WorkspaceConfigStepValues>
         initialValues={initialValues}
@@ -407,9 +346,7 @@ function Phase2Config({
           return (
             <FormikForm onSubmit={handleSubmit}>
               <div>
-                <label className="mb-1.5 block text-sm text-dash-text-body">
-                  Team Size
-                </label>
+                <label className="mb-1.5 block text-sm text-dash-text-body">Team Size</label>
                 <Dropdown
                   value={String(values.teamSize)}
                   options={teamSizeOptions.map(String)}
@@ -426,9 +363,7 @@ function Phase2Config({
               </div>
 
               <div className="mt-5">
-                <label className="mb-1.5 block text-sm text-dash-text-body">
-                  Concurrent Builds
-                </label>
+                <label className="mb-1.5 block text-sm text-dash-text-body">Concurrent Builds</label>
                 <Stepper
                   value={values.concurrentBuilds}
                   min={WORKSPACE_MIN_BUILDS}
@@ -442,16 +377,12 @@ function Phase2Config({
                 <InfoBanner>
                   Build pricing: ${costPerBuild}/build container/mo
                   <br />
-                  <span className="font-medium">
-                    Estimated total: ${totalCost % 1 === 0 ? totalCost : totalCost.toFixed(2)}/mo
-                  </span>
+                  <span className="font-medium">Estimated total: ${totalCost % 1 === 0 ? totalCost : totalCost.toFixed(2)}/mo</span>
                 </InfoBanner>
               </div>
 
               <div className="mt-5">
-                <label className="mb-1.5 block text-sm text-dash-text-body">
-                  Startup Promo Code
-                </label>
+                <label className="mb-1.5 block text-sm text-dash-text-body">Startup Promo Code</label>
                 <div className="flex items-stretch gap-2">
                   <input
                     type="text"
@@ -496,20 +427,11 @@ function Phase2Config({
                     Promo code applied successfully
                   </p>
                 )}
-                {promoStatus === "invalid" && (
-                  <p className="mt-1.5 text-sm text-[#ef2f1f]">
-                    Invalid promo code. Please try again.
-                  </p>
-                )}
+                {promoStatus === "invalid" && <p className="mt-1.5 text-sm text-[#ef2f1f]">Invalid promo code. Please try again.</p>}
               </div>
 
               <div className="mt-6">
-                <GlossyButton
-                  type="submit"
-                  variant="blue"
-                  fullWidth
-                  disabled={disabled}
-                >
+                <GlossyButton type="submit" variant="blue" fullWidth disabled={disabled}>
                   Continue
                 </GlossyButton>
               </div>
@@ -555,12 +477,8 @@ function Phase3Invite({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-        Invite your team
-      </h3>
-      <p className="mb-4 text-sm text-dash-text-faded">
-        Add team members to &ldquo;{workspaceName}&rdquo;. You can always do this later.
-      </p>
+      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Invite your team</h3>
+      <p className="mb-4 text-sm text-dash-text-faded">Add team members to &ldquo;{workspaceName}&rdquo;. You can always do this later.</p>
 
       <Formik<WorkspaceInviteStepValues>
         initialValues={initialValues}
@@ -570,11 +488,7 @@ function Phase3Invite({
           const normalizedCurrentUserEmail = currentUserEmail?.trim().toLowerCase() ?? "";
           const hasSelfInvite = values.invites.some((row) => {
             const normalizedEmail = row.email.trim().toLowerCase();
-            return Boolean(
-              normalizedEmail &&
-                normalizedCurrentUserEmail &&
-                normalizedEmail === normalizedCurrentUserEmail,
-            );
+            return Boolean(normalizedEmail && normalizedCurrentUserEmail && normalizedEmail === normalizedCurrentUserEmail);
           });
           if (hasSelfInvite) {
             return;
@@ -591,27 +505,17 @@ function Phase3Invite({
             rows
               .filter((row) => {
                 const normalizedEmail = row.email.trim().toLowerCase();
-                return Boolean(
-                  normalizedEmail &&
-                    normalizedCurrentUserEmail &&
-                    normalizedEmail === normalizedCurrentUserEmail,
-                );
+                return Boolean(normalizedEmail && normalizedCurrentUserEmail && normalizedEmail === normalizedCurrentUserEmail);
               })
               .map((row) => row.id),
           );
 
           function addRow() {
-            setFieldValue("invites", [
-              ...rows,
-              { id: inviteNextId++, email: "", role: "Member" },
-            ]);
+            setFieldValue("invites", [...rows, { id: inviteNextId++, email: "", role: "Member" }]);
           }
 
           function removeRow(id: number) {
-            setFieldValue(
-              "invites",
-              rows.length > 1 ? rows.filter((r) => r.id !== id) : rows,
-            );
+            setFieldValue("invites", rows.length > 1 ? rows.filter((r) => r.id !== id) : rows);
           }
 
           function updateRow(id: number, field: "email" | "role", value: string) {
@@ -644,10 +548,7 @@ function Phase3Invite({
                             : `flex-1 ${inputClass}`
                         }
                       />
-                      <RoleDropdown
-                        value={row.role}
-                        onChange={(v) => updateRow(row.id, "role", v)}
-                      />
+                      <RoleDropdown value={row.role} onChange={(v) => updateRow(row.id, "role", v)} />
                       <button
                         type="button"
                         onClick={() => removeRow(row.id)}
@@ -657,21 +558,15 @@ function Phase3Invite({
                       </button>
                     </div>
                     {Array.isArray((errors as any).invites) && (errors as any).invites[index]?.email ? (
-                      <p className="mt-1.5 text-xs text-[#ef2f1f]">
-                        {(errors as any).invites[index].email}
-                      </p>
+                      <p className="mt-1.5 text-xs text-[#ef2f1f]">{(errors as any).invites[index].email}</p>
                     ) : selfInviteRowIds.has(row.id) ? (
-                      <p className="mt-1.5 text-xs text-[#ef2f1f]">
-                        You can&apos;t invite yourself to this workspace.
-                      </p>
+                      <p className="mt-1.5 text-xs text-[#ef2f1f]">You can&apos;t invite yourself to this workspace.</p>
                     ) : null}
                   </div>
                 ))}
               </div>
 
-              {typeof errors.invites === "string" ? (
-                <p className="mt-2 text-xs text-[#ef2f1f]">{errors.invites}</p>
-              ) : null}
+              {typeof errors.invites === "string" ? <p className="mt-2 text-xs text-[#ef2f1f]">{errors.invites}</p> : null}
 
               <button
                 type="button"
@@ -688,17 +583,19 @@ function Phase3Invite({
                 const total = seatsCost + buildsCost;
                 return (
                   <div className="mt-5 rounded-[6px] bg-dash-bg-elevated px-4 py-3.5">
-                    <p className="mb-2.5 text-xs font-medium uppercase tracking-wide text-dash-text-extra-faded">
-                      Billing summary
-                    </p>
+                    <p className="mb-2.5 text-xs font-medium uppercase tracking-wide text-dash-text-extra-faded">Billing summary</p>
                     <div className="flex flex-col gap-1.5 text-sm">
                       <div className="flex items-center justify-between">
-                        <span className="text-dash-text-faded">{teamSize} team {teamSize === 1 ? "seat" : "seats"} &times; ${costPerMember}/mo</span>
+                        <span className="text-dash-text-faded">
+                          {teamSize} team {teamSize === 1 ? "seat" : "seats"} &times; ${costPerMember}/mo
+                        </span>
                         <span className="text-dash-text-strong">${seatsCost.toFixed(2)}</span>
                       </div>
                       {concurrentBuilds > 0 && (
                         <div className="flex items-center justify-between">
-                          <span className="text-dash-text-faded">{concurrentBuilds} concurrent {concurrentBuilds === 1 ? "build" : "builds"} &times; ${costPerBuild}/mo</span>
+                          <span className="text-dash-text-faded">
+                            {concurrentBuilds} concurrent {concurrentBuilds === 1 ? "build" : "builds"} &times; ${costPerBuild}/mo
+                          </span>
                           <span className="text-dash-text-strong">${buildsCost.toFixed(2)}</span>
                         </div>
                       )}
@@ -739,9 +636,7 @@ function NewWorkspacePage() {
   const { settingsSnapshot } = RootRoute.useLoaderData() ?? ({} as any);
   const navigate = useNavigate({ from: "/workspace/new" });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
-  const createWorkspace = useServerFn(createWorkspaceServerFn as any) as (args: {
-    data: Record<string, unknown>;
-  }) => Promise<Workspace>;
+  const createWorkspace = useServerFn(createWorkspaceServerFn as any) as (args: { data: Record<string, unknown> }) => Promise<Workspace>;
   const verifyPromo = useServerFn(verifyWorkspacePromoCodeServerFn as any) as (args: {
     data: { code: string };
   }) => Promise<{ valid: boolean; reference?: string }>;
@@ -751,9 +646,7 @@ function NewWorkspacePage() {
   const [workspaceSlug, setWorkspaceSlug] = useState("");
   const [workspaceImageUrl, setWorkspaceImageUrl] = useState("");
   const [teamConfig, setTeamConfig] = useState<TeamConfig | null>(null);
-  const [inviteRows, setInviteRows] = useState<WorkspaceInviteRow[]>([
-    { id: inviteNextId++, email: "", role: "Member" },
-  ]);
+  const [inviteRows, setInviteRows] = useState<WorkspaceInviteRow[]>([{ id: inviteNextId++, email: "", role: "Member" }]);
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
   const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
   const currentUserEmail = settingsSnapshot?.profile?.email ?? null;
@@ -764,11 +657,13 @@ function NewWorkspacePage() {
   }
 
   useEffect(() => {
-    fetchLatestPaymentMethods().then((methods: any[]) => {
-      setHasPaymentMethod(Array.isArray(methods) && methods.length > 0);
-    }).catch(() => {
-      setHasPaymentMethod(false);
-    });
+    fetchLatestPaymentMethods()
+      .then((methods: any[]) => {
+        setHasPaymentMethod(Array.isArray(methods) && methods.length > 0);
+      })
+      .catch(() => {
+        setHasPaymentMethod(false);
+      });
   }, []);
 
   function handleNameSubmit(name: string, slug: string, imageUrl: string) {
@@ -860,25 +755,23 @@ function NewWorkspacePage() {
             <ArrowLeft className="size-4" />
             Back to dashboard
           </Link>
-          <h1 className="text-xl font-medium text-dash-text-strong">
-            New Workspace
-          </h1>
-          <p className="mt-1 text-sm text-dash-text-faded">
-            Set up a new workspace for your team.
-          </p>
+          <h1 className="text-xl font-medium text-dash-text-strong">New Workspace</h1>
+          <p className="mt-1 text-sm text-dash-text-faded">Set up a new workspace for your team.</p>
         </div>
 
         {hasPaymentMethod === false && (
-          <div className="mb-6"><InfoBanner>
-            A payment method is required to create a workspace.{" "}
-            <button
-              type="button"
-              onClick={() => profileDrawer.open(ProfileTab.Billing)}
-              className="font-medium text-[#4879f8] hover:text-[#3a6ae6]"
-            >
-              Add a payment method
-            </button>
-          </InfoBanner></div>
+          <div className="mb-6">
+            <InfoBanner>
+              A payment method is required to create a workspace.{" "}
+              <button
+                type="button"
+                onClick={() => profileDrawer.open(ProfileTab.Billing)}
+                className="font-medium text-[#4879f8] hover:text-[#3a6ae6]"
+              >
+                Add a payment method
+              </button>
+            </InfoBanner>
+          </div>
         )}
 
         {/* Phase 1 */}

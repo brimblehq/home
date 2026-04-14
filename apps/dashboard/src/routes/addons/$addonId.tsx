@@ -10,41 +10,33 @@ import { useHaptics } from "@/hooks/use-haptics";
 import { AddonCard } from "../../components/shared/addon-card";
 import { GlossyButton } from "../../components/shared/glossy-button";
 import { startOauthPopup } from "@/lib/auth/oauth-popup";
-import {
-  buildTwoFactorChallengeUrl,
-  extractTwoFactorChallenge,
-} from "@/lib/auth/two-factor";
+import { buildTwoFactorChallengeUrl, extractTwoFactorChallenge } from "@/lib/auth/two-factor";
 import type { McpServerListResult, McpServerTemplate } from "@/backend/mcp";
 import type { GithubAccount, GithubAccountsResult } from "@/backend/repositories";
 import { finalizeOauthSessionServerFn } from "@/server/auth/actions";
 import { deployMcpTemplateServerFn, getMcpTemplateServerFn, listMcpTemplatesServerFn } from "@/server/mcp/actions";
 import { listGithubAccountsServerFn } from "@/server/repositories/actions";
-import {
-  mapMcpTemplateToAddon,
-  mapMcpTemplateToAddonDetail,
-} from "@/utils/discover-mcp";
+import { mapMcpTemplateToAddon, mapMcpTemplateToAddonDetail } from "@/utils/discover-mcp";
 
 export const Route = createFileRoute("/addons/$addonId")({
   staleTime: 300_000,
   preloadStaleTime: 300_000,
   loader: async ({ params }) => {
-    const template = await (getMcpTemplateServerFn as unknown as (input: {
-      data: { id: string };
-    }) => Promise<McpServerTemplate | null>)({
+    const template = await (getMcpTemplateServerFn as unknown as (input: { data: { id: string } }) => Promise<McpServerTemplate | null>)({
       data: { id: params.addonId },
     });
 
     const detail = template ? mapMcpTemplateToAddonDetail(template) : null;
     const category = template?.category;
 
-    const relatedResult = await (listMcpTemplatesServerFn as unknown as (input: {
-      data?: { limit?: number; category?: string };
-    }) => Promise<McpServerListResult>)({
+    const relatedResult = await (
+      listMcpTemplatesServerFn as unknown as (input: { data?: { limit?: number; category?: string } }) => Promise<McpServerListResult>
+    )({
       data: {
         limit: 4,
         ...(category ? { category } : {}),
       },
-    }).catch(() => ({ servers: [], pagination: {} } as McpServerListResult));
+    }).catch(() => ({ servers: [], pagination: {} }) as McpServerListResult);
 
     const currentId = template?.qualifiedName || template?.id || params.addonId;
     const relatedAddons = relatedResult.servers
@@ -63,27 +55,24 @@ export const Route = createFileRoute("/addons/$addonId")({
 const ease = [0.16, 1, 0.3, 1] as const;
 const TWO_FACTOR_REDIRECT_SIGNAL = "__TWO_FACTOR_REDIRECT__";
 
-function ToolCard({ tool }: { tool: { name: string; description?: string; requiredCount?: number; inputSchema?: Record<string, unknown> } }) {
+function ToolCard({
+  tool,
+}: {
+  tool: { name: string; description?: string; requiredCount?: number; inputSchema?: Record<string, unknown> };
+}) {
   const [expanded, setExpanded] = useState(false);
   const properties = (tool.inputSchema?.properties ?? {}) as Record<string, { type?: string; description?: string }>;
   const params = Object.entries(properties);
-  const required = new Set(
-    Array.isArray(tool.inputSchema?.required) ? (tool.inputSchema.required as string[]) : [],
-  );
+  const required = new Set(Array.isArray(tool.inputSchema?.required) ? (tool.inputSchema.required as string[]) : []);
 
   const shortDesc = tool.description?.split("\n")[0]?.slice(0, 120) || "";
 
   return (
     <div>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between gap-3 py-2 text-left"
-      >
+      <button onClick={() => setExpanded(!expanded)} className="flex w-full items-center justify-between gap-3 py-2 text-left">
         <div className="min-w-0 flex-1">
           <span className="font-mono text-sm text-dash-text-strong">{tool.name}</span>
-          {shortDesc && !expanded && (
-            <p className="mt-0.5 truncate text-xs font-light text-dash-text-faded">{shortDesc}</p>
-          )}
+          {shortDesc && !expanded && <p className="mt-0.5 truncate text-xs font-light text-dash-text-faded">{shortDesc}</p>}
         </div>
         <ChevronDown className={`size-3.5 shrink-0 text-dash-text-extra-faded transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
@@ -98,9 +87,7 @@ function ToolCard({ tool }: { tool: { name: string; description?: string; requir
           >
             <div className="pb-3 pt-1">
               {tool.description && (
-                <p className="text-sm font-light leading-[1.45] text-dash-text-faded">
-                  {tool.description.split("\n")[0]}
-                </p>
+                <p className="text-sm font-light leading-[1.45] text-dash-text-faded">{tool.description.split("\n")[0]}</p>
               )}
               {params.length > 0 && (
                 <div className="mt-3 flex flex-col gap-1">
@@ -108,11 +95,11 @@ function ToolCard({ tool }: { tool: { name: string; description?: string; requir
                     <div key={name} className="flex items-baseline gap-2 py-1">
                       <code className="shrink-0 font-mono text-xs text-dash-text-body">{name}</code>
                       {schema.type && (
-                        <span className="text-[10px] text-dash-text-extra-faded">{Array.isArray(schema.type) ? schema.type.join(" | ") : schema.type}</span>
+                        <span className="text-[10px] text-dash-text-extra-faded">
+                          {Array.isArray(schema.type) ? schema.type.join(" | ") : schema.type}
+                        </span>
                       )}
-                      {required.has(name) && (
-                        <span className="text-[10px] font-medium text-[#f5a623]">required</span>
-                      )}
+                      {required.has(name) && <span className="text-[10px] font-medium text-[#f5a623]">required</span>}
                     </div>
                   ))}
                 </div>
@@ -129,15 +116,11 @@ function chooseGithubInstallation(accounts: GithubAccount[], workspace?: string)
   if (!accounts.length) return null;
 
   if (workspace) {
-    const orgAccount = accounts.find(
-      (account) => account.type === "Organization" && account.installationId !== undefined,
-    );
+    const orgAccount = accounts.find((account) => account.type === "Organization" && account.installationId !== undefined);
     if (orgAccount) return orgAccount;
   }
 
-  const userAccount = accounts.find(
-    (account) => account.type === "User" && account.installationId !== undefined,
-  );
+  const userAccount = accounts.find((account) => account.type === "User" && account.installationId !== undefined);
   if (userAccount) return userAccount;
 
   return accounts.find((account) => account.installationId !== undefined) ?? null;
@@ -187,7 +170,6 @@ function AddonDetailPage() {
     );
   }
 
-
   async function ensureGithubAccounts() {
     let result = await listGithubAccounts();
     if (result.accounts.length > 0 && result.authenticated) return result.accounts;
@@ -196,9 +178,7 @@ function AddonDetailPage() {
     const challenge = extractTwoFactorChallenge(oauth);
     if (challenge) {
       const nextPath = `${window.location.pathname}${window.location.search}`;
-      window.location.assign(
-        buildTwoFactorChallengeUrl(challenge, { next: nextPath }),
-      );
+      window.location.assign(buildTwoFactorChallengeUrl(challenge, { next: nextPath }));
       throw new Error(TWO_FACTOR_REDIRECT_SIGNAL);
     }
 
@@ -292,9 +272,7 @@ function AddonDetailPage() {
         transition={{ duration: 0.3, delay: 0.05, ease }}
         className="mt-5 flex flex-col gap-6 lg:flex-row lg:gap-8"
       >
-        <div
-          className={`relative h-[210px] w-full shrink-0 overflow-clip rounded-[8px] bg-gradient-to-b ${detail.gradient} lg:w-[437px]`}
-        >
+        <div className={`relative h-[210px] w-full shrink-0 overflow-clip rounded-[8px] bg-gradient-to-b ${detail.gradient} lg:w-[437px]`}>
           <div
             className="absolute top-[26px] bottom-0 w-[388px] overflow-clip rounded-t-[4px] border-[0.5px] border-[#e6e5e5] border-b-0 bg-[#fbfbfb]"
             style={{ left: "calc(50% + 80.5px)", transform: "translateX(-50%)" }}
@@ -334,15 +312,11 @@ function AddonDetailPage() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-base font-medium tracking-[-0.03px] text-dash-text-strong">{detail.name}</h1>
-              {detail.verified ? (
-                <span className="rounded-full bg-[#e8f3ff] px-2 py-0.5 text-xs text-[#3975f6]">Verified</span>
-              ) : null}
+              {detail.verified ? <span className="rounded-full bg-[#e8f3ff] px-2 py-0.5 text-xs text-[#3975f6]">Verified</span> : null}
             </div>
             <p className="mt-2 text-sm font-light leading-[1.3] text-dash-text-faded">
               {detail.description}. Connect it to your Brimble project and streamline your workflow.
-              {detail.source ? (
-                <span className="text-dash-text-extra-faded"> — via {detail.source}</span>
-              ) : null}
+              {detail.source ? <span className="text-dash-text-extra-faded"> — via {detail.source}</span> : null}
             </p>
             {detail.tools.length > 0 ? (
               <p className="mt-2 text-sm font-light leading-[1.3] text-dash-text-faded">
@@ -352,46 +326,38 @@ function AddonDetailPage() {
             {detail.tools.length > 0 ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {detail.tools.slice(0, 3).map((tool) => (
-                  <span
-                    key={tool.name}
-                    className="rounded-full bg-dash-bg-elevated px-2 py-1 text-xs text-dash-text-faded"
-                  >
+                  <span key={tool.name} className="rounded-full bg-dash-bg-elevated px-2 py-1 text-xs text-dash-text-faded">
                     {tool.name}
                   </span>
                 ))}
-                {detail.tools.length > 3 && (
-                  <span className="text-xs text-dash-text-extra-faded">
-                    +{detail.tools.length - 3}
-                  </span>
-                )}
+                {detail.tools.length > 3 && <span className="text-xs text-dash-text-extra-faded">+{detail.tools.length - 3}</span>}
               </div>
             ) : null}
           </div>
           <div className="mt-4 flex items-center gap-3">
             <ToggleSwitch checked={authEnabled} onChange={setAuthEnabled} />
             <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium text-dash-text-strong">
-                Enable Authentication
-              </span>
+              <span className="text-sm font-medium text-dash-text-strong">Enable Authentication</span>
               <span className="text-xs font-light text-dash-text-faded">
-                Require an API key in the <code className="rounded bg-dash-bg-elevated px-1 font-mono text-[10px]">x-brimble-key</code> header to access this MCP server.
+                Require an API key in the <code className="rounded bg-dash-bg-elevated px-1 font-mono text-[10px]">x-brimble-key</code>{" "}
+                header to access this MCP server.
               </span>
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {canWrite && (
-            <GlossyButton
-              className="min-w-[160px]"
-              loading={deploying}
-              loadingLabel="Deploying..."
-              onClick={() => {
-                void handleDeployServer();
-              }}
-            >
-              Deploy server
-            </GlossyButton>
+              <GlossyButton
+                className="min-w-[160px]"
+                loading={deploying}
+                loadingLabel="Deploying..."
+                onClick={() => {
+                  void handleDeployServer();
+                }}
+              >
+                Deploy server
+              </GlossyButton>
             )}
-            {(detail.githubUrl || detail.documentationUrl) ? (
+            {detail.githubUrl || detail.documentationUrl ? (
               <a
                 href={detail.githubUrl || detail.documentationUrl}
                 target="_blank"
@@ -418,16 +384,12 @@ function AddonDetailPage() {
           <h2 className="text-base font-medium tracking-[-0.03px] text-dash-text-strong">More details</h2>
           <p className="mt-3 text-sm font-light leading-[1.45] text-dash-text-faded">
             {detail.longDescription}
-            {detail.source ? (
-              <span className="text-dash-text-extra-faded"> — via {detail.source}</span>
-            ) : null}
+            {detail.source ? <span className="text-dash-text-extra-faded"> — via {detail.source}</span> : null}
           </p>
 
           {detail.tools.length > 0 && (
             <div className="mt-6">
-              <h3 className="mb-2 text-sm font-medium text-dash-text-strong">
-                Tools ({detail.tools.length})
-              </h3>
+              <h3 className="mb-2 text-sm font-medium text-dash-text-strong">Tools ({detail.tools.length})</h3>
               <div className="divide-y divide-dash-border-soft">
                 {detail.tools.map((tool) => (
                   <ToolCard key={tool.name} tool={tool} />
@@ -436,16 +398,11 @@ function AddonDetailPage() {
             </div>
           )}
         </div>
-
       </motion.div>
 
       <hr className="my-8 border-dash-border-soft" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.2, ease }}
-      >
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2, ease }}>
         <h2 className="mb-4 text-base font-medium tracking-[-0.03px] text-dash-text-strong">More like this</h2>
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {relatedAddons.map((addon) => (

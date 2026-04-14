@@ -9,10 +9,7 @@ import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { useProfileDrawer } from "@/contexts/profile-drawer-context";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import { ProfileTab } from "@/types/enums";
-import {
-  getGithubInstallUrlServerFn,
-  listGithubAccountsServerFn,
-} from "@/server/repositories/actions";
+import { getGithubInstallUrlServerFn, listGithubAccountsServerFn } from "@/server/repositories/actions";
 import { getWorkspaceTeamMembersServerFn } from "@/server/teams/actions";
 import { updateSettingsFollowedXServerFn } from "@/server/settings/actions";
 import type { Project } from "@/backend/projects";
@@ -101,9 +98,7 @@ export function OnboardingChecklist({
   const profileDrawer = useProfileDrawer();
   const haptics = useHaptics();
   const [expanded, setExpanded] = useState(false);
-  const [hasFollowed, setHasFollowed] = useState(
-    Boolean(settingsSnapshot?.profile?.followedX),
-  );
+  const [hasFollowed, setHasFollowed] = useState(Boolean(settingsSnapshot?.profile?.followedX));
 
   const navigate = useNavigate();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
@@ -114,9 +109,7 @@ export function OnboardingChecklist({
   const getTeamMembers = useServerFn(getWorkspaceTeamMembersServerFn as any) as (args: {
     data: { workspace: string };
   }) => Promise<TeamDetails>;
-  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<
-    unknown[] | { accounts?: unknown[] }
-  >;
+  const listGithubAccounts = useServerFn(listGithubAccountsServerFn as any) as () => Promise<unknown[] | { accounts?: unknown[] }>;
   const activeWorkspaceSlug = (() => {
     const params = new URLSearchParams(searchStr || "");
     const workspace = params.get("workspace")?.trim();
@@ -131,9 +124,7 @@ export function OnboardingChecklist({
     const serviceType = String(project.serviceType ?? "").toLowerCase();
     return serviceType !== "database" && serviceType !== "database-service";
   });
-  const hasGitFromProjects = deployableProjects.some(
-    (p) => p.gitLink || p.repo?.git || p.repo?.fullName || p.repo?.name,
-  );
+  const hasGitFromProjects = deployableProjects.some((p) => p.gitLink || p.repo?.git || p.repo?.fullName || p.repo?.name);
 
   useEffect(() => {
     function handleGitChange() {
@@ -172,7 +163,7 @@ export function OnboardingChecklist({
       cancelled = true;
       if (retryTimeout) clearTimeout(retryTimeout);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- listGithubAccounts is stable in behavior but unstable in reference (useServerFn)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- listGithubAccounts is stable in behavior but unstable in reference (useServerFn)
   }, [gitRefreshKey]);
 
   useEffect(() => {
@@ -218,7 +209,7 @@ export function OnboardingChecklist({
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- getTeamMembers is stable in behavior but unstable in reference (useServerFn)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getTeamMembers is stable in behavior but unstable in reference (useServerFn)
   }, [activeWorkspaceSlug, isTeamWorkspace, teamDetails, teamDetailsByWorkspace]);
 
   useEffect(() => {
@@ -228,19 +219,11 @@ export function OnboardingChecklist({
   const hasGit = hasConnectedGit ?? hasGitFromProjects;
   const hasProject = deployableProjects.length > 0;
   const planType = (settingsSnapshot?.profile?.subscription?.planType ?? "").toUpperCase();
-  const isFreePlan =
-    !planType || planType === SUBSCRIPTION_PLAN_TYPE.FreePlan;
-  const {
-    data: fetchedPaymentMethods,
-    isFetched: paymentMethodsFetched,
-    isError: paymentMethodsFailed,
-  } = usePaymentMethods();
-  const hasPaymentCard =
-    (Array.isArray(fetchedPaymentMethods) && fetchedPaymentMethods.length > 0);
-  const resolvedTeamDetails =
-    (activeWorkspaceSlug ? teamDetailsByWorkspace[activeWorkspaceSlug] : null) ?? teamDetails ?? null;
-  const acceptedTeamMembersCount =
-    resolvedTeamDetails?.members?.filter((member) => member.accepted !== false).length ?? 0;
+  const isFreePlan = !planType || planType === SUBSCRIPTION_PLAN_TYPE.FreePlan;
+  const { data: fetchedPaymentMethods, isFetched: paymentMethodsFetched, isError: paymentMethodsFailed } = usePaymentMethods();
+  const hasPaymentCard = Array.isArray(fetchedPaymentMethods) && fetchedPaymentMethods.length > 0;
+  const resolvedTeamDetails = (activeWorkspaceSlug ? teamDetailsByWorkspace[activeWorkspaceSlug] : null) ?? teamDetails ?? null;
+  const acceptedTeamMembersCount = resolvedTeamDetails?.members?.filter((member) => member.accepted !== false).length ?? 0;
   const hasTeamMembers = acceptedTeamMembersCount > 1;
   const currentUserId = settingsSnapshot?.profile?.id?.trim().toLowerCase() ?? "";
   const currentUserEmail = settingsSnapshot?.profile?.email?.trim().toLowerCase() ?? "";
@@ -252,9 +235,8 @@ export function OnboardingChecklist({
   const currentUserIsTeamOwner =
     Boolean(resolvedTeamDetails?.isCreator) ||
     Boolean(currentTeamMember?.isCreator) ||
-    (currentTeamMember?.role?.trim().toLowerCase() === "creator");
-  const showInviteTeamMemberTask =
-    Boolean(isTeamWorkspace) && currentUserIsTeamOwner && acceptedTeamMembersCount <= 1;
+    currentTeamMember?.role?.trim().toLowerCase() === "creator";
+  const showInviteTeamMemberTask = Boolean(isTeamWorkspace) && currentUserIsTeamOwner && acceptedTeamMembersCount <= 1;
 
   const tasks = useMemo(
     () =>
@@ -274,21 +256,13 @@ export function OnboardingChecklist({
                 throw new Error("Unable to get GitHub install link.");
               }
 
-              const popup = window.open(
-                installUrl,
-                "_blank",
-                "width=900,height=760",
-              );
+              const popup = window.open(installUrl, "_blank", "width=900,height=760");
 
               if (!popup) {
                 throw new Error("Popup blocked. Please allow popups and try again.");
               }
             } catch (error) {
-              toast.error(
-                error instanceof Error
-                  ? error.message
-                  : "Failed to open GitHub install page",
-              );
+              toast.error(error instanceof Error ? error.message : "Failed to open GitHub install page");
             }
           })();
         },
@@ -316,13 +290,9 @@ export function OnboardingChecklist({
   const settingsResolved = Boolean(settingsSnapshot?.profile);
   const projectsResolved = Array.isArray(projects);
   const paymentMethodsResolved = paymentMethodsFetched && !paymentMethodsFailed;
-  const teamMembersResolved =
-    !isTeamWorkspace ||
-    Boolean(resolvedTeamDetails);
+  const teamMembersResolved = !isTeamWorkspace || Boolean(resolvedTeamDetails);
   const teamMembersFetchFailed =
-    Boolean(isTeamWorkspace) &&
-    Boolean(activeWorkspaceSlug) &&
-    Boolean(activeWorkspaceSlug in teamMembersFetchFailedByWorkspace);
+    Boolean(isTeamWorkspace) && Boolean(activeWorkspaceSlug) && Boolean(activeWorkspaceSlug in teamMembersFetchFailedByWorkspace);
   const checklistSignalsReady =
     settingsResolved &&
     projectsResolved &&
@@ -397,15 +367,7 @@ export function OnboardingChecklist({
         >
           {/* Progress ring */}
           <svg width="20" height="20" viewBox="0 0 20 20" className="shrink-0">
-            <circle
-              cx="10"
-              cy="10"
-              r="8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className="text-dash-border"
-            />
+            <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="2" className="text-dash-border" />
             <circle
               cx="10"
               cy="10"
@@ -421,20 +383,8 @@ export function OnboardingChecklist({
           <span>
             {completedCount}/{tasks.length} completed
           </span>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            className="text-dash-text-faded"
-          >
-            <path
-              d="M4 10L8 6L12 10"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-dash-text-faded">
+            <path d="M4 10L8 6L12 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </motion.button>
       )}
@@ -454,9 +404,7 @@ export function OnboardingChecklist({
             {/* Header */}
             <div className="flex items-center justify-between border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-4 py-3">
               <div className="flex-1">
-                <h3 className="text-sm font-semibold text-dash-text-strong">
-                  Getting started
-                </h3>
+                <h3 className="text-sm font-semibold text-dash-text-strong">Getting started</h3>
                 <p className="mt-0.5 text-xs text-dash-text-faded">
                   {completedCount}/{tasks.length} completed
                 </p>
@@ -468,21 +416,8 @@ export function OnboardingChecklist({
                 }}
                 className="flex h-7 w-7 items-center justify-center rounded-md text-dash-text-faded transition-colors hover:bg-dash-bg hover:text-dash-text-strong"
               >
-                <motion.svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  animate={{ rotate: 180 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <path
-                    d="M4 10L8 6L12 10"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                <motion.svg width="16" height="16" viewBox="0 0 16 16" fill="none" animate={{ rotate: 180 }} transition={{ duration: 0.2 }}>
+                  <path d="M4 10L8 6L12 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </motion.svg>
               </button>
             </div>
@@ -505,25 +440,12 @@ export function OnboardingChecklist({
                     {/* Checkbox (read-only) */}
                     <span
                       className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors ${
-                        task.done
-                          ? "border-[#3c6ce7] bg-[#3c6ce7]"
-                          : "border-dash-border"
+                        task.done ? "border-[#3c6ce7] bg-[#3c6ce7]" : "border-dash-border"
                       }`}
                     >
                       {task.done && (
-                        <svg
-                          width="10"
-                          height="10"
-                          viewBox="0 0 10 10"
-                          fill="none"
-                        >
-                          <path
-                            d="M2 5.5L4 7.5L8 3"
-                            stroke="white"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                          <path d="M2 5.5L4 7.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                     </span>
@@ -536,11 +458,7 @@ export function OnboardingChecklist({
                       </button>
                     ) : (
                       <span
-                        className={`text-sm transition-colors ${
-                          task.done
-                            ? "text-dash-text-faded line-through"
-                            : "text-dash-text-strong"
-                        }`}
+                        className={`text-sm transition-colors ${task.done ? "text-dash-text-faded line-through" : "text-dash-text-strong"}`}
                       >
                         {task.label}
                       </span>

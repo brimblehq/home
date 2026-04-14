@@ -1,53 +1,20 @@
-import {
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-  useCallback,
-  type ReactNode,
-} from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, type ReactNode } from "react";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Drawer } from "vaul";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  Activity,
-  Forward,
-  Download,
-  X,
-  Copy,
-  Check,
-  Calendar,
-  ChevronDown,
-} from "lucide-react";
-import {
-  Pause,
-  Play,
-  Clock,
-  MagnifyingGlass,
-  CircleNotch,
-  ArrowUp,
-  ArrowDown,
-} from "@phosphor-icons/react";
+import { Activity, Forward, Download, X, Copy, Check, Calendar, ChevronDown } from "lucide-react";
+import { Pause, Play, Clock, MagnifyingGlass, CircleNotch, ArrowUp, ArrowDown } from "@phosphor-icons/react";
 import type { DateRange } from "react-day-picker";
 import { endOfDay, format, startOfDay, subDays, subHours } from "date-fns";
 import { TabHeader } from "../../../components/shared/tab-header";
-import {
-  FilterDropdown,
-  type FilterOption,
-} from "../../../components/shared/filter-dropdown";
+import { FilterDropdown, type FilterOption } from "../../../components/shared/filter-dropdown";
 import { SearchFilterBar } from "../../../components/shared/search-filter-bar";
 import { DateRangePicker } from "../../../components/shared/date-range-picker";
 import { CursorPagination } from "../../../components/shared/pagination";
-import {
-  listRequestLogsServerFn,
-  getLogTrendsServerFn,
-} from "@/server/logs/actions";
-import type {
-  RequestLogsPage as RequestLogsResponse,
-  LogTrendsResponse,
-} from "@/backend/logs";
+import { listRequestLogsServerFn, getLogTrendsServerFn } from "@/server/logs/actions";
+import type { RequestLogsPage as RequestLogsResponse, LogTrendsResponse } from "@/backend/logs";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useLiveApplicationLogs } from "@/hooks/use-live-application-logs";
 import {
@@ -64,10 +31,7 @@ import {
   type UiLogLevel,
   type UiRequestLogEntry as RequestLogEntry,
 } from "@/utils/project-logs";
-import {
-  isDatabaseProject,
-  isStaticProject,
-} from "@/utils/project-capabilities";
+import { isDatabaseProject, isStaticProject } from "@/utils/project-capabilities";
 import { usePlanGate } from "@/hooks/use-plan-gate";
 
 export const Route = createFileRoute("/projects/$projectId/logs")({
@@ -128,10 +92,7 @@ function highlightMatches(text: string, query: string): React.ReactNode {
   const parts = text.split(re);
   return parts.map((part, i) =>
     i % 2 === 1 ? (
-      <mark
-        key={i}
-        className="rounded-sm bg-[#b37a10]/30 px-0.5 text-[#b37a10] dark:bg-[#f5a623]/25 dark:text-[#f5a623]"
-      >
+      <mark key={i} className="rounded-sm bg-[#b37a10]/30 px-0.5 text-[#b37a10] dark:bg-[#f5a623]/25 dark:text-[#f5a623]">
         {part}
       </mark>
     ) : (
@@ -179,9 +140,7 @@ function LogMessage({ text, highlight }: { text: string; highlight?: string }) {
             {part}
           </a>
         ) : (
-          <span key={i}>
-            {highlight ? highlightMatches(part, highlight) : part}
-          </span>
+          <span key={i}>{highlight ? highlightMatches(part, highlight) : part}</span>
         ),
       )}
     </span>
@@ -189,18 +148,11 @@ function LogMessage({ text, highlight }: { text: string; highlight?: string }) {
 }
 
 function clampDateToBounds(date: Date, minDate: Date, maxDate: Date): Date {
-  const value = Math.min(
-    Math.max(date.getTime(), minDate.getTime()),
-    maxDate.getTime(),
-  );
+  const value = Math.min(Math.max(date.getTime(), minDate.getTime()), maxDate.getTime());
   return new Date(value);
 }
 
-function clampRangeToBounds(
-  range: DateRange | undefined,
-  minDate: Date,
-  maxDate: Date,
-): DateRange | undefined {
+function clampRangeToBounds(range: DateRange | undefined, minDate: Date, maxDate: Date): DateRange | undefined {
   if (!range) return undefined;
 
   const next: DateRange = { from: undefined, to: undefined };
@@ -272,9 +224,7 @@ function LogsActionsMenu({ actions }: { actions: LogsActionItem[] }) {
         }}
         className="flex h-full items-center border-l-[0.5px] border-dash-border px-2 py-3 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong disabled:cursor-not-allowed disabled:opacity-40"
       >
-        <ChevronDown
-          className={`size-4 transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       <AnimatePresence>
@@ -342,10 +292,7 @@ function VolumeGraphSkeleton() {
       </div>
       <div className="mt-2 flex h-[56px] items-end gap-[1px]">
         {SKELETON_HEIGHTS.map((h, i) => (
-          <div
-            key={i}
-            className="relative flex h-full flex-1 flex-col justify-end"
-          >
+          <div key={i} className="relative flex h-full flex-1 flex-col justify-end">
             <div
               className="w-full animate-pulse rounded-[1px] bg-dash-border-soft dark:bg-white/10"
               style={{
@@ -360,21 +307,10 @@ function VolumeGraphSkeleton() {
   );
 }
 
-function VolumeGraph({
-  buckets,
-  totals,
-  isLoading,
-}: {
-  buckets: VolumeBucket[];
-  totals: VolumeTotals;
-  isLoading: boolean;
-}) {
+function VolumeGraph({ buckets, totals, isLoading }: { buckets: VolumeBucket[]; totals: VolumeTotals; isLoading: boolean }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
-  const maxBucketTotal = useMemo(
-    () => Math.max(1, ...buckets.map((b) => b.total)),
-    [buckets],
-  );
+  const maxBucketTotal = useMemo(() => Math.max(1, ...buckets.map((b) => b.total)), [buckets]);
 
   const showSkeleton = isLoading && buckets.length === 0;
   const active = hoveredIdx !== null ? (buckets[hoveredIdx] ?? null) : null;
@@ -392,23 +328,17 @@ function VolumeGraph({
             active ? "opacity-0" : "opacity-100"
           }`}
         >
-          <span className="text-dash-text-strong dark:text-white/70">
-            {totals.total.toLocaleString()} events
-          </span>
+          <span className="text-dash-text-strong dark:text-white/70">{totals.total.toLocaleString()} events</span>
           {totals.warn > 0 && (
             <>
               <span>·</span>
-              <span className="text-[#b37a10] dark:text-[#f5a623]">
-                {totals.warn.toLocaleString()} warn
-              </span>
+              <span className="text-[#b37a10] dark:text-[#f5a623]">{totals.warn.toLocaleString()} warn</span>
             </>
           )}
           {totals.error > 0 && (
             <>
               <span>·</span>
-              <span className="text-[#c92414] dark:text-[#ff5544]">
-                {totals.error.toLocaleString()} error
-              </span>
+              <span className="text-[#c92414] dark:text-[#ff5544]">{totals.error.toLocaleString()} error</span>
             </>
           )}
         </div>
@@ -419,27 +349,19 @@ function VolumeGraph({
         >
           {active && (
             <>
-              <span className="text-dash-text-strong dark:text-white/70">
-                {format(new Date(active.tsStart), "MMM d HH:mm")}
-              </span>
+              <span className="text-dash-text-strong dark:text-white/70">{format(new Date(active.tsStart), "MMM d HH:mm")}</span>
               <span>·</span>
-              <span className="text-dash-text-strong dark:text-white/70">
-                {active.total.toLocaleString()} total
-              </span>
+              <span className="text-dash-text-strong dark:text-white/70">{active.total.toLocaleString()} total</span>
               {active.warn > 0 && (
                 <>
                   <span>·</span>
-                  <span className="text-[#b37a10] dark:text-[#f5a623]">
-                    {active.warn.toLocaleString()} warn
-                  </span>
+                  <span className="text-[#b37a10] dark:text-[#f5a623]">{active.warn.toLocaleString()} warn</span>
                 </>
               )}
               {active.error > 0 && (
                 <>
                   <span>·</span>
-                  <span className="text-[#c92414] dark:text-[#ff5544]">
-                    {active.error.toLocaleString()} err
-                  </span>
+                  <span className="text-[#c92414] dark:text-[#ff5544]">{active.error.toLocaleString()} err</span>
                 </>
               )}
             </>
@@ -448,20 +370,13 @@ function VolumeGraph({
       </div>
 
       {/* Bars */}
-      <div
-        className="mt-2 flex h-[56px] items-end gap-[1px]"
-        onMouseLeave={() => setHoveredIdx(null)}
-      >
+      <div className="mt-2 flex h-[56px] items-end gap-[1px]" onMouseLeave={() => setHoveredIdx(null)}>
         {buckets.map((b, i) => {
           const heightPct = (b.total / maxBucketTotal) * 100;
           const isEmpty = b.total === 0;
           const isDimmed = hoveredIdx !== null && hoveredIdx !== i;
           return (
-            <div
-              key={i}
-              onMouseEnter={() => setHoveredIdx(i)}
-              className="relative flex h-full flex-1 cursor-default flex-col justify-end"
-            >
+            <div key={i} onMouseEnter={() => setHoveredIdx(i)} className="relative flex h-full flex-1 cursor-default flex-col justify-end">
               {isEmpty ? (
                 <div className="h-px w-full bg-dash-border-soft/50 dark:bg-white/[0.04]" />
               ) : (
@@ -484,18 +399,8 @@ function VolumeGraph({
                   }}
                   className="flex w-full flex-col-reverse overflow-hidden rounded-[1px]"
                 >
-                  {b.info + b.debug + b.warn > 0 && (
-                    <div
-                      className="w-full bg-[#ff7a00]/40"
-                      style={{ flex: b.info + b.debug + b.warn }}
-                    />
-                  )}
-                  {b.error > 0 && (
-                    <div
-                      className="w-full bg-[#c92414] dark:bg-[#ff5544]"
-                      style={{ flex: b.error }}
-                    />
-                  )}
+                  {b.info + b.debug + b.warn > 0 && <div className="w-full bg-[#ff7a00]/40" style={{ flex: b.info + b.debug + b.warn }} />}
+                  {b.error > 0 && <div className="w-full bg-[#c92414] dark:bg-[#ff5544]" style={{ flex: b.error }} />}
                 </motion.div>
               )}
             </div>
@@ -506,13 +411,7 @@ function VolumeGraph({
   );
 }
 
-function ApplicationLogsEmptyState({
-  isConnecting,
-  hasActiveFilters,
-}: {
-  isConnecting: boolean;
-  hasActiveFilters: boolean;
-}) {
+function ApplicationLogsEmptyState({ isConnecting, hasActiveFilters }: { isConnecting: boolean; hasActiveFilters: boolean }) {
   let icon: ReactNode;
   let title: string;
   let body: ReactNode;
@@ -520,19 +419,14 @@ function ApplicationLogsEmptyState({
   if (isConnecting) {
     icon = <CircleNotch className="size-6 animate-spin text-dash-text-faded dark:text-white/50" />;
     title = "Connecting to log stream";
-    body = (
-      <p>
-        Establishing a connection to your container's log output. This usually
-        takes a moment.
-      </p>
-    );
+    body = <p>Establishing a connection to your container's log output. This usually takes a moment.</p>;
   } else if (hasActiveFilters) {
     icon = <MagnifyingGlass className="size-6 text-dash-text-faded dark:text-white/50" />;
     title = "No logs match your filters";
     body = (
       <p>
-        Try clearing the search query or switching the level filter back to "All
-        Levels". Adjusting the date range above can also surface older activity.
+        Try clearing the search query or switching the level filter back to "All Levels". Adjusting the date range above can also surface
+        older activity.
       </p>
     );
   } else {
@@ -540,14 +434,8 @@ function ApplicationLogsEmptyState({
     title = "Nothing to show yet";
     body = (
       <>
-        <p>
-          We'll show your app's activity here as soon as it starts running. If
-          you just deployed, give it a few seconds.
-        </p>
-        <p>
-          Try widening the date range above to look further back, or head to
-          Deployments to make sure your latest build is live.
-        </p>
+        <p>We'll show your app's activity here as soon as it starts running. If you just deployed, give it a few seconds.</p>
+        <p>Try widening the date range above to look further back, or head to Deployments to make sure your latest build is live.</p>
       </>
     );
   }
@@ -556,9 +444,7 @@ function ApplicationLogsEmptyState({
     <div className="flex h-[420px] flex-col items-center justify-center px-8 text-center">
       {icon}
       <h3 className="mt-4 text-base font-semibold text-dash-text-strong dark:text-white">{title}</h3>
-      <div className="mt-2 flex max-w-[520px] flex-col gap-2 text-sm leading-6 text-dash-text-faded dark:text-white/55">
-        {body}
-      </div>
+      <div className="mt-2 flex max-w-[520px] flex-col gap-2 text-sm leading-6 text-dash-text-faded dark:text-white/55">{body}</div>
     </div>
   );
 }
@@ -578,29 +464,18 @@ function ApplicationLogs({
   const scrollRef = useRef<HTMLDivElement>(null);
   const maxSelectableDate = useMemo(() => endOfDay(new Date()), []);
   const minSelectableDate = useMemo(
-    () =>
-      startOfDay(subDays(maxSelectableDate, Math.max(0, logRetentionDays - 1))),
+    () => startOfDay(subDays(maxSelectableDate, Math.max(0, logRetentionDays - 1))),
     [logRetentionDays, maxSelectableDate],
   );
 
   const [searchQuery, setSearchQuery] = useState("");
   const [levelFilter, setLevelFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() =>
-    clampRangeToBounds(
-      defaultApplicationLogsDateRange(),
-      minSelectableDate,
-      maxSelectableDate,
-    ),
+    clampRangeToBounds(defaultApplicationLogsDateRange(), minSelectableDate, maxSelectableDate),
   );
 
   useEffect(() => {
-    setDateRange((prev) =>
-      clampRangeToBounds(
-        prev ?? defaultApplicationLogsDateRange(),
-        minSelectableDate,
-        maxSelectableDate,
-      ),
-    );
+    setDateRange((prev) => clampRangeToBounds(prev ?? defaultApplicationLogsDateRange(), minSelectableDate, maxSelectableDate));
   }, [minSelectableDate, maxSelectableDate]);
 
   const rangeStart = useMemo(() => {
@@ -631,19 +506,12 @@ function ApplicationLogs({
   }) => Promise<LogTrendsResponse>;
 
   const stepSec = useMemo(() => {
-    const duration =
-      ((rangeEnd ?? new Date()).getTime() - rangeStart.getTime()) / 1000;
+    const duration = ((rangeEnd ?? new Date()).getTime() - rangeStart.getTime()) / 1000;
     return Math.max(15, Math.min(3600, Math.floor(duration / 60)));
   }, [rangeStart, rangeEnd]);
 
   const trendsQuery = useQuery({
-    queryKey: [
-      "log-trends",
-      projectId,
-      rangeStart.getTime(),
-      rangeEnd?.getTime() ?? null,
-      stepSec,
-    ] as const,
+    queryKey: ["log-trends", projectId, rangeStart.getTime(), rangeEnd?.getTime() ?? null, stepSec] as const,
     enabled: Boolean(projectId && containers.length > 0),
     staleTime: 30_000,
     queryFn: () =>
@@ -716,11 +584,7 @@ function ApplicationLogs({
 
   const filteredLogs = useMemo(() => {
     return logs.filter((line) => {
-      if (
-        searchQuery &&
-        !line.message.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-        return false;
+      if (searchQuery && !line.message.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (levelFilter !== "all" && line.level !== levelFilter) return false;
       if (line.epochMs < rangeStart.getTime()) return false;
       if (rangeEnd && line.epochMs > rangeEnd.getTime()) return false;
@@ -729,12 +593,7 @@ function ApplicationLogs({
   }, [levelFilter, logs, rangeEnd, rangeStart, searchQuery]);
 
   const filteredLogsExportText = useMemo(() => {
-    return filteredLogs
-      .map(
-        (line) =>
-          `[${line.timestamp}] ${levelBadge[line.level]} ${line.message}`,
-      )
-      .join("\n");
+    return filteredLogs.map((line) => `[${line.timestamp}] ${levelBadge[line.level]} ${line.message}`).join("\n");
   }, [filteredLogs]);
 
   const handleCopyFilteredLogs = useCallback(async () => {
@@ -745,10 +604,7 @@ function ApplicationLogs({
 
   const handleDownloadFilteredLogs = useCallback(() => {
     if (!filteredLogsExportText) return;
-    downloadLogsText(
-      filteredLogsExportText,
-      createLogExportFilename("application-logs"),
-    );
+    downloadLogsText(filteredLogsExportText, createLogExportFilename("application-logs"));
     haptics.light();
   }, [filteredLogsExportText, haptics]);
 
@@ -798,12 +654,8 @@ function ApplicationLogs({
   if (containers.length === 0) {
     return (
       <div className="flex h-[420px] flex-col items-center justify-center gap-1.5 rounded-[4px] border border-dash-border bg-dash-bg-elevated px-6 text-center">
-        <span className="text-sm font-medium text-dash-text-strong">
-          Logs will appear here once your app starts running
-        </span>
-        <span className="text-[13px] text-dash-text-faded">
-          Deploy your project to start streaming application logs.
-        </span>
+        <span className="text-sm font-medium text-dash-text-strong">Logs will appear here once your app starts running</span>
+        <span className="text-[13px] text-dash-text-faded">Deploy your project to start streaming application logs.</span>
       </div>
     );
   }
@@ -829,16 +681,8 @@ function ApplicationLogs({
         />
 
         <div className="flex items-stretch rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg text-sm text-dash-text-body">
-          <DateRangePicker
-            value={dateRange}
-            onChange={setDateRange}
-            minDate={minSelectableDate}
-            maxDate={maxSelectableDate}
-          >
-            <button
-              type="button"
-              className="flex items-center gap-2 px-3 py-3 transition-colors hover:bg-dash-bg-elevated"
-            >
+          <DateRangePicker value={dateRange} onChange={setDateRange} minDate={minSelectableDate} maxDate={maxSelectableDate}>
+            <button type="button" className="flex items-center gap-2 px-3 py-3 transition-colors hover:bg-dash-bg-elevated">
               <Calendar className="size-3.5 text-dash-text-faded" />
               {dateRange?.from && dateRange?.to
                 ? `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`
@@ -875,9 +719,7 @@ function ApplicationLogs({
               liveLogs.pause();
             }
           }}
-          aria-label={
-            liveLogs.isPaused ? "Resume log stream" : "Pause log stream"
-          }
+          aria-label={liveLogs.isPaused ? "Resume log stream" : "Pause log stream"}
           title={liveLogs.isPaused ? "Resume" : "Pause"}
           className="flex size-[42px] shrink-0 items-center justify-center rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
         >
@@ -898,11 +740,7 @@ function ApplicationLogs({
         </div>
 
         <div className="overflow-hidden rounded-[4px] border border-dash-border dark:border-[#1f2123] bg-dash-bg-elevated dark:bg-[#0d0e10]">
-          <VolumeGraph
-            buckets={trendBuckets}
-            totals={trendTotals}
-            isLoading={trendsQuery.isLoading}
-          />
+          <VolumeGraph buckets={trendBuckets} totals={trendTotals} isLoading={trendsQuery.isLoading} />
         </div>
 
         <div className="h-3" />
@@ -929,44 +767,26 @@ function ApplicationLogs({
                       navigator.clipboard.writeText(raw);
                       haptics.light();
                       setCopiedIdx(i);
-                      setTimeout(
-                        () =>
-                          setCopiedIdx((prev) => (prev === i ? null : prev)),
-                        1200,
-                      );
+                      setTimeout(() => setCopiedIdx((prev) => (prev === i ? null : prev)), 1200);
                     }}
                     className={`flex cursor-pointer gap-3 rounded-[2px] px-1 py-1.5 transition-colors hover:bg-dash-bg dark:hover:bg-white/[0.04] ${
-                      line.level === "error"
-                        ? "bg-red-500/[0.06]"
-                        : line.level === "warn"
-                          ? "bg-yellow-500/[0.06]"
-                          : ""
+                      line.level === "error" ? "bg-red-500/[0.06]" : line.level === "warn" ? "bg-yellow-500/[0.06]" : ""
                     }`}
                   >
-                    <span className="shrink-0 select-none pt-px text-dash-text-extra-faded dark:text-white/20">
-                      {line.timestamp}
-                    </span>
-                    <span
-                      className={`shrink-0 select-none pt-px font-medium ${levelColors[line.level]}`}
-                    >
-                      {levelBadge[line.level]}
-                    </span>
+                    <span className="shrink-0 select-none pt-px text-dash-text-extra-faded dark:text-white/20">{line.timestamp}</span>
+                    <span className={`shrink-0 select-none pt-px font-medium ${levelColors[line.level]}`}>{levelBadge[line.level]}</span>
                     <span className="min-w-0 flex-1 text-dash-text-body dark:text-white/60">
                       <LogMessage text={line.message} highlight={searchQuery} />
                     </span>
                     {copiedIdx === i && (
-                      <span className="shrink-0 select-none pt-px text-[10px] text-dash-text-strong dark:text-white/80">
-                        Copied
-                      </span>
+                      <span className="shrink-0 select-none pt-px text-[10px] text-dash-text-strong dark:text-white/80">Copied</span>
                     )}
                   </div>
                 ))
               ) : (
                 <ApplicationLogsEmptyState
                   isConnecting={liveLogs.isConnecting}
-                  hasActiveFilters={
-                    searchQuery.trim().length > 0 || levelFilter !== "all"
-                  }
+                  hasActiveFilters={searchQuery.trim().length > 0 || levelFilter !== "all"}
                 />
               )}
             </div>
@@ -1021,8 +841,7 @@ const statusFilterOptions: FilterOption[] = [
 /** Tokenize a single line of JSON and return colored spans */
 function JsonLine({ text }: { text: string }) {
   const tokens: { value: string; color: string }[] = [];
-  const re =
-    /("(?:[^"\\]|\\.)*")(\s*:\s*)?|(\d+(?:\.\d+)?)|(\btrue\b|\bfalse\b|\bnull\b)|([^"\d\w]+|\w+)/g;
+  const re = /("(?:[^"\\]|\\.)*")(\s*:\s*)?|(\d+(?:\.\d+)?)|(\btrue\b|\bfalse\b|\bnull\b)|([^"\d\w]+|\w+)/g;
   let m: RegExpExecArray | null;
 
   while ((m = re.exec(text)) !== null) {
@@ -1082,9 +901,7 @@ function RequestDetailDrawer({
     /* leave as-is */
   }
 
-  const queryEntries: Array<[string, string]> = log.query
-    ? Object.entries(log.query)
-    : [];
+  const queryEntries: Array<[string, string]> = log.query ? Object.entries(log.query) : [];
   const hasQuery = queryEntries.length > 0;
 
   function tryPrettyJson(value: string): string | null {
@@ -1148,12 +965,7 @@ function RequestDetailDrawer({
   }
 
   return (
-    <Drawer.Root
-      open={open}
-      onOpenChange={onOpenChange}
-      direction="bottom"
-      modal={false}
-    >
+    <Drawer.Root open={open} onOpenChange={onOpenChange} direction="bottom" modal={false}>
       <Drawer.Portal>
         <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 flex flex-col outline-none">
           <motion.div
@@ -1166,9 +978,7 @@ function RequestDetailDrawer({
             {/* Top bar */}
             <div className="flex shrink-0 items-center justify-between gap-3 border-b-[0.5px] border-[#e5e5e5] px-5 py-2.5 dark:border-dash-border">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span
-                  className={`shrink-0 font-logs text-xs font-medium ${methodColors[log.method] ?? "text-dash-text-body"}`}
-                >
+                <span className={`shrink-0 font-logs text-xs font-medium ${methodColors[log.method] ?? "text-dash-text-body"}`}>
                   {log.method}
                 </span>
                 <span
@@ -1177,12 +987,8 @@ function RequestDetailDrawer({
                 >
                   {log.path}
                 </span>
-                <span
-                  className={`flex shrink-0 items-center gap-1 font-logs text-xs ${statusColor(log.status)}`}
-                >
-                  <span
-                    className={`size-1.5 rounded-full ${statusDot(log.status)}`}
-                  />
+                <span className={`flex shrink-0 items-center gap-1 font-logs text-xs ${statusColor(log.status)}`}>
+                  <span className={`size-1.5 rounded-full ${statusDot(log.status)}`} />
                   {log.status}
                 </span>
               </div>
@@ -1191,9 +997,7 @@ function RequestDetailDrawer({
                 className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
               >
                 <X className="size-4" />
-                <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">
-                  Close
-                </span>
+                <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">Close</span>
               </button>
             </div>
 
@@ -1228,14 +1032,9 @@ function RequestDetailDrawer({
                   {/* Request + Response side by side */}
                   <div className="grid grid-cols-2 gap-4">
                     {groups.slice(0, 2).map((group) => (
-                      <div
-                        key={group.title}
-                        className="min-w-0 rounded-[4px] border-[0.5px] border-dash-border"
-                      >
+                      <div key={group.title} className="min-w-0 rounded-[4px] border-[0.5px] border-dash-border">
                         <div className="border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5 py-2">
-                          <span className="font-logs text-[10px] uppercase tracking-widest text-dash-text-faded">
-                            {group.title}
-                          </span>
+                          <span className="font-logs text-[10px] uppercase tracking-widest text-dash-text-faded">{group.title}</span>
                         </div>
                         <div>
                           {group.items.map((item, j) => (
@@ -1243,17 +1042,11 @@ function RequestDetailDrawer({
                               key={item.label}
                               className={`flex items-start justify-between gap-4 px-3.5 py-2 ${j < group.items.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
                             >
-                              <span className="shrink-0 font-logs text-[11px] text-dash-text-faded">
-                                {item.label}
-                              </span>
+                              <span className="shrink-0 font-logs text-[11px] text-dash-text-faded">{item.label}</span>
                               <span
                                 className={`min-w-0 break-all text-right font-logs text-[11px] ${item.color ?? "text-dash-text-strong"}`}
                               >
-                                {item.dot && (
-                                  <span
-                                    className={`mr-1.5 inline-block size-1.5 rounded-full align-middle ${item.dot}`}
-                                  />
-                                )}
+                                {item.dot && <span className={`mr-1.5 inline-block size-1.5 rounded-full align-middle ${item.dot}`} />}
                                 {item.value}
                               </span>
                             </div>
@@ -1267,9 +1060,7 @@ function RequestDetailDrawer({
                   {hasQuery && (
                     <div className="rounded-[4px] border-[0.5px] border-dash-border">
                       <div className="border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5 py-2">
-                        <span className="font-logs text-[10px] uppercase tracking-widest text-dash-text-faded">
-                          Query Parameters
-                        </span>
+                        <span className="font-logs text-[10px] uppercase tracking-widest text-dash-text-faded">Query Parameters</span>
                       </div>
                       <div>
                         {queryEntries.map(([key, value], j) => {
@@ -1280,9 +1071,7 @@ function RequestDetailDrawer({
                               key={key}
                               className={`flex flex-col gap-1.5 px-3.5 py-2.5 ${j < queryEntries.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
                             >
-                              <span className="font-logs text-[11px] text-dash-text-faded">
-                                {key}
-                              </span>
+                              <span className="font-logs text-[11px] text-dash-text-faded">{key}</span>
                               {pretty ? (
                                 <div className="relative">
                                   <CopyValueButton value={copyValue} />
@@ -1308,9 +1097,7 @@ function RequestDetailDrawer({
                   {/* Client full width */}
                   <div className="rounded-[4px] border-[0.5px] border-dash-border">
                     <div className="border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-3.5 py-2">
-                      <span className="font-logs text-[10px] uppercase tracking-widest text-dash-text-faded">
-                        {groups[2].title}
-                      </span>
+                      <span className="font-logs text-[10px] uppercase tracking-widest text-dash-text-faded">{groups[2].title}</span>
                     </div>
                     <div>
                       {groups[2].items.map((item, j) => (
@@ -1318,12 +1105,8 @@ function RequestDetailDrawer({
                           key={item.label}
                           className={`flex items-start justify-between gap-4 px-3.5 py-2 ${j < groups[2].items.length - 1 ? "border-b-[0.5px] border-dash-border" : ""}`}
                         >
-                          <span className="shrink-0 font-logs text-[11px] text-dash-text-faded">
-                            {item.label}
-                          </span>
-                          <span className="min-w-0 break-all text-right font-logs text-[11px] text-dash-text-strong">
-                            {item.value}
-                          </span>
+                          <span className="shrink-0 font-logs text-[11px] text-dash-text-faded">{item.label}</span>
+                          <span className="min-w-0 break-all text-right font-logs text-[11px] text-dash-text-strong">{item.value}</span>
                         </div>
                       ))}
                     </div>
@@ -1336,20 +1119,14 @@ function RequestDetailDrawer({
                     onClick={handleCopy}
                     className="absolute right-3 top-2 flex items-center gap-1 rounded p-0.5 font-logs text-[10px] leading-[1.4] tracking-[-0.01px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
                   >
-                    {copied ? (
-                      <Check className="size-3 text-[#28c840]" />
-                    ) : (
-                      <Copy className="size-3" />
-                    )}
+                    {copied ? <Check className="size-3 text-[#28c840]" /> : <Copy className="size-3" />}
                     {copied ? "Copied" : "Copy"}
                   </button>
 
                   <div className="px-5 py-2.5 font-mono text-xs leading-[1.6]">
                     {rawLines.map((line, i) => (
                       <div key={i} className="flex">
-                        <span className="inline-block w-6 shrink-0 select-none text-right text-dash-text-extra-faded">
-                          {i + 1}
-                        </span>
+                        <span className="inline-block w-6 shrink-0 select-none text-right text-dash-text-extra-faded">{i + 1}</span>
                         <span className="ml-3 min-w-0 flex-1 whitespace-pre-wrap break-all text-dash-text-body">
                           <JsonLine text={line} />
                         </span>
@@ -1366,18 +1143,11 @@ function RequestDetailDrawer({
   );
 }
 
-function RequestLogs({
-  projectId,
-  logRetentionDays,
-}: {
-  projectId: string;
-  logRetentionDays: number;
-}) {
+function RequestLogs({ projectId, logRetentionDays }: { projectId: string; logRetentionDays: number }) {
   const haptics = useHaptics();
   const maxSelectableDate = useMemo(() => endOfDay(new Date()), []);
   const minSelectableDate = useMemo(
-    () =>
-      startOfDay(subDays(maxSelectableDate, Math.max(0, logRetentionDays - 1))),
+    () => startOfDay(subDays(maxSelectableDate, Math.max(0, logRetentionDays - 1))),
     [logRetentionDays, maxSelectableDate],
   );
   const [selectedLog, setSelectedLog] = useState<RequestLogEntry | null>(null);
@@ -1393,21 +1163,11 @@ function RequestLogs({
   const [methodFilter, setMethodFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() =>
-    clampRangeToBounds(
-      defaultRequestLogsDateRange(),
-      minSelectableDate,
-      maxSelectableDate,
-    ),
+    clampRangeToBounds(defaultRequestLogsDateRange(), minSelectableDate, maxSelectableDate),
   );
 
   useEffect(() => {
-    setDateRange((prev) =>
-      clampRangeToBounds(
-        prev ?? defaultRequestLogsDateRange(),
-        minSelectableDate,
-        maxSelectableDate,
-      ),
-    );
+    setDateRange((prev) => clampRangeToBounds(prev ?? defaultRequestLogsDateRange(), minSelectableDate, maxSelectableDate));
   }, [minSelectableDate, maxSelectableDate]);
 
   const getRequestLogs = useServerFn(listRequestLogsServerFn as any) as (args: {
@@ -1436,8 +1196,7 @@ function RequestLogs({
       };
       filters.statuses = map[statusFilter] ?? statusFilter;
     }
-    if (dateRange?.from)
-      filters.start = startOfDay(dateRange.from).toISOString();
+    if (dateRange?.from) filters.start = startOfDay(dateRange.from).toISOString();
     if (dateRange?.to) filters.end = endOfDay(dateRange.to).toISOString();
     if (searchQuery.trim()) filters.search = searchQuery.trim();
     return filters;
@@ -1462,9 +1221,7 @@ function RequestLogs({
         });
 
         const result = rawResult as RequestLogsResponse | undefined;
-        const items = Array.isArray(result?.items)
-          ? result.items.map(mapApiRequestLogToUiRow)
-          : [];
+        const items = Array.isArray(result?.items) ? result.items.map(mapApiRequestLogToUiRow) : [];
 
         setRequestLogs(items);
         setNextCursor(result?.nextCursor ?? null);
@@ -1506,14 +1263,7 @@ function RequestLogs({
   const requestLogsExportText = useMemo(() => {
     return requestLogs
       .map((log) =>
-        [
-          `[${log.isoTimestamp}]`,
-          log.method,
-          log.path,
-          String(log.status),
-          log.duration,
-          log.response,
-        ]
+        [`[${log.isoTimestamp}]`, log.method, log.path, String(log.status), log.duration, log.response]
           .filter((token) => token.trim().length > 0)
           .join(" "),
       )
@@ -1528,10 +1278,7 @@ function RequestLogs({
 
   const handleDownloadFilteredRequestLogs = useCallback(() => {
     if (!requestLogsExportText) return;
-    downloadLogsText(
-      requestLogsExportText,
-      createLogExportFilename("request-logs"),
-    );
+    downloadLogsText(requestLogsExportText, createLogExportFilename("request-logs"));
     haptics.light();
   }, [requestLogsExportText, haptics]);
 
@@ -1571,16 +1318,8 @@ function RequestLogs({
         />
 
         <div className="flex items-stretch rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg text-sm text-dash-text-body">
-          <DateRangePicker
-            value={dateRange}
-            onChange={setDateRange}
-            minDate={minSelectableDate}
-            maxDate={maxSelectableDate}
-          >
-            <button
-              type="button"
-              className="flex items-center gap-2 px-3 py-3 transition-colors hover:bg-dash-bg-elevated"
-            >
+          <DateRangePicker value={dateRange} onChange={setDateRange} minDate={minSelectableDate} maxDate={maxSelectableDate}>
+            <button type="button" className="flex items-center gap-2 px-3 py-3 transition-colors hover:bg-dash-bg-elevated">
               <Calendar className="size-3.5 text-dash-text-faded" />
               {dateRange?.from && dateRange?.to
                 ? `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`
@@ -1612,18 +1351,10 @@ function RequestLogs({
       <div className="overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
         {/* Table header */}
         <div className="grid grid-cols-[64px_1fr_60px_160px] items-center gap-2 border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-4 py-2.5">
-          <span className="font-logs text-[11px] font-medium text-dash-text-faded">
-            Method
-          </span>
-          <span className="font-logs text-[11px] font-medium text-dash-text-faded">
-            Path
-          </span>
-          <span className="font-logs text-[11px] font-medium text-dash-text-faded">
-            Status
-          </span>
-          <span className="font-logs text-[11px] font-medium text-dash-text-faded">
-            Time
-          </span>
+          <span className="font-logs text-[11px] font-medium text-dash-text-faded">Method</span>
+          <span className="font-logs text-[11px] font-medium text-dash-text-faded">Path</span>
+          <span className="font-logs text-[11px] font-medium text-dash-text-faded">Status</span>
+          <span className="font-logs text-[11px] font-medium text-dash-text-faded">Time</span>
         </div>
 
         {/* Rows */}
@@ -1646,22 +1377,10 @@ function RequestLogs({
               onClick={() => handleRowClick(log)}
               className="grid w-full grid-cols-[64px_1fr_60px_160px] items-center gap-2 border-b-[0.5px] border-dash-border px-4 py-2.5 text-left transition-colors hover:bg-dash-bg-elevated"
             >
-              <span
-                className={`font-logs text-[11px] font-medium ${methodColors[log.method] ?? "text-dash-text-body"}`}
-              >
-                {log.method}
-              </span>
-              <span className="truncate font-logs text-[11px] font-light text-dash-text-strong">
-                {log.path}
-              </span>
-              <span
-                className={`font-logs text-[11px] font-medium ${statusColor(log.status)}`}
-              >
-                {log.status}
-              </span>
-              <span className="font-logs text-[11px] font-light text-dash-text-faded">
-                {log.timestamp}
-              </span>
+              <span className={`font-logs text-[11px] font-medium ${methodColors[log.method] ?? "text-dash-text-body"}`}>{log.method}</span>
+              <span className="truncate font-logs text-[11px] font-light text-dash-text-strong">{log.path}</span>
+              <span className={`font-logs text-[11px] font-medium ${statusColor(log.status)}`}>{log.status}</span>
+              <span className="font-logs text-[11px] font-light text-dash-text-faded">{log.timestamp}</span>
             </button>
           ))
         ) : (
@@ -1689,11 +1408,7 @@ function RequestLogs({
         />
       </div>
 
-      <RequestDetailDrawer
-        log={selectedLog}
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-      />
+      <RequestDetailDrawer log={selectedLog} open={drawerOpen} onOpenChange={setDrawerOpen} />
     </div>
   );
 }
@@ -1709,15 +1424,11 @@ function LogsPage() {
   const logRetentionDays = Math.max(1, Number(plan.logRetention ?? 1));
   const staticProject = isStaticProject(project);
   const databaseProject = isDatabaseProject(project as any);
-  const [activeTab, setActiveTab] = useState<LogTab>(
-    staticProject ? LogTab.Request : LogTab.Application,
-  );
+  const [activeTab, setActiveTab] = useState<LogTab>(staticProject ? LogTab.Request : LogTab.Application);
   const [hasMountedApplicationLogs, setHasMountedApplicationLogs] = useState(
     !staticProject && (databaseProject || activeTab === LogTab.Application),
   );
-  const [hasMountedRequestLogs, setHasMountedRequestLogs] = useState(
-    !databaseProject && (staticProject || activeTab === LogTab.Request),
-  );
+  const [hasMountedRequestLogs, setHasMountedRequestLogs] = useState(!databaseProject && (staticProject || activeTab === LogTab.Request));
 
   useEffect(() => {
     if (staticProject && activeTab !== LogTab.Request) {
@@ -1745,20 +1456,14 @@ function LogsPage() {
 
     if (Array.isArray(project?.job?.allocations)) {
       for (const allocation of project.job.allocations) {
-        const container =
-          typeof allocation?.container === "string"
-            ? allocation.container.trim()
-            : "";
+        const container = typeof allocation?.container === "string" ? allocation.container.trim() : "";
         if (!container || seenContainers.has(container)) continue;
         seenContainers.add(container);
         containers.push(container);
       }
     }
 
-    const commonContainer =
-      typeof project?.job?.commonContainer === "string"
-        ? project.job.commonContainer.trim()
-        : "";
+    const commonContainer = typeof project?.job?.commonContainer === "string" ? project.job.commonContainer.trim() : "";
 
     if (commonContainer && !seenContainers.has(commonContainer)) {
       seenContainers.add(commonContainer);
@@ -1772,7 +1477,8 @@ function LogsPage() {
     <div className="mx-auto flex max-w-[1000px] flex-col gap-6 py-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <TabHeader title="Logs">
-          Monitor your application and request logs in real-time. Your plan retains logs for {logRetentionDays} {logRetentionDays === 1 ? "day" : "days"}.
+          Monitor your application and request logs in real-time. Your plan retains logs for {logRetentionDays}{" "}
+          {logRetentionDays === 1 ? "day" : "days"}.
         </TabHeader>
 
         {/* Tab switcher */}
@@ -1800,9 +1506,7 @@ function LogsPage() {
                 setActiveTab(LogTab.Request);
               }}
               className={`flex h-[34px] items-center gap-2 px-3.5 text-sm transition-colors ${
-                activeTab === LogTab.Request
-                  ? "bg-dash-bg font-medium text-dash-text-strong"
-                  : "bg-dash-bg-elevated text-dash-text-faded"
+                activeTab === LogTab.Request ? "bg-dash-bg font-medium text-dash-text-strong" : "bg-dash-bg-elevated text-dash-text-faded"
               }`}
             >
               <Forward className="size-4" />
@@ -1815,19 +1519,12 @@ function LogsPage() {
       {/* Content */}
       {!databaseProject && hasMountedApplicationLogs && (
         <div className={activeTab === LogTab.Application ? "block" : "hidden"}>
-          <ApplicationLogs
-            projectId={project?.id ?? ""}
-            containers={applicationLogContainers}
-            logRetentionDays={logRetentionDays}
-          />
+          <ApplicationLogs projectId={project?.id ?? ""} containers={applicationLogContainers} logRetentionDays={logRetentionDays} />
         </div>
       )}
       {!staticProject && hasMountedRequestLogs && (
         <div className={activeTab === LogTab.Request ? "block" : "hidden"}>
-          <RequestLogs
-            projectId={project?.id ?? ""}
-            logRetentionDays={logRetentionDays}
-          />
+          <RequestLogs projectId={project?.id ?? ""} logRetentionDays={logRetentionDays} />
         </div>
       )}
     </div>

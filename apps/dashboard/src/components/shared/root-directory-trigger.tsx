@@ -24,18 +24,8 @@ export function RootDirectoryTrigger({
       } ${disabled ? "cursor-not-allowed opacity-60" : "transition-colors"}`}
     >
       <span className="flex min-w-0 items-center gap-2">
-        <FolderOpen
-          size={18}
-          weight="duotone"
-          className="shrink-0 text-dash-text-faded"
-        />
-        <span
-          className={`truncate text-sm leading-6 ${
-            isDefault
-              ? "text-dash-text-faded"
-              : "font-family-mono text-dash-text-strong"
-          }`}
-        >
+        <FolderOpen size={18} weight="duotone" className="shrink-0 text-dash-text-faded" />
+        <span className={`truncate text-sm leading-6 ${isDefault ? "text-dash-text-faded" : "font-family-mono text-dash-text-strong"}`}>
           {value || "./"}
         </span>
       </span>

@@ -10,8 +10,7 @@ export const Route = createFileRoute("/legal/")({
   head: () =>
     buildSeoHead({
       title: "Legal",
-      description:
-        "Access all our legal documentation, policies, and compliance information.",
+      description: "Access all our legal documentation, policies, and compliance information.",
       path: "/legal",
     }),
   component: LegalHubPage,
@@ -54,8 +53,7 @@ function LegalHero() {
             ease: [0.16, 1, 0.3, 1],
           }}
         >
-          Access all our legal documentation, policies, and compliance
-          information.
+          Access all our legal documentation, policies, and compliance information.
         </motion.p>
       </div>
     </section>
@@ -70,10 +68,7 @@ function LegalCards() {
 
   return (
     <section className="bg-brimble-surface transition-colors duration-300 px-6 py-10">
-      <div
-        ref={ref}
-        className="mx-auto grid max-w-[720px] grid-cols-1 gap-4 sm:grid-cols-2"
-      >
+      <div ref={ref} className="mx-auto grid max-w-[720px] grid-cols-1 gap-4 sm:grid-cols-2">
         {legalDocuments.map((doc, i) => (
           <motion.div
             key={doc.slug}
@@ -90,12 +85,8 @@ function LegalCards() {
               params={{ slug: doc.slug }}
               className="group flex flex-col gap-2 rounded-xl border border-[rgba(152,157,164,0.3)] bg-brimble-surface p-6 transition-colors duration-200 hover:border-[rgba(152,157,164,0.5)] dark:border-white/10 dark:hover:border-white/20"
             >
-              <h2 className="font-body text-base font-medium text-brimble-black">
-                {doc.title}
-              </h2>
-              <p className="font-body text-sm leading-[1.6] text-brimble-black/60">
-                {doc.description}
-              </p>
+              <h2 className="font-body text-base font-medium text-brimble-black">{doc.title}</h2>
+              <p className="font-body text-sm leading-[1.6] text-brimble-black/60">{doc.description}</p>
             </Link>
           </motion.div>
         ))}

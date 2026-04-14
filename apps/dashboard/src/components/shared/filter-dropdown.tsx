@@ -72,12 +72,9 @@ export function FilterDropdown({
         className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-dash-text-body transition-colors hover:text-dash-text-strong"
       >
         {activeDot ? (
-          <span
-            className="size-[6px] shrink-0 rounded-full"
-            style={{ backgroundColor: activeDot }}
-          />
+          <span className="size-[6px] shrink-0 rounded-full" style={{ backgroundColor: activeDot }} />
         ) : (
-          icon ?? <Funnel className="size-4" />
+          (icon ?? <Funnel className="size-4" />)
         )}
         {displayLabel}
         {loading ? <Spinner size="size-3.5" className="text-dash-text-faded" /> : null}
@@ -106,17 +103,10 @@ export function FilterDropdown({
                 className="mx-1 flex w-[calc(100%-8px)] items-center justify-between rounded-[2px] px-2 py-1.5 text-sm text-dash-text-body transition-colors hover:bg-dash-bg-elevated dark:text-dash-text-strong"
               >
                 <div className="flex items-center gap-2">
-                  {option.dot && (
-                    <span
-                      className="size-[6px] rounded-full"
-                      style={{ backgroundColor: option.dot }}
-                    />
-                  )}
+                  {option.dot && <span className="size-[6px] rounded-full" style={{ backgroundColor: option.dot }} />}
                   {option.label}
                 </div>
-                {value === option.value && (
-                  <Check className="size-3.5 text-[#4879f8]" />
-                )}
+                {value === option.value && <Check className="size-3.5 text-[#4879f8]" />}
               </button>
             ))}
           </motion.div>
