@@ -1002,6 +1002,7 @@ function ApiKeySection({
   const [rerollOpen, setRerollOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDecrypting, setIsDecrypting] = useState(false);
+  const hasApiKey = Boolean(encryptedApiKey);
 
   const inputClass = "w-full input-base px-3 py-2.5 text-sm leading-6 text-dash-text-strong";
 
@@ -1049,57 +1050,55 @@ function ApiKeySection({
       {!isFreePlan && (
         <>
           <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={displayValue}
-                readOnly
-                className={cn(inputClass, "pr-20 font-mono text-[13px] text-dash-text-faded")}
-              />
-              <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-                <button
-                  onClick={async () => {
-                    if (!encryptedApiKey) {
-                      return;
-                    }
-
-                    if (revealed) {
-                      setRevealed(false);
-                      return;
-                    }
-
-                    if (decryptedApiKey) {
-                      setRevealed(true);
-                      return;
-                    }
-
-                    setIsDecrypting(true);
-
-                    try {
-                      const decrypted = await onDecrypt?.(encryptedApiKey);
-                      if (decrypted) {
-                        setDecryptedApiKey(decrypted);
-                        setRevealed(true);
+            {hasApiKey && (
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={displayValue}
+                  readOnly
+                  className={cn(inputClass, "pr-20 font-mono text-[13px] text-dash-text-faded")}
+                />
+                <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                  <button
+                    onClick={async () => {
+                      if (revealed) {
+                        setRevealed(false);
+                        return;
                       }
-                    } finally {
-                      setIsDecrypting(false);
-                    }
-                  }}
-                  disabled={!encryptedApiKey || isDecrypting}
-                  className="shrink-0 rounded-[4px] p-1 text-dash-text-faded transition-colors hover:text-dash-text-strong"
-                  title={revealed ? "Hide" : "Reveal"}
-                >
-                  {revealed ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                </button>
-                {decryptedApiKey ? (
-                  <CopyButton text={decryptedApiKey} />
-                ) : (
-                  <button disabled className="shrink-0 rounded-[4px] p-1 text-dash-text-extra-faded" title="Reveal key to copy">
-                    <Copy className="size-4" />
+
+                      if (decryptedApiKey) {
+                        setRevealed(true);
+                        return;
+                      }
+
+                      setIsDecrypting(true);
+
+                      try {
+                        const decrypted = await onDecrypt?.(encryptedApiKey);
+                        if (decrypted) {
+                          setDecryptedApiKey(decrypted);
+                          setRevealed(true);
+                        }
+                      } finally {
+                        setIsDecrypting(false);
+                      }
+                    }}
+                    disabled={isDecrypting}
+                    className="shrink-0 rounded-[4px] p-1 text-dash-text-faded transition-colors hover:text-dash-text-strong"
+                    title={revealed ? "Hide" : "Reveal"}
+                  >
+                    {revealed ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                   </button>
-                )}
+                  {decryptedApiKey ? (
+                    <CopyButton text={decryptedApiKey} />
+                  ) : (
+                    <button disabled className="shrink-0 rounded-[4px] p-1 text-dash-text-extra-faded" title="Reveal key to copy">
+                      <Copy className="size-4" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             <button
               onClick={() => setRerollOpen(true)}
@@ -1107,7 +1106,7 @@ function ApiKeySection({
               className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
             >
               <RefreshCw className="size-3.5" />
-              {encryptedApiKey ? "Reroll" : "Generate"}
+              {hasApiKey ? "Reroll" : "Generate"}
             </button>
           </div>
 
