@@ -192,6 +192,7 @@ code {
   --color-dash-btn-outline-bg: var(--dash-btn-outline-bg);
   --color-dash-btn-outline-border: var(--dash-btn-outline-border);
   --color-dash-btn-outline-text: var(--dash-btn-outline-text);
+  --color-dash-syntax: #c4651a;
 
   --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-logs: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;

@@ -193,12 +193,12 @@ export function highlightEnvText(text: string): string {
 
       const idx = line.indexOf("=");
       if (idx === -1) {
-        return `<span class="text-[#c4651a]">${escapeHtml(line)}</span>`;
+        return `<span class="text-dash-syntax">${escapeHtml(line)}</span>`;
       }
 
       const key = escapeHtml(line.slice(0, idx));
       const value = escapeHtml(line.slice(idx + 1));
-      return `<span class="text-[#c4651a]">${key}</span><span class="text-dash-text-extra-faded">=</span><span class="text-dash-text-strong">${value}</span>`;
+      return `<span class="text-dash-syntax">${key}</span><span class="text-dash-text-extra-faded">=</span><span class="text-dash-text-strong">${value}</span>`;
     })
     .join("\n");
 }
@@ -208,11 +208,11 @@ export function highlightJsonText(text: string): string {
     /("(?:[^"\\]|\\.)*")\s*(:)|("(?:[^"\\]|\\.)*")|(\b(?:true|false|null)\b)|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|([{}[\]:,])/g,
     (match, key, colon, str, bool, num, punct) => {
       if (key && colon) {
-        return `<span class="text-[#c4651a]">${escapeHtml(key)}</span><span class="text-dash-text-extra-faded">${escapeHtml(colon)}</span>`;
+        return `<span class="text-dash-syntax">${escapeHtml(key)}</span><span class="text-dash-text-extra-faded">${escapeHtml(colon)}</span>`;
       }
       if (str) return `<span class="text-dash-text-strong">${escapeHtml(str)}</span>`;
-      if (bool) return `<span class="text-[#c4651a]">${escapeHtml(bool)}</span>`;
-      if (num) return `<span class="text-[#c4651a]">${escapeHtml(num)}</span>`;
+      if (bool) return `<span class="text-dash-syntax">${escapeHtml(bool)}</span>`;
+      if (num) return `<span class="text-dash-syntax">${escapeHtml(num)}</span>`;
       if (punct) return `<span class="text-dash-text-extra-faded">${escapeHtml(punct)}</span>`;
       return escapeHtml(match);
     },
@@ -235,7 +235,7 @@ export function formatEnvRowRelativeTime(createdAt?: string, updatedAt?: string)
 
 export function getEnvironmentDescription(canEdit: boolean): string {
   if (canEdit) {
-    return "Manage your project's environment variables. Changes made will be applied on the next build.";
+    return "Manage your project's secrets. Changes made will be applied on the next build.";
   }
 
   return "View your database connection credentials.";

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ProjectSubnav } from "../../components/project/project-subnav";
@@ -23,6 +23,39 @@ import config from "@/config";
 
 const SUCCESS_LOG_PATTERN = /site (is )?(live|running)\b/i;
 const FAILURE_LOG_PATTERN = /deployment failed|build failed|failed to deploy/i;
+
+function getDrawerEntryKey(entry: DeploymentDrawerLogEntry): string {
+  const rawId = entry.rawId?.trim();
+  if (rawId) {
+    return `id:${rawId}`;
+  }
+
+  return `${entry.type}|${entry.timestamp}|${entry.message}`;
+}
+
+function mergeDeploymentDrawerEntries(
+  existing: DeploymentDrawerLogEntry[],
+  incoming: DeploymentDrawerLogEntry[],
+): DeploymentDrawerLogEntry[] {
+  if (incoming.length === 0) {
+    return existing;
+  }
+
+  const seen = new Set(existing.map(getDrawerEntryKey));
+  const next = [...existing];
+
+  for (const entry of incoming) {
+    const key = getDrawerEntryKey(entry);
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    next.push(entry);
+  }
+
+  return next;
+}
 
 const projectCache = new Map<string, { data: BackendProject; fetchedAt: number }>();
 const PROJECT_CACHE_TTL = 300_000;
@@ -159,12 +192,17 @@ function ProjectLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedDeployment, setSelectedDeployment] = useState<DeploymentLog | null>(null);
   const [drawerLogsByDeploymentId, setDrawerLogsByDeploymentId] = useState<Record<string, DeploymentDrawerLogEntry[]>>({});
+  const drawerLogsByDeploymentIdRef = useRef<Record<string, DeploymentDrawerLogEntry[]>>({});
   const [drawerLogsLoading, setDrawerLogsLoading] = useState(false);
   const [drawerLogsError, setDrawerLogsError] = useState<string | null>(null);
 
   const isDomainSettings = new RegExp(`^/projects/[^/]+/domains/[^/]+`).test(pathname);
 
   const selectedDeploymentLogs = selectedDeployment ? (drawerLogsByDeploymentId[selectedDeployment.id] ?? []) : [];
+
+  useEffect(() => {
+    drawerLogsByDeploymentIdRef.current = drawerLogsByDeploymentId;
+  }, [drawerLogsByDeploymentId]);
 
   let drawerStatus: "Successful" | "Failed" | "Pending" = "Pending";
   const selectedStatus = selectedDeployment?.status?.toLowerCase();
@@ -175,21 +213,31 @@ function ProjectLayout() {
   }
 
   const fetchLogsForDeployment = useCallback(
-    async (deployment: DeploymentLog) => {
+    async (
+      deployment: DeploymentLog,
+      options?: {
+        revalidate?: boolean;
+        silent?: boolean;
+        merge?: boolean;
+      },
+    ) => {
       if (!deployment.id) {
         setDrawerLogsError("Missing deployment log ID.");
         setDrawerLogsLoading(false);
         return;
       }
 
-      const cached = drawerLogsByDeploymentId[deployment.id];
-      if (cached) {
+      const cached = drawerLogsByDeploymentIdRef.current[deployment.id];
+      if (cached && !options?.revalidate) {
         setDrawerLogsError(null);
         setDrawerLogsLoading(false);
         return;
       }
 
-      setDrawerLogsLoading(true);
+      const shouldShowLoader = !options?.silent && !cached;
+      if (shouldShowLoader) {
+        setDrawerLogsLoading(true);
+      }
       setDrawerLogsError(null);
 
       try {
@@ -200,17 +248,33 @@ function ProjectLayout() {
           },
         });
 
-        setDrawerLogsByDeploymentId((prev) => ({
-          ...prev,
-          [deployment.id]: Array.isArray(result?.entries) ? result.entries : [],
-        }));
+        const incomingEntries = Array.isArray(result?.entries) ? result.entries : [];
+
+        setDrawerLogsByDeploymentId((prev) => {
+          const existingEntries = prev[deployment.id] ?? [];
+          const nextEntries = options?.merge === true ? mergeDeploymentDrawerEntries(existingEntries, incomingEntries) : incomingEntries;
+
+          if (
+            existingEntries.length === nextEntries.length &&
+            existingEntries.every((entry, index) => getDrawerEntryKey(entry) === getDrawerEntryKey(nextEntries[index]))
+          ) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            [deployment.id]: nextEntries,
+          };
+        });
       } catch {
         setDrawerLogsError("Failed to load deployment logs.");
       } finally {
-        setDrawerLogsLoading(false);
+        if (shouldShowLoader) {
+          setDrawerLogsLoading(false);
+        }
       }
     },
-    [drawerLogsByDeploymentId, getDeploymentRunLogs, workspace],
+    [getDeploymentRunLogs, workspace],
   );
 
   useEffect(() => {
@@ -254,18 +318,52 @@ function ProjectLayout() {
             });
           }
 
-          setDrawerLogsByDeploymentId((prev) => ({
-            ...prev,
-            [logId]: [...(prev[logId] ?? []), entry],
-          }));
+          setDrawerLogsByDeploymentId((prev) => {
+            const existingEntries = prev[logId] ?? [];
+            const nextEntries = mergeDeploymentDrawerEntries(existingEntries, [entry]);
+            if (nextEntries.length === existingEntries.length) {
+              return prev;
+            }
+
+            return {
+              ...prev,
+              [logId]: nextEntries,
+            };
+          });
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          void fetchLogsForDeployment(selectedDeployment, {
+            revalidate: true,
+            silent: true,
+            merge: true,
+          });
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [drawerOpen, selectedDeployment, sendNotification, project, projectId]);
+  }, [drawerOpen, selectedDeployment, sendNotification, project, projectId, fetchLogsForDeployment]);
+
+  useEffect(() => {
+    if (!drawerOpen || !selectedDeployment?.id) {
+      return;
+    }
+
+    const refreshInterval = window.setInterval(() => {
+      void fetchLogsForDeployment(selectedDeployment, {
+        revalidate: true,
+        silent: true,
+        merge: true,
+      });
+    }, 3_000);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+    };
+  }, [drawerOpen, selectedDeployment, fetchLogsForDeployment]);
 
   useEffect(() => {
     const backendProjectId = (project as BackendProject)?.id;
@@ -303,9 +401,14 @@ function ProjectLayout() {
 
   const openDeploymentDrawer = useCallback(
     (deployment: DeploymentLog) => {
+      const hasCachedLogs = Boolean(drawerLogsByDeploymentIdRef.current[deployment.id]);
       setSelectedDeployment(deployment);
       setDrawerOpen(true);
-      void fetchLogsForDeployment(deployment);
+      void fetchLogsForDeployment(deployment, {
+        revalidate: true,
+        silent: hasCachedLogs,
+        merge: true,
+      });
     },
     [fetchLogsForDeployment],
   );

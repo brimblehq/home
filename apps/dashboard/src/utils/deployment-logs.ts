@@ -5,6 +5,7 @@ export type DeploymentDrawerLogEntryType = "section" | "detail";
 export type DeploymentDrawerLogSectionStatus = "success" | "error";
 
 export interface DeploymentDrawerLogEntry {
+  rawId?: string;
   type: DeploymentDrawerLogEntryType;
   message: string;
   timestamp: string;
@@ -87,6 +88,7 @@ export function mapDeploymentRunLogsToDrawerEntries(rows: RawDeploymentRunLogRow
     const classification = classifyLogMessage(message);
     const timestampValue = row.timestamp ?? row.timeStamp ?? parsedLine.embeddedTimestamp;
     entries.push({
+      rawId: row.id,
       type: classification.type,
       message,
       timestamp: formatTimestamp(timestampValue),

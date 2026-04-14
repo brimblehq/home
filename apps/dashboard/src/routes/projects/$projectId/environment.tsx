@@ -25,7 +25,7 @@ import {
   updateEnvironmentVariableServerFn,
   updateProjectEnvironmentVariableServerFn,
 } from "@/server/environments/actions";
-import { redeployProjectServerFn } from "@/server/projects/actions";
+import { redeployProjectServerFn, listHomeProjectsServerFn } from "@/server/projects/actions";
 import {
   formatEnvRowRelativeTime,
   fromEnvText,
@@ -45,6 +45,10 @@ import {
 } from "@/utils/project-environment";
 import { isDatabaseProject as getIsDatabaseProject } from "@/utils/project-capabilities";
 import { markDeploymentHistoryForRefresh } from "@/utils/deployment-history-refresh";
+import { type ReferenceValidationContext } from "@/utils/env-references";
+import type { ProjectOption, ProjectVarOption, SharedVarOption } from "@/components/project/env-reference-autocomplete";
+import { ReferenceHighlightInput } from "@/components/project/reference-highlight-input";
+import { ReferenceCountBadge, ReferenceWarnings } from "@/components/project/env-reference-widgets";
 
 const parentRoute = getRouteApi("/projects/$projectId");
 const DEFAULT_TARGET = "PRODUCTION";
@@ -491,6 +495,7 @@ function EnvAccordionRow({
       >
         <span className="min-w-0 flex-1 truncate font-mono">{name}</span>
         {isShared && <span className="shrink-0 rounded-full bg-[#4879f8]/10 px-2 py-0.5 text-xs text-[#4879f8]">Shared</span>}
+        <ReferenceCountBadge value={decryptedValue ?? row.value} />
         <span className="hidden shrink-0 text-sm font-normal text-dash-text-faded sm:block">••••••••••••••••</span>
         {isDecrypting && <Spinner className="size-4 shrink-0" />}
       </AccordionTrigger>
@@ -539,7 +544,7 @@ function EnvAccordionRow({
                 side="top"
                 user={{
                   name: authorDisplayName,
-                  role: row.isSystem ? "System" : "Environment variable author",
+                  role: row.isSystem ? "System" : "Secret author",
                   avatarUrl: row.avatar,
                   avatarFallback: authorDisplayName.slice(0, 2).toUpperCase(),
                 }}
@@ -867,6 +872,9 @@ function EnvironmentPage() {
       variables: Array<{ name: string; value: string; inheritable?: boolean }>;
     };
   }) => Promise<EffectiveEnvironmentVariable[]>;
+  const listSiblingProjects = useServerFn(listHomeProjectsServerFn as any) as (args: {
+    data: { workspace?: string };
+  }) => Promise<{ items: Array<{ id: string; slug: string; name: string }> }>;
 
   type DraftRowWithShared = EditableEnvRow & { shared?: boolean };
 
@@ -884,12 +892,15 @@ function EnvironmentPage() {
   const [rawDirty, setRawDirty] = useState(false);
   const [savingRaw, setSavingRaw] = useState(false);
   const [draftRows, setDraftRows] = useState<DraftRowWithShared[]>([{ id: createDraftId(), name: "", value: "", shared: false }]);
-  const [visibleDraftIds, setVisibleDraftIds] = useState<Set<string>>(new Set());
+  const [hiddenDraftIds, setHiddenDraftIds] = useState<Set<string>>(new Set());
   const [savingDraftRows, setSavingDraftRows] = useState(false);
   const [expandedRowId, setExpandedRowId] = useState<string | undefined>(undefined);
   const [decryptingRowId, setDecryptingRowId] = useState<string | undefined>(undefined);
   const [decryptedCache, setDecryptedCache] = useState<Record<string, string>>({});
   const [envLevelVars, setEnvLevelVars] = useState<EffectiveEnvironmentVariable[]>([]);
+  const [siblingProjects, setSiblingProjects] = useState<ProjectOption[]>([]);
+  const projectVarsCache = useRef(new Map<string, ProjectVarOption[]>());
+  const projectVarsBySlug = useRef(new Map<string, Set<string>>());
 
   useEffect(() => {
     setSelectedTarget(initialTarget);
@@ -919,6 +930,69 @@ function EnvironmentPage() {
   useEffect(() => {
     void fetchEnvLevelVars();
   }, [fetchEnvLevelVars]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listSiblingProjects({ data: { workspace } })
+      .then((result) => {
+        if (cancelled) return;
+        const items = Array.isArray(result?.items) ? result.items : [];
+        const currentSlug = project?.slug as string | undefined;
+        setSiblingProjects(
+          items.filter((p) => p.id && p.slug && p.slug !== currentSlug).map((p) => ({ id: p.id, slug: p.slug, name: p.name })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setSiblingProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listSiblingProjects, workspace, project?.slug]);
+
+  const getProjectVars = useCallback(
+    async (target: ProjectOption): Promise<ProjectVarOption[]> => {
+      const lookupKey = target.id || target.slug;
+      const cached = projectVarsCache.current.get(lookupKey);
+      if (cached) return cached;
+      try {
+        const snapshot = await getEnvSnapshot({ data: { projectId: lookupKey, target: "PRODUCTION" } });
+        const vars = Array.isArray(snapshot?.envs) ? snapshot.envs.map((e) => ({ name: e.name })).filter((v) => v.name) : [];
+        projectVarsCache.current.set(lookupKey, vars);
+        projectVarsBySlug.current.set(target.slug, new Set(vars.map((v) => v.name)));
+        return vars;
+      } catch {
+        return [];
+      }
+    },
+    [getEnvSnapshot],
+  );
+
+  const autocompleteSharedVars = useMemo<SharedVarOption[]>(
+    () => envLevelVars.filter((v) => v.name).map((v) => ({ name: v.name, sourceEnvironment: v.sourceEnvironment })),
+    [envLevelVars],
+  );
+
+  const autocompleteConfig = useMemo(
+    () => ({
+      sharedVars: autocompleteSharedVars,
+      sharedDisabled: !sharedLayerEnabled,
+      siblingProjects,
+      getProjectVars,
+    }),
+    [autocompleteSharedVars, sharedLayerEnabled, siblingProjects, getProjectVars],
+  );
+
+  const validationContext = useMemo<ReferenceValidationContext>(
+    () => ({
+      sharedVars: new Set(autocompleteSharedVars.map((v) => v.name)),
+      sharedDisabled: !sharedLayerEnabled,
+      siblingSlugs: new Set(siblingProjects.map((p) => p.slug)),
+      projectVarsCache: projectVarsBySlug.current,
+      currentProjectSlug: project?.slug as string | undefined,
+    }),
+    [autocompleteSharedVars, sharedLayerEnabled, siblingProjects, project?.slug],
+  );
 
   const currentSnapshot = snapshotsByTarget[selectedTarget] ?? {
     envs: [],
@@ -1008,7 +1082,7 @@ function EnvironmentPage() {
       setSnapshotsByTarget((prev) => ({ ...prev, [target]: snapshot }));
       setDecryptedCache({});
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load environment variables");
+      toast.error(error instanceof Error ? error.message : "Failed to load secrets");
     } finally {
       setLoadingTarget(false);
     }
@@ -1078,7 +1152,7 @@ function EnvironmentPage() {
     const validation = validateEnvironmentEntries(nonEmpty);
 
     if (!validation.valid) {
-      toast.error(validation.message || "Invalid environment variables");
+      toast.error(validation.message || "Invalid secrets");
       return;
     }
 
@@ -1139,7 +1213,7 @@ function EnvironmentPage() {
         },
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save environment variables");
+      toast.error(error instanceof Error ? error.message : "Failed to save secrets");
     } finally {
       setSavingDraftRows(false);
     }
@@ -1242,7 +1316,7 @@ function EnvironmentPage() {
     const sanitized = sanitizeEnvironmentEntries(parsedRows);
     const validation = validateEnvironmentEntries(sanitized);
     if (!validation.valid) {
-      toast.error(validation.message || "Invalid environment variables");
+      toast.error(validation.message || "Invalid secrets");
       return;
     }
 
@@ -1337,7 +1411,7 @@ function EnvironmentPage() {
 
   return (
     <div className="mx-auto flex max-w-[1000px] flex-col gap-4 py-8">
-      <TabHeader title="Environment Variables">
+      <TabHeader title="Secrets">
         {getEnvironmentDescription(canEdit)}{" "}
         <a href="#" className="text-[#4879f8] underline">
           Learn more
@@ -1348,7 +1422,7 @@ function EnvironmentPage() {
 
       {!envTabSupported && (
         <div className="rounded-[4px] border-[0.5px] border-dash-border px-4 py-5 text-sm text-dash-text-faded">
-          Environment variables are not available for HTML projects.
+          Secrets are not available for HTML projects.
         </div>
       )}
 
@@ -1367,7 +1441,7 @@ function EnvironmentPage() {
                     type="text"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search ENVs created..."
+                    placeholder="Search secrets..."
                     className="w-full bg-transparent text-sm text-dash-text-strong outline-none placeholder:text-dash-text-extra-faded"
                   />
                 </div>
@@ -1468,17 +1542,12 @@ function EnvironmentPage() {
                                 placeholder="APP_ENV"
                                 className="input-base input-focus h-[36px] min-w-0 flex-1 px-3 font-mono text-sm text-dash-text-strong placeholder:text-dash-text-extra-faded"
                               />
-                              <input
-                                type="text"
-                                autoComplete="off"
+                              <ReferenceHighlightInput
                                 value={row.value}
-                                onChange={(event) => updateDraftRow(row.id, "value", event.target.value)}
+                                onChange={(next) => updateDraftRow(row.id, "value", next)}
                                 placeholder="value"
-                                className={`input-base input-focus h-[36px] min-w-0 flex-1 px-3 text-sm text-dash-text-strong placeholder:text-dash-text-extra-faded ${
-                                  visibleDraftIds.has(row.id)
-                                    ? ""
-                                    : "[text-security:disc] [-webkit-text-security:disc] placeholder:[-webkit-text-security:none]"
-                                }`}
+                                masked={hiddenDraftIds.has(row.id)}
+                                autocomplete={autocompleteConfig}
                               />
                               {sharedLayerEnabled && (
                                 <SimpleTooltip content="Share this variable across all projects in your workspace" side="top">
@@ -1507,7 +1576,7 @@ function EnvironmentPage() {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  setVisibleDraftIds((prev) => {
+                                  setHiddenDraftIds((prev) => {
                                     const next = new Set(prev);
                                     if (next.has(row.id)) next.delete(row.id);
                                     else next.add(row.id);
@@ -1515,9 +1584,9 @@ function EnvironmentPage() {
                                   })
                                 }
                                 className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[4px] text-dash-text-faded hover:text-dash-text-body"
-                                title={visibleDraftIds.has(row.id) ? "Hide value" : "Show value"}
+                                title={hiddenDraftIds.has(row.id) ? "Show value" : "Hide value"}
                               >
-                                {visibleDraftIds.has(row.id) ? <EyeSlash className="size-4" /> : <Eye className="size-4" />}
+                                {hiddenDraftIds.has(row.id) ? <Eye className="size-4" /> : <EyeSlash className="size-4" />}
                               </button>
                               <button
                                 type="button"
@@ -1528,6 +1597,7 @@ function EnvironmentPage() {
                                 <X className="size-4" />
                               </button>
                             </div>
+                            <ReferenceWarnings value={row.value} context={validationContext} />
                           </motion.div>
                         ))}
                       </AnimatePresence>
@@ -1558,14 +1628,14 @@ function EnvironmentPage() {
                       <div className="flex flex-col items-center justify-center py-12 text-center">
                         <Lock className="mb-3 size-8 text-dash-text-extra-faded opacity-40" />
                         <h3 className="mb-1 text-sm font-medium text-dash-text-strong">
-                          {mergedRows.length === 0 ? "No environment variables" : "No matching variables"}
+                          {mergedRows.length === 0 ? "No secrets" : "No matching secrets"}
                         </h3>
                         <p className="max-w-[360px] text-sm text-dash-text-faded">
                           {mergedRows.length === 0
                             ? databaseProject
                               ? "No credentials are available for this deployment target yet."
-                              : "Add environment variables to securely store API keys, database URLs, and other secrets."
-                            : `No variables matching "${search}".`}
+                              : "Add secrets to securely store API keys, database URLs, and other sensitive values."
+                            : `No secrets matching "${search}".`}
                         </p>
                       </div>
                     )}

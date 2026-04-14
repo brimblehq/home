@@ -51,7 +51,7 @@ const baseTabs = [
   { label: "Observability", slug: "observability", Icon: ChartBar },
   { label: "Web analytics", slug: "web-analytics", Icon: Pulse },
   { label: "Domains", slug: "domains", Icon: FileText },
-  { label: "Environment", slug: "environment", Icon: LockKey },
+  { label: "Secrets", slug: "environment", Icon: LockKey },
   {
     label: "Deployment history",
     slug: "deployment-history",
