@@ -424,7 +424,7 @@ function SignupPage() {
         </>
       }
     >
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         {step === "details" ? (
           <DetailsStep
             key="details"

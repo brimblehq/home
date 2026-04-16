@@ -613,7 +613,7 @@ function LoginPage() {
         </>
       }
     >
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         {step === "email" ? (
           <EmailStep
             key="email"
