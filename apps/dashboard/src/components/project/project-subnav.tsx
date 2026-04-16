@@ -416,19 +416,13 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                 preload="intent"
                 onClick={() => haptics.selection()}
                 className={cn(
-                  "flex h-14 items-center gap-2 px-2 text-sm tracking-[-0.09px] transition-colors",
+                  "flex h-14 items-center gap-2 px-2 text-sm tracking-[-0.09px] transition-colors duration-200 ease-out",
                   tab.isActive
                     ? "border-b border-[#3c6ce7] text-dash-text-strong"
-                    : "text-dash-text-faded font-light hover:text-dash-text-body",
+                    : "text-dash-text-faded font-light hover:text-dash-text-strong",
                 )}
               >
-                <tab.Icon
-                  className={cn(
-                    "size-4 shrink-0",
-                    !tab.isActive && "dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80",
-                  )}
-                  weight="fill"
-                />
+                <tab.Icon className="size-4 shrink-0" weight="fill" />
                 <span className={cn("whitespace-nowrap md:inline", tab.isActive ? "inline" : "hidden")}>{tab.label}</span>
               </Link>
             );
@@ -439,8 +433,8 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
               type="button"
               onClick={() => setOverflowOpen((prev) => !prev)}
               className={cn(
-                "relative flex h-14 items-center px-2 transition-colors",
-                overflowHasActive ? "border-b border-[#3c6ce7] text-dash-text-strong" : "text-dash-text-faded hover:text-dash-text-body",
+                "relative flex h-14 items-center px-2 transition-colors duration-200 ease-out",
+                overflowHasActive ? "border-b border-[#3c6ce7] text-dash-text-strong" : "text-dash-text-faded hover:text-dash-text-strong",
               )}
               aria-label="More tabs"
             >

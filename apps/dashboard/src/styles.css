@@ -375,6 +375,37 @@ code {
   display: none;
 }
 
+/* Subtle, thin scrollbar that blends into panels */
+.scrollbar-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
+.dark .scrollbar-subtle {
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+.scrollbar-subtle::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-subtle::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-subtle::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.dark .scrollbar-subtle::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+.scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.28);
+}
+.dark .scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
 /* ─── Date range picker ─── */
 
 /* Each month: 296px, 12px padding, 8px row gap */

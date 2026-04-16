@@ -1003,7 +1003,7 @@ export function DomainSettings({ domain, backPath, workspace }: { domain: Domain
         width={420}
       >
         <ModalHeader title="Link to project" description="Select a project to connect this domain to" />
-        <div className="max-h-[280px] overflow-y-auto">
+        <div className="scrollbar-subtle max-h-[280px] overflow-y-auto">
           {linkProjectLoading ? (
             <div className="flex h-20 items-center justify-center">
               <RefreshCw className="size-4 animate-spin text-dash-text-faded" />
