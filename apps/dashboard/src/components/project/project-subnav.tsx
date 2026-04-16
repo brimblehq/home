@@ -19,7 +19,10 @@ import {
   Scroll,
   GitBranch,
   ArrowsClockwise,
+  Tag,
 } from "@phosphor-icons/react";
+import { SimpleTooltip } from "../shared/tooltip";
+import { usePlanGate } from "@/hooks/use-plan-gate";
 import { FolderTrashIcon } from "../shared/folder-trash-icon";
 import { WarningModal } from "../shared/warning-modal";
 import {
@@ -200,6 +203,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   const deploymentsEnabled = useFeatureFlag(FeatureFlags.ENABLE_DEPLOYMENTS);
   const databasesEnabled = useFeatureFlag(FeatureFlags.ENABLE_DATABASES);
   const webAnalyticsEnabled = useFeatureFlag(FeatureFlags.ENABLE_WEB_ANALYTICS);
+  const planSupportsAnalytics = usePlanGate().analytics !== false;
 
   const tabs = baseTabs.filter((tab) => {
     if (tab.slug === "observability" && !shouldShowProjectObservabilityTab(project as any)) {
@@ -233,11 +237,13 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     const isActive = tab.slug
       ? pathname === tabPath || pathname === `${tabPath}/`
       : pathname === `/projects/${projectId}` || pathname === `/projects/${projectId}/`;
+    const locked = (tab.slug === "observability" || tab.slug === "web-analytics") && !planSupportsAnalytics;
 
     return {
       ...tab,
       tabPath,
       isActive,
+      locked,
     };
   });
   const visibleTabs = tabsWithPath.slice(0, MAX_VISIBLE_SUBNAV_TABS);
@@ -370,6 +376,34 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
         {/* Tabs */}
         <div className="scrollbar-hidden flex min-w-0 flex-1 items-start overflow-x-auto md:overflow-visible">
           {visibleTabs.map((tab) => {
+            if (tab.locked) {
+              return (
+                <div
+                  key={tab.label}
+                  aria-disabled="true"
+                  className="flex h-14 cursor-not-allowed items-center gap-2 px-2 text-sm font-light tracking-[-0.09px] text-dash-text-faded opacity-50"
+                >
+                  <tab.Icon
+                    className="size-4 shrink-0 dark:invert dark:sepia dark:saturate-[3] dark:hue-rotate-[345deg] dark:opacity-80"
+                    weight="fill"
+                  />
+                  <span className="hidden whitespace-nowrap md:inline">{tab.label}</span>
+                  <SimpleTooltip
+                    content={
+                      <>
+                        <RocketLaunch className="size-3.5" weight="fill" />
+                        Upgrade to a higher plan to access this feature
+                      </>
+                    }
+                  >
+                    <button type="button" aria-label="Upgrade required" className="flex shrink-0 items-center">
+                      <Tag className="size-3.5 text-dash-text-faded" weight="fill" />
+                    </button>
+                  </SimpleTooltip>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={tab.label}
@@ -545,29 +579,55 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
                 }}
                 className="z-[120] min-w-[220px] origin-top-left overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg py-1 shadow-[0px_4px_12px_-4px_rgba(0,0,0,0.12)]"
               >
-                {overflowTabs.map((tab) => (
-                  <Link
-                    key={tab.label}
-                    to={
-                      withWorkspaceQuery({
-                        pathname: tab.tabPath,
-                        searchStr,
-                      }) as any
-                    }
-                    preload="intent"
-                    onClick={() => {
-                      haptics.selection();
-                      setOverflowOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors",
-                      tab.isActive ? "bg-dash-bg-elevated text-dash-text-strong" : "text-dash-text-body hover:bg-dash-bg-elevated",
-                    )}
-                  >
-                    <tab.Icon className="size-4 shrink-0" weight="fill" />
-                    <span className="whitespace-nowrap">{tab.label}</span>
-                  </Link>
-                ))}
+                {overflowTabs.map((tab) => {
+                  if (tab.locked) {
+                    return (
+                      <SimpleTooltip
+                        key={tab.label}
+                        side="right"
+                        content={
+                          <>
+                            <RocketLaunch className="size-3.5" weight="fill" />
+                            Upgrade to a higher plan to access this feature
+                          </>
+                        }
+                      >
+                        <div
+                          aria-disabled="true"
+                          className="flex w-full cursor-not-allowed items-center gap-2.5 px-3 py-2 text-sm text-dash-text-faded opacity-50"
+                        >
+                          <tab.Icon className="size-4 shrink-0" weight="fill" />
+                          <span className="whitespace-nowrap">{tab.label}</span>
+                          <Tag className="ml-auto size-3.5 shrink-0 text-dash-text-faded" weight="fill" />
+                        </div>
+                      </SimpleTooltip>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={tab.label}
+                      to={
+                        withWorkspaceQuery({
+                          pathname: tab.tabPath,
+                          searchStr,
+                        }) as any
+                      }
+                      preload="intent"
+                      onClick={() => {
+                        haptics.selection();
+                        setOverflowOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors",
+                        tab.isActive ? "bg-dash-bg-elevated text-dash-text-strong" : "text-dash-text-body hover:bg-dash-bg-elevated",
+                      )}
+                    >
+                      <tab.Icon className="size-4 shrink-0" weight="fill" />
+                      <span className="whitespace-nowrap">{tab.label}</span>
+                    </Link>
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>,

@@ -42,7 +42,7 @@ export const Route = createFileRoute("/projects/$projectId/observability")({
         }) => Promise<ResourceObservabilityMetrics>
       )({
         data: { projectId: project?.id, workspace, hrsAgo: 1 },
-      }),
+      }).catch(() => ({}) as ResourceObservabilityMetrics),
       (getObservabilityGrafanaUrlServerFn as unknown as (input: { data: { workspace?: string } }) => Promise<string | null>)({
         data: { workspace },
       }).catch(() => null),
@@ -1232,10 +1232,22 @@ export function AppAnalytics({ initial, projectId }: { initial: AnalyticsPayload
 
 function ObservabilityPage() {
   const { project, workspace } = parentRoute.useLoaderData() as any;
+  const plan = usePlanGate();
   if (!shouldShowProjectObservabilityTab(project)) {
     return (
       <div className="mx-auto flex max-w-[1000px] flex-col gap-4 px-4 py-8 sm:px-0">
         <TabHeader title="Metrics & Observability">Observability is not available for static projects.</TabHeader>
+      </div>
+    );
+  }
+  if (plan.analytics === false) {
+    return (
+      <div className="mx-auto flex max-w-[1000px] flex-col gap-6 px-4 py-8 sm:px-0">
+        <TabHeader title="Metrics & Observability">Monitor your app's key metrics and health.</TabHeader>
+        <PlanUpgradePrompt
+          feature="Observability"
+          description="Upgrade to a higher plan to monitor your app's metrics."
+        />
       </div>
     );
   }
