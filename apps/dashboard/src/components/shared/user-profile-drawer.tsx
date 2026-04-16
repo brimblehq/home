@@ -3242,8 +3242,8 @@ function NotificationsForm({
         <>
           <hr className="-ml-8 border-dash-border-soft" />
           {!webhookEnabled && (
-            <div className="max-w-[488px] rounded-[6px] border border-[#f5a623]/25 bg-[#f5a623]/8 px-3.5 py-3 text-sm text-dash-text-faded">
-              Webhooks are available on paid plans. Upgrade your plan to configure webhook URLs and event subscriptions.
+            <div className="max-w-[488px] rounded-[6px] bg-[#f5a623]/8 px-3.5 py-3 text-sm text-dash-text-faded">
+              Your current plan doesn't support webhooks. Upgrade to a higher plan to configure webhook URLs and event subscriptions.
             </div>
           )}
           {/* Webhook URLs */}

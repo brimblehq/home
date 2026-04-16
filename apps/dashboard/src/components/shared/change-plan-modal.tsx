@@ -222,7 +222,7 @@ export function ChangePlanModal({
           </label>
         )}
 
-        <a href="/pricing" target="_blank" rel="noopener noreferrer" className="text-sm text-[#4879f8] hover:underline">
+        <a href="https://brimble.io/pricing" target="_blank" rel="noopener noreferrer" className="text-sm text-[#4879f8] hover:underline">
           Compare all plans &rarr;
         </a>
       </div>
