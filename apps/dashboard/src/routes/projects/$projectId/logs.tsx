@@ -1517,12 +1517,12 @@ function LogsPage() {
       </div>
 
       {/* Content */}
-      {!databaseProject && hasMountedApplicationLogs && (
+      {!staticProject && hasMountedApplicationLogs && (
         <div className={activeTab === LogTab.Application ? "block" : "hidden"}>
           <ApplicationLogs projectId={project?.id ?? ""} containers={applicationLogContainers} logRetentionDays={logRetentionDays} />
         </div>
       )}
-      {!staticProject && hasMountedRequestLogs && (
+      {!databaseProject && hasMountedRequestLogs && (
         <div className={activeTab === LogTab.Request ? "block" : "hidden"}>
           <RequestLogs projectId={project?.id ?? ""} logRetentionDays={logRetentionDays} />
         </div>
