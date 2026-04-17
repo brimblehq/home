@@ -6,6 +6,7 @@ import {
   getServerUserAgent,
   getServerClientIp,
   setServerAuthCookies,
+  clearServerAuthCookies,
   tokenFingerprint,
 } from "@/server/auth/cookies";
 import { authLogger } from "@/server/shared/logger";
@@ -207,6 +208,18 @@ export async function refreshServerSession(refreshToken = getServerRefreshToken(
       attemptMatchesLatestRefreshToken,
       isRefreshTokenReuse: isRefreshReuse,
     });
+
+    const isTerminalAuthFailure = status === 401 || status === 403;
+    if (isTerminalAuthFailure && attemptMatchesLatestRefreshToken) {
+      authLogger.warn("refreshServerSession clearing cookies after terminal refresh failure", {
+        status: status ?? null,
+        message: getErrorMessage(error),
+        refreshTokenFp,
+        currentRefreshTokenFp: latestRefreshTokenFp,
+      });
+      clearServerAuthCookies();
+    }
+
     throw error;
   }
 }
