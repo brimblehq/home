@@ -1979,7 +1979,7 @@ function Phase3Configure({
 
     const invalidEnv = cleanedEnvVars.find((v) => !v.key || !v.value);
     if (invalidEnv) {
-      toast.error("Each environment variable must include both key and value.");
+      toast.error("Each secret must include both key and value.");
       return null;
     }
 
@@ -2233,13 +2233,13 @@ function Phase3Configure({
         </>
       )}
 
-      {/* Environment variables — hidden for no-build frameworks (HTML, Static) */}
+      {/* Secrets — hidden for no-build frameworks (HTML, Static) */}
       {!isNoBuildFramework(framework) && (
         <div>
           <button onClick={() => setEnvExpanded(!envExpanded)} className="flex w-full items-center justify-between text-sm">
-            <span className="font-medium text-dash-text-strong">Environment Variables</span>
+            <span className="font-medium text-dash-text-strong">Secrets</span>
             <span className="flex items-center gap-2 text-xs text-dash-text-faded">
-              {envVars.length} variable{envVars.length !== 1 ? "s" : ""}
+              {envVars.length} secret{envVars.length !== 1 ? "s" : ""}
               <motion.span animate={{ rotate: envExpanded ? 180 : 0 }} transition={{ duration: 0.2, ease }}>
                 <ChevronDown className="size-3.5" />
               </motion.span>
@@ -2288,7 +2288,7 @@ function Phase3Configure({
                   className="mt-3 flex items-center gap-1.5 text-sm text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
                 >
                   <Plus className="size-3.5" />
-                  Add variable
+                  Add secret
                 </button>
               </motion.div>
             )}

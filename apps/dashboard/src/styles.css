@@ -662,3 +662,10 @@ code {
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+.woot-widget-bubble,
+.woot--bubble-holder,
+.woot-widget-holder,
+.woot-widget-holder iframe {
+  z-index: 2147483647 !important;
+}

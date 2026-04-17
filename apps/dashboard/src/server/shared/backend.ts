@@ -6,68 +6,32 @@ import {
   getServerUserAgent,
   getServerClientIp,
   setServerAuthCookies,
-  clearServerAuthCookies,
   tokenFingerprint,
 } from "@/server/auth/cookies";
 import { authLogger } from "@/server/shared/logger";
 
-function getErrorMeta(error: any) {
-  return {
-    status: error?.status ?? null,
-    message: typeof error?.message === "string" ? error.message : typeof error?.data?.message === "string" ? error.data.message : null,
-  };
-}
-
-function decodeJwtPayload(accessToken: string): Record<string, unknown> | null {
-  const [, payloadPart] = accessToken.split(".");
-  if (!payloadPart) {
-    return null;
+function getErrorMessage(error: any): string | null {
+  if (typeof error?.message === "string") {
+    return error.message;
   }
 
-  try {
-    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const payloadJson =
-      typeof Buffer !== "undefined" ? Buffer.from(padded, "base64").toString("utf8") : globalThis.atob?.(padded) ?? null;
-    if (!payloadJson) {
-      return null;
-    }
-
-    const parsed = JSON.parse(payloadJson);
-    if (!parsed || typeof parsed !== "object") {
-      return null;
-    }
-
-    return parsed as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-function getJwtExpiryMs(accessToken: string): number | null {
-  const payload = decodeJwtPayload(accessToken);
-  const expClaim = payload?.exp;
-
-  if (typeof expClaim === "number" && Number.isFinite(expClaim)) {
-    return expClaim * 1000;
-  }
-
-  if (typeof expClaim === "string") {
-    const asNumber = Number(expClaim);
-    if (Number.isFinite(asNumber)) {
-      return asNumber * 1000;
-    }
+  if (typeof error?.data?.message === "string") {
+    return error.data.message;
   }
 
   return null;
 }
 
-function isTokenExpiringSoon(accessToken: string, skewMs = 30_000): boolean {
-  const expiryMs = getJwtExpiryMs(accessToken);
-  if (!expiryMs) {
-    return false;
-  }
-  return expiryMs <= Date.now() + skewMs;
+function getErrorMeta(error: any) {
+  return {
+    status: error?.status ?? null,
+    message: getErrorMessage(error),
+  };
+}
+
+function isRefreshTokenReuseError(error: any): boolean {
+  const message = getErrorMessage(error) ?? "";
+  return /reuse detected/i.test(message);
 }
 
 const activeRefreshPromises = new Map<string, Promise<AuthSession>>();
@@ -173,15 +137,19 @@ export async function refreshServerSession(refreshToken = getServerRefreshToken(
   }
 
   const refreshTokenFp = tokenFingerprint(refreshToken);
+  const currentRefreshToken = getServerRefreshToken();
+  const currentRefreshTokenFp = tokenFingerprint(currentRefreshToken);
+  const attemptMatchesCurrentRefreshToken = currentRefreshToken === refreshToken;
   const recentSession = getRecentRefreshSession(refreshToken);
 
   if (recentSession) {
     authLogger.info("refreshServerSession using recent refreshed session", {
       refreshTokenFp,
+      currentRefreshTokenFp,
+      attemptMatchesCurrentRefreshToken,
       nextAccessTokenFp: tokenFingerprint(recentSession.accessToken),
       nextRefreshTokenFp: tokenFingerprint(recentSession.refreshToken),
     });
-    setServerAuthCookies(recentSession);
     return recentSession;
   }
 
@@ -189,7 +157,8 @@ export async function refreshServerSession(refreshToken = getServerRefreshToken(
     refreshTokenFp,
     hasAccessToken: Boolean(getServerAccessToken()),
     currentAccessTokenFp: tokenFingerprint(getServerAccessToken()),
-    currentRefreshTokenFp: tokenFingerprint(getServerRefreshToken()),
+    currentRefreshTokenFp,
+    attemptMatchesCurrentRefreshToken,
     reusingActiveRefresh: activeRefreshPromises.has(refreshToken),
   });
 
@@ -204,28 +173,40 @@ export async function refreshServerSession(refreshToken = getServerRefreshToken(
     return session;
   } catch (error: any) {
     const status = error?.status;
+    const latestRefreshToken = getServerRefreshToken();
+    const latestRefreshTokenFp = tokenFingerprint(latestRefreshToken);
+    const attemptMatchesLatestRefreshToken = latestRefreshToken === refreshToken;
+    const isRefreshReuse = isRefreshTokenReuseError(error);
     const fallbackSession = getRecentRefreshSession(refreshToken);
     if (fallbackSession) {
       authLogger.warn("refreshServerSession recovered from stale refresh token", {
         refreshTokenFp,
+        latestRefreshTokenFp,
+        attemptMatchesLatestRefreshToken,
         nextAccessTokenFp: tokenFingerprint(fallbackSession.accessToken),
         nextRefreshTokenFp: tokenFingerprint(fallbackSession.refreshToken),
       });
-      setServerAuthCookies(fallbackSession);
       return fallbackSession;
+    }
+
+    if (isRefreshReuse) {
+      authLogger.warn("refreshServerSession refresh-token reuse detected", {
+        refreshTokenFp,
+        latestRefreshTokenFp,
+        attemptMatchesLatestRefreshToken,
+        activePromiseForAttempt: activeRefreshPromises.has(refreshToken),
+      });
     }
 
     authLogger.warn("refreshServerSession failed", {
       status: status ?? null,
-      message: typeof error?.message === "string" ? error.message : typeof error?.data?.message === "string" ? error.data.message : null,
+      message: getErrorMessage(error),
       refreshTokenFp,
       currentAccessTokenFp: tokenFingerprint(getServerAccessToken()),
-      currentRefreshTokenFp: tokenFingerprint(getServerRefreshToken()),
-      willClearCookies: status === 401 || status === 403,
+      currentRefreshTokenFp: latestRefreshTokenFp,
+      attemptMatchesLatestRefreshToken,
+      isRefreshTokenReuse: isRefreshReuse,
     });
-    if (status === 401 || status === 403) {
-      clearServerAuthCookies();
-    }
     throw error;
   }
 }
@@ -285,8 +266,8 @@ export async function withTokenRefresh<T>(fn: (api: BackendApi) => Promise<T>): 
 }
 
 async function withTokenRefreshImpl<T>(fn: (api: BackendApi) => Promise<T>): Promise<T> {
-  let accessToken = getServerAccessToken();
-  let refreshToken = getServerRefreshToken();
+  const accessToken = getServerAccessToken();
+  const refreshToken = getServerRefreshToken();
 
   if (refreshToken) {
     const recentSession = getRecentRefreshSession(refreshToken);
@@ -297,7 +278,6 @@ async function withTokenRefreshImpl<T>(fn: (api: BackendApi) => Promise<T>): Pro
         nextRefreshTokenFp: tokenFingerprint(recentSession.refreshToken),
       });
 
-      setServerAuthCookies(recentSession);
       const recentApi = createBackendApi({
         baseUrl: serverConfig.apiUrl,
         getAccessToken: () => recentSession.accessToken ?? null,
@@ -357,44 +337,6 @@ async function withTokenRefreshImpl<T>(fn: (api: BackendApi) => Promise<T>): Pro
     }
   }
 
-  accessToken = getServerAccessToken();
-  refreshToken = getServerRefreshToken();
-
-  if (accessToken && refreshToken && isTokenExpiringSoon(accessToken)) {
-    authLogger.info("withTokenRefresh preflight refresh start", {
-      hasAccessToken: true,
-      hasRefreshToken: true,
-      accessTokenFp: tokenFingerprint(accessToken),
-      refreshTokenFp: tokenFingerprint(refreshToken),
-    });
-
-    try {
-      const session = await refreshServerSession(refreshToken);
-      if (session?.accessToken) {
-        authLogger.info("withTokenRefresh preflight refresh success", {
-          hasNewAccessToken: true,
-          hasNewRefreshToken: Boolean(session.refreshToken),
-          userId: session.user?.id ?? null,
-        });
-
-        const freshApi = createBackendApi({
-          baseUrl: serverConfig.apiUrl,
-          getAccessToken: () => session.accessToken ?? null,
-          defaultHeaders: getClientHeaders(),
-          signatureSecret: serverConfig.hmacSecretKey,
-          apiKey: serverConfig.apiKey,
-        });
-
-        return await fn(freshApi);
-      }
-    } catch (error: any) {
-      authLogger.warn("withTokenRefresh preflight refresh failed", {
-        hasRefreshToken: true,
-        ...getErrorMeta(error),
-      });
-    }
-  }
-
   const api = getServerBackendApi();
   try {
     return await fn(api);
@@ -411,7 +353,10 @@ async function withTokenRefreshImpl<T>(fn: (api: BackendApi) => Promise<T>): Pro
 
     const refreshToken = getServerRefreshToken();
     if (!refreshToken) {
-      authLogger.warn("withTokenRefresh cannot retry after 401: missing refresh token");
+      authLogger.warn("withTokenRefresh cannot retry after 401: missing refresh token", {
+        currentAccessTokenFp: tokenFingerprint(getServerAccessToken()),
+        currentRefreshTokenFp: tokenFingerprint(getServerRefreshToken()),
+      });
       throw error;
     }
 
