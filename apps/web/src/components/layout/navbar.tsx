@@ -25,59 +25,63 @@ export function Navbar() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
-      <nav className="mx-auto flex max-w-[720px] items-center justify-between gap-3 px-6 py-4">
+      <nav className="mx-auto flex max-w-[720px] min-w-0 items-center gap-3 px-4 py-3 sm:px-6 sm:py-4">
         <Link to="/" className="shrink-0">
           <img src={brimbleLogo} alt="Brimble" className="size-8 dark:invert" />
         </Link>
-        <div className="flex items-center gap-1 overflow-x-auto sm:gap-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {siteConfig.navLinks.map((link, i) => {
-            const isExternal = link.href.startsWith("http");
-            const isActive = !isExternal && pathname === link.href;
-            const linkBase =
-              "relative inline-flex items-center gap-1.5 rounded px-2 py-1 font-body text-sm font-medium transition-colors duration-150 hover:bg-brimble-air-gray dark:hover:bg-white/10";
-            const linkClass = isActive
-              ? `${linkBase} text-brimble-black shadow-[var(--shadow-button)]`
-              : `${linkBase} text-brimble-black/50 dark:text-white/50 shadow-none`;
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1 overflow-x-auto overscroll-x-contain pr-1 sm:gap-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {siteConfig.navLinks.map((link, i) => {
+              const isExternal = link.href.startsWith("http");
+              const isActive = !isExternal && pathname === link.href;
+              const linkBase =
+                "relative inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded px-2 py-1 font-body text-sm font-medium transition-colors duration-150 hover:bg-brimble-air-gray dark:hover:bg-white/10";
+              const linkClass = isActive
+                ? `${linkBase} text-brimble-black shadow-[var(--shadow-button)]`
+                : `${linkBase} text-brimble-black/50 dark:text-white/50 shadow-none`;
 
-            return (
-              <motion.div
-                key={link.label}
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 + i * 0.05, ease: [0.16, 1, 0.3, 1] }}
-              >
-                {isExternal ? (
-                  <a
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${linkBase} text-brimble-black/50 dark:text-white/50 shadow-none`}
-                  >
-                    {link.status && <StatusDot />}
-                    {link.label}
-                  </a>
-                ) : (
-                  <Link to={link.href} className={linkClass}>
-                    {link.label}
-                  </Link>
-                )}
-              </motion.div>
-            );
-          })}
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <button
-              onClick={toggleTheme}
-              className="ml-1 inline-flex size-8 cursor-pointer items-center justify-center rounded-lg text-brimble-black transition-colors duration-150 hover:bg-brimble-air-gray dark:hover:bg-white/10"
-              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            </button>
-          </motion.div>
+              return (
+                <motion.div
+                  key={link.label}
+                  className="shrink-0"
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 + i * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {isExternal ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`${linkBase} text-brimble-black/50 dark:text-white/50 shadow-none`}
+                    >
+                      {link.status && <StatusDot />}
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link to={link.href} className={linkClass}>
+                      {link.label}
+                    </Link>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
+        <motion.div
+          className="shrink-0"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <button
+            onClick={toggleTheme}
+            className="inline-flex size-8 cursor-pointer items-center justify-center rounded-lg text-brimble-black transition-colors duration-150 hover:bg-brimble-air-gray dark:hover:bg-white/10"
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+        </motion.div>
       </nav>
     </motion.header>
   );

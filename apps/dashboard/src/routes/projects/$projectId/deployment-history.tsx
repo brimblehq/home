@@ -537,7 +537,7 @@ function DeploymentRow({
       {/* Col 3: Commit + branch */}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 pl-2">
         <span className="truncate text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
-          {deployment.message || "No commit message"}
+          {deployment.message || "-"}
         </span>
         <div className="flex items-center gap-1">
           <GitBranch className="size-3.5 text-dash-text-faded" />
