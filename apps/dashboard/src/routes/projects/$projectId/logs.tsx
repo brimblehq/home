@@ -449,15 +449,7 @@ function ApplicationLogsEmptyState({ isConnecting, hasActiveFilters }: { isConne
   );
 }
 
-function ApplicationLogs({
-  projectId,
-  containers,
-  logRetentionDays,
-}: {
-  projectId: string;
-  containers: string[];
-  logRetentionDays: number;
-}) {
+function ApplicationLogs({ projectId, logRetentionDays }: { projectId: string; logRetentionDays: number }) {
   const haptics = useHaptics();
   const [autoScroll, setAutoScroll] = useState(true);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -512,7 +504,7 @@ function ApplicationLogs({
 
   const trendsQuery = useQuery({
     queryKey: ["log-trends", projectId, rangeStart.getTime(), rangeEnd?.getTime() ?? null, stepSec] as const,
-    enabled: Boolean(projectId && containers.length > 0),
+    enabled: Boolean(projectId),
     staleTime: 30_000,
     queryFn: () =>
       getLogTrends({
@@ -556,11 +548,11 @@ function ApplicationLogs({
   }, [trendsQuery.data]);
 
   const liveLogs = useLiveApplicationLogs({
-    containers,
+    projectId,
     searchQuery: null,
     start: rangeStart,
     end: rangeEnd,
-    enabled: containers.length > 0,
+    enabled: Boolean(projectId),
     limit: 200,
   });
 
@@ -650,15 +642,6 @@ function ApplicationLogs({
       setAutoScroll(false);
     }
   }, []);
-
-  if (containers.length === 0) {
-    return (
-      <div className="flex h-[420px] flex-col items-center justify-center gap-1.5 rounded-[4px] border border-dash-border bg-dash-bg-elevated px-6 text-center">
-        <span className="text-sm font-medium text-dash-text-strong">Logs will appear here once your app starts running</span>
-        <span className="text-[13px] text-dash-text-faded">Deploy your project to start streaming application logs.</span>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -1450,13 +1433,8 @@ function LogsPage() {
     }
   }, [activeTab]);
 
-  const applicationLogContainers = useMemo(() => {
-    const commonContainer = project?.job?.commonContainer?.trim();
-    return commonContainer ? [commonContainer] : [];
-  }, [project]);
-
   return (
-    <div className="mx-auto flex max-w-[1000px] flex-col gap-6 py-8">
+    <div className="mx-auto flex max-w-250 flex-col gap-6 py-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <TabHeader title="Logs">
           Monitor your application and request logs in real-time. Your plan retains logs for {logRetentionDays}{" "}
@@ -1464,14 +1442,14 @@ function LogsPage() {
         </TabHeader>
 
         {/* Tab switcher */}
-        <div className="flex overflow-clip rounded-[4px] border border-dash-border-soft shadow-[0px_1px_2px_rgba(18,18,23,0.05)]">
+        <div className="flex overflow-clip rounded-lg border border-dash-border-soft shadow-[0px_1px_2px_rgba(18,18,23,0.05)]">
           {!staticProject && (
             <button
               onClick={() => {
                 haptics.selection();
                 setActiveTab(LogTab.Application);
               }}
-              className={`flex h-[34px] items-center gap-2 border-r border-dash-border-soft px-3.5 text-sm transition-colors ${
+              className={`flex h-8.5 items-center gap-2 border-r border-dash-border-soft px-3.5 text-sm transition-colors ${
                 activeTab === LogTab.Application
                   ? "bg-dash-bg font-medium text-dash-text-strong"
                   : "bg-dash-bg-elevated text-dash-text-faded"
@@ -1501,7 +1479,7 @@ function LogsPage() {
       {/* Content */}
       {!staticProject && hasMountedApplicationLogs && (
         <div className={activeTab === LogTab.Application ? "block" : "hidden"}>
-          <ApplicationLogs projectId={project?.id ?? ""} containers={applicationLogContainers} logRetentionDays={logRetentionDays} />
+          <ApplicationLogs projectId={project?.id ?? ""} logRetentionDays={logRetentionDays} />
         </div>
       )}
       {!databaseProject && hasMountedRequestLogs && (

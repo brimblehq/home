@@ -12,7 +12,7 @@ export interface LiveApplicationLogEntry {
 }
 
 interface UseLiveApplicationLogsInput {
-  containers: string[];
+  projectId: string;
   searchQuery?: string | null;
   start?: Date;
   end?: Date;
@@ -27,23 +27,11 @@ interface LokiStreamPayload {
   }>;
 }
 
-function escapeRegexLiteral(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/"/g, '\\"');
-}
-
-function buildLokiQuery(input: { containers: string[]; searchQuery?: string | null }) {
-  const normalizedContainers = Array.from(new Set(input.containers.map((value) => value.trim()).filter((value) => value.length > 0)));
-  const containerPattern = normalizedContainers.map((value) => escapeRegexLiteral(value)).join("|");
-  const base = containerPattern ? `{container=~"^(${containerPattern})$"}` : `{container=""}`;
-  const rawSearch = input.searchQuery?.trim();
-
-  if (!rawSearch) {
-    return base;
-  }
-
-  const escaped = rawSearch.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[()]/g, "").replace(/\n/g, " ");
-
-  return `${base} |~ "(?i)${escaped}"`;
+function buildSearchPipeline(searchQuery?: string | null): string {
+  const raw = searchQuery?.trim();
+  if (!raw) return "";
+  const escaped = raw.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[()]/g, "").replace(/\n/g, " ");
+  return `|~ "(?i)${escaped}"`;
 }
 
 function nsStringToEpochMs(raw: string): number {
@@ -132,6 +120,7 @@ function mergeUniqueLogs(current: LiveApplicationLogEntry[], incoming: LiveAppli
 }
 
 interface TailRequestParams {
+  projectId: string;
   query: string;
   start: string;
   limit: string;
@@ -257,20 +246,9 @@ export function useLiveApplicationLogs(input: UseLiveApplicationLogsInput) {
   const isTailRestartRef = useRef(false);
   const blockedByLimitRef = useRef(false);
 
-  const normalizedContainers = useMemo(
-    () => Array.from(new Set(input.containers.map((value) => value.trim()).filter((value) => value.length > 0))),
-    [input.containers],
-  );
-  const enabled = Boolean(input.enabled && normalizedContainers.length > 0);
+  const enabled = Boolean(input.enabled && input.projectId);
 
-  const lokiQuery = useMemo(
-    () =>
-      buildLokiQuery({
-        containers: normalizedContainers,
-        searchQuery: input.searchQuery,
-      }),
-    [normalizedContainers, input.searchQuery],
-  );
+  const lokiQuery = useMemo(() => buildSearchPipeline(input.searchQuery), [input.searchQuery]);
 
   const rangeStartMs = useMemo(() => {
     if (input.start instanceof Date) {
@@ -293,6 +271,7 @@ export function useLiveApplicationLogs(input: UseLiveApplicationLogsInput) {
 
   const tailParams = useMemo(() => {
     const params: TailRequestParams = {
+      projectId: input.projectId,
       query: lokiQuery,
       start: String(rangeStartMs * 1_000_000),
       limit: String(input.limit ?? 150),
@@ -304,7 +283,7 @@ export function useLiveApplicationLogs(input: UseLiveApplicationLogsInput) {
     }
 
     return params;
-  }, [input.limit, lokiQuery, rangeEndMs, rangeStartMs]);
+  }, [input.limit, input.projectId, lokiQuery, rangeEndMs, rangeStartMs]);
 
   const tailKey = useMemo(() => JSON.stringify(tailParams), [tailParams]);
 
