@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { createFileRoute, getRouteApi, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown, Monitor, Smartphone, Tablet, Tv } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Monitor, Smartphone, Tablet, Tv } from "lucide-react";
 import { BrowserIcon } from "@/components/analytics/browser-icons";
 import { SimpleTooltip } from "@/components/shared/tooltip";
 import { ArrowBendUpLeft, GlobeHemisphereWest, UsersThree } from "@phosphor-icons/react";
@@ -304,11 +304,93 @@ function AppMetrics({
   );
 }
 
-function StatTile({ label, value }: { label: string; value: string }) {
+type AnimatedStatValue = {
+  value: number | null;
+  unit: "s" | "ms" | "";
+  decimals: number;
+};
+
+const PERF_COUNTER_DURATION_MS = 900;
+
+function formatAnimatedNumber(value: number, decimals: number): string {
+  if (decimals === 0) {
+    return String(Math.round(value));
+  }
+
+  return value.toFixed(decimals);
+}
+
+function CounterValue({ stat }: { stat: AnimatedStatValue }) {
+  const valueRef = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(valueRef, { once: true, margin: "-80px" });
+  const [animatedValue, setAnimatedValue] = useState<number | null>(stat.value == null ? null : 0);
+
+  useEffect(() => {
+    if (stat.value == null || !Number.isFinite(stat.value)) {
+      setAnimatedValue(null);
+      return;
+    }
+
+    const reducedMotionQuery =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)")
+        : null;
+
+    if (reducedMotionQuery?.matches) {
+      setAnimatedValue(stat.value);
+      return;
+    }
+
+    if (!isInView) {
+      setAnimatedValue(0);
+      return;
+    }
+
+    let frame = 0;
+    const animationStart = performance.now();
+    const target = stat.value;
+
+    setAnimatedValue(0);
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - animationStart) / PERF_COUNTER_DURATION_MS, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const nextValue = target * eased;
+
+      setAnimatedValue(nextValue);
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick);
+        return;
+      }
+
+      setAnimatedValue(target);
+    };
+
+    frame = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(frame);
+  }, [isInView, stat.value]);
+
+  if (animatedValue == null) {
+    return <span ref={valueRef}>—</span>;
+  }
+
+  return (
+    <span ref={valueRef}>
+      {formatAnimatedNumber(animatedValue, stat.decimals)}
+      {stat.unit}
+    </span>
+  );
+}
+
+function StatTile({ label, stat }: { label: string; stat: AnimatedStatValue }) {
   return (
     <div className="flex flex-1 flex-col gap-1">
       <span className="text-[10px] font-medium uppercase tracking-[1px] text-dash-text-faded">{label}</span>
-      <span className="text-2xl font-light text-dash-text-strong">{value}</span>
+      <span className="text-2xl font-light text-dash-text-strong">
+        <CounterValue stat={stat} />
+      </span>
     </div>
   );
 }
@@ -581,18 +663,22 @@ function formatNumber(value: number): string {
 
 type PerfKind = "lcp" | "fcp" | "inp" | "ttfb" | "cls";
 
-function formatPerf(metric: AnalyticsPerformanceMetric, kind: PerfKind): string {
-  if (!metric || metric.samples === 0 || metric.p75 == null) return "—";
+function formatPerf(metric: AnalyticsPerformanceMetric, kind: PerfKind): AnimatedStatValue {
+  if (!metric || metric.samples === 0 || metric.p75 == null) {
+    return { value: null, unit: "", decimals: 0 };
+  }
+
   const v = metric.p75;
+
   switch (kind) {
     case "lcp":
     case "fcp":
-      return `${(v / 1000).toFixed(1)}s`;
+      return { value: v / 1000, unit: "s", decimals: 1 };
     case "inp":
     case "ttfb":
-      return `${Math.round(v)}ms`;
+      return { value: v, unit: "ms", decimals: 0 };
     case "cls":
-      return v.toFixed(2);
+      return { value: v, unit: "", decimals: 2 };
   }
 }
 
@@ -879,8 +965,16 @@ export function AppAnalytics({ initial, projectId }: { initial: AnalyticsPayload
             {pageSpeedUrl ? (
               <>
                 {" "}
-                <a href={pageSpeedUrl} target="_blank" rel="noreferrer" className="text-[#4879f8] underline">
+                <a
+                  href={pageSpeedUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group inline-flex items-center gap-1 text-[#4879f8] no-underline hover:underline"
+                >
                   Open in PageSpeed Insights
+                  <span className="inline-flex w-0 overflow-hidden opacity-0 transition-all duration-150 group-hover:w-3.5 group-hover:opacity-100">
+                    <ArrowUpRight className="size-3.5" />
+                  </span>
                 </a>
               </>
             ) : null}
@@ -1086,16 +1180,22 @@ export function AppAnalytics({ initial, projectId }: { initial: AnalyticsPayload
               <p className="text-xs font-light text-dash-text-faded">Core Web Vitals (p75) over this window</p>
             </div>
             <div className="grid grid-cols-2 gap-x-6 gap-y-5 px-5 py-5 sm:grid-cols-3 md:grid-cols-5">
-              <StatTile label="LCP" value={formatPerf(data.performance.lcp, "lcp")} />
-              <StatTile label="FCP" value={formatPerf(data.performance.fcp, "fcp")} />
-              <StatTile label="INP" value={formatPerf(data.performance.inp, "inp")} />
-              <StatTile label="TTFB" value={formatPerf(data.performance.ttfb, "ttfb")} />
-              <StatTile label="CLS" value={formatPerf(data.performance.cls, "cls")} />
+              <StatTile label="LCP" stat={formatPerf(data.performance.lcp, "lcp")} />
+              <StatTile label="FCP" stat={formatPerf(data.performance.fcp, "fcp")} />
+              <StatTile label="INP" stat={formatPerf(data.performance.inp, "inp")} />
+              <StatTile label="TTFB" stat={formatPerf(data.performance.ttfb, "ttfb")} />
+              <StatTile label="CLS" stat={formatPerf(data.performance.cls, "cls")} />
             </div>
             <div className="flex items-center justify-between border-t-[0.5px] border-dash-border-soft px-5 py-3 text-xs">
               <span className="text-dash-text-faded">Average load time</span>
               <span className="font-medium text-dash-text-strong">
-                {data.performance.avgLoadTime != null ? `${(data.performance.avgLoadTime / 1000).toFixed(1)}s` : "—"}
+                <CounterValue
+                  stat={{
+                    value: data.performance.avgLoadTime != null ? data.performance.avgLoadTime / 1000 : null,
+                    unit: "s",
+                    decimals: 1,
+                  }}
+                />
               </span>
             </div>
           </div>

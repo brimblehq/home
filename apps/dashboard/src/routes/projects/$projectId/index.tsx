@@ -98,6 +98,7 @@ function ProjectDetailPage() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [restartingDb, setRestartingDb] = useState(false);
   const [restartConfirmOpen, setRestartConfirmOpen] = useState(false);
+  const [screenshotLoadFailed, setScreenshotLoadFailed] = useState(false);
   const haptics = useHaptics();
   const router = useRouter();
   const { openDeploymentDrawer } = useProjectDeploymentLogsDrawer();
@@ -121,6 +122,10 @@ function ProjectDetailPage() {
     frameworks?: FrameworkOption[];
     recentDeployments?: DeploymentLog[];
   };
+
+  useEffect(() => {
+    setScreenshotLoadFailed(false);
+  }, [screenshotUrl]);
 
   const projectName = project?.name || projectId;
   const isDatabaseProject = getIsDatabaseProject(project);
@@ -257,8 +262,13 @@ function ProjectDetailPage() {
                   </div>
                 </div>
                 <div className="relative h-[222px] w-full bg-dash-bg-elevated">
-                  {screenshotUrl ? (
-                    <img src={screenshotUrl} alt={`${projectName} screenshot`} className="h-full w-full object-cover object-top" />
+                  {screenshotUrl && !screenshotLoadFailed ? (
+                    <img
+                      src={screenshotUrl}
+                      alt={`${projectName} screenshot`}
+                      className="h-full w-full object-cover object-top"
+                      onError={() => setScreenshotLoadFailed(true)}
+                    />
                   ) : isServiceFramework ? (
                     <div className="flex h-full flex-col items-center justify-center gap-2 bg-dash-bg">
                       <Terminal className="size-10 text-dash-text-extra-faded" />

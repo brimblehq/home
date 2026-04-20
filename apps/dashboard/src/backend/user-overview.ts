@@ -99,7 +99,7 @@ export function createUserOverviewApi(client: ApiClient): UserOverviewApi {
     async get(input) {
       const response = await client.request<UserOverviewResponse>("/auth/user/overview", {
         method: "GET",
-        query: input?.teamId ? { teamId: input.teamId } : undefined,
+        query: input?.teamId ? { team_id: input.teamId } : undefined,
       });
 
       const root = (response?.data?.data ?? response?.data) as UserOverviewRoot;

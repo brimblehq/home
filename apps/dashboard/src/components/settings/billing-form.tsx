@@ -125,10 +125,22 @@ function BillingFormInner({
   const [isEditingLimit, setIsEditingLimit] = useState(false);
 
   const { data: paymentMethods = [], isLoading: isLoadingMethods } = usePaymentMethods(initialPaymentMethods ?? undefined);
+  const canUseInitialUserOverview = useMemo(() => {
+    if (!initialUserOverview) {
+      return false;
+    }
+
+    if (teamId) {
+      return initialUserOverview.buildMinutes.ownerType === "team" && initialUserOverview.buildMinutes.ownerId === teamId;
+    }
+
+    return initialUserOverview.buildMinutes.ownerType !== "team";
+  }, [initialUserOverview, teamId]);
+
   const { data: userOverview } = useQuery<UserOverview>({
     queryKey: ["user-overview", teamId ?? "self"],
     queryFn: () => (getUserOverviewServerFn as unknown as (args: { data: { teamId?: string } }) => Promise<UserOverview>)({ data: { teamId } }),
-    ...(initialUserOverview ? { initialData: initialUserOverview } : {}),
+    ...(canUseInitialUserOverview && initialUserOverview ? { initialData: initialUserOverview } : {}),
   });
   const { data: subscription } = useSubscription();
   const { data: spendingLimitStatus } = useSpendingLimitStatus(teamId);
@@ -271,7 +283,7 @@ function BillingFormInner({
         usedMinutes={userOverview?.buildMinutes.used ?? 0}
         includedMinutes={userOverview?.buildMinutes.included ?? 0}
         creditMinutes={userOverview?.buildMinutes.purchased ?? 0}
-        resetDate={userOverview?.buildMinutes.nextResetAt ?? initialSubscriptionStats?.next_payment_date ?? null}
+        resetDate={userOverview?.buildMinutes.nextResetAt ?? (teamId ? null : initialSubscriptionStats?.next_payment_date ?? null)}
         teamId={teamId}
         initialPaymentMethods={initialPaymentMethods}
       />

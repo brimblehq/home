@@ -140,13 +140,36 @@ export const Route = createRootRoute({
 
       const hasGlobalCache = globalDataCache.fetchedAt > 0 && Date.now() - globalDataCache.fetchedAt < GLOBAL_CACHE_TTL;
 
+      let workspacesRequest: Promise<ApiListResponse<Workspace>>;
+      if (hasGlobalCache && globalDataCache.workspaces) {
+        workspacesRequest = Promise.resolve(globalDataCache.workspaces);
+      } else {
+        workspacesRequest = (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)();
+      }
+
+      const userOverviewRequest = (async () => {
+        let teamId: string | undefined;
+
+        if (workspace) {
+          try {
+            const availableWorkspaces = await workspacesRequest;
+            const matchedWorkspace = availableWorkspaces.items.find((item) => item.slug === workspace);
+            teamId = matchedWorkspace?.id || undefined;
+          } catch {
+            teamId = undefined;
+          }
+        }
+
+        return (getUserOverviewServerFn as unknown as (input: { data?: { teamId?: string } }) => Promise<UserOverview>)({
+          data: teamId ? { teamId } : {},
+        });
+      })();
+
       const [settingsSnapshot, workspaces, onboardingProjects, pricingResult, tags, subscriptionStats, userOverview] = await Promise.allSettled([
         (getSettingsSidebarSnapshotServerFn as unknown as (input: { data?: { workspace?: string } }) => Promise<SettingsSidebarSnapshot>)({
           data: { workspace },
         }),
-        hasGlobalCache && globalDataCache.workspaces
-          ? Promise.resolve(globalDataCache.workspaces)
-          : (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)(),
+        workspacesRequest,
         (listHomeProjectsServerFn as unknown as (input: { data: { workspace?: string } }) => Promise<ApiListResponse<Project>>)({
           data: { workspace },
         }),
@@ -159,9 +182,7 @@ export const Route = createRootRoute({
         (getSubscriptionStatsServerFn as unknown as (input: { data?: { workspace?: string } }) => Promise<SubscriptionStats>)({
           data: { workspace },
         }),
-        (getUserOverviewServerFn as unknown as (input: { data?: { teamId?: string } }) => Promise<UserOverview>)({
-          data: {},
-        }),
+        userOverviewRequest,
       ]);
 
       if (workspaces.status === "fulfilled") {
