@@ -8,6 +8,7 @@ export type CareerRole = {
   applicationsClose?: string;
   summary: string;
   applyUrl: string;
+  notionUrl?: string;
   content: string;
 };
 
@@ -22,6 +23,7 @@ export const careerRoles: CareerRole[] = [
     summary:
       "Own the roadmap, talk to users, and help decide what we build next on Brimble — a PaaS for developers.",
     applyUrl: "https://tally.so/r/7R9rA2",
+    notionUrl: "https://www.notion.so/Product-Manager-Brimble-349827413034806bae3fd4eb436f8c7b",
     content: `## About the role
 Brimble is a PaaS for developers. We're looking for a product manager to own the roadmap, talk to users, and help us decide what to build next.
 
@@ -60,6 +62,7 @@ Because we're a startup, you may wear multiple hats at times — including occas
     summary:
       "A take-home task that mirrors how we run Brimble: build a one-page deployment pipeline with Vite + TanStack, an API, Railpack builds, and Caddy ingress.",
     applyUrl: "https://tally.so/r/ODBMdR",
+    notionUrl: "https://www.notion.so/Brimble-Fullstack-Infra-Engineer-Role-3498274130348076822ae6d1db9c8747",
     content: `## About the role
 Brimble runs a PaaS on bare metal across Hetzner and DigitalOcean. Developers push code; we provision infrastructure, build, route traffic, and serve it all behind a single UI.
 

@@ -62,17 +62,30 @@ function CareerDetailPage() {
               <div className="mt-10 rounded-xl border border-[rgba(152,157,164,0.3)] bg-brimble-surface p-6 dark:border-white/10">
                 <p className="font-body text-base font-medium text-brimble-black">Interested?</p>
                 <p className="mt-1 font-body text-sm leading-[1.6] text-brimble-black/60">
-                  Read the full role details and apply on our public Notion page. We review every application.
+                  Submit through the application form below. We review every application.
                 </p>
-                <a
-                  href={role.applyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg bg-brimble-black px-4 py-2 font-body text-sm font-medium text-brimble-surface shadow-[var(--shadow-button)] transition-opacity duration-150 hover:opacity-90"
-                >
-                  Apply for this role
-                  <ArrowUpRight className="size-3.5" />
-                </a>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <a
+                    href={role.applyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brimble-black px-4 py-2 font-body text-sm font-medium text-brimble-surface shadow-[var(--shadow-button)] transition-opacity duration-150 hover:opacity-90"
+                  >
+                    Apply for this role
+                    <ArrowUpRight className="size-3.5" />
+                  </a>
+                  {role.notionUrl && (
+                    <a
+                      href={role.notionUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 font-body text-sm font-medium text-brimble-black/70 transition-colors duration-150 hover:text-brimble-black"
+                    >
+                      View full JD on Notion
+                      <ArrowUpRight className="size-3.5" />
+                    </a>
+                  )}
+                </div>
               </div>
 
               {/* Back link */}
