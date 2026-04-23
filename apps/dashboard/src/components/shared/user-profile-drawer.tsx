@@ -4,7 +4,7 @@ import axios from "axios";
 import { Drawer } from "vaul";
 import { cn } from "@brimble/ui";
 import { SUBSCRIPTION_PLAN_TYPE } from "@brimble/models/dist/enum";
-import { useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -392,7 +392,12 @@ function ProfileForm({
 
   const inputClass = dashInputClassName;
   const normalizedPlanType = (profile.subscriptionPlanType ?? "").toUpperCase();
-  const isFreePlan = !normalizedPlanType || normalizedPlanType === SUBSCRIPTION_PLAN_TYPE.FreePlan;
+  const paidPlanTypes = new Set(
+    [SUBSCRIPTION_PLAN_TYPE.HackerPlan, SUBSCRIPTION_PLAN_TYPE.DeveloperPlan, SUBSCRIPTION_PLAN_TYPE.TeamPlan].map((plan) =>
+      String(plan).toUpperCase(),
+    ),
+  );
+  const isFreePlan = !paidPlanTypes.has(normalizedPlanType);
   const buildLockReason = getBuildLockReason(profile.buildDisabledBy);
 
   function handleSave() {
@@ -1653,6 +1658,7 @@ export function UserProfileDrawer({
   projectCount?: number;
   requestedTab?: ProfileTab;
 }) {
+  const navigate = useNavigate();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const queryClient = useQueryClient();
 
@@ -2010,7 +2016,7 @@ export function UserProfileDrawer({
       .then(() => {
         posthog.reset();
         invalidateSessionCache();
-        window.location.href = "/login";
+        void navigate({ to: "/login" });
       });
   }
 

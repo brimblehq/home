@@ -306,6 +306,9 @@ function getNextUrl(): string {
 const AUTH_METHOD_KEY = "brimble:last-auth-method";
 type AuthMethod = "github" | "google" | "gitlab" | "bitbucket" | "email";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FRIENDLY_AUTH_SERVER_ERROR_MESSAGE = "We can't sign you in right now. Please try again in a moment.";
+const SERVER_FAILURE_PATTERNS = ["internal server error", "http 500", "status code 500"] as const;
+const CLOUDFLARE_HTML_PATTERNS = ["cloudflare", "<!doctype html", "<html"] as const;
 
 function validateEmailInput(value: string): string | null {
   const trimmed = value.trim();
@@ -316,6 +319,41 @@ function validateEmailInput(value: string): string | null {
     return "Enter a valid email address.";
   }
   return null;
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== "object") {
+    return undefined;
+  }
+
+  const withStatus = error as { status?: unknown };
+  if (typeof withStatus.status === "number") {
+    return withStatus.status;
+  }
+
+  return undefined;
+}
+
+function includesAny(input: string, patterns: readonly string[]): boolean {
+  return patterns.some((pattern) => input.includes(pattern));
+}
+
+function getFriendlyAuthError(error: unknown, fallback: string): string {
+  const status = getErrorStatus(error);
+  if (typeof status === "number" && status >= 500) {
+    return FRIENDLY_AUTH_SERVER_ERROR_MESSAGE;
+  }
+
+  const message = error instanceof Error ? error.message : "";
+  const normalized = message.toLowerCase();
+  const looksLikeServerFailure = includesAny(normalized, SERVER_FAILURE_PATTERNS);
+  const looksLikeCloudflareHtml = includesAny(normalized, CLOUDFLARE_HTML_PATTERNS);
+
+  if (looksLikeServerFailure || looksLikeCloudflareHtml) {
+    return FRIENDLY_AUTH_SERVER_ERROR_MESSAGE;
+  }
+
+  return message || fallback;
 }
 
 function getLastAuthMethod(): AuthMethod | null {
@@ -416,7 +454,7 @@ function LoginPage() {
       window.location.replace(getNextUrl());
       return;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "OAuth sign in failed");
+      toast.error(getFriendlyAuthError(error, "OAuth sign in failed"));
       setOauthLoadingProvider(null);
     }
   }
@@ -524,7 +562,7 @@ function LoginPage() {
       toast.success("Verification code sent");
       setStep("otp");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to send code");
+      toast.error(getFriendlyAuthError(error, "Failed to send code"));
     } finally {
       setLoading(false);
     }
@@ -558,7 +596,7 @@ function LoginPage() {
       window.location.replace(getNextUrl());
       return;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Verification failed");
+      toast.error(getFriendlyAuthError(error, "Verification failed"));
       setLoading(false);
     }
   }
@@ -572,7 +610,7 @@ function LoginPage() {
       await resendAuthCode({ data: { email, geo: await getClientGeo() } });
       toast.success("Code resent");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to resend code");
+      toast.error(getFriendlyAuthError(error, "Failed to resend code"));
     } finally {
       setLoading(false);
     }
