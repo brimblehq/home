@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Drawer } from "vaul";
-import { Clock, ChevronRight, ChevronsDownUp, ChevronsDown, X, CheckCircle2, XCircle } from "lucide-react";
+import { Clock, ChevronRight, ChevronsDownUp, ChevronsDown, X, CheckCircle2, XCircle, CircleDashed } from "lucide-react";
 import { DownloadSimple } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { useServerFn } from "@tanstack/react-start";
@@ -411,6 +411,7 @@ export function DeploymentLogsDrawer({
                                 )}
                                 {log.status === "success" && <CheckCircle2 className="size-3.5 shrink-0 text-[#13d282]" />}
                                 {log.status === "error" && <XCircle className="size-3.5 shrink-0 text-[#fc391e]" />}
+                                {log.status === "pending" && <CircleDashed className="size-3.5 shrink-0 text-[#ffb020]" />}
                                 <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] text-dash-text-strong">
                                   {renderLogTextWithLinks(log.message)}
                                 </span>

@@ -17,7 +17,7 @@ import {
 } from "@/contexts/project-deployment-logs-drawer-context";
 import { Realtime } from "ably";
 import { getSupabaseClient } from "@/lib/supabase";
-import { mapDeploymentRunLogsToDrawerEntries } from "@/utils/deployment-logs";
+import { mapDeploymentRunLogsToDrawerEntries, sortDeploymentDrawerEntries } from "@/utils/deployment-logs";
 import { usePushNotification } from "@/hooks/use-push-notification";
 import config from "@/config";
 
@@ -30,7 +30,7 @@ function getDrawerEntryKey(entry: DeploymentDrawerLogEntry): string {
     return `id:${rawId}`;
   }
 
-  return `${entry.type}|${entry.timestamp}|${entry.message}`;
+  return `${entry.type}|${entry.timestampRaw ?? entry.timestamp}|${entry.message}`;
 }
 
 function mergeDeploymentDrawerEntries(
@@ -41,20 +41,36 @@ function mergeDeploymentDrawerEntries(
     return existing;
   }
 
-  const seen = new Set(existing.map(getDrawerEntryKey));
   const next = [...existing];
+  const keyToIndex = new Map<string, number>();
+  for (let index = 0; index < next.length; index++) {
+    keyToIndex.set(getDrawerEntryKey(next[index]), index);
+  }
 
   for (const entry of incoming) {
     const key = getDrawerEntryKey(entry);
-    if (seen.has(key)) {
+    const existingIndex = keyToIndex.get(key);
+    if (existingIndex !== undefined) {
+      const previousEntry = next[existingIndex];
+      const shouldUpgradeStatus = previousEntry.status !== entry.status && entry.status !== undefined;
+      const shouldUpgradeRawId = !previousEntry.rawId && Boolean(entry.rawId);
+      const shouldUpgradeTimestamp = previousEntry.timestampMs == null && entry.timestampMs != null;
+
+      if (shouldUpgradeStatus || shouldUpgradeRawId || shouldUpgradeTimestamp) {
+        next[existingIndex] = {
+          ...previousEntry,
+          ...entry,
+        };
+      }
+
       continue;
     }
 
-    seen.add(key);
+    keyToIndex.set(key, next.length);
     next.push(entry);
   }
 
-  return next;
+  return sortDeploymentDrawerEntries(next);
 }
 
 const projectCache = new Map<string, { data: BackendProject; fetchedAt: number }>();
@@ -321,7 +337,10 @@ function ProjectLayout() {
 
         setDrawerLogsByDeploymentId((prev) => {
           const existingEntries = prev[deployment.id] ?? [];
-          const nextEntries = options?.merge === true ? mergeDeploymentDrawerEntries(existingEntries, incomingEntries) : incomingEntries;
+          let nextEntries = sortDeploymentDrawerEntries(incomingEntries);
+          if (options?.merge === true) {
+            nextEntries = mergeDeploymentDrawerEntries(existingEntries, incomingEntries);
+          }
 
           if (
             existingEntries.length === nextEntries.length &&
