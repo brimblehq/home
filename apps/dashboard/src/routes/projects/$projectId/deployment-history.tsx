@@ -134,10 +134,10 @@ function FilterSelect({
   const activeDot = value !== "All" && dotColors?.[value];
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative w-full sm:w-auto" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center overflow-clip rounded-[4px] border border-dash-border bg-dash-bg text-sm text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
+        className="flex w-full items-center justify-between overflow-clip rounded-[4px] border border-dash-border bg-dash-bg text-sm text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated sm:w-auto sm:justify-start"
       >
         <span className="flex items-center gap-2 px-3 py-1.5">
           {activeDot ? <span className="size-[6px] shrink-0 rounded-full" style={{ backgroundColor: activeDot }} /> : icon}
@@ -506,10 +506,10 @@ function DeploymentRow({
   return (
     <div
       onClick={onClick}
-      className="flex cursor-pointer items-center border-b-[0.5px] border-dash-border px-3.5 py-4 transition-colors last:border-b-0 hover:bg-dash-bg-elevated"
+      className="flex cursor-pointer items-center gap-2 border-b-[0.5px] border-dash-border px-3.5 py-4 transition-colors last:border-b-0 hover:bg-dash-bg-elevated sm:gap-0"
     >
       {/* Col 1: Name + environment */}
-      <div className="flex w-[280px] shrink-0 flex-col gap-0.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:w-[280px] sm:shrink-0 sm:flex-none">
         <div className="flex min-w-0 items-center gap-1">
           <span className="truncate text-sm tracking-[-0.084px] text-dash-text-strong">{deploymentName}</span>
           <button
@@ -526,7 +526,7 @@ function DeploymentRow({
       </div>
 
       {/* Col 2: Status + duration */}
-      <div className="flex w-[180px] shrink-0 flex-col gap-0.5 px-5">
+      <div className="flex w-[130px] shrink-0 flex-col gap-0.5 pr-2 sm:w-[180px] sm:px-5">
         <div className="flex items-center gap-1.5">
           <span className={`size-[6px] shrink-0 rounded-full ${dot}`} />
           <span className="text-sm font-light text-dash-text-body">{label}</span>
@@ -535,7 +535,7 @@ function DeploymentRow({
       </div>
 
       {/* Col 3: Commit + branch */}
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5 pl-2">
+      <div className="hidden min-w-0 flex-1 flex-col gap-0.5 pl-2 md:flex">
         <span className="truncate text-sm font-light leading-[1.4] tracking-[-0.28px] text-dash-text-strong">
           {deployment.message || "-"}
         </span>
@@ -546,7 +546,7 @@ function DeploymentRow({
       </div>
 
       {/* Col 4: Time + user */}
-      <div className="flex w-[160px] shrink-0 flex-col gap-0.5 pl-4">
+      <div className="hidden w-[160px] shrink-0 flex-col gap-0.5 pl-4 md:flex">
         <span className="text-sm tracking-[-0.084px] text-dash-text-strong">{ago}</span>
         <Tooltip
           user={{
@@ -565,7 +565,7 @@ function DeploymentRow({
       </div>
 
       {/* Col 5: Menu */}
-      <div onClick={(e) => e.stopPropagation()}>
+      <div className="pl-1 sm:pl-0" onClick={(e) => e.stopPropagation()}>
         <DeploymentMenu
           deployment={deployment}
           projectId={projectId}
@@ -582,24 +582,24 @@ function DeploymentRow({
 
 function DeploymentSkeleton() {
   return (
-    <div className="flex items-center border-b-[0.5px] border-dash-border px-3.5 py-4 last:border-b-0">
-      <div className="flex w-[280px] shrink-0 flex-col gap-1.5">
+    <div className="flex items-center gap-2 border-b-[0.5px] border-dash-border px-3.5 py-4 last:border-b-0 sm:gap-0">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:w-[280px] sm:shrink-0 sm:flex-none">
         <div className="h-4 w-48 animate-pulse rounded bg-dash-border-soft" />
         <div className="h-3.5 w-20 animate-pulse rounded bg-dash-border-soft" />
       </div>
-      <div className="flex w-[120px] shrink-0 flex-col gap-1.5">
+      <div className="flex w-[130px] shrink-0 flex-col gap-1.5 pr-2 sm:w-[180px] sm:px-5">
         <div className="h-4 w-16 animate-pulse rounded bg-dash-border-soft" />
         <div className="h-3.5 w-10 animate-pulse rounded bg-dash-border-soft" />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="hidden min-w-0 flex-1 flex-col gap-1.5 md:flex">
         <div className="h-4 w-56 animate-pulse rounded bg-dash-border-soft" />
         <div className="h-3.5 w-16 animate-pulse rounded bg-dash-border-soft" />
       </div>
-      <div className="flex w-[160px] shrink-0 flex-col gap-1.5 pl-4">
+      <div className="hidden w-[160px] shrink-0 flex-col gap-1.5 pl-4 md:flex">
         <div className="h-4 w-14 animate-pulse rounded bg-dash-border-soft" />
         <div className="h-3.5 w-24 animate-pulse rounded bg-dash-border-soft" />
       </div>
-      <div className="ml-4 size-4 animate-pulse rounded bg-dash-border-soft" />
+      <div className="ml-1 size-4 animate-pulse rounded bg-dash-border-soft sm:ml-4" />
     </div>
   );
 }
@@ -919,9 +919,9 @@ function DeploymentHistoryPage() {
       </TabHeader>
 
       {/* Filter bar */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         {/* Search */}
-        <div className="flex flex-1 items-center gap-2 rounded-[4px] border border-dash-border bg-dash-bg px-3 py-1.5 shadow-[0px_1px_2px_rgba(18,18,23,0.05)]">
+        <div className="flex w-full flex-1 items-center gap-2 rounded-[4px] border border-dash-border bg-dash-bg px-3 py-1.5 shadow-[0px_1px_2px_rgba(18,18,23,0.05)] sm:min-w-[280px]">
           <Search className="size-4 shrink-0 text-dash-text-extra-faded" />
           <input
             type="text"
@@ -932,39 +932,46 @@ function DeploymentHistoryPage() {
           />
         </div>
 
-        <DateRangePicker value={dateRange} onChange={setDateRange}>
-          <button className="flex items-center overflow-clip rounded-[4px] border border-dash-border bg-dash-bg text-sm text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated">
-            <span className="flex items-center gap-2 px-3 py-1.5">
-              <Calendar className="size-3.5 text-dash-text-faded" />
-              {dateRange?.from && dateRange?.to
-                ? `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`
-                : "Last 30 days"}
-            </span>
-            <span className="flex h-full items-center border-l border-dash-border px-2 py-1.5">
-              <ChevronDown className="size-4 text-dash-text-faded" />
-            </span>
-          </button>
-        </DateRangePicker>
-        <FilterSelect
-          label="All Environments"
-          options={["All", "Production", "Preview", "Development"]}
-          value={environment}
-          onChange={setEnvironment}
-        />
-        <FilterSelect
-          label="Status"
-          options={["All", "Successful", "Failed", "In Progress", "Pending", "Cancelled"]}
-          value={status}
-          onChange={setStatus}
-          icon={<StatusDotsIcon />}
-          dotColors={{
-            Successful: "#13d282",
-            Failed: "#fc391e",
-            "In Progress": "#ff7a00",
-            Pending: "#ff7a00",
-            Cancelled: "#888",
-          }}
-        />
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-3">
+          <div className="col-span-2 sm:col-span-1">
+            <DateRangePicker value={dateRange} onChange={setDateRange}>
+              <button className="flex w-full items-center justify-between overflow-clip rounded-[4px] border border-dash-border bg-dash-bg text-sm text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated sm:w-auto sm:justify-start">
+                <span className="flex min-w-0 items-center gap-2 px-3 py-1.5">
+                  <Calendar className="size-3.5 shrink-0 text-dash-text-faded" />
+                  <span className="truncate">
+                    {dateRange?.from && dateRange?.to
+                      ? `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`
+                      : "Last 30 days"}
+                  </span>
+                </span>
+                <span className="flex h-full items-center border-l border-dash-border px-2 py-1.5">
+                  <ChevronDown className="size-4 text-dash-text-faded" />
+                </span>
+              </button>
+            </DateRangePicker>
+          </div>
+
+          <FilterSelect
+            label="All Environments"
+            options={["All", "Production", "Preview", "Development"]}
+            value={environment}
+            onChange={setEnvironment}
+          />
+          <FilterSelect
+            label="Status"
+            options={["All", "Successful", "Failed", "In Progress", "Pending", "Cancelled"]}
+            value={status}
+            onChange={setStatus}
+            icon={<StatusDotsIcon />}
+            dotColors={{
+              Successful: "#13d282",
+              Failed: "#fc391e",
+              "In Progress": "#ff7a00",
+              Pending: "#ff7a00",
+              Cancelled: "#888",
+            }}
+          />
+        </div>
       </div>
 
       {/* Deployment list */}

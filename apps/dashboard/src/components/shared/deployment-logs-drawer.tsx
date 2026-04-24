@@ -256,7 +256,7 @@ export function DeploymentLogsDrawer({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
-            className="flex max-h-[60vh] flex-col overflow-clip rounded-t-[4px] border-t-[0.5px] border-[#d9dadd] bg-dash-bg shadow-[0px_-4px_20px_-8px_rgba(0,0,0,0.15)] dark:border-dash-border dark:bg-[#181819]"
+            className="flex max-h-[80dvh] flex-col overflow-clip rounded-t-[4px] border-t-[0.5px] border-[#d9dadd] bg-dash-bg shadow-[0px_-4px_20px_-8px_rgba(0,0,0,0.15)] sm:max-h-[60vh] dark:border-dash-border dark:bg-[#181819]"
           >
             {/* ─── Drag handle ─── */}
             <div className="flex shrink-0 cursor-grab items-center justify-center py-2 active:cursor-grabbing">
@@ -264,13 +264,13 @@ export function DeploymentLogsDrawer({
             </div>
 
             {/* ─── Top bar ─── */}
-            <div className="flex shrink-0 items-center justify-between border-b-[0.5px] border-[#e5e5e5] px-5 pb-3.5 dark:border-dash-border">
+            <div className="flex shrink-0 flex-col gap-2 border-b-[0.5px] border-[#e5e5e5] px-3.5 pb-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:border-dash-border">
               <div className="flex items-center gap-2">
                 <Clock className="size-4 text-dash-text-faded" />
                 <span className="text-sm leading-[1.3] tracking-[-0.0224px] text-dash-text-strong">Run History</span>
               </div>
 
-              <div className="flex flex-1 items-center justify-end gap-6">
+              <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:flex-1 sm:justify-end sm:gap-6">
                 {/* Counters */}
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-0.5 p-0.5">
@@ -286,7 +286,7 @@ export function DeploymentLogsDrawer({
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
                   <button
                     onClick={() => {
                       setAutoScroll(true);
@@ -295,10 +295,10 @@ export function DeploymentLogsDrawer({
                         behavior: "smooth",
                       });
                     }}
-                    className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
+                    className="flex items-center gap-1.5 rounded px-1 py-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated sm:gap-2 sm:px-0.5"
                   >
                     <ChevronsDown className="size-4" />
-                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">Bottom</span>
+                    <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px] sm:inline">Bottom</span>
                   </button>
                   <button
                     onClick={async () => {
@@ -318,21 +318,21 @@ export function DeploymentLogsDrawer({
                       }
                       downloadLogsClientFallback(logs);
                     }}
-                    className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
+                    className="flex items-center gap-1.5 rounded px-1 py-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated sm:gap-2 sm:px-0.5"
                   >
                     <DownloadSimple className="size-4" />
                     <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">Download</span>
                   </button>
                   <button
                     onClick={collapseAll}
-                    className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
+                    className="flex items-center gap-1.5 rounded px-1 py-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated sm:gap-2 sm:px-0.5"
                   >
                     <ChevronsDownUp className="size-4" />
                     <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">Collapse</span>
                   </button>
                   <button
                     onClick={() => onOpenChange(false)}
-                    className="flex items-center gap-2 rounded p-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated"
+                    className="flex items-center gap-1.5 rounded px-1 py-0.5 text-dash-text-strong transition-colors hover:bg-dash-bg-elevated sm:gap-2 sm:px-0.5"
                   >
                     <X className="size-4" />
                     <span className="font-logs text-xs leading-[1.4] tracking-[-0.01px]">Close</span>
@@ -353,13 +353,13 @@ export function DeploymentLogsDrawer({
                     Array.from({ length: 10 }).map((_, index) => (
                       <tr key={`skeleton-${index}`} className="border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]">
                         <td className="align-top">
-                          <div className="flex items-center gap-3 py-2.5 pl-5 pr-2">
+                          <div className="flex items-center gap-3 py-2.5 pl-3.5 pr-2 sm:pl-5">
                             <div className="h-3.5 w-3.5 animate-pulse rounded bg-dash-border-soft" />
-                            <div className="h-3.5 w-60 animate-pulse rounded bg-dash-border-soft" />
+                            <div className="h-3.5 w-48 animate-pulse rounded bg-dash-border-soft sm:w-60" />
                           </div>
                         </td>
-                        <td className="w-[100px] border-l-[0.5px] border-[#e5e5e5] align-top sm:w-[200px] dark:border-[#2a2a2b]">
-                          <div className="py-2.5 pl-4 pr-3">
+                        <td className="w-[88px] border-l-[0.5px] border-[#e5e5e5] align-top sm:w-[200px] dark:border-[#2a2a2b]">
+                          <div className="py-2.5 pl-3 pr-2 sm:pl-4 sm:pr-3">
                             <div className="h-3.5 w-28 animate-pulse rounded bg-dash-border-soft" />
                           </div>
                         </td>
@@ -398,7 +398,7 @@ export function DeploymentLogsDrawer({
                                   toggleSection(index);
                                 }}
                                 onDoubleClick={() => copyLogLine(log, index)}
-                                className="flex w-full items-center gap-3 py-2.5 pl-5 pr-2 text-left transition-colors hover:bg-dash-bg-elevated"
+                                className="flex w-full items-center gap-3 py-2.5 pl-3.5 pr-2 text-left transition-colors hover:bg-dash-bg-elevated sm:pl-5"
                               >
                                 {canCollapse ? (
                                   <ChevronRight
@@ -424,7 +424,7 @@ export function DeploymentLogsDrawer({
                               <button
                                 type="button"
                                 onClick={() => copyLogLine(log, index)}
-                                className="flex w-full items-start gap-3 py-2.5 pl-12 pr-2 text-left transition-colors hover:bg-dash-bg-elevated"
+                                className="flex w-full items-start gap-3 py-2.5 pl-9 pr-2 text-left transition-colors hover:bg-dash-bg-elevated sm:pl-12"
                               >
                                 <span
                                   className={`flex-1 whitespace-pre-wrap font-logs text-xs leading-[1.4] tracking-[-0.01px] ${detailClasses.text}`}
@@ -438,8 +438,8 @@ export function DeploymentLogsDrawer({
                             )}
                           </td>
 
-                          <td className="w-[100px] border-l-[0.5px] border-[#e5e5e5] align-top dark:border-[#2a2a2b] sm:w-[200px]">
-                            <div className="whitespace-nowrap py-2.5 pl-4 pr-3">
+                          <td className="w-[88px] border-l-[0.5px] border-[#e5e5e5] align-top dark:border-[#2a2a2b] sm:w-[200px]">
+                            <div className="whitespace-nowrap py-2.5 pl-3 pr-2 sm:pl-4 sm:pr-3">
                               <span
                                 className={`font-logs text-xs leading-[1.4] tracking-[-0.01px] ${
                                   isSection ? "text-dash-text-strong" : detailClasses.timestamp

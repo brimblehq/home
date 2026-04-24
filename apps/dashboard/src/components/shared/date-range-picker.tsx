@@ -48,6 +48,9 @@ function clampRangeToBounds(range: DateRange | undefined, minDate?: Date, maxDat
 
 export function DateRangePicker({ value, onChange, minDate, maxDate, children }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 639px)").matches : false,
+  );
   const [draft, setDraft] = useState<DateRange | undefined>(clampRangeToBounds(value, minDate, maxDate));
   const ref = useRef<HTMLDivElement>(null);
 
@@ -65,6 +68,19 @@ export function DateRangePicker({ value, onChange, minDate, maxDate, children }:
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(max-width: 639px)");
+    const updateViewportMode = () => {
+      setIsMobileView(media.matches);
+    };
+
+    updateViewportMode();
+    media.addEventListener("change", updateViewportMode);
+    return () => media.removeEventListener("change", updateViewportMode);
+  }, []);
 
   function handleApply() {
     onChange(clampRangeToBounds(draft, minDate, maxDate));
@@ -94,13 +110,13 @@ export function DateRangePicker({ value, onChange, minDate, maxDate, children }:
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 top-full z-50 mt-1.5 origin-top-right"
+            className="absolute left-0 right-0 top-full z-50 mt-1.5 origin-top sm:left-auto sm:right-0 sm:origin-top-right"
           >
-            <div className="brimble-date-picker flex flex-col overflow-clip rounded-[4px] border-[0.5px] border-[#d9dadd] bg-dash-bg shadow-[0px_4px_20px_-8px_rgba(18,18,23,0.25),0px_1px_2px_rgba(18,18,23,0.07)] dark:border-dash-border">
+            <div className="brimble-date-picker flex w-full flex-col overflow-clip rounded-[4px] border-[0.5px] border-[#d9dadd] bg-dash-bg shadow-[0px_4px_20px_-8px_rgba(18,18,23,0.25),0px_1px_2px_rgba(18,18,23,0.07)] sm:w-auto dark:border-dash-border">
               {/* Calendar area */}
               <DayPicker
                 mode="range"
-                numberOfMonths={2}
+                numberOfMonths={isMobileView ? 1 : 2}
                 selected={draft}
                 onSelect={setDraft}
                 disabled={[...(minDate ? [{ before: minDate }] : []), ...(maxDate ? [{ after: maxDate }] : [])]}
@@ -108,8 +124,8 @@ export function DateRangePicker({ value, onChange, minDate, maxDate, children }:
                 weekStartsOn={1}
                 classNames={{
                   root: "relative",
-                  months: "rdp-months flex",
-                  month: "rdp-month relative w-[296px]",
+                  months: "rdp-months flex flex-col sm:flex-row",
+                  month: "rdp-month relative w-full sm:w-[296px]",
                   month_caption:
                     "rdp-month_caption flex items-center justify-center border-b-[0.5px] border-[#d9dadd] px-3 py-3 dark:border-dash-border",
                   caption_label: "text-[13px] font-medium leading-5 text-dash-text-strong",
@@ -140,21 +156,21 @@ export function DateRangePicker({ value, onChange, minDate, maxDate, children }:
               />
 
               {/* Footer */}
-              <div className="flex items-center justify-between border-t-[0.5px] border-[#d9dadd] px-4 py-3.5 dark:border-dash-border">
-                <div className="flex items-center gap-1 text-[13px] font-medium leading-5">
+              <div className="flex flex-col gap-3 border-t-[0.5px] border-[#d9dadd] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between dark:border-dash-border">
+                <div className="min-w-0 text-[13px] font-medium leading-5">
                   <span className="text-dash-text-faded">Range:</span>
-                  <span className="text-dash-text-strong">{rangeLabel}</span>
+                  <span className="ml-1 inline-block max-w-full truncate align-bottom text-dash-text-strong">{rangeLabel}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-stretch sm:self-auto">
                   <button
                     onClick={handleCancel}
-                    className="flex h-[34px] items-center rounded-[4px] border border-dash-border-soft bg-dash-bg px-3.5 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
+                    className="flex h-[34px] flex-1 items-center justify-center rounded-[4px] border border-dash-border-soft bg-dash-bg px-3.5 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated sm:flex-none"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleApply}
-                    className="flex h-[34px] items-center rounded-[4px] bg-[#010f1a] px-4 text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-[#0a1f2e] dark:bg-white dark:text-[#010f1a] dark:hover:bg-white/90"
+                    className="flex h-[34px] flex-1 items-center justify-center rounded-[4px] bg-[#010f1a] px-4 text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-[#0a1f2e] sm:flex-none dark:bg-white dark:text-[#010f1a] dark:hover:bg-white/90"
                   >
                     Apply
                   </button>

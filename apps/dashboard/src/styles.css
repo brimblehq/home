@@ -440,6 +440,12 @@ code {
   border-right-color: var(--dash-border);
 }
 
+@media (max-width: 639px) {
+  .brimble-date-picker .rdp-months > .rdp-month:first-child {
+    border-right: 0;
+  }
+}
+
 /* ─ Range: start & end day pills ─ */
 .brimble-date-picker .rdp-range-start .rdp-day_button,
 .brimble-date-picker .rdp-range-end .rdp-day_button {
