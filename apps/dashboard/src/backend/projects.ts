@@ -1,4 +1,3 @@
-import config from "@/config";
 import type { ApiClient, ApiListResponse } from "./types";
 import { notImplemented } from "./utils";
 import { asNonEmptyString, asRecord, asString, pickBoolean, pickNonEmptyString, pickNumber, pickString } from "./normalize";
@@ -565,19 +564,13 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
         throw new Error("Message must be between 5 and 10000 characters.");
       }
 
-      const path = `${listEndpoint}/${encodeURIComponent(projectId)}/debug-suggestions`;
-      const fullUrl = `${config.gatewayUrl}${path}`;
-      const requestBody = { logId, message };
-      // eslint-disable-next-line no-console
-      console.log("[debug-suggestions] POST", fullUrl, "body:", requestBody);
-
-      const response = await client.request<any>(path, {
-        method: "POST",
-        body: requestBody,
-      });
-
-      // eslint-disable-next-line no-console
-      console.log("[debug-suggestions] response:", JSON.stringify(response?.data ?? response, null, 2));
+      const response = await client.request<any>(
+        `${listEndpoint}/${encodeURIComponent(projectId)}/debug-suggestions`,
+        {
+          method: "POST",
+          body: { logId, message },
+        },
+      );
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rootRecord = asRecord(root) ?? {};
