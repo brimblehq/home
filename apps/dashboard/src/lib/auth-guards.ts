@@ -24,10 +24,6 @@ export async function enforceRouteAuth(pathname: string, search?: string) {
   const isPublicRoute = publicRoutes.has(pathname);
   const isTwoFactorRoute = pathname === "/2fa";
 
-  if (!isPublicRoute && isSessionRecentlyVerified()) {
-    return { session: true };
-  }
-
   if (isPublicRoute && !isTwoFactorRoute && isSessionRecentlyVerified()) {
     const nextParam = new URLSearchParams(search?.startsWith("?") ? search : `?${search || ""}`).get("next");
     throw redirect({ to: nextParam || "/" });

@@ -44,6 +44,8 @@ function isNetworkError(error: unknown): boolean {
 }
 
 function getFriendlyError(error: unknown): { title: string; description: string } {
+  console.log(`ERROR: APPLICATION HERE HERE ->`, error);
+
   if (isNetworkError(error)) {
     return {
       title: "Can't reach our servers",
