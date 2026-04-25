@@ -22,12 +22,13 @@ export interface Project {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Database, Star, MoreVertical } from "lucide-react";
+import { Database, ArrowLeftRight, MoreVertical } from "lucide-react";
 import { getWorkspaceFromSearch } from "@/utils/topbar-navigation";
 import { ProjectCardTags } from "@/components/projects/project-card-tags";
 import { TagAssignmentPopover } from "@/components/projects/tag-assignment-popover";
 import { StatusChip } from "@/components/shared/status-chip";
 import { useTagsStore } from "@/hooks/use-tags-store";
+import { TransferProjectModal } from "@/components/project/transfer-project-modal";
 
 function normalizeProjectHostname(domain?: string): string | null {
   const raw = domain?.trim();
@@ -141,7 +142,7 @@ export function ProjectCard({ project, onTagsChange }: { project: Project; onTag
   const slug = (project.slug || project.name).toLowerCase().replace(/\s+/g, "-");
   const projectRouteId = slug || project.id || project.name;
   const projectTagTargetId = project.id || slug;
-  const [starred, setStarred] = useState(project.starred ?? false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
   const dotsRef = useRef<HTMLButtonElement>(null);
   const allTags = useTagsStore((s) => s.tags);
@@ -231,14 +232,16 @@ export function ProjectCard({ project, onTagsChange }: { project: Project; onTag
               <MoreVertical className="size-4" />
             </button>
             <button
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setStarred(!starred);
+                setTransferOpen(true);
               }}
-              className="shrink-0 text-dash-text-extra-faded transition-colors hover:text-[#f5a623]"
+              aria-label="Transfer project to workspace"
+              className="shrink-0 text-dash-text-extra-faded transition-colors hover:text-dash-text-strong"
             >
-              <Star className="size-4" fill={starred ? "#f5a623" : "none"} stroke={starred ? "#f5a623" : "currentColor"} />
+              <ArrowLeftRight className="size-4" />
             </button>
           </div>
         </div>
@@ -250,6 +253,13 @@ export function ProjectCard({ project, onTagsChange }: { project: Project; onTag
         onOpenChange={setTagPopoverOpen}
         assignedTagIds={projectTags.map((t) => t.id)}
         onAssignedTagIdsChange={handleAssignedTagIdsChange}
+      />
+      <TransferProjectModal
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        projectId={projectTagTargetId}
+        projectName={project.name}
+        currentWorkspaceSlug={workspace}
       />
     </Link>
   );

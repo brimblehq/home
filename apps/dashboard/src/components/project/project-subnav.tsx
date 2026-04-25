@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { cn } from "@brimble/ui";
 import { Link, getRouteApi, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Star, Share2, Check, Plug, Bolt, ArrowUp, ChevronDown, MoreHorizontal } from "lucide-react";
+import { Share2, Check, Plug, Bolt, ArrowUp, ChevronDown, MoreHorizontal, ArrowLeftRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
@@ -46,6 +46,7 @@ import {
 import { markDeploymentHistoryForRefresh } from "@/utils/deployment-history-refresh";
 import { useHasActiveDeployment } from "@/hooks/use-has-active-deployment";
 import { DatabaseConnectionModal } from "./database-connection-modal";
+import { TransferProjectModal } from "./transfer-project-modal";
 import { useFeatureFlag, FeatureFlags } from "@/lib/feature-flags";
 
 const baseTabs = [
@@ -115,6 +116,7 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
   }) => Promise<{ message?: string }>;
   const haptics = useHaptics();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [confirmName, setConfirmName] = useState("");
   const [copied, setCopied] = useState(false);
@@ -530,9 +532,18 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
             </a>
           )}
           <div className="flex items-center gap-4">
-            {/*<button className="text-dash-text-faded hover:text-dash-text-strong transition-colors">
-              <Star className="size-4" />
-            </button>*/}
+            <SimpleTooltip content="Transfer project to workspace">
+              <button
+                onClick={() => {
+                  haptics.selection();
+                  setTransferOpen(true);
+                }}
+                className="text-dash-text-faded transition-colors hover:text-dash-text-strong"
+                aria-label="Transfer project to workspace"
+              >
+                <ArrowLeftRight className="size-4" />
+              </button>
+            </SimpleTooltip>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(window.location.href);
@@ -703,6 +714,14 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
         onOpenChange={setConnectOpen}
         connectionUri={project?.connectionUri}
         isActive={canOpenDatabaseConnection}
+      />
+
+      <TransferProjectModal
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        projectId={actualProjectId}
+        projectName={projectName}
+        currentWorkspaceSlug={workspaceParam}
       />
     </>
   );

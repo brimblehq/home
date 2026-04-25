@@ -379,6 +379,29 @@ export const debugSuggestionsServerFn = createServerFn({
   return withTokenRefresh((api) => api.projects.debugSuggestions(projectId, { logId, message }));
 });
 
+export const transferProjectServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as
+    | {
+        projectId: string;
+        teamId: string;
+      }
+    | undefined;
+
+  const projectId = payload?.projectId?.trim();
+  const teamId = payload?.teamId?.trim();
+
+  if (!projectId) {
+    throw new Error("Project ID is required");
+  }
+  if (!teamId) {
+    throw new Error("Please select a workspace to transfer to.");
+  }
+
+  return withTokenRefresh((api) => api.projects.transfer(projectId, { teamId }));
+});
+
 export const saveProjectGeneralConfigServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {

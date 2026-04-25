@@ -229,6 +229,10 @@ export interface ProjectsApi {
     projectId: string,
     input: { logId: string; message: string },
   ): Promise<DebugSuggestionsResponse>;
+  transfer(
+    projectId: string,
+    input: { teamId: string },
+  ): Promise<{ id?: string; team?: string; environmentId?: string }>;
   databaseBackup(projectId: string, input?: { teamId?: string }): Promise<{ message?: string }>;
   databaseRefresh(projectId: string, input?: { teamId?: string }): Promise<{ message?: string }>;
   updateDatabaseConfig(
@@ -644,6 +648,29 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
         usage,
         suggestions,
       } satisfies DebugSuggestionsResponse;
+    },
+    async transfer(projectId, input) {
+      const teamId = input.teamId.trim();
+      if (!teamId) {
+        throw new Error("Team ID is required");
+      }
+
+      const response = await client.request<any>(
+        `${listEndpoint}/transfer/${encodeURIComponent(projectId)}`,
+        {
+          method: "POST",
+          body: { teamId },
+        },
+      );
+
+      const root = response?.data?.data ?? response?.data ?? response ?? {};
+      const rootRecord = asRecord(root) ?? {};
+
+      return {
+        id: pickString(rootRecord, "id", "_id"),
+        team: pickString(rootRecord, "team"),
+        environmentId: pickString(rootRecord, "project_environment", "projectEnvironment", "environmentId"),
+      };
     },
     async databaseBackup(projectId, input) {
       const response = await client.request<any>("/core/v1/projects/database/backup", {
