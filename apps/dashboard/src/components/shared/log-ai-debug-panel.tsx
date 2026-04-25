@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Sparkles } from "lucide-react";
+import { Check, Copy, Sparkles } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { debugSuggestionsServerFn } from "@/server/projects/actions";
@@ -74,6 +74,7 @@ export function LogAiDebugPanel({ open, onOpenChange, projectId, logId, message 
 
   const trimmedMessage = message.trim();
   const enabled = open && Boolean(projectId && logId && trimmedMessage.length >= 5);
+  const [copied, setCopied] = useState(false);
 
   const query = useQuery<DebugSuggestionsResponse>({
     queryKey: ["debug-suggestions", projectId, logId, trimmedMessage],
@@ -107,6 +108,22 @@ export function LogAiDebugPanel({ open, onOpenChange, projectId, logId, message 
       ? "text-[#b37a10] dark:text-[#ffb020]"
       : "text-dash-text-faded";
 
+  const canCopy = !!query.data && !limited;
+
+  function handleCopy() {
+    if (!query.data) return;
+    const text = formatSuggestionsForClipboard(query.data);
+    navigator.clipboard.writeText(text).then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1200);
+      },
+      () => {
+        toast.error("Failed to copy to clipboard");
+      },
+    );
+  }
+
   return (
     <Modal open={open} onOpenChange={onOpenChange} width={640} className="max-h-[min(640px,calc(100vh-32px))]">
       <div className="flex shrink-0 items-start justify-between gap-3 rounded-t-lg border-b-[0.5px] border-dash-border bg-dash-bg-elevated px-6 py-4">
@@ -121,12 +138,24 @@ export function LogAiDebugPanel({ open, onOpenChange, projectId, logId, message 
             </Dialog.Description>
           </div>
         </div>
-        <span
-          className={`shrink-0 font-logs text-xs tabular-nums tracking-[-0.01px] ${usageTone}`}
-          aria-label={usage ? `${remaining} of ${usage.limit} daily uses left` : "Daily usage not yet loaded"}
-        >
-          {usage ? `[${remaining}/${usage.limit} left]` : "[—/— left]"}
-        </span>
+        <div className="flex shrink-0 items-center gap-3">
+          <span
+            className={`font-logs text-xs tabular-nums tracking-[-0.01px] ${usageTone}`}
+            aria-label={usage ? `${remaining} of ${usage.limit} daily uses left` : "Daily usage not yet loaded"}
+          >
+            {usage ? `[${remaining}/${usage.limit} left]` : "[—/— left]"}
+          </span>
+          {canCopy && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              aria-label="Copy analysis"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-dash-text-faded transition-colors hover:bg-dash-bg hover:text-dash-text-strong"
+            >
+              {copied ? <Check className="size-3.5 text-[#13d282]" /> : <Copy className="size-3.5" />}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 [scrollbar-color:rgba(0,0,0,0.14)_transparent] [scrollbar-width:thin] dark:[scrollbar-color:rgba(255,255,255,0.14)_transparent]">
@@ -282,4 +311,63 @@ function ActionRow({ action }: { action: DebugAction }) {
       )}
     </div>
   );
+}
+
+function formatSuggestionsForClipboard(data: DebugSuggestionsResponse): string {
+  const { suggestions } = data;
+  const parts: string[] = ["Debug with AI", ""];
+
+  if (suggestions.summary) {
+    parts.push(suggestions.summary, "");
+  }
+
+  if (suggestions.likelyCauses.length > 0) {
+    parts.push("Likely causes");
+    for (const cause of suggestions.likelyCauses) {
+      parts.push(`- ${cause.title} [${cause.confidence.toUpperCase()}]`);
+      if (cause.reason) parts.push(`  ${cause.reason}`);
+    }
+    parts.push("");
+  }
+
+  if (suggestions.actions.length > 0) {
+    parts.push("Suggested actions");
+    suggestions.actions.forEach((action, index) => {
+      parts.push(`${index + 1}. ${action.title} [${action.priority.toUpperCase()}]`);
+      if (action.why) parts.push(`   Why: ${action.why}`);
+      if (action.steps.length > 0) {
+        parts.push("   Steps:");
+        action.steps.forEach((step, i) => parts.push(`     ${i + 1}. ${step}`));
+      }
+      if (action.commands.length > 0) {
+        parts.push("   Commands:");
+        action.commands.forEach((cmd) => parts.push(`     $ ${cmd}`));
+      }
+      if (action.files.length > 0) {
+        parts.push(`   Files: ${action.files.join(", ")}`);
+      }
+      if (action.expectedResult) {
+        parts.push(`   Expected: ${action.expectedResult}`);
+      }
+    });
+    parts.push("");
+  }
+
+  if (suggestions.quickChecks.length > 0) {
+    parts.push("Quick checks");
+    for (const check of suggestions.quickChecks) {
+      parts.push(`- ${check}`);
+    }
+    parts.push("");
+  }
+
+  if (suggestions.notes.length > 0) {
+    parts.push("Notes");
+    for (const note of suggestions.notes) {
+      parts.push(`- ${note}`);
+    }
+    parts.push("");
+  }
+
+  return parts.join("\n").trimEnd();
 }
