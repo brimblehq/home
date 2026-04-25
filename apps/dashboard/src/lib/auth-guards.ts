@@ -43,7 +43,7 @@ export async function enforceRouteAuth(pathname: string, search?: string) {
     console.warn("[auth] enforceRouteAuth session check failed", error);
   }
 
-  if (!session && !authCheckFailed) {
+  if (!session) {
     session = await refreshSessionServerFn();
   }
 

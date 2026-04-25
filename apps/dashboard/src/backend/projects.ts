@@ -1,3 +1,4 @@
+import config from "@/config";
 import type { ApiClient, ApiListResponse } from "./types";
 import { notImplemented } from "./utils";
 import { asNonEmptyString, asRecord, asString, pickBoolean, pickNonEmptyString, pickNumber, pickString } from "./normalize";
@@ -170,6 +171,48 @@ export interface UpdateProjectInput {
   rootDirectory?: string;
 }
 
+export type DebugConfidence = "high" | "medium" | "low";
+export type DebugPriority = "high" | "medium" | "low";
+
+export interface DebugLikelyCause {
+  title: string;
+  confidence: DebugConfidence;
+  reason: string;
+}
+
+export interface DebugAction {
+  title: string;
+  priority: DebugPriority;
+  why: string;
+  steps: string[];
+  commands: string[];
+  files: string[];
+  expectedResult: string;
+}
+
+export interface DebugSuggestions {
+  summary: string;
+  likelyCauses: DebugLikelyCause[];
+  actions: DebugAction[];
+  quickChecks: string[];
+  notes: string[];
+}
+
+export interface DebugUsage {
+  count: number;
+  limit: number;
+  limited: boolean;
+}
+
+export interface DebugSuggestionsResponse {
+  model: string;
+  framework: unknown;
+  envNames: string[];
+  rootDir: unknown[];
+  usage: DebugUsage;
+  suggestions: DebugSuggestions;
+}
+
 export interface ProjectsApi {
   list(input?: ListProjectsInput): Promise<PaginatedProjectsResponse>;
   getById(projectId: string, input?: { teamId?: string }): Promise<Project>;
@@ -183,6 +226,10 @@ export interface ProjectsApi {
       payload?: Record<string, unknown>;
     },
   ): Promise<{ id?: string; message?: string }>;
+  debugSuggestions(
+    projectId: string,
+    input: { logId: string; message: string },
+  ): Promise<DebugSuggestionsResponse>;
   databaseBackup(projectId: string, input?: { teamId?: string }): Promise<{ message?: string }>;
   databaseRefresh(projectId: string, input?: { teamId?: string }): Promise<{ message?: string }>;
   updateDatabaseConfig(
@@ -507,6 +554,103 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
         id: pickString(rootRecord, "id", "_id"),
         message: pickString(rootRecord, "message"),
       };
+    },
+    async debugSuggestions(projectId, input) {
+      const message = input.message.trim();
+      const logId = input.logId.trim();
+      if (!logId) {
+        throw new Error("Log ID is required");
+      }
+      if (message.length < 5 || message.length > 10000) {
+        throw new Error("Message must be between 5 and 10000 characters.");
+      }
+
+      const path = `${listEndpoint}/${encodeURIComponent(projectId)}/debug-suggestions`;
+      const fullUrl = `${config.gatewayUrl}${path}`;
+      const requestBody = { logId, message };
+      // eslint-disable-next-line no-console
+      console.log("[debug-suggestions] POST", fullUrl, "body:", requestBody);
+
+      const response = await client.request<any>(path, {
+        method: "POST",
+        body: requestBody,
+      });
+
+      // eslint-disable-next-line no-console
+      console.log("[debug-suggestions] response:", JSON.stringify(response?.data ?? response, null, 2));
+
+      const root = response?.data?.data ?? response?.data ?? response ?? {};
+      const rootRecord = asRecord(root) ?? {};
+      const usageRecord = asRecord(rootRecord.usage) ?? {};
+      const suggestionsRecord = asRecord(rootRecord.suggestions) ?? {};
+
+      const mapConfidence = (value: unknown): DebugConfidence => {
+        const v = String(value ?? "").toLowerCase();
+        return v === "high" || v === "medium" || v === "low" ? (v as DebugConfidence) : "low";
+      };
+      const mapPriority = (value: unknown): DebugPriority => {
+        const v = String(value ?? "").toLowerCase();
+        return v === "high" || v === "medium" || v === "low" ? (v as DebugPriority) : "low";
+      };
+      const stringArray = (value: unknown): string[] =>
+        Array.isArray(value) ? value.map((item) => asString(item) ?? "").filter((item) => item.length > 0) : [];
+
+      const likelyCauses: DebugLikelyCause[] = Array.isArray(suggestionsRecord.likelyCauses)
+        ? suggestionsRecord.likelyCauses
+            .map((item: unknown) => {
+              const row = asRecord(item) ?? {};
+              const title = pickString(row, "title") ?? "";
+              if (!title) return null;
+              return {
+                title,
+                confidence: mapConfidence(row.confidence),
+                reason: pickString(row, "reason") ?? "",
+              } satisfies DebugLikelyCause;
+            })
+            .filter((item: DebugLikelyCause | null): item is DebugLikelyCause => item !== null)
+        : [];
+
+      const actions: DebugAction[] = Array.isArray(suggestionsRecord.actions)
+        ? suggestionsRecord.actions
+            .map((item: unknown) => {
+              const row = asRecord(item) ?? {};
+              const title = pickString(row, "title") ?? "";
+              if (!title) return null;
+              return {
+                title,
+                priority: mapPriority(row.priority),
+                why: pickString(row, "why") ?? "",
+                steps: stringArray(row.steps),
+                commands: stringArray(row.commands),
+                files: stringArray(row.files),
+                expectedResult: pickString(row, "expectedResult") ?? "",
+              } satisfies DebugAction;
+            })
+            .filter((item: DebugAction | null): item is DebugAction => item !== null)
+        : [];
+
+      const usage: DebugUsage = {
+        count: pickNumber(usageRecord, "count") ?? 0,
+        limit: pickNumber(usageRecord, "limit") ?? 0,
+        limited: pickBoolean(usageRecord, "limited") ?? false,
+      };
+
+      const suggestions: DebugSuggestions = {
+        summary: pickString(suggestionsRecord, "summary") ?? "",
+        likelyCauses,
+        actions,
+        quickChecks: stringArray(suggestionsRecord.quickChecks),
+        notes: stringArray(suggestionsRecord.notes),
+      };
+
+      return {
+        model: pickString(rootRecord, "model") ?? "",
+        framework: rootRecord.framework ?? null,
+        envNames: stringArray(rootRecord.envNames),
+        rootDir: Array.isArray(rootRecord.rootDir) ? rootRecord.rootDir : [],
+        usage,
+        suggestions,
+      } satisfies DebugSuggestionsResponse;
     },
     async databaseBackup(projectId, input) {
       const response = await client.request<any>("/core/v1/projects/database/backup", {

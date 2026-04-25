@@ -39,6 +39,20 @@ import { workspaceLoaderDeps } from "@/utils/workspace-route-search";
 import { getRouteApi } from "@tanstack/react-router";
 
 const rootRoute = getRouteApi("__root__");
+const EMPTY_PROJECTS: BackendProject[] = [];
+const EMPTY_OVERVIEW: OverviewSummary = {
+  total: {
+    project: 0,
+    domain: 0,
+    team: 0,
+  },
+  deploymentBuildTime: {
+    recent: null,
+    fastest: null,
+    slowest: null,
+  },
+};
+const EMPTY_BANDWIDTH: BandwidthSummary = { results: [], total: 0 };
 
 export const Route = createFileRoute("/")({
   staleTime: 300_000,
@@ -78,7 +92,7 @@ export const Route = createFileRoute("/")({
       environments,
     });
 
-    const [projectsResult, overviewResult, bandwidthResult] = await Promise.all([
+    const [projectsResult, overviewResult, bandwidthResult] = await Promise.allSettled([
       (listHomeProjectsServerFn as unknown as (input: {
         data: { workspace?: string; environmentId?: string };
       }) => Promise<ApiListResponse<BackendProject>>)({
@@ -93,7 +107,7 @@ export const Route = createFileRoute("/")({
         data: { workspace?: string; environmentId?: string };
       }) => Promise<BandwidthSummary>)({
         data: { workspace, environmentId },
-      }).catch(() => ({ results: [], total: 0 }) as BandwidthSummary),
+      }),
     ]);
 
     const frameworkLogoMap = new Map<string, string>();
@@ -101,10 +115,20 @@ export const Route = createFileRoute("/")({
       if (fw.slug && fw.logo) frameworkLogoMap.set(fw.slug.toLowerCase(), fw.logo);
     }
 
+    if (projectsResult.status === "rejected") {
+      console.warn("[dashboard-home loader] failed to load projects", projectsResult.reason);
+    }
+    if (overviewResult.status === "rejected") {
+      console.warn("[dashboard-home loader] failed to load overview", overviewResult.reason);
+    }
+    if (bandwidthResult.status === "rejected") {
+      console.warn("[dashboard-home loader] failed to load bandwidth", bandwidthResult.reason);
+    }
+
     return {
-      projects: projectsResult.items,
-      overview: overviewResult,
-      bandwidth: bandwidthResult,
+      projects: projectsResult.status === "fulfilled" ? projectsResult.value.items : EMPTY_PROJECTS,
+      overview: overviewResult.status === "fulfilled" ? overviewResult.value : EMPTY_OVERVIEW,
+      bandwidth: bandwidthResult.status === "fulfilled" ? bandwidthResult.value : EMPTY_BANDWIDTH,
       featuredAddons: mcpTemplatesResult.servers.slice(0, 3).map(mapMcpTemplateToAddon),
       frameworkLogos: Object.fromEntries(frameworkLogoMap),
       workspace,

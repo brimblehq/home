@@ -84,6 +84,7 @@ export interface RepositoryFrameworkDefaults {
   outputDirectory?: string;
   logo?: string;
   port?: number;
+  type?: string;
 }
 
 export interface RepositoryDirectoryEntry {
@@ -150,6 +151,7 @@ function mapRepositoryFrameworkDefaults(value: unknown): RepositoryFrameworkDefa
     outputDirectory: pickString(row, "outputDirectory"),
     logo: pickString(row, "logo"),
     port: pickNumber(row, "port"),
+    type: pickString(row, "type"),
   };
 }
 

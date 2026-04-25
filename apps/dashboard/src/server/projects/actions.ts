@@ -351,6 +351,34 @@ export const redeployProjectServerFn = createServerFn({
   });
 });
 
+export const debugSuggestionsServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as
+    | {
+        projectId: string;
+        logId: string;
+        message: string;
+      }
+    | undefined;
+
+  const projectId = payload?.projectId?.trim();
+  const logId = payload?.logId?.trim();
+  const message = payload?.message;
+
+  if (!projectId) {
+    throw new Error("Project ID is required");
+  }
+  if (!logId) {
+    throw new Error("Log ID is required");
+  }
+  if (!message?.trim()) {
+    throw new Error("Message is required");
+  }
+
+  return withTokenRefresh((api) => api.projects.debugSuggestions(projectId, { logId, message }));
+});
+
 export const saveProjectGeneralConfigServerFn = createServerFn({
   method: "POST",
 }).handler(async ({ data }) => {

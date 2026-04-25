@@ -533,7 +533,7 @@ function ProjectLayout() {
             logs={selectedDeploymentLogs}
             loading={drawerLogsLoading}
             emptyMessage={drawerLogsError || "No logs available for this deployment yet."}
-            projectId={projectId}
+            projectId={project?.id || projectId}
             deploymentId={selectedDeployment.id}
             workspace={workspace}
           />

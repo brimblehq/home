@@ -959,6 +959,7 @@ function BuildSection({
   initialValues,
   onSubmit,
   showCommands = true,
+  showStartCommand = true,
   showHealthCheck = true,
   showDockerSourceFields = false,
   showOutputDirectory = false,
@@ -969,6 +970,7 @@ function BuildSection({
   initialValues: BuildInitialValues;
   onSubmit: (values: BuildInitialValues) => Promise<void>;
   showCommands?: boolean;
+  showStartCommand?: boolean;
   showHealthCheck?: boolean;
   showDockerSourceFields?: boolean;
   showOutputDirectory?: boolean;
@@ -1094,19 +1096,23 @@ function BuildSection({
 
           <hr className="border-dash-border" />
 
-          {/* Row 3: Start command */}
-          <div className="flex flex-col gap-1.5 px-4 py-4">
-            <label className="text-sm font-medium text-dash-text-strong">Start command</label>
-            <input
-              type="text"
-              value={values.startCommand}
-              onChange={(e) => setValues((v) => ({ ...v, startCommand: e.target.value }))}
-              placeholder="npm start"
-              readOnly={!canWrite}
-              className={inputClass}
-            />
-          </div>
-          <hr className="border-dash-border" />
+          {showStartCommand && (
+            <>
+              {/* Row 3: Start command */}
+              <div className="flex flex-col gap-1.5 px-4 py-4">
+                <label className="text-sm font-medium text-dash-text-strong">Start command</label>
+                <input
+                  type="text"
+                  value={values.startCommand}
+                  onChange={(e) => setValues((v) => ({ ...v, startCommand: e.target.value }))}
+                  placeholder="npm start"
+                  readOnly={!canWrite}
+                  className={inputClass}
+                />
+              </div>
+              <hr className="border-dash-border" />
+            </>
+          )}
         </>
       )}
 
@@ -2015,7 +2021,7 @@ function ConfigurationPage() {
           workspace,
           installCommand: values.installCommand,
           buildCommand: values.buildCommand,
-          startCommand: values.startCommand,
+          startCommand: isStaticProject(project) ? "" : values.startCommand,
           healthCheckPath: values.healthCheckPath,
           preStartCommand: values.preStartCommand,
           outputDirectory: values.outputDirectory,
@@ -2205,6 +2211,7 @@ function ConfigurationPage() {
                   initialValues={buildInitialValues}
                   onSubmit={handleSubmitBuild}
                   showCommands={sourceFieldsVisible && !noBuildFramework}
+                  showStartCommand={!isStaticProject(project)}
                   showHealthCheck={healthCheckVisible}
                   showDockerSourceFields={dockerSourceFieldsVisible}
                   showOutputDirectory={sourceFieldsVisible && !noBuildFramework}

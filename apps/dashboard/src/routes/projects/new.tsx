@@ -3,6 +3,8 @@ import { IpWhitelist } from "@/components/shared/ip-whitelist";
 import { createFileRoute, getRouteApi, Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import {
   ArrowLeft,
   Search,
@@ -1746,13 +1748,6 @@ function Phase3Configure({
   const lastAppliedSourceRef = useRef<string>("");
 
   const [projectName, setProjectName] = useState(defaultName.toLowerCase().replace(/[^a-z-]/g, ""));
-
-  const projectNameError = (() => {
-    if (!projectName.trim()) return null;
-    if (/[^a-z-]/.test(projectName)) return "Project name can only contain lowercase letters and hyphens.";
-    return null;
-  })();
-  const hasProjectNameError = projectNameError !== null;
   const [region, setRegion] = useState(regionOptions[0]?.id ?? "");
   const [branch, setBranch] = useState(branchOptions?.[0] ?? "main");
   const [rootDir, setRootDir] = useState("./");
@@ -1762,6 +1757,40 @@ function Phase3Configure({
   const pricing = usePricing();
   const isFreePlan = planKey === "free";
   const limitReached = projectLimit !== null && projectCount > projectLimit;
+  const backendOnFreePlan = isFreePlan && detectedFramework?.type === "backend";
+
+  const deployValidationSchema = useMemo(
+    () =>
+      Yup.object({
+        projectName: Yup.string()
+          .trim()
+          .required("Project name is required.")
+          .matches(/^[a-z-]+$/, "Project name can only contain lowercase letters and hyphens."),
+        region: Yup.string().required("Please select a region."),
+        limitReached: Yup.boolean().oneOf(
+          [false],
+          "You have reached your project limit. Upgrade your plan to create more.",
+        ),
+        backendOnFreePlan: Yup.boolean().oneOf(
+          [false],
+          `${detectedFramework?.name ?? "This framework"} runs server-side and needs a paid plan.`,
+        ),
+      }),
+    [detectedFramework?.name],
+  );
+
+  const deployFormik = useFormik({
+    initialValues: { projectName, region, limitReached, backendOnFreePlan },
+    enableReinitialize: true,
+    validateOnMount: true,
+    validationSchema: deployValidationSchema,
+    onSubmit: () => {},
+  });
+
+  const projectNameError =
+    projectName.trim() && deployFormik.errors.projectName ? deployFormik.errors.projectName : null;
+  const hasProjectNameError = projectNameError !== null;
+  const canSubmit = deployFormik.isValid;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const nextPlanName = useMemo(() => {
     const currentIdx = pricing.plans.findIndex((p) => p.id === planKey || p.name.toLowerCase() === planKey);
@@ -1997,7 +2026,7 @@ function Phase3Configure({
       framework,
       preStartCommand: preStartCmd.trim(),
       buildCommand: buildCmd.trim(),
-      startCommand: startCmd.trim(),
+      startCommand: serviceType === ServiceType.Static ? "" : startCmd.trim(),
       outputDirectory: outputDir.trim(),
       installCommand: installCmd.trim(),
       envVars: cleanedEnvVars,
@@ -2174,19 +2203,21 @@ function Phase3Configure({
                   />
                 </div>
 
-                <div>
-                  <label className="mb-1.5 block text-sm text-dash-text-body">Start command</label>
-                  <input
-                    type="text"
-                    value={startCmd}
-                    onChange={(e) => setStartCmd(e.target.value)}
-                    placeholder="npm run start"
-                    className={`${inputClass} font-family-mono text-[13px]`}
-                  />
-                  <p className="mt-2 text-xs text-dash-text-extra-faded">
-                    Make sure your app listens on the port Brimble provides via the <code className="rounded bg-dash-bg-elevated px-1 py-0.5 font-family-mono text-[11px] text-dash-text-body">PORT</code> env var so health checks pass on startup.
-                  </p>
-                </div>
+                {serviceType !== ServiceType.Static && (
+                  <div>
+                    <label className="mb-1.5 block text-sm text-dash-text-body">Start command</label>
+                    <input
+                      type="text"
+                      value={startCmd}
+                      onChange={(e) => setStartCmd(e.target.value)}
+                      placeholder="npm run start"
+                      className={`${inputClass} font-family-mono text-[13px]`}
+                    />
+                    <p className="mt-2 text-xs text-dash-text-extra-faded">
+                      Make sure your app listens on the port Brimble provides via the <code className="rounded bg-dash-bg-elevated px-1 py-0.5 font-family-mono text-[11px] text-dash-text-body">PORT</code> env var so health checks pass on startup.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
@@ -2368,15 +2399,31 @@ function Phase3Configure({
 
       {/* Save / Deploy actions */}
       <div className="mt-8">
+        {backendOnFreePlan && (
+          <div className="mb-4 flex items-center gap-3 rounded-md border-[0.5px] border-dash-border bg-[#f5a623]/5 px-4 py-3 dark:bg-[#f5a623]/15">
+            <Lock className="size-4 shrink-0 text-[#f5a623]" />
+            <p className="flex-1 text-sm text-dash-text-strong">
+              <span className="font-medium">{detectedFramework?.name || "This framework"}</span> runs server-side and needs a paid
+              plan &mdash; free plans only support static sites.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowUpgradeModal(true)}
+              className="shrink-0 text-sm font-medium text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
+            >
+              Upgrade plan
+            </button>
+          </div>
+        )}
         <div className="flex flex-col gap-2 sm:flex-row">
           <GlossyButton
             variant="white"
             className="sm:min-w-[190px]"
             loading={saving}
             loadingLabel="Saving..."
-            disabled={deploying || saving || !projectName.trim() || !region || limitReached || hasProjectNameError}
+            disabled={deploying || saving || !canSubmit}
             onClick={() => {
-              if (limitReached) {
+              if (limitReached || backendOnFreePlan) {
                 setShowUpgradeModal(true);
                 return;
               }
@@ -2396,9 +2443,9 @@ function Phase3Configure({
             fullWidth
             loading={deploying}
             loadingLabel="Deploying..."
-            disabled={deploying || saving || !projectName.trim() || !region || limitReached || hasProjectNameError}
+            disabled={deploying || saving || !canSubmit}
             onClick={() => {
-              if (limitReached) {
+              if (limitReached || backendOnFreePlan) {
                 setShowUpgradeModal(true);
                 return;
               }
