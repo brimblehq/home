@@ -67,13 +67,6 @@ const DEFAULT_ROOT_LOADER_DATA: RootLoaderData = {
   pricing: DEFAULT_PRICING,
 };
 
-const globalDataCache: {
-  workspaces: ApiListResponse<Workspace> | null;
-  pricing: Pricing | null;
-  fetchedAt: number;
-} = { workspaces: null, pricing: null, fetchedAt: 0 };
-const GLOBAL_CACHE_TTL = 300_000;
-
 function createRootLoaderData(overrides: Partial<RootLoaderData> = {}): RootLoaderData {
   return {
     ...DEFAULT_ROOT_LOADER_DATA,
@@ -138,14 +131,7 @@ export const Route = createRootRoute({
         workspace = rawWorkspace.trim();
       }
 
-      const hasGlobalCache = globalDataCache.fetchedAt > 0 && Date.now() - globalDataCache.fetchedAt < GLOBAL_CACHE_TTL;
-
-      let workspacesRequest: Promise<ApiListResponse<Workspace>>;
-      if (hasGlobalCache && globalDataCache.workspaces) {
-        workspacesRequest = Promise.resolve(globalDataCache.workspaces);
-      } else {
-        workspacesRequest = (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)();
-      }
+      const workspacesRequest = (listWorkspacesServerFn as unknown as () => Promise<ApiListResponse<Workspace>>)();
 
       const userOverviewRequest = (async () => {
         let teamId: string | undefined;
@@ -173,9 +159,7 @@ export const Route = createRootRoute({
         (listHomeProjectsServerFn as unknown as (input: { data: { workspace?: string } }) => Promise<ApiListResponse<Project>>)({
           data: { workspace },
         }),
-        hasGlobalCache && globalDataCache.pricing
-          ? Promise.resolve(globalDataCache.pricing)
-          : (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
+        (getSubscriptionSpecsServerFn as unknown as () => Promise<Pricing>)(),
         (listTagsServerFn as unknown as (input: { data: { workspace?: string } }) => Promise<BackendTag[]>)({
           data: { workspace },
         }),
@@ -184,16 +168,6 @@ export const Route = createRootRoute({
         }),
         userOverviewRequest,
       ]);
-
-      if (workspaces.status === "fulfilled") {
-        globalDataCache.workspaces = workspaces.value;
-      }
-      if (pricingResult.status === "fulfilled") {
-        globalDataCache.pricing = pricingResult.value;
-      }
-      if (workspaces.status === "fulfilled" || pricingResult.status === "fulfilled") {
-        globalDataCache.fetchedAt = Date.now();
-      }
 
       return createRootLoaderData({
         workspace,

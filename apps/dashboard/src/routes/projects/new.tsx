@@ -21,7 +21,6 @@ import {
   HardDrive,
   ArrowUpRight,
   AlertTriangle,
-  Info,
 } from "lucide-react";
 import { GithubLogo, Cube, Database, CircleNotch } from "@phosphor-icons/react";
 import { hapticToast as toast } from "@/utils/haptic-toast";
@@ -1703,10 +1702,7 @@ type Phase3DeployInput = {
   mountPath?: string;
 };
 
-const SERVER_RUNTIME_FRAMEWORK_TYPES: string[] = [
-  FrameworkApplicationType.Ssr,
-  FrameworkApplicationType.Backend,
-];
+const SERVER_RUNTIME_FRAMEWORK_TYPES: string[] = [FrameworkApplicationType.Ssr, FrameworkApplicationType.Backend, "other"];
 
 function Phase3Configure({
   sourceType,
@@ -1776,10 +1772,7 @@ function Phase3Configure({
           .required("Project name is required.")
           .matches(/^[a-z-]+$/, "Project name can only contain lowercase letters and hyphens."),
         region: Yup.string().required("Please select a region."),
-        limitReached: Yup.boolean().oneOf(
-          [false],
-          "You have reached your project limit. Upgrade your plan to create more.",
-        ),
+        limitReached: Yup.boolean().oneOf([false], "You have reached your project limit. Upgrade your plan to create more."),
         backendOnFreePlan: Yup.boolean().oneOf(
           [false],
           `${detectedFramework?.name ?? "This framework"} runs server-side and needs a paid plan.`,
@@ -1796,8 +1789,7 @@ function Phase3Configure({
     onSubmit: () => {},
   });
 
-  const projectNameError =
-    projectName.trim() && deployFormik.errors.projectName ? deployFormik.errors.projectName : null;
+  const projectNameError = projectName.trim() && deployFormik.errors.projectName ? deployFormik.errors.projectName : null;
   const hasProjectNameError = projectNameError !== null;
   const canSubmit = deployFormik.isValid;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -1876,8 +1868,7 @@ function Phase3Configure({
   const hideStorageSettings = isNoBuildFramework(framework) || serviceType === ServiceType.Static;
   const showMcpAuthToggle = serviceType === ServiceType.Mcp;
   const effectiveFrameworkType = fw.type ?? detectedFramework?.type;
-  const requiresServerRuntime =
-    SERVER_RUNTIME_FRAMEWORK_TYPES.includes(effectiveFrameworkType ?? "") && serviceType === ServiceType.Static;
+  const requiresServerRuntime = SERVER_RUNTIME_FRAMEWORK_TYPES.includes(effectiveFrameworkType ?? "") && serviceType === ServiceType.Static;
   const [confirmServerRuntimeOpen, setConfirmServerRuntimeOpen] = useState(false);
 
   useEffect(() => {
@@ -2227,7 +2218,9 @@ function Phase3Configure({
                       className={`${inputClass} font-family-mono text-[13px]`}
                     />
                     <p className="mt-2 text-xs text-dash-text-extra-faded">
-                      Make sure your app listens on the port Brimble provides via the <code className="rounded bg-dash-bg-elevated px-1 py-0.5 font-family-mono text-[11px] text-dash-text-body">PORT</code> env var so health checks pass on startup.
+                      Make sure your app listens on the port Brimble provides via the{" "}
+                      <code className="rounded bg-dash-bg-elevated px-1 py-0.5 font-family-mono text-[11px] text-dash-text-body">PORT</code>{" "}
+                      env var so health checks pass on startup.
                     </p>
                   </div>
                 )}
@@ -2416,8 +2409,8 @@ function Phase3Configure({
           <div className="mb-4 flex items-center gap-3 rounded-md border-[0.5px] border-dash-border bg-[#f5a623]/5 px-4 py-3 dark:bg-[#f5a623]/15">
             <Lock className="size-4 shrink-0 text-[#f5a623]" />
             <p className="flex-1 text-sm text-dash-text-strong">
-              <span className="font-medium">{detectedFramework?.name || "This framework"}</span> runs server-side and needs a paid
-              plan &mdash; free plans only support static sites.
+              <span className="font-medium">{detectedFramework?.name || "This framework"}</span> runs server-side and needs a paid plan
+              &mdash; free plans only support static sites.
             </p>
             <button
               type="button"
@@ -2488,7 +2481,6 @@ function Phase3Configure({
         <ConfirmServerRuntimeModal
           open={confirmServerRuntimeOpen}
           onOpenChange={setConfirmServerRuntimeOpen}
-          frameworkName={fw.name}
           tooltipMessage={fw.tooltipMessage ?? detectedFramework?.tooltipMessage}
           isFreePlan={isFreePlan}
           loading={deploying}
