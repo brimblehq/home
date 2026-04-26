@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ScalingRouteImport } from './routes/scaling'
+import { Route as SandboxesRouteImport } from './routes/sandboxes'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PasskeyRecoveryRouteImport } from './routes/passkey-recovery'
 import { Route as OverviewRouteImport } from './routes/overview'
@@ -21,10 +22,12 @@ import { Route as R2faRouteImport } from './routes/2fa'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ScalingIndexRouteImport } from './routes/scaling/index'
+import { Route as SandboxesIndexRouteImport } from './routes/sandboxes/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as DomainsIndexRouteImport } from './routes/domains/index'
 import { Route as AddonsIndexRouteImport } from './routes/addons/index'
 import { Route as WorkspaceNewRouteImport } from './routes/workspace/new'
+import { Route as SandboxesNewRouteImport } from './routes/sandboxes/new'
 import { Route as ProjectsNewRouteImport } from './routes/projects/new'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as DomainsBuyRouteImport } from './routes/domains/buy'
@@ -52,6 +55,11 @@ const SignupRoute = SignupRouteImport.update({
 const ScalingRoute = ScalingRouteImport.update({
   id: '/scaling',
   path: '/scaling',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SandboxesRoute = SandboxesRouteImport.update({
+  id: '/sandboxes',
+  path: '/sandboxes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsRoute = ProjectsRouteImport.update({
@@ -104,6 +112,11 @@ const ScalingIndexRoute = ScalingIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ScalingRoute,
 } as any)
+const SandboxesIndexRoute = SandboxesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SandboxesRoute,
+} as any)
 const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -123,6 +136,11 @@ const WorkspaceNewRoute = WorkspaceNewRouteImport.update({
   id: '/workspace/new',
   path: '/workspace/new',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SandboxesNewRoute = SandboxesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => SandboxesRoute,
 } as any)
 const ProjectsNewRoute = ProjectsNewRouteImport.update({
   id: '/new',
@@ -234,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/overview': typeof OverviewRoute
   '/passkey-recovery': typeof PasskeyRecoveryRoute
   '/projects': typeof ProjectsRouteWithChildren
+  '/sandboxes': typeof SandboxesRouteWithChildren
   '/scaling': typeof ScalingRouteWithChildren
   '/signup': typeof SignupRoute
   '/addons/$addonId': typeof AddonsAddonIdRoute
@@ -241,10 +260,12 @@ export interface FileRoutesByFullPath {
   '/domains/buy': typeof DomainsBuyRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/new': typeof ProjectsNewRoute
+  '/sandboxes/new': typeof SandboxesNewRoute
   '/workspace/new': typeof WorkspaceNewRoute
   '/addons/': typeof AddonsIndexRoute
   '/domains/': typeof DomainsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/sandboxes/': typeof SandboxesIndexRoute
   '/scaling/': typeof ScalingIndexRoute
   '/projects/$projectId/configuration': typeof ProjectsProjectIdConfigurationRoute
   '/projects/$projectId/deployment-history': typeof ProjectsProjectIdDeploymentHistoryRoute
@@ -272,10 +293,12 @@ export interface FileRoutesByTo {
   '/domains/$domainName': typeof DomainsDomainNameRoute
   '/domains/buy': typeof DomainsBuyRoute
   '/projects/new': typeof ProjectsNewRoute
+  '/sandboxes/new': typeof SandboxesNewRoute
   '/workspace/new': typeof WorkspaceNewRoute
   '/addons': typeof AddonsIndexRoute
   '/domains': typeof DomainsIndexRoute
   '/projects': typeof ProjectsIndexRoute
+  '/sandboxes': typeof SandboxesIndexRoute
   '/scaling': typeof ScalingIndexRoute
   '/projects/$projectId/configuration': typeof ProjectsProjectIdConfigurationRoute
   '/projects/$projectId/deployment-history': typeof ProjectsProjectIdDeploymentHistoryRoute
@@ -301,6 +324,7 @@ export interface FileRoutesById {
   '/overview': typeof OverviewRoute
   '/passkey-recovery': typeof PasskeyRecoveryRoute
   '/projects': typeof ProjectsRouteWithChildren
+  '/sandboxes': typeof SandboxesRouteWithChildren
   '/scaling': typeof ScalingRouteWithChildren
   '/signup': typeof SignupRoute
   '/addons/$addonId': typeof AddonsAddonIdRoute
@@ -308,10 +332,12 @@ export interface FileRoutesById {
   '/domains/buy': typeof DomainsBuyRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/projects/new': typeof ProjectsNewRoute
+  '/sandboxes/new': typeof SandboxesNewRoute
   '/workspace/new': typeof WorkspaceNewRoute
   '/addons/': typeof AddonsIndexRoute
   '/domains/': typeof DomainsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/sandboxes/': typeof SandboxesIndexRoute
   '/scaling/': typeof ScalingIndexRoute
   '/projects/$projectId/configuration': typeof ProjectsProjectIdConfigurationRoute
   '/projects/$projectId/deployment-history': typeof ProjectsProjectIdDeploymentHistoryRoute
@@ -339,6 +365,7 @@ export interface FileRouteTypes {
     | '/overview'
     | '/passkey-recovery'
     | '/projects'
+    | '/sandboxes'
     | '/scaling'
     | '/signup'
     | '/addons/$addonId'
@@ -346,10 +373,12 @@ export interface FileRouteTypes {
     | '/domains/buy'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/sandboxes/new'
     | '/workspace/new'
     | '/addons/'
     | '/domains/'
     | '/projects/'
+    | '/sandboxes/'
     | '/scaling/'
     | '/projects/$projectId/configuration'
     | '/projects/$projectId/deployment-history'
@@ -377,10 +406,12 @@ export interface FileRouteTypes {
     | '/domains/$domainName'
     | '/domains/buy'
     | '/projects/new'
+    | '/sandboxes/new'
     | '/workspace/new'
     | '/addons'
     | '/domains'
     | '/projects'
+    | '/sandboxes'
     | '/scaling'
     | '/projects/$projectId/configuration'
     | '/projects/$projectId/deployment-history'
@@ -405,6 +436,7 @@ export interface FileRouteTypes {
     | '/overview'
     | '/passkey-recovery'
     | '/projects'
+    | '/sandboxes'
     | '/scaling'
     | '/signup'
     | '/addons/$addonId'
@@ -412,10 +444,12 @@ export interface FileRouteTypes {
     | '/domains/buy'
     | '/projects/$projectId'
     | '/projects/new'
+    | '/sandboxes/new'
     | '/workspace/new'
     | '/addons/'
     | '/domains/'
     | '/projects/'
+    | '/sandboxes/'
     | '/scaling/'
     | '/projects/$projectId/configuration'
     | '/projects/$projectId/deployment-history'
@@ -442,6 +476,7 @@ export interface RootRouteChildren {
   OverviewRoute: typeof OverviewRoute
   PasskeyRecoveryRoute: typeof PasskeyRecoveryRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
+  SandboxesRoute: typeof SandboxesRouteWithChildren
   ScalingRoute: typeof ScalingRouteWithChildren
   SignupRoute: typeof SignupRoute
   WorkspaceNewRoute: typeof WorkspaceNewRoute
@@ -464,6 +499,13 @@ declare module '@tanstack/react-router' {
       path: '/scaling'
       fullPath: '/scaling'
       preLoaderRoute: typeof ScalingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sandboxes': {
+      id: '/sandboxes'
+      path: '/sandboxes'
+      fullPath: '/sandboxes'
+      preLoaderRoute: typeof SandboxesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects': {
@@ -536,6 +578,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScalingIndexRouteImport
       parentRoute: typeof ScalingRoute
     }
+    '/sandboxes/': {
+      id: '/sandboxes/'
+      path: '/'
+      fullPath: '/sandboxes/'
+      preLoaderRoute: typeof SandboxesIndexRouteImport
+      parentRoute: typeof SandboxesRoute
+    }
     '/projects/': {
       id: '/projects/'
       path: '/'
@@ -563,6 +612,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/workspace/new'
       preLoaderRoute: typeof WorkspaceNewRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/sandboxes/new': {
+      id: '/sandboxes/new'
+      path: '/new'
+      fullPath: '/sandboxes/new'
+      preLoaderRoute: typeof SandboxesNewRouteImport
+      parentRoute: typeof SandboxesRoute
     }
     '/projects/new': {
       id: '/projects/new'
@@ -780,6 +836,20 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
   ProjectsRouteChildren,
 )
 
+interface SandboxesRouteChildren {
+  SandboxesNewRoute: typeof SandboxesNewRoute
+  SandboxesIndexRoute: typeof SandboxesIndexRoute
+}
+
+const SandboxesRouteChildren: SandboxesRouteChildren = {
+  SandboxesNewRoute: SandboxesNewRoute,
+  SandboxesIndexRoute: SandboxesIndexRoute,
+}
+
+const SandboxesRouteWithChildren = SandboxesRoute._addFileChildren(
+  SandboxesRouteChildren,
+)
+
 interface ScalingRouteChildren {
   ScalingIndexRoute: typeof ScalingIndexRoute
 }
@@ -801,6 +871,7 @@ const rootRouteChildren: RootRouteChildren = {
   OverviewRoute: OverviewRoute,
   PasskeyRecoveryRoute: PasskeyRecoveryRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
+  SandboxesRoute: SandboxesRouteWithChildren,
   ScalingRoute: ScalingRouteWithChildren,
   SignupRoute: SignupRoute,
   WorkspaceNewRoute: WorkspaceNewRoute,

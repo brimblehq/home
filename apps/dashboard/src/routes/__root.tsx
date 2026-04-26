@@ -124,7 +124,7 @@ export const Route = createRootRoute({
   },
   loader: (async ({ location, deps }: any) => {
     const isAuthRoute = /^\/(login|signup|2fa)$/.test(location.pathname);
-    const knownPrefixes = /^\/(login|signup|2fa|projects|domains|addons|scaling|workspace|teams)?(\/|$)/;
+    const knownPrefixes = /^\/(login|signup|2fa|projects|domains|addons|scaling|workspace|teams|sandboxes)?(\/|$)/;
     const isCatchAll = location.pathname !== "/" && !knownPrefixes.test(location.pathname);
 
     if (isAuthRoute || isCatchAll) {

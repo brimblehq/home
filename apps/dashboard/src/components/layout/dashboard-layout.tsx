@@ -608,7 +608,7 @@ export function DashboardLayout({
   });
   const navigate = useNavigate();
   const isAuthRoute = /^\/(login|signup)$/.test(layoutPathname) || /^\/(login|signup)$/.test(pathname);
-  const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace)?(\/|$)/;
+  const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace|sandboxes)?(\/|$)/;
   const isCatchAll = layoutPathname !== "/" && !knownPrefixes.test(layoutPathname);
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const resolvedSearchStr = useRouterState({

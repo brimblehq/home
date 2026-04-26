@@ -39,7 +39,6 @@ export const mainNav = [
     icon: "/icons/sandbox.svg",
     href: "/sandboxes",
     flag: FeatureFlags.ENABLE_SANDBOX,
-    comingSoon: true,
   },
 ];
 
