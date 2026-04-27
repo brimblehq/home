@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { Realtime, type Message as AblyMessage } from "ably";
 import {
   Search,
   ChevronDown,
@@ -42,6 +43,7 @@ import { useWorkspaceRole } from "@/contexts/workspace-role-context";
 import { usePushNotification } from "@/hooks/use-push-notification";
 import { Route as RootRoute } from "@/routes/__root";
 import type { TeamDetails, TeamMember } from "@/backend/teams";
+import config from "@/config";
 
 const parentRoute = getRouteApi("/projects/$projectId");
 
@@ -59,6 +61,24 @@ const PAGE_CACHE_TTL_MS = 15_000;
 type DeploymentsCacheEntry = {
   data: PaginatedDeploymentsResponse;
   fetchedAt: number;
+};
+
+type AblyLogEventPayload = {
+  id?: string;
+  logId?: string;
+  name?: string;
+  status?: string;
+  createdAt?: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  message?: string;
+  branch?: string;
+  username?: string;
+  avatar?: string | null;
+  commitLink?: string | null;
+  pullRequestLink?: string | null;
+  environment?: string;
+  domain?: string | null;
 };
 
 function createEmptyDeployments(): PaginatedDeploymentsResponse {
@@ -433,6 +453,70 @@ function normalizeDeploymentStatus(status?: string): string {
   return status?.trim().toLowerCase() ?? "";
 }
 
+function toAblyLogEventPayload(data: unknown): AblyLogEventPayload | null {
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  return data as AblyLogEventPayload;
+}
+
+function mapAblyLogEventToDeployment(payload: AblyLogEventPayload): (Partial<DeploymentLog> & { id: string }) | null {
+  const logId = payload.logId ? payload.logId.trim() : "";
+
+  const eventId = payload.id ? payload.id.trim() : "";
+
+  const id = logId || eventId;
+
+  if (!id) {
+    return null;
+  }
+
+  const next: Partial<DeploymentLog> & { id: string } = { id };
+
+  if (payload.name && payload.name.trim()) {
+    next.name = payload.name;
+  }
+  if (payload.status && payload.status.trim()) {
+    next.status = payload.status;
+  }
+  if (payload.branch && payload.branch.trim()) {
+    next.branch = payload.branch;
+  }
+  if (payload.message) {
+    next.message = payload.message;
+  }
+  if (payload.commitLink && payload.commitLink.trim()) {
+    next.commitLink = payload.commitLink;
+  }
+  if (payload.pullRequestLink && payload.pullRequestLink.trim()) {
+    next.pullRequestLink = payload.pullRequestLink;
+  }
+  if (payload.environment && payload.environment.trim()) {
+    next.environment = payload.environment;
+  }
+  if (payload.startTime && payload.startTime.trim()) {
+    next.startTime = payload.startTime;
+  }
+  if (payload.endTime && payload.endTime.trim()) {
+    next.endTime = payload.endTime;
+  }
+  if (payload.createdAt && payload.createdAt.trim()) {
+    next.createdAt = payload.createdAt;
+  }
+  if (payload.username && payload.username.trim()) {
+    next.username = payload.username;
+  }
+  if (payload.avatar && payload.avatar.trim()) {
+    next.avatar = payload.avatar;
+  }
+  if (payload.domain && payload.domain.trim()) {
+    next.domain = payload.domain;
+  }
+
+  return next;
+}
+
 const TERMINAL_STATUSES = new Set([
   "active",
   "ready",
@@ -661,9 +745,10 @@ function DeploymentHistoryPage() {
 
     return document.visibilityState === "visible";
   });
-  const { openDeploymentDrawer } = useProjectDeploymentLogsDrawer();
+  const { openDeploymentDrawer, syncDeploymentInDrawer } = useProjectDeploymentLogsDrawer();
   const { sendNotification } = usePushNotification(workspace);
   const prevStatusMapRef = useRef<Record<string, string>>({});
+  const failureToastDedupeRef = useRef<Set<string>>(new Set());
   const latestRequestRef = useRef(0);
   const previousProjectScopeRef = useRef<string | null>(null);
   const deploymentsCacheRef = useRef<Map<string, DeploymentsCacheEntry>>(new Map());
@@ -688,15 +773,7 @@ function DeploymentHistoryPage() {
 
   const buildCacheKey = useCallback(
     (page: number) =>
-      [
-        projectScope,
-        page,
-        statusesParam ?? "",
-        environmentParam ?? "",
-        startParam ?? "",
-        endParam ?? "",
-        searchParam ?? "",
-      ].join("|"),
+      [projectScope, page, statusesParam ?? "", environmentParam ?? "", startParam ?? "", endParam ?? "", searchParam ?? ""].join("|"),
     [projectScope, statusesParam, environmentParam, startParam, endParam, searchParam],
   );
 
@@ -820,7 +897,18 @@ function DeploymentHistoryPage() {
         }
       }
     },
-    [projectId, workspace, statusesParam, environmentParam, startParam, endParam, searchParam, projectName, sendNotification, buildCacheKey],
+    [
+      projectId,
+      workspace,
+      statusesParam,
+      environmentParam,
+      startParam,
+      endParam,
+      searchParam,
+      projectName,
+      sendNotification,
+      buildCacheKey,
+    ],
   );
 
   useEffect(() => {
@@ -896,6 +984,130 @@ function DeploymentHistoryPage() {
 
     return () => window.clearInterval(intervalId);
   }, [currentPage, fetchDeployments, isPageVisible]);
+
+  useEffect(() => {
+    if (!projectId) {
+      return;
+    }
+
+    const ably = new Realtime({
+      authUrl: `${config.apiUrl}/v1/ably/token?clientId=${projectId}`,
+      clientId: projectId,
+    });
+
+    const channel = ably.channels.get(projectId);
+
+    const handleLogEvent = (message: AblyMessage) => {
+      const payload = toAblyLogEventPayload(message.data);
+      if (!payload) {
+        return;
+      }
+
+      const incoming = mapAblyLogEventToDeployment(payload);
+      if (!incoming) {
+        return;
+      }
+
+      const payloadLogId = payload?.logId ? payload.logId.trim() : "";
+      const payloadId = payload.id ? payload.id.trim() : "";
+      const previousStatus = prevStatusMapRef.current[incoming.id] ?? "";
+      const nextStatus = normalizeDeploymentStatus(incoming.status);
+
+      setDeployments((previous) => {
+        const items = [...(previous.items ?? [])];
+        let existingIndex = -1;
+        if (payloadLogId) {
+          existingIndex = items.findIndex((item) => item.id === payloadLogId);
+        }
+        if (existingIndex < 0 && payloadId) {
+          existingIndex = items.findIndex((item) => item.id === payloadId);
+        }
+        if (existingIndex < 0) {
+          existingIndex = items.findIndex((item) => item.id === incoming.id);
+        }
+
+        if (existingIndex >= 0) {
+          items[existingIndex] = {
+            ...items[existingIndex],
+            ...incoming,
+          };
+        } else {
+          items.unshift({
+            ...incoming,
+            name: incoming.name || incoming.id,
+            status: incoming.status || "pending",
+          });
+        }
+
+        return {
+          ...previous,
+          items,
+        };
+      });
+
+      syncDeploymentInDrawer(incoming);
+      if (payloadId && payloadId !== incoming.id) {
+        const incomingWithoutId: Partial<DeploymentLog> = { ...incoming };
+        delete incomingWithoutId.id;
+        syncDeploymentInDrawer({
+          id: payloadId,
+          ...incomingWithoutId,
+        });
+      }
+      if (nextStatus) {
+        prevStatusMapRef.current[incoming.id] = nextStatus;
+        if (payloadId && payloadId !== incoming.id) {
+          prevStatusMapRef.current[payloadId] = nextStatus;
+        }
+      }
+
+      if (nextStatus === "failed") {
+        const dedupeKey = `${payloadLogId || payloadId || incoming.id}:${String(payload.status ?? "")}:${payload.endTime || ""}`;
+        if (!failureToastDedupeRef.current.has(dedupeKey)) {
+          failureToastDedupeRef.current.add(dedupeKey);
+          const commitLink = incoming.commitLink?.trim();
+          const pullRequestLink = incoming.pullRequestLink?.trim();
+          let action:
+            | {
+                label: string;
+                onClick: () => void;
+              }
+            | undefined;
+          if (commitLink) {
+            action = {
+              label: "Open commit",
+              onClick: () => window.open(commitLink, "_blank", "noopener,noreferrer"),
+            };
+          } else if (pullRequestLink) {
+            action = {
+              label: "Open PR/MR",
+              onClick: () => window.open(pullRequestLink, "_blank", "noopener,noreferrer"),
+            };
+          }
+
+          toast.error("Deployment failed.", action ? { action } : undefined);
+        }
+      }
+
+      if (previousStatus !== "failed" && nextStatus === "failed") {
+        const env = incoming.environment || "Production";
+        sendNotification({
+          title: "Deployment Failed",
+          body: `${projectName} (${env}) deployment failed.`,
+          onClick: () => window.focus(),
+        });
+      }
+    };
+
+    channel.subscribe("log", handleLogEvent);
+
+    return () => {
+      try {
+        channel.unsubscribe("log", handleLogEvent);
+        ably.close();
+      } catch {}
+    };
+  }, [projectId, projectName, sendNotification, syncDeploymentInDrawer]);
 
   function handlePageChange(page: number) {
     void fetchDeployments(page, { useCache: true });

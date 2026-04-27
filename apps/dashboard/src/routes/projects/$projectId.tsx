@@ -505,14 +505,28 @@ function ProjectLayout() {
     setDrawerOpen(false);
   }, []);
 
+  const syncDeploymentInDrawer = useCallback((update: Partial<DeploymentLog> & { id: string }) => {
+    setSelectedDeployment((previous) => {
+      if (!previous || previous.id !== update.id) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        ...update,
+      };
+    });
+  }, []);
+
   const drawerContextValue = useMemo<ProjectDeploymentLogsDrawerContextValue>(
     () => ({
       drawerOpen,
       selectedDeployment,
       openDeploymentDrawer,
       closeDeploymentDrawer,
+      syncDeploymentInDrawer,
     }),
-    [closeDeploymentDrawer, drawerOpen, openDeploymentDrawer, selectedDeployment],
+    [closeDeploymentDrawer, drawerOpen, openDeploymentDrawer, selectedDeployment, syncDeploymentInDrawer],
   );
 
   return (
@@ -530,6 +544,7 @@ function ProjectLayout() {
             }}
             environment={selectedDeployment.environment || "Production"}
             status={drawerStatus}
+            deploymentStatus={selectedDeployment.status}
             logs={selectedDeploymentLogs}
             loading={drawerLogsLoading}
             emptyMessage={drawerLogsError || "No logs available for this deployment yet."}

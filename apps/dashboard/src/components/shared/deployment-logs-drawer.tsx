@@ -15,6 +15,7 @@ interface DeploymentLogsDrawerProps {
   onOpenChange: (open: boolean) => void;
   environment: string;
   status: "Successful" | "Failed" | "Pending";
+  deploymentStatus?: string;
   logs?: DeploymentDrawerLogEntry[];
   loading?: boolean;
   emptyMessage?: string;
@@ -115,11 +116,17 @@ function downloadLogsClientFallback(logs: DeploymentDrawerLogEntry[]) {
   triggerFileDownload(text, `deployment-logs-${Date.now()}.log`);
 }
 
+function isBuildInProgress(status?: string): boolean {
+  const value = status?.trim().toLowerCase();
+  return value === "inprogress" || value === "pending";
+}
+
 export function DeploymentLogsDrawer({
   open,
   onOpenChange,
   environment,
   status,
+  deploymentStatus,
   logs = [],
   loading = false,
   emptyMessage = "No logs available for this deployment yet.",
@@ -138,6 +145,7 @@ export function DeploymentLogsDrawer({
   const [autoScroll, setAutoScroll] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastScrollTopRef = useRef(0);
+  const buildInProgress = isBuildInProgress(deploymentStatus);
 
   useEffect(() => {
     if (!open) {
@@ -389,11 +397,12 @@ export function DeploymentLogsDrawer({
                       const canCollapse = isSection ? sectionHasChildren(index) : false;
                       const detailTone = getLogLineTone(log.message);
                       const detailClasses = getDetailToneClasses(detailTone);
-                      const canDebug =
+                      const showDebugAction =
                         aiDebugEnabled &&
                         !isSection &&
                         (detailTone === "error" || detailTone === "warning") &&
                         Boolean(projectId && deploymentId && log.messageId);
+                      const debugDisabled = showDebugAction && buildInProgress;
 
                       let rowClassName = "border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]";
                       if (!isSection && detailClasses.row) {
@@ -443,7 +452,7 @@ export function DeploymentLogsDrawer({
                                     type="button"
                                     onClick={() => copyLogLine(log, index)}
                                     className={`flex w-full items-start gap-3 pt-2.5 pl-9 pr-2 text-left transition-colors hover:bg-dash-bg-elevated sm:pl-12 ${
-                                      canDebug ? "pb-1" : "pb-2.5"
+                                      showDebugAction ? "pb-1" : "pb-2.5"
                                     }`}
                                   >
                                     <span
@@ -455,13 +464,14 @@ export function DeploymentLogsDrawer({
                                       <span className="shrink-0 font-logs text-[10px] uppercase tracking-wider text-[#13d282]">Copied</span>
                                     )}
                                   </button>
-                                  {canDebug && (
+                                  {showDebugAction && (
                                     <div className="flex items-center pb-2.5 pl-9 pr-2 sm:pl-12">
                                       <button
                                         type="button"
+                                        disabled={debugDisabled}
                                         onClick={(event) => {
                                           event.stopPropagation();
-                                          if (!log.messageId) {
+                                          if (!log.messageId || debugDisabled) {
                                             return;
                                           }
 
@@ -470,7 +480,12 @@ export function DeploymentLogsDrawer({
                                             messageId: log.messageId,
                                           });
                                         }}
-                                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-logs text-[10px] uppercase tracking-wider text-dash-text-strong underline decoration-dash-text-extra-faded underline-offset-2 transition-colors hover:bg-dash-bg-elevated hover:decoration-dash-text-strong"
+                                        title={debugDisabled ? "Debug with A.I is unavailable while the build is in progress." : undefined}
+                                        className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-logs text-[10px] uppercase tracking-wider underline underline-offset-2 transition-colors ${
+                                          debugDisabled
+                                            ? "cursor-not-allowed text-dash-text-extra-faded decoration-dash-text-extra-faded/50 opacity-70"
+                                            : "text-dash-text-strong decoration-dash-text-extra-faded hover:bg-dash-bg-elevated hover:decoration-dash-text-strong"
+                                        }`}
                                       >
                                         <Sparkles className="size-3" />
                                         <span>Debug with A.I</span>

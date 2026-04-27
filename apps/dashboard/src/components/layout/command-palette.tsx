@@ -612,7 +612,7 @@ export function CommandPalette() {
                                     .then(() => {
                                       posthog.reset();
                                       invalidateSessionCache();
-                                      void navigate({ to: "/login" });
+                                      window.location.href = "/login";
                                     });
                                 })
                               }

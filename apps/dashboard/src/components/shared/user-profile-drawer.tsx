@@ -4,7 +4,7 @@ import axios from "axios";
 import { Drawer } from "vaul";
 import { cn } from "@brimble/ui";
 import { SUBSCRIPTION_PLAN_TYPE } from "@brimble/models/dist/enum";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -1688,7 +1688,6 @@ export function UserProfileDrawer({
   projectCount?: number;
   requestedTab?: ProfileTab;
 }) {
-  const navigate = useNavigate();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const queryClient = useQueryClient();
 
@@ -2046,7 +2045,7 @@ export function UserProfileDrawer({
       .then(() => {
         posthog.reset();
         invalidateSessionCache();
-        void navigate({ to: "/login" });
+        window.location.href = "/login";
       });
   }
 

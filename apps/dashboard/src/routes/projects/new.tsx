@@ -1762,7 +1762,6 @@ function Phase3Configure({
   const pricing = usePricing();
   const isFreePlan = planKey === "free";
   const limitReached = projectLimit !== null && projectCount > projectLimit;
-  const backendOnFreePlan = isFreePlan && detectedFramework?.type === FrameworkApplicationType.Backend;
 
   const deployValidationSchema = useMemo(
     () =>
@@ -1773,16 +1772,12 @@ function Phase3Configure({
           .matches(/^[a-z-]+$/, "Project name can only contain lowercase letters and hyphens."),
         region: Yup.string().required("Please select a region."),
         limitReached: Yup.boolean().oneOf([false], "You have reached your project limit. Upgrade your plan to create more."),
-        backendOnFreePlan: Yup.boolean().oneOf(
-          [false],
-          `${detectedFramework?.name ?? "This framework"} runs server-side and needs a paid plan.`,
-        ),
       }),
-    [detectedFramework?.name],
+    [],
   );
 
   const deployFormik = useFormik({
-    initialValues: { projectName, region, limitReached, backendOnFreePlan },
+    initialValues: { projectName, region, limitReached },
     enableReinitialize: true,
     validateOnMount: true,
     validationSchema: deployValidationSchema,
@@ -2405,22 +2400,6 @@ function Phase3Configure({
 
       {/* Save / Deploy actions */}
       <div className="mt-8">
-        {backendOnFreePlan && (
-          <div className="mb-4 flex items-center gap-3 rounded-md border-[0.5px] border-dash-border bg-[#f5a623]/5 px-4 py-3 dark:bg-[#f5a623]/15">
-            <Lock className="size-4 shrink-0 text-[#f5a623]" />
-            <p className="flex-1 text-sm text-dash-text-strong">
-              <span className="font-medium">{detectedFramework?.name || "This framework"}</span> runs server-side and needs a paid plan
-              &mdash; free plans only support static sites.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowUpgradeModal(true)}
-              className="shrink-0 text-sm font-medium text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
-            >
-              Upgrade plan
-            </button>
-          </div>
-        )}
         <div className="flex flex-col gap-2 sm:flex-row">
           <GlossyButton
             variant="white"
@@ -2429,7 +2408,7 @@ function Phase3Configure({
             loadingLabel="Saving..."
             disabled={deploying || saving || !canSubmit}
             onClick={() => {
-              if (limitReached || backendOnFreePlan) {
+              if (limitReached) {
                 setShowUpgradeModal(true);
                 return;
               }
@@ -2451,7 +2430,7 @@ function Phase3Configure({
             loadingLabel="Deploying..."
             disabled={deploying || saving || !canSubmit}
             onClick={() => {
-              if (limitReached || backendOnFreePlan) {
+              if (limitReached) {
                 setShowUpgradeModal(true);
                 return;
               }
