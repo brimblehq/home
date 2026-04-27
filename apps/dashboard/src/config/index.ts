@@ -28,6 +28,7 @@ export const config = {
   supabaseUrl: readEnv("VITE_SUPABASE_URL") ?? "",
   supabaseKey: readEnv("VITE_SUPABASE_KEY") ?? "",
   supabaseTableName: readEnv("VITE_SUPABASE_TABLE_NAME") ?? "BRIMBLE_DEPLOYMENT_LOGS",
+  aiDebugModel: readEnv("VITE_AI_DEBUG_MODEL") ?? readEnv("AI_DEBUG_MODEL") ?? "gpt-5.1-codex-mini",
   stripePublishableKey: readEnv("VITE_STRIPE_KEY") ?? "",
 
   defaultPlanFreePrice: Number(readEnv("VITE_DEFAULT_PLAN_FREE_PRICE") ?? "0"),

@@ -1046,7 +1046,7 @@ export function DashboardLayout({
                                       }
 
                                       if (/^https?:\/\//.test(msg.route!)) {
-                                        window.location.href = msg.route!;
+                                        window.open(msg.route!, "_blank", "noopener,noreferrer");
                                         return;
                                       }
 

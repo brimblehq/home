@@ -23,6 +23,11 @@ interface DeploymentLogsDrawerProps {
   workspace?: string;
 }
 
+interface AiDebugSelection {
+  message: string;
+  messageId: string;
+}
+
 const statusDotColor = {
   Successful: "bg-[#13d282]",
   Failed: "bg-[#fc391e]",
@@ -127,7 +132,7 @@ export function DeploymentLogsDrawer({
     data: { projectId: string; logId: string; workspace?: string };
   }) => Promise<{ content: string; filename: string }>;
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set());
-  const [aiDebugMessage, setAiDebugMessage] = useState<string | null>(null);
+  const [aiDebugSelection, setAiDebugSelection] = useState<AiDebugSelection | null>(null);
   const aiDebugEnabled = useFeatureFlag(FeatureFlags.ENABLE_AI_DEBUG);
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -140,7 +145,7 @@ export function DeploymentLogsDrawer({
     }
 
     setCollapsedSections(new Set());
-    setAiDebugMessage(null);
+    setAiDebugSelection(null);
     setAutoScroll(true);
     lastScrollTopRef.current = 0;
   }, [open]);
@@ -388,7 +393,7 @@ export function DeploymentLogsDrawer({
                         aiDebugEnabled &&
                         !isSection &&
                         (detailTone === "error" || detailTone === "warning") &&
-                        Boolean(projectId && deploymentId);
+                        Boolean(projectId && deploymentId && log.messageId);
 
                       let rowClassName = "border-b-[0.5px] border-[#e5e5e5] dark:border-[#2a2a2b]";
                       if (!isSection && detailClasses.row) {
@@ -456,7 +461,14 @@ export function DeploymentLogsDrawer({
                                         type="button"
                                         onClick={(event) => {
                                           event.stopPropagation();
-                                          setAiDebugMessage(log.message);
+                                          if (!log.messageId) {
+                                            return;
+                                          }
+
+                                          setAiDebugSelection({
+                                            message: log.message,
+                                            messageId: log.messageId,
+                                          });
                                         }}
                                         className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-logs text-[10px] uppercase tracking-wider text-dash-text-strong underline decoration-dash-text-extra-faded underline-offset-2 transition-colors hover:bg-dash-bg-elevated hover:decoration-dash-text-strong"
                                       >
@@ -502,15 +514,16 @@ export function DeploymentLogsDrawer({
       </Drawer.Portal>
 
       <LogAiDebugPanel
-        open={aiDebugEnabled && aiDebugMessage !== null}
+        open={aiDebugEnabled && aiDebugSelection !== null}
         onOpenChange={(next) => {
           if (!next) {
-            setAiDebugMessage(null);
+            setAiDebugSelection(null);
           }
         }}
         projectId={projectId ?? ""}
         logId={deploymentId ?? ""}
-        message={aiDebugMessage ?? ""}
+        messageId={aiDebugSelection?.messageId ?? ""}
+        message={aiDebugSelection?.message ?? ""}
       />
     </Drawer.Root>
   );

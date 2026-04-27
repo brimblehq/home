@@ -854,7 +854,7 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
     }
 
     if (/^https?:\/\//i.test(notification.route)) {
-      window.location.href = notification.route;
+      window.open(notification.route, "_blank", "noopener,noreferrer");
       return;
     }
 

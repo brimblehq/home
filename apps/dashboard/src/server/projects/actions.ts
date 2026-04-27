@@ -358,12 +358,14 @@ export const debugSuggestionsServerFn = createServerFn({
     | {
         projectId: string;
         logId: string;
+        messageId: string;
         message: string;
       }
     | undefined;
 
   const projectId = payload?.projectId?.trim();
   const logId = payload?.logId?.trim();
+  const messageId = payload?.messageId?.trim();
   const message = payload?.message;
 
   if (!projectId) {
@@ -372,11 +374,14 @@ export const debugSuggestionsServerFn = createServerFn({
   if (!logId) {
     throw new Error("Log ID is required");
   }
+  if (!messageId) {
+    throw new Error("Message ID is required");
+  }
   if (!message?.trim()) {
     throw new Error("Message is required");
   }
 
-  return withTokenRefresh((api) => api.projects.debugSuggestions(projectId, { logId, message }));
+  return withTokenRefresh((api) => api.projects.debugSuggestions(projectId, { logId, messageId, message }));
 });
 
 export const debugSuggestionsPrServerFn = createServerFn({
@@ -386,6 +391,7 @@ export const debugSuggestionsPrServerFn = createServerFn({
     | {
         projectId: string;
         logId: string;
+        messageId: string;
         message: string;
         debug?: {
           framework: unknown | null;
@@ -398,6 +404,7 @@ export const debugSuggestionsPrServerFn = createServerFn({
 
   const projectId = payload?.projectId?.trim();
   const logId = payload?.logId?.trim();
+  const messageId = payload?.messageId?.trim();
   const message = payload?.message;
 
   if (!projectId) {
@@ -406,6 +413,9 @@ export const debugSuggestionsPrServerFn = createServerFn({
   if (!logId) {
     throw new Error("Log ID is required");
   }
+  if (!messageId) {
+    throw new Error("Message ID is required");
+  }
   if (!message?.trim()) {
     throw new Error("Message is required");
   }
@@ -413,6 +423,7 @@ export const debugSuggestionsPrServerFn = createServerFn({
   return withTokenRefresh((api) =>
     api.projects.debugSuggestionsPr(projectId, {
       logId,
+      messageId,
       message,
       debug: (payload?.debug as never) ?? null,
     }),

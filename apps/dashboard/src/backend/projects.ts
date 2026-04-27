@@ -214,13 +214,8 @@ export interface DebugSuggestionsResponse {
   suggestions: DebugSuggestions;
 }
 
-export type DebugPrStatus = "created" | "blocked";
-export type DebugPrBlockReason =
-  | "plan_disabled"
-  | "quota_exceeded"
-  | "unsupported_provider"
-  | "no_safe_changes"
-  | "generation_failed";
+export type DebugPrStatus = "created" | "queued" | "blocked";
+export type DebugPrBlockReason = "plan_disabled" | "quota_exceeded" | "unsupported_provider" | "no_safe_changes" | "generation_failed";
 
 export interface ProvidedDebugContext {
   framework: unknown | null;
@@ -245,6 +240,11 @@ export interface DebugPullRequest {
   changedFiles: string[];
 }
 
+export interface DebugPrJob {
+  id: string;
+  deduped: boolean;
+}
+
 export interface DebugSuggestionsPrResponse {
   model: string;
   status: DebugPrStatus;
@@ -256,8 +256,9 @@ export interface DebugSuggestionsPrResponse {
     envNames: string[];
     rootDir: unknown[];
     suggestions: DebugSuggestions;
-  };
+  } | null;
   pullRequest: DebugPullRequest | null;
+  job?: DebugPrJob | null;
 }
 
 export interface ProjectsApi {
@@ -273,18 +274,12 @@ export interface ProjectsApi {
       payload?: Record<string, unknown>;
     },
   ): Promise<{ id?: string; message?: string }>;
-  debugSuggestions(
-    projectId: string,
-    input: { logId: string; message: string },
-  ): Promise<DebugSuggestionsResponse>;
+  debugSuggestions(projectId: string, input: { logId: string; messageId: string; message: string }): Promise<DebugSuggestionsResponse>;
   debugSuggestionsPr(
     projectId: string,
-    input: { logId: string; message: string; debug?: ProvidedDebugContext | null },
+    input: { logId: string; messageId: string; message: string; debug?: ProvidedDebugContext | null },
   ): Promise<DebugSuggestionsPrResponse>;
-  transfer(
-    projectId: string,
-    input: { teamId: string },
-  ): Promise<{ id?: string; team?: string; environmentId?: string }>;
+  transfer(projectId: string, input: { teamId: string }): Promise<{ id?: string; team?: string; environmentId?: string }>;
   databaseBackup(projectId: string, input?: { teamId?: string }): Promise<{ message?: string }>;
   databaseRefresh(projectId: string, input?: { teamId?: string }): Promise<{ message?: string }>;
   updateDatabaseConfig(
@@ -326,6 +321,7 @@ export interface PaginatedProjectsResponse extends ApiListResponse<Project> {
 
 const debugMessageSchema = Yup.object({
   logId: Yup.string().trim().required("Log ID is required"),
+  messageId: Yup.string().trim().required("Message ID is required"),
   message: Yup.string()
     .trim()
     .required("We need the log message to debug.")
@@ -678,22 +674,18 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       };
     },
     async debugSuggestions(projectId, input) {
-      const { logId, message } = debugMessageSchema.validateSync(input);
+      const { logId, messageId, message } = debugMessageSchema.validateSync(input);
 
       const path = `${listEndpoint}/${encodeURIComponent(projectId)}/debug-suggestions`;
       const fullUrl = `${config.gatewayUrl}${path}`;
-      const requestBody = { logId, message };
+      const requestBody = { logId, messageId, message, debugModel: config.aiDebugModel };
       // eslint-disable-next-line no-console
-      console.log("[debug-suggestions] POST", fullUrl, "body:", requestBody);
 
       const response = await client.request<any>(path, {
         method: "POST",
         body: requestBody,
         timeout: 90_000,
       });
-
-      // eslint-disable-next-line no-console
-      console.log("[debug-suggestions] response:", JSON.stringify(response?.data ?? response, null, 2));
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rootRecord = asRecord(root) ?? {};
@@ -715,29 +707,39 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       } satisfies DebugSuggestionsResponse;
     },
     async debugSuggestionsPr(projectId, input) {
-      const { logId, message } = debugMessageSchema.validateSync({ logId: input.logId, message: input.message });
+      const { logId, messageId, message } = debugMessageSchema.validateSync({
+        logId: input.logId,
+        messageId: input.messageId,
+        message: input.message,
+      });
 
-      const body: Record<string, unknown> = { logId, message };
+      const body: Record<string, unknown> = { logId, messageId, message, debugModel: config.aiDebugModel };
       if (input.debug) {
         body.debug = input.debug;
       }
 
-      const response = await client.request<any>(
-        `${listEndpoint}/${encodeURIComponent(projectId)}/debug-suggestions/pr`,
-        {
-          method: "POST",
-          body,
-          timeout: 180_000,
-        },
-      );
+      const path = `${listEndpoint}/${encodeURIComponent(projectId)}/debug-suggestions/pr`;
+
+      const response = await client.request<any>(path, {
+        method: "POST",
+        body,
+        timeout: 180_000,
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rootRecord = asRecord(root) ?? {};
       const usageRecord = asRecord(rootRecord.usage) ?? {};
-      const debugRecord = asRecord(rootRecord.debug) ?? {};
+      const debugRecord = asRecord(rootRecord.debug);
       const pullRequestRecord = asRecord(rootRecord.pullRequest);
+      const jobRecord = asRecord(rootRecord.job);
 
-      const status: DebugPrStatus = rootRecord.status === "created" ? "created" : "blocked";
+      const statusRaw = String(rootRecord.status ?? "").toLowerCase();
+      let status: DebugPrStatus = "blocked";
+      if (statusRaw === "created") {
+        status = "created";
+      } else if (statusRaw === "queued") {
+        status = "queued";
+      }
 
       const reasonRaw = String(rootRecord.reason ?? "").toLowerCase();
       const allowedReasons: DebugPrBlockReason[] = [
@@ -771,19 +773,29 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
           }
         : null;
 
+      const job: DebugPrJob | null = jobRecord
+        ? {
+            id: pickString(jobRecord, "id") ?? "",
+            deduped: pickBoolean(jobRecord, "deduped") ?? false,
+          }
+        : null;
+
       return {
         model: pickString(rootRecord, "model") ?? "",
         status,
         reason,
         message: pickString(rootRecord, "message") ?? "",
         usage,
-        debug: {
-          framework: debugRecord.framework ?? null,
-          envNames: mapStringArray(debugRecord.envNames),
-          rootDir: Array.isArray(debugRecord.rootDir) ? debugRecord.rootDir : [],
-          suggestions: mapDebugSuggestionsObject(asRecord(debugRecord.suggestions) ?? {}),
-        },
+        debug: debugRecord
+          ? {
+              framework: debugRecord.framework ?? null,
+              envNames: mapStringArray(debugRecord.envNames),
+              rootDir: Array.isArray(debugRecord.rootDir) ? debugRecord.rootDir : [],
+              suggestions: mapDebugSuggestionsObject(asRecord(debugRecord.suggestions) ?? {}),
+            }
+          : null,
         pullRequest,
+        job,
       } satisfies DebugSuggestionsPrResponse;
     },
     async transfer(projectId, input) {
@@ -792,13 +804,10 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
         throw new Error("Team ID is required");
       }
 
-      const response = await client.request<any>(
-        `${listEndpoint}/transfer/${encodeURIComponent(projectId)}`,
-        {
-          method: "POST",
-          body: { teamId },
-        },
-      );
+      const response = await client.request<any>(`${listEndpoint}/transfer/${encodeURIComponent(projectId)}`, {
+        method: "POST",
+        body: { teamId },
+      });
 
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       const rootRecord = asRecord(root) ?? {};
