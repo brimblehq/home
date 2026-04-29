@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requestAirtableJson } from "@/server/airtable/request-json";
 
 export type ChangelogType = "Feature" | "Improvement" | "Fix";
 
@@ -109,33 +110,29 @@ export const listChangelogServerFn = createServerFn({
   url.searchParams.set("sort[0][field]", "Date");
   url.searchParams.set("sort[0][direction]", "desc");
 
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        Accept: "application/json",
-      },
-    });
+  const { data, failure } = await requestAirtableJson<AirtableResponse>({
+    url: url.toString(),
+    apiKey: config.apiKey,
+    logTag: "changelog",
+  });
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      console.error(`[changelog] Airtable request failed (${response.status}): ${body}`);
-      return [];
+  if (!data) {
+    if (failure?.status) {
+      console.error(`[changelog] Airtable request failed (${failure.status}): ${failure.body ?? ""}`);
+    } else {
+      console.error("[changelog] Failed to fetch from Airtable:", failure?.error);
     }
-
-    const json = (await response.json()) as AirtableResponse;
-    if (json.offset) {
-      console.warn("[changelog] Airtable response paginated; only first page is rendered.");
-    }
-
-    const entries = (json.records ?? [])
-      .map(mapRecord)
-      .filter((entry): entry is ChangelogEntry => entry !== null);
-
-    cache = { data: entries, expiresAt: Date.now() + TTL_MS };
-    return entries;
-  } catch (error) {
-    console.error("[changelog] Failed to fetch from Airtable:", error);
     return [];
   }
+
+  if (data.offset) {
+    console.warn("[changelog] Airtable response paginated; only first page is rendered.");
+  }
+
+  const entries = (data.records ?? [])
+    .map(mapRecord)
+    .filter((entry): entry is ChangelogEntry => entry !== null);
+
+  cache = { data: entries, expiresAt: Date.now() + TTL_MS };
+  return entries;
 });

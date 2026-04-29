@@ -322,7 +322,7 @@ export const siteConfig = {
     viewAllCta: "View all updates",
     page: {
       heading: "Changelog",
-      description: "What we've been shipping. Updated regularly.",
+      description: "What we've been shipping. Updated every friday.",
       empty: "No updates yet — check back soon.",
     },
   },

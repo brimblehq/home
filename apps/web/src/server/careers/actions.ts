@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requestAirtableJson } from "@/server/airtable/request-json";
 
 export type CareerRole = {
   slug: string;
@@ -120,33 +121,29 @@ export const listCareersServerFn = createServerFn({
   url.searchParams.set("sort[1][field]", "Order");
   url.searchParams.set("sort[1][direction]", "asc");
 
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        Accept: "application/json",
-      },
-    });
+  const { data, failure } = await requestAirtableJson<AirtableResponse>({
+    url: url.toString(),
+    apiKey: config.apiKey,
+    logTag: "careers",
+  });
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      console.error(`[careers] Airtable request failed (${response.status}): ${body}`);
-      return [];
+  if (!data) {
+    if (failure?.status) {
+      console.error(`[careers] Airtable request failed (${failure.status}): ${failure.body ?? ""}`);
+    } else {
+      console.error("[careers] Failed to fetch from Airtable:", failure?.error);
     }
-
-    const json = (await response.json()) as AirtableResponse;
-    if (json.offset) {
-      console.warn("[careers] Airtable response paginated; only first page is rendered. Reduce role count or add pagination.");
-    }
-
-    const roles = (json.records ?? [])
-      .map(mapRecord)
-      .filter((role): role is CareerRole => role !== null);
-
-    cache = { data: roles, expiresAt: Date.now() + TTL_MS };
-    return roles;
-  } catch (error) {
-    console.error("[careers] Failed to fetch from Airtable:", error);
     return [];
   }
+
+  if (data.offset) {
+    console.warn("[careers] Airtable response paginated; only first page is rendered. Reduce role count or add pagination.");
+  }
+
+  const roles = (data.records ?? [])
+    .map(mapRecord)
+    .filter((role): role is CareerRole => role !== null);
+
+  cache = { data: roles, expiresAt: Date.now() + TTL_MS };
+  return roles;
 });
