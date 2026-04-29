@@ -22,6 +22,12 @@ export const Route = createFileRoute("/changelog/")({
   component: ChangelogPage,
 });
 
+type ChangelogDateGroup = {
+  dateISO: string;
+  date: string;
+  entries: ChangelogEntry[];
+};
+
 const TYPE_BADGE_CLASS: Record<ChangelogType, string> = {
   Feature: "bg-[#e6f0ff] text-[#006fff] dark:bg-[#006fff]/15 dark:text-[#3b8eff]",
   Improvement: "bg-brimble-light-gray text-brimble-black/70 dark:bg-white/10 dark:text-brimble-black/70",
@@ -33,13 +39,14 @@ const BADGE_BASE =
 
 function ChangelogPage() {
   const entries = Route.useLoaderData();
+  const groups = groupEntriesByDate(entries);
 
   return (
     <div className="min-h-dvh bg-brimble-surface transition-colors duration-300">
       <Navbar />
       <main>
         <ChangelogHero />
-        <ChangelogEntries entries={entries} />
+        <ChangelogEntries groups={groups} />
         <Cta />
       </main>
     </div>
@@ -71,11 +78,11 @@ function ChangelogHero() {
   );
 }
 
-function ChangelogEntries({ entries }: { entries: ChangelogEntry[] }) {
+function ChangelogEntries({ groups }: { groups: ChangelogDateGroup[] }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-80px" });
 
-  if (entries.length === 0) {
+  if (groups.length === 0) {
     return (
       <section className="bg-brimble-surface transition-colors duration-300 px-6 py-10">
         <div ref={ref} className="mx-auto flex max-w-[720px] flex-col gap-4">
@@ -97,38 +104,64 @@ function ChangelogEntries({ entries }: { entries: ChangelogEntry[] }) {
   return (
     <section className="bg-brimble-surface transition-colors duration-300 px-6 py-10">
       <div ref={ref} className="mx-auto flex max-w-[720px] flex-col">
-        {entries.map((entry, i) => (
-          <Fragment key={entry.slug}>
-            {i > 0 && <div className="h-px w-full bg-brimble-black/10 dark:bg-white/10" />}
-            <motion.article
-              id={entry.slug}
-              className="flex scroll-mt-24 flex-col gap-3 py-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: Math.min(i, 4) * 0.08, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <time
-                  dateTime={entry.dateISO}
-                  className="font-mono text-xs uppercase tracking-[1.2px] text-brimble-black/50"
-                >
-                  {entry.date}
-                </time>
-                <span className={`${BADGE_BASE} ${TYPE_BADGE_CLASS[entry.type]}`}>{entry.type}</span>
+        {groups.map((group, groupIndex) => (
+          <Fragment key={group.dateISO}>
+            {groupIndex > 0 && <div className="h-px w-full bg-brimble-black/10 dark:bg-white/10" />}
+            <div className="py-10">
+              <time dateTime={group.dateISO} className="font-mono text-xs uppercase tracking-[1.2px] text-brimble-black/50">
+                {group.date}
+              </time>
+              <div className="mt-5 flex flex-col">
+                {group.entries.map((entry, entryIndex) => (
+                  <Fragment key={entry.slug}>
+                    {entryIndex > 0 && <div className="my-8 h-px w-full bg-brimble-black/10 dark:bg-white/10" />}
+                    <motion.article
+                      id={entry.slug}
+                      className="flex scroll-mt-24 flex-col gap-3"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={isInView ? { opacity: 1, y: 0 } : {}}
+                      transition={{ duration: 0.6, delay: Math.min(groupIndex + entryIndex, 4) * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className={`${BADGE_BASE} ${TYPE_BADGE_CLASS[entry.type]}`}>{entry.type}</span>
+                      </div>
+                      <h2 className="font-body text-xl font-medium leading-[28px] tracking-[-0.24px] text-brimble-black">
+                        {entry.title}
+                      </h2>
+                      <p className="font-body text-base leading-[1.6] text-brimble-black/70">{entry.summary}</p>
+                      {entry.content.trim().length > 0 && (
+                        <div className="mt-3">
+                          <MarkdownContent content={entry.content} />
+                        </div>
+                      )}
+                    </motion.article>
+                  </Fragment>
+                ))}
               </div>
-              <h2 className="font-body text-xl font-medium leading-[28px] tracking-[-0.24px] text-brimble-black">
-                {entry.title}
-              </h2>
-              <p className="font-body text-base leading-[1.6] text-brimble-black/70">{entry.summary}</p>
-              {entry.content.trim().length > 0 && (
-                <div className="mt-3">
-                  <MarkdownContent content={entry.content} />
-                </div>
-              )}
-            </motion.article>
+            </div>
           </Fragment>
         ))}
       </div>
     </section>
   );
+}
+
+function groupEntriesByDate(entries: ChangelogEntry[]): ChangelogDateGroup[] {
+  const groups = new Map<string, ChangelogDateGroup>();
+
+  for (const entry of entries) {
+    const existing = groups.get(entry.dateISO);
+    if (existing) {
+      existing.entries.push(entry);
+      continue;
+    }
+
+    groups.set(entry.dateISO, {
+      dateISO: entry.dateISO,
+      date: entry.date,
+      entries: [entry],
+    });
+  }
+
+  return Array.from(groups.values());
 }
