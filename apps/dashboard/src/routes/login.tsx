@@ -100,6 +100,8 @@ function EmailStep({
   onPasskey: () => void;
   passkeyLoading: boolean;
 }) {
+  const isEmailValid = !validateEmailInput(email);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -164,7 +166,7 @@ function EmailStep({
 
         <button
           type="submit"
-          disabled={!email.trim() || loading}
+          disabled={!isEmailValid || loading}
           className="relative flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#006fff] text-sm font-semibold text-white shadow-[0_1px_2px_rgba(0,80,200,0.3)] transition-all hover:bg-[#0060e0] disabled:opacity-40 disabled:hover:bg-[#006fff]"
         >
           {loading ? <Loader2 className="size-4 animate-spin" /> : "Continue with email"}

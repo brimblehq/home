@@ -1703,6 +1703,7 @@ type Phase3DeployInput = {
 };
 
 const SERVER_RUNTIME_FRAMEWORK_TYPES: string[] = [FrameworkApplicationType.Ssr, FrameworkApplicationType.Backend, "other"];
+const FREE_PLAN_FRAMEWORK_TYPES: string[] = [FrameworkApplicationType.Static, FrameworkApplicationType.Spa, FrameworkApplicationType.Ssr];
 
 function Phase3Configure({
   sourceType,
@@ -2177,12 +2178,17 @@ function Phase3Configure({
               </label>
               <Dropdown
                 value={framework}
-                options={frameworkOptions.map((f) => ({
-                  id: f.id,
-                  label: f.name,
-                  icon: f.icon,
-                  iconClassName: f.iconClassName,
-                }))}
+                options={frameworkOptions.map((f) => {
+                  const gated = isFreePlan && !FREE_PLAN_FRAMEWORK_TYPES.includes(f.type ?? "");
+                  return {
+                    id: f.id,
+                    label: f.name,
+                    icon: f.icon,
+                    iconClassName: f.iconClassName,
+                    disabled: gated,
+                    asideText: gated ? "Upgrade to access" : undefined,
+                  };
+                })}
                 onChange={handleFrameworkChange}
                 searchable
                 searchPlaceholder="Search frameworks..."

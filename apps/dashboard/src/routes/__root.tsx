@@ -26,9 +26,14 @@ import appCss from "../styles.css?url";
 import marfaLatinWoff2 from "../assets/fonts/ABCMarfaVariableVF-latin.woff2?url";
 
 const GA_MEASUREMENT_ID = "G-T6EZL8YJW7";
+const CHATWOOT_ALLOWED_HOSTS = ["app.brimble.io", "brimble.io", "dev.brimble.app"] as const;
+const CHATWOOT_ALLOWED_HOSTS_LITERAL = JSON.stringify(CHATWOOT_ALLOWED_HOSTS);
 
 const chatwootBootstrapScript = `(function(d,t){
   try {
+    var allowedHosts=${CHATWOOT_ALLOWED_HOSTS_LITERAL};
+    var host=(window.location&&window.location.hostname?window.location.hostname:"").toLowerCase();
+    if (allowedHosts.indexOf(host)===-1) return;
     if (window.__brimbleChatwootBooted) return;
     window.__brimbleChatwootBooted = true;
     var BASE_URL="https://app.chatwoot.com";
