@@ -252,7 +252,7 @@ function BuyDomainPage() {
 
       toast.success(`${target.domainName} purchased successfully!`);
       setPurchaseTarget(null);
-      await router.invalidate();
+      await router.invalidate({ filter: (route) => route.routeId === '/domains/' });
       const detailPath = `/domains/${encodeURIComponent(target.domainName)}`;
       router.navigate({
         to: withWorkspaceQuery({ pathname: detailPath, searchStr }) as any,

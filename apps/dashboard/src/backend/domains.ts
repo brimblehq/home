@@ -619,13 +619,12 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
     },
 
     async createDnsRecord(input) {
-      const response = await client.request<any>(config.dnsApiUrl, {
+      const response = await client.request<any>(`${listEndpoint}/${encodeURIComponent(input.domain)}/records`, {
         method: "POST",
         query: {
           teamId: input.teamId,
         },
         body: {
-          domain: input.domain,
           record: input.record,
         },
       });
@@ -647,7 +646,7 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
 
     async updateDnsRecord(input) {
       const response = await client.request<any>(
-        `${config.dnsApiUrl}/${encodeURIComponent(input.domain)}/${encodeURIComponent(input.recordId)}`,
+        `${listEndpoint}/${encodeURIComponent(input.domain)}/records/${encodeURIComponent(input.recordId)}`,
         {
           method: "PATCH",
           query: {
@@ -678,12 +677,15 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
     },
 
     async deleteDnsRecord(input) {
-      await client.request<any>(`${config.dnsApiUrl}/${encodeURIComponent(input.domain)}/${encodeURIComponent(input.recordId)}`, {
-        method: "DELETE",
-        query: {
-          teamId: input.teamId,
+      await client.request<any>(
+        `${listEndpoint}/${encodeURIComponent(input.domain)}/records/${encodeURIComponent(input.recordId)}`,
+        {
+          method: "DELETE",
+          query: {
+            teamId: input.teamId,
+          },
         },
-      });
+      );
     },
   };
 }

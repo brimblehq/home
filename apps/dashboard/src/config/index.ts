@@ -17,7 +17,6 @@ export const config = {
   gatewayUrl,
   apiUrl: `${gatewayUrl}/core`,
   authApiUrl: `${gatewayUrl}/auth`,
-  dnsApiUrl: `${gatewayUrl}/dns`,
   paymentApiUrl: `${gatewayUrl}/payment/api`,
   logsSocketUrl: `${gatewayUrl}/core`,
   avatarUrl: readEnv("VITE_AVATAR_URL") ?? "https://api.dicebear.com/7.x",
