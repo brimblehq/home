@@ -8,7 +8,7 @@ import type {
   UpdateTeamSpendingLimitInput,
   UpdateTeamSubscriptionInput,
 } from "@/backend/payments";
-import { withTokenRefresh } from "@/server/shared/backend";
+import { withTokenRefresh, resolveTeamId } from "@/server/shared/backend";
 
 /* ── Queries ── */
 
@@ -49,13 +49,7 @@ export const getSubscriptionStatsServerFn = createServerFn({
   const payload = data as unknown as { workspace?: string } | undefined;
 
   return withTokenRefresh(async (api) => {
-    let teamId: string | undefined;
-    const workspaceSlug = payload?.workspace?.trim().toLowerCase();
-    if (workspaceSlug) {
-      const teams = await api.workspaces.list();
-      const match = teams.items.find((item) => item.slug === workspaceSlug);
-      teamId = match?.id ?? undefined;
-    }
+    const teamId = await resolveTeamId(api, payload?.workspace);
     return api.payments.getSubscriptionStats(teamId);
   });
 });

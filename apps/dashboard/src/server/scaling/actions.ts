@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { ScalingGroup, BackendApi } from "@/backend";
-import { withTokenRefresh } from "@/server/shared/backend";
+import { withTokenRefresh, resolveTeamId } from "@/server/shared/backend";
 
 function supportsAutoscalingPlan(planType?: string) {
   const normalized = String(planType ?? "")
@@ -19,18 +19,7 @@ async function canUseAutoscaling(api: BackendApi) {
 }
 
 async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
-  const workspaceSlug = workspace?.trim().toLowerCase();
-  if (!workspaceSlug) {
-    return undefined;
-  }
-
-  const teams = await api.workspaces.list();
-  const match = teams.items.find((item) => item.slug === workspaceSlug);
-  if (!match?.id) {
-    return undefined;
-  }
-
-  return match.id;
+  return resolveTeamId(api, workspace);
 }
 
 export const listScalingGroupsServerFn = createServerFn({

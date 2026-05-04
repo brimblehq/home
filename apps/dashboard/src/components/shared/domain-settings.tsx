@@ -567,6 +567,11 @@ export function DomainSettings({ domain, backPath, workspace }: { domain: Domain
     setTransferStep("setup");
     setTransferAuthCode("");
     setTransferAuthLoading(false);
+    setTransferChecklist({
+      unlocked: false,
+      registrantEmailReady: false,
+      understandDnsImpact: false,
+    });
   }
   return (
     <div className="flex flex-col">

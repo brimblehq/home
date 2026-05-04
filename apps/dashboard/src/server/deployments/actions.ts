@@ -3,15 +3,10 @@ import type { BackendApi } from "@/backend";
 import { listDeploymentRunLogsFromSupabase } from "@/backend/deployment-run-logs";
 import type { PaginatedDeploymentsResponse, DeploymentLog } from "@/backend/deployments";
 import config from "@/config";
-import { withTokenRefresh } from "@/server/shared/backend";
+import { withTokenRefresh, resolveTeamId } from "@/server/shared/backend";
 
 async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
-  const workspaceSlug = workspace?.trim().toLowerCase();
-  if (!workspaceSlug) return undefined;
-
-  const teams = await api.workspaces.list();
-  const match = teams.items.find((item) => item.slug === workspaceSlug);
-  return match?.id ?? undefined;
+  return resolveTeamId(api, workspace);
 }
 
 async function resolveLogOwnerId(api: BackendApi, workspace?: string) {

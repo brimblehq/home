@@ -17,9 +17,15 @@ const VIBRATE = {
 const REPORT_ERROR_EMAIL = "hello@brimble.app";
 const REPORT_ERROR_SUBJECT = "Dashboard Error Report";
 
+function getProjectIdFromUrl(url: string): string | undefined {
+  const match = url.match(/\/projects\/([^/?#]+)/);
+  return match?.[1];
+}
+
 function buildReportErrorBody(message?: string): string {
   const timestamp = new Date().toISOString();
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
+  const projectId = getProjectIdFromUrl(currentUrl);
   const lines = [
     "Hi Brimble team,",
     "",
@@ -27,6 +33,7 @@ function buildReportErrorBody(message?: string): string {
     "",
     `Error message: ${message || "N/A"}`,
     `Page URL: ${currentUrl || "N/A"}`,
+    `Project ID: ${projectId || "N/A"}`,
     `Time (UTC): ${timestamp}`,
     "",
     "What I was doing:",

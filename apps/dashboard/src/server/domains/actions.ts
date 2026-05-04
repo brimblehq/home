@@ -4,23 +4,12 @@ import type { BackendApi } from "@/backend";
 import type { DomainDetailsRecord, DomainRecord, PaginatedDomainsResponse } from "@/backend/domains";
 import type { PaginatedProjectsResponse } from "@/backend/projects";
 import config from "@/config";
-import { withTokenRefresh } from "@/server/shared/backend";
+import { withTokenRefresh, resolveTeamId } from "@/server/shared/backend";
 import { domainsLogger, domainsDnsLogger } from "@/server/shared/logger";
 import { resolveEnvironmentId } from "@/utils/environment-selection";
 
 async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
-  const workspaceSlug = workspace?.trim().toLowerCase();
-  if (!workspaceSlug) {
-    return undefined;
-  }
-
-  const teams = await api.workspaces.list();
-  const match = teams.items.find((item) => item.slug === workspaceSlug);
-  if (match?.id) {
-    return match.id;
-  }
-
-  return undefined;
+  return resolveTeamId(api, workspace);
 }
 
 function buildEnvironmentPreferenceCookieName(workspace?: string) {

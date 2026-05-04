@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ProjectSubnav } from "../../components/project/project-subnav";
 import { DeploymentLogsDrawer } from "../../components/shared/deployment-logs-drawer";
@@ -15,14 +15,15 @@ import {
   ProjectDeploymentLogsDrawerContext,
   type ProjectDeploymentLogsDrawerContextValue,
 } from "@/contexts/project-deployment-logs-drawer-context";
-import { Realtime } from "ably";
-import { getSupabaseClient } from "@/lib/supabase";
 import { mapDeploymentRunLogsToDrawerEntries, sortDeploymentDrawerEntries } from "@/utils/deployment-logs";
 import { usePushNotification } from "@/hooks/use-push-notification";
 import config from "@/config";
 
 const SUCCESS_LOG_PATTERN = /site (is )?(live|running)\b/i;
 const FAILURE_LOG_PATTERN = /deployment failed|build failed|failed to deploy/i;
+
+const DEPLOYMENT_EVENT_NAMES = ["deployment:started", "deployment:completed", "deployment:failed"] as const;
+type DeploymentEventName = (typeof DEPLOYMENT_EVENT_NAMES)[number];
 
 function getDrawerEntryKey(entry: DeploymentDrawerLogEntry): string {
   const rawId = entry.rawId?.trim();
@@ -273,6 +274,7 @@ function ProjectLayout() {
     };
   }) => Promise<{ entries: DeploymentDrawerLogEntry[] }>;
 
+  const router = useRouter();
   const { sendNotification } = usePushNotification(workspace);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedDeployment, setSelectedDeployment] = useState<DeploymentLog | null>(null);
@@ -368,70 +370,82 @@ function ProjectLayout() {
   useEffect(() => {
     if (!drawerOpen || !selectedDeployment) return;
 
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
 
-    const logId = selectedDeployment.id;
-    const channel = supabase
-      .channel(`deployment-logs-${logId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: config.supabaseTableName,
-        },
-        (payload) => {
-          const row = payload.new as any;
-          if (row.logId !== logId) return;
+    void (async () => {
+      const { getSupabaseClient } = await import("@/lib/supabase");
+      if (cancelled) return;
 
-          const [entry] = mapDeploymentRunLogsToDrawerEntries([row]);
-          if (!entry) return;
+      const supabase = getSupabaseClient();
+      if (!supabase) return;
 
-          // Fire push notification on terminal log messages
-          const msg = entry.message;
-          const env = selectedDeployment.environment || "Production";
-          const name = (project as BackendProject)?.name || projectId;
-          if (SUCCESS_LOG_PATTERN.test(msg)) {
-            sendNotification({
-              title: "Deployment Successful",
-              body: `${name} (${env}) deployed successfully.`,
-              onClick: () => window.focus(),
-            });
-          } else if (FAILURE_LOG_PATTERN.test(msg)) {
-            sendNotification({
-              title: "Deployment Failed",
-              body: `${name} (${env}) deployment failed.`,
-              onClick: () => window.focus(),
-            });
-          }
+      const logId = selectedDeployment.id;
+      const channel = supabase
+        .channel(`deployment-logs-${logId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: config.supabaseTableName,
+          },
+          (payload) => {
+            const row = payload.new as any;
+            if (row.logId !== logId) return;
 
-          setDrawerLogsByDeploymentId((prev) => {
-            const existingEntries = prev[logId] ?? [];
-            const nextEntries = mergeDeploymentDrawerEntries(existingEntries, [entry]);
-            if (nextEntries.length === existingEntries.length) {
-              return prev;
+            const [entry] = mapDeploymentRunLogsToDrawerEntries([row]);
+            if (!entry) return;
+
+            const msg = entry.message;
+            const env = selectedDeployment.environment || "Production";
+            const name = (project as BackendProject)?.name || projectId;
+            if (SUCCESS_LOG_PATTERN.test(msg)) {
+              sendNotification({
+                title: "Deployment Successful",
+                body: `${name} (${env}) deployed successfully.`,
+                onClick: () => window.focus(),
+              });
+            } else if (FAILURE_LOG_PATTERN.test(msg)) {
+              sendNotification({
+                title: "Deployment Failed",
+                body: `${name} (${env}) deployment failed.`,
+                onClick: () => window.focus(),
+              });
             }
 
-            return {
-              ...prev,
-              [logId]: nextEntries,
-            };
-          });
-        },
-      )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          void fetchLogsForDeployment(selectedDeployment, {
-            revalidate: true,
-            silent: true,
-            merge: true,
-          });
-        }
-      });
+            setDrawerLogsByDeploymentId((prev) => {
+              const existingEntries = prev[logId] ?? [];
+              const nextEntries = mergeDeploymentDrawerEntries(existingEntries, [entry]);
+              if (nextEntries.length === existingEntries.length) {
+                return prev;
+              }
+
+              return {
+                ...prev,
+                [logId]: nextEntries,
+              };
+            });
+          },
+        )
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            void fetchLogsForDeployment(selectedDeployment, {
+              revalidate: true,
+              silent: true,
+              merge: true,
+            });
+          }
+        });
+
+      cleanup = () => {
+        supabase.removeChannel(channel);
+      };
+    })();
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      cleanup?.();
     };
   }, [drawerOpen, selectedDeployment, sendNotification, project, projectId, fetchLogsForDeployment]);
 
@@ -457,35 +471,49 @@ function ProjectLayout() {
     const backendProjectId = (project as BackendProject)?.id;
     if (!backendProjectId) return;
 
-    const ably = new Realtime({
-      authUrl: `${config.apiUrl}/v1/ably/token?clientId=${backendProjectId}`,
-      clientId: backendProjectId,
-    });
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
 
-    const channel = ably.channels.get(backendProjectId);
+    void (async () => {
+      const { Realtime } = await import("ably");
+      if (cancelled) return;
 
-    channel.subscribe((message) => {
-      const eventName = message.name ?? "";
-      if (
-        eventName === "deployment:started" ||
-        eventName === "deployment:completed" ||
-        eventName === "deployment:failed" ||
-        eventName.startsWith("deployment:")
-      ) {
-        window.dispatchEvent(
-          new CustomEvent("brimble:deployment-updated", {
-            detail: { projectId: backendProjectId, ...(message.data ?? {}) },
-          }),
-        );
-      }
-    });
+      const ably = new Realtime({
+        authUrl: `${config.apiUrl}/v1/ably/token?clientId=${backendProjectId}`,
+        clientId: backendProjectId,
+      });
+
+      const channel = ably.channels.get(backendProjectId);
+
+      channel.subscribe((message) => {
+        const eventName = message.name ?? "";
+        if (DEPLOYMENT_EVENT_NAMES.includes(eventName as DeploymentEventName)) {
+          window.dispatchEvent(
+            new CustomEvent("brimble:deployment-updated", {
+              detail: { projectId: backendProjectId, ...(message.data ?? {}) },
+            }),
+          );
+        }
+
+        if (eventName === "database:provisioned") {
+          void router.invalidate();
+        }
+      });
+
+      cleanup = () => {
+        try {
+          ably.close();
+        } catch {
+          // ignore
+        }
+      };
+    })();
 
     return () => {
-      try {
-        ably.close();
-      } catch {}
+      cancelled = true;
+      cleanup?.();
     };
-  }, [(project as BackendProject)?.id]);
+  }, [(project as BackendProject)?.id, router]);
 
   const openDeploymentDrawer = useCallback(
     (deployment: DeploymentLog) => {

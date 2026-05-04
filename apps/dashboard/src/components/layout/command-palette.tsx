@@ -108,18 +108,6 @@ export function CommandPalette() {
 
   const go = (pathname: string) => navigate({ to: withWorkspaceQuery({ pathname, searchStr }) as any });
 
-  // ⌘K / Ctrl+K to toggle
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setIsOpen(!isOpen);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, setIsOpen]);
-
   const prevIsOpen = useRef(false);
   useEffect(() => {
     if (isOpen && !prevIsOpen.current) haptics.soft();

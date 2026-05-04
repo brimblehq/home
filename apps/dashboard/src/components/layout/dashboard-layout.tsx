@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,14 +9,11 @@ import { cn } from "@brimble/ui";
 import { Sidebar, mainNav, moreNav } from "./sidebar";
 import { Topbar } from "./topbar";
 import { Footer } from "./footer";
-import { CommandPalette } from "./command-palette";
+import { RouterProgressBar } from "./router-progress-bar";
 import { TooltipProvider } from "../shared/tooltip";
 import { Snackbar } from "../shared/snackbar";
-import { OnboardingChecklist } from "../shared/onboarding-checklist";
-import { WelcomeModal } from "../shared/welcome-modal";
 import { DashToaster } from "../shared/toaster";
-import { UserProfileDrawer } from "../shared/user-profile-drawer";
-import { ScoutBarProvider } from "../../contexts/scoutbar-context";
+import { ScoutBarProvider, useScoutBar } from "../../contexts/scoutbar-context";
 import { useTheme } from "../../hooks/use-theme";
 import { setHapticsEnabled } from "../../hooks/use-haptics";
 import type { SettingsSidebarSnapshot } from "@/backend/settings";
@@ -41,6 +38,27 @@ import { getSettingsSidebarSnapshotServerFn } from "@/server/settings/actions";
 import { getWorkspaceTeamMembersServerFn } from "@/server/teams/actions";
 import { identifyPostHog, isPostHogEnabled } from "@/lib/posthog";
 import { useFeatureFlag, FeatureFlags } from "@/lib/feature-flags";
+
+const CommandPalette = lazy(() => import("./command-palette").then((m) => ({ default: m.CommandPalette })));
+const UserProfileDrawer = lazy(() => import("../shared/user-profile-drawer").then((m) => ({ default: m.UserProfileDrawer })));
+const OnboardingChecklist = lazy(() => import("../shared/onboarding-checklist").then((m) => ({ default: m.OnboardingChecklist })));
+const WelcomeModal = lazy(() => import("../shared/welcome-modal").then((m) => ({ default: m.WelcomeModal })));
+
+const WELCOME_MODAL_STORAGE_KEY = "brimble:welcome-modal-dismissed";
+
+function CommandPaletteSlot() {
+  const { isOpen } = useScoutBar();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    if (isOpen) setMounted(true);
+  }, [isOpen]);
+  if (!mounted) return null;
+  return (
+    <Suspense fallback={null}>
+      <CommandPalette />
+    </Suspense>
+  );
+}
 
 const dashboardQueryClient = new QueryClient({
   defaultOptions: {
@@ -694,10 +712,40 @@ export function DashboardLayout({
   // Settings drawer — shared between sidebar & topbar
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileRequestedTab, setProfileRequestedTab] = useState<ProfileTab | undefined>(undefined);
+  const [profileEverOpened, setProfileEverOpened] = useState(false);
+
+  useEffect(() => {
+    if (profileOpen && !profileEverOpened) setProfileEverOpened(true);
+  }, [profileOpen, profileEverOpened]);
 
   const openProfileDrawer = useCallback((tab?: ProfileTab) => {
     setProfileRequestedTab(tab);
     setProfileOpen(true);
+  }, []);
+
+  const [shouldRenderWelcomeModal, setShouldRenderWelcomeModal] = useState(false);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(WELCOME_MODAL_STORAGE_KEY)) {
+        setShouldRenderWelcomeModal(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const [shouldRenderOnboardingChecklist, setShouldRenderOnboardingChecklist] = useState(false);
+  useEffect(() => {
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    if (w.requestIdleCallback) {
+      const handle = w.requestIdleCallback(() => setShouldRenderOnboardingChecklist(true), { timeout: 1500 });
+      return () => w.cancelIdleCallback?.(handle);
+    }
+    const handle = window.setTimeout(() => setShouldRenderOnboardingChecklist(true), 600);
+    return () => window.clearTimeout(handle);
   }, []);
 
   const getTooltipMessages = useServerFn(listTooltipMessagesServerFn as any) as (args: {
@@ -953,6 +1001,7 @@ export function DashboardLayout({
           <PlanTypeProvider value={planType}>
             <WorkspaceRoleProvider value={workspaceRoleValue}>
               <TooltipProvider>
+                <RouterProgressBar />
                 <DashToaster />
                 {children}
               </TooltipProvider>
@@ -971,8 +1020,9 @@ export function DashboardLayout({
             <ScoutBarProvider>
               <TooltipProvider>
                 <ProfileDrawerProvider onOpen={openProfileDrawer}>
+                  <RouterProgressBar />
                   <DashToaster />
-                  <CommandPalette />
+                  <CommandPaletteSlot />
                   <div className="flex h-dvh flex-col bg-dash-bg">
                     <Topbar
                       onSettingsClick={() => setProfileOpen(true)}
@@ -1105,27 +1155,39 @@ export function DashboardLayout({
                         </main>
                       </div>
                     )}
-                    <WelcomeModal />
-                    <OnboardingChecklist
-                      projects={checklistProjects}
-                      settingsSnapshot={activeSettingsSnapshot}
-                      isTeamWorkspace={isTeamWorkspace}
-                      teamDetails={activeWorkspaceTeamMembers}
-                    />
-                    <UserProfileDrawer
-                      initialWorkspaceTeamMembers={activeWorkspaceTeamMembers}
-                      open={profileOpen}
-                      onOpenChange={setProfileOpen}
-                      requestedTab={profileRequestedTab}
-                      initialSnapshot={activeSettingsSnapshot}
-                      initialPaymentMethods={initialPaymentMethods ?? null}
-                      initialInvoices={initialInvoices ?? null}
-                      initialActivityLogs={initialActivityLogs ?? null}
-                      initialSubscriptionStats={initialSubscriptionStats ?? null}
-                      initialUserOverview={initialUserOverview ?? null}
-                      initialProjectEnvironments={initialProjectEnvironments ?? null}
-                      projectCount={accountProjectCount}
-                    />
+                    {shouldRenderWelcomeModal && (
+                      <Suspense fallback={null}>
+                        <WelcomeModal />
+                      </Suspense>
+                    )}
+                    {shouldRenderOnboardingChecklist && (
+                      <Suspense fallback={null}>
+                        <OnboardingChecklist
+                          projects={checklistProjects}
+                          settingsSnapshot={activeSettingsSnapshot}
+                          isTeamWorkspace={isTeamWorkspace}
+                          teamDetails={activeWorkspaceTeamMembers}
+                        />
+                      </Suspense>
+                    )}
+                    {profileEverOpened && (
+                      <Suspense fallback={null}>
+                        <UserProfileDrawer
+                          initialWorkspaceTeamMembers={activeWorkspaceTeamMembers}
+                          open={profileOpen}
+                          onOpenChange={setProfileOpen}
+                          requestedTab={profileRequestedTab}
+                          initialSnapshot={activeSettingsSnapshot}
+                          initialPaymentMethods={initialPaymentMethods ?? null}
+                          initialInvoices={initialInvoices ?? null}
+                          initialActivityLogs={initialActivityLogs ?? null}
+                          initialSubscriptionStats={initialSubscriptionStats ?? null}
+                          initialUserOverview={initialUserOverview ?? null}
+                          initialProjectEnvironments={initialProjectEnvironments ?? null}
+                          projectCount={accountProjectCount}
+                        />
+                      </Suspense>
+                    )}
                   </div>
                 </ProfileDrawerProvider>
               </TooltipProvider>

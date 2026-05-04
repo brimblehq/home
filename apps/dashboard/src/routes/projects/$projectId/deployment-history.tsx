@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
-import { Realtime, type Message as AblyMessage } from "ably";
+import type { Message as AblyMessage } from "ably";
 import {
   Search,
   ChevronDown,
@@ -992,12 +992,8 @@ function DeploymentHistoryPage() {
       return;
     }
 
-    const ably = new Realtime({
-      authUrl: `${config.apiUrl}/v1/ably/token?clientId=${projectId}`,
-      clientId: projectId,
-    });
-
-    const channel = ably.channels.get(projectId);
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
 
     const handleLogEvent = (message: AblyMessage) => {
       const payload = toAblyLogEventPayload(message.data);
@@ -1101,13 +1097,30 @@ function DeploymentHistoryPage() {
       }
     };
 
-    channel.subscribe("log", handleLogEvent);
+    void (async () => {
+      const { Realtime } = await import("ably");
+      if (cancelled) return;
+
+      const ably = new Realtime({
+        authUrl: `${config.apiUrl}/v1/ably/token?clientId=${projectId}`,
+        clientId: projectId,
+      });
+      const channel = ably.channels.get(projectId);
+      channel.subscribe("log", handleLogEvent);
+
+      cleanup = () => {
+        try {
+          channel.unsubscribe("log", handleLogEvent);
+          ably.close();
+        } catch {
+          // ignore
+        }
+      };
+    })();
 
     return () => {
-      try {
-        channel.unsubscribe("log", handleLogEvent);
-        ably.close();
-      } catch {}
+      cancelled = true;
+      cleanup?.();
     };
   }, [projectId, projectName, sendNotification, syncDeploymentInDrawer]);
 

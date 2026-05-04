@@ -2,6 +2,7 @@ import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import * as Sentry from "@sentry/tanstackstart-react";
 import { routeTree } from "./routeTree.gen";
 import { DefaultErrorComponent } from "./components/shared/default-error";
+import { installServerFnPerfLogger } from "./lib/perf-logger";
 
 let sentryInitialized = false;
 
@@ -25,20 +26,8 @@ export function getRouter() {
     sentryInitialized = true;
   }
 
-  if (typeof document !== "undefined") {
-    import("nprogress").then((mod) => {
-      const NProgress = mod.default;
-      import("nprogress/nprogress.css");
-      NProgress.configure({ showSpinner: false, trickleSpeed: 200 });
-
-      router.subscribe("onBeforeLoad", ({ pathChanged }) => {
-        if (pathChanged) NProgress.start();
-      });
-
-      router.subscribe("onLoad", () => {
-        NProgress.done();
-      });
-    });
+  if (!router.isServer) {
+    installServerFnPerfLogger();
   }
 
   return router;

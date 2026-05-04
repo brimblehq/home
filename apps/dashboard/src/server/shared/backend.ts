@@ -39,6 +39,53 @@ const activeRefreshPromises = new Map<string, Promise<AuthSession>>();
 const recentRefreshSessions = new Map<string, { session: AuthSession; expiresAt: number }>();
 const RECENT_REFRESH_TTL_MS = 2 * 60 * 1000;
 
+type WorkspaceListResult = Awaited<ReturnType<BackendApi["workspaces"]["list"]>>;
+
+const workspacesCache = new Map<string, { promise: Promise<WorkspaceListResult>; expiresAt: number }>();
+
+const WORKSPACES_CACHE_TTL_MS = 5_000;
+
+async function getCachedWorkspaces(api: BackendApi): Promise<WorkspaceListResult> {
+  const accessToken = getServerAccessToken();
+
+  if (!accessToken) {
+    return api.workspaces.list();
+  }
+
+  const key = tokenFingerprint(accessToken);
+  const existing = workspacesCache.get(key);
+  if (existing && existing.expiresAt > Date.now()) {
+    return existing.promise;
+  }
+
+  const promise = api.workspaces.list();
+  workspacesCache.set(key, { promise, expiresAt: Date.now() + WORKSPACES_CACHE_TTL_MS });
+  promise.catch(() => {
+    if (workspacesCache.get(key)?.promise === promise) {
+      workspacesCache.delete(key);
+    }
+  });
+  return promise;
+}
+
+type WorkspaceItem = WorkspaceListResult["items"][number];
+
+export async function resolveWorkspace(
+  api: BackendApi,
+  slug: string | undefined | null,
+): Promise<WorkspaceItem | undefined> {
+  if (!slug) return undefined;
+  const normalized = slug.trim().toLowerCase();
+  if (!normalized) return undefined;
+  const teams = await getCachedWorkspaces(api);
+  return teams.items.find((item) => item.slug?.toLowerCase() === normalized);
+}
+
+export async function resolveTeamId(api: BackendApi, slug: string | undefined | null): Promise<string | undefined> {
+  const match = await resolveWorkspace(api, slug);
+  return match?.id ?? undefined;
+}
+
 function getRecentRefreshSession(refreshToken: string): AuthSession | null {
   const entry = recentRefreshSessions.get(refreshToken);
   if (!entry) {

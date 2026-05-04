@@ -29,18 +29,38 @@ function staleAssetGuard(): Plugin {
   };
 }
 
+function cacheHeaders(): Plugin {
+  const IMMUTABLE = "public, max-age=31536000, immutable";
+  const REVALIDATE_DAILY = "public, max-age=86400, must-revalidate";
+  return {
+    name: "brimble:cache-headers",
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split("?")[0] ?? "";
+        if (/^\/assets\//.test(url)) {
+          res.setHeader("Cache-Control", IMMUTABLE);
+        } else if (/^\/(icons|images|abc-marfa-font-family)\//.test(url)) {
+          res.setHeader("Cache-Control", REVALIDATE_DAILY);
+        }
+        next();
+      });
+    },
+  };
+}
+
 const config = defineConfig({
   envPrefix: ["VITE_"],
   plugins: [
     tsconfigPaths({ projects: ["./tsconfig.json"] }),
     tailwindcss(),
+    cacheHeaders(),
     staleAssetGuard(),
     tanstackStart(),
     ...(process.env.SENTRY_AUTH_TOKEN
       ? [
           sentryTanstackStart({
             org: "brimble",
-            project: "brimble-dashboard-new",
+            project: "brimble-dashboard",
             authToken: process.env.SENTRY_AUTH_TOKEN,
           }),
         ]

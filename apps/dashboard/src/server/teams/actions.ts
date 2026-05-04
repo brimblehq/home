@@ -1,17 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { BackendApi } from "@/backend";
-import { withTokenRefresh } from "@/server/shared/backend";
+import { withTokenRefresh, resolveWorkspace } from "@/server/shared/backend";
 import { teamsLogger } from "@/server/shared/logger";
 
 async function resolveWorkspaceTeam(api: BackendApi, workspace?: string) {
-  const workspaceSlug = workspace?.trim().toLowerCase();
-  if (!workspaceSlug) {
+  if (!workspace?.trim()) {
     throw new Error("Workspace is required");
   }
 
-  const teams = await api.workspaces.list();
-  const match = teams.items.find((item) => item.slug === workspaceSlug);
-
+  const match = await resolveWorkspace(api, workspace);
   if (!match?.id || !match.slug) {
     throw new Error("Workspace team not found");
   }
