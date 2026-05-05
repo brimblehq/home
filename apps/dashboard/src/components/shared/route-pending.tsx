@@ -60,6 +60,130 @@ export function RoutePending() {
 }
 
 /* ─────────────────────────────────────────────
+   / (workspace home)
+
+   Mirrors routes/index.tsx:
+   1. WelcomeSection: h1 "Welcome <name>," + subtitle paragraph
+   2. StatsRow: single rounded card, 3 columns on lg (Bandwidth | Deployment minutes | Total projects), each 30px header
+   3. hr
+   4. DeployedProjects: PageHeader + 3-col grid of 168px ProjectCards
+   5. hr
+   6. ConnectedDomains: flex card with left text+button, right big number
+   7. hr
+   8. FeaturedIntegrations: section header + Browse button + 3-col grid of addon cards
+   ───────────────────────────────────────────── */
+
+export function HomePending() {
+  return (
+    <div className="max-w-[1000px]" aria-hidden="true">
+      {/* WelcomeSection */}
+      <div className="mb-6">
+        <div className={`mb-2 h-8 w-64 rounded ${PULSE_BG_STRONG} animate-pulse`} />
+        <div className={`h-3.5 w-full max-w-[480px] rounded ${PULSE_BG_MEDIUM} animate-pulse`} />
+      </div>
+
+      {/* StatsRow — single rounded card, 3 columns on lg, h-[160px] */}
+      <div className="mb-8 flex flex-col overflow-hidden rounded border-[0.5px] border-dash-border lg:h-[160px] lg:flex-row">
+        {/* Bandwidth (36%) */}
+        <div className="flex w-full shrink-0 flex-col border-b-[0.5px] border-dash-border lg:w-[36%] lg:border-b-0 lg:border-r-[0.5px]">
+          <div className="flex h-[30px] items-center border-b-[0.5px] border-dash-border bg-dash-bg-elevated/60 px-2">
+            <div className={`h-2.5 w-44 rounded ${PULSE_BG_MEDIUM} animate-pulse`} />
+          </div>
+          <div className="px-2 pb-3 pt-2">
+            <div className={`h-2.5 w-20 rounded ${PULSE_BG_WEAK} animate-pulse`} />
+          </div>
+          <div className="mt-auto h-[65px] w-full bg-gradient-to-t from-dash-border-soft/30 to-transparent" />
+        </div>
+
+        {/* Deployment minutes (34%) */}
+        <div className="flex w-full shrink-0 flex-col border-b-[0.5px] border-dash-border lg:w-[34%] lg:border-b-0">
+          <div className="flex h-[30px] items-center justify-between border-b-[0.5px] border-dash-border bg-dash-bg-elevated/60 px-2">
+            <div className={`h-2.5 w-32 rounded ${PULSE_BG_MEDIUM} animate-pulse`} />
+            <div className={`h-2.5 w-16 rounded ${PULSE_BG_WEAK} animate-pulse`} />
+          </div>
+          <div className="flex flex-1 flex-col justify-between gap-1 px-2 py-3.5 lg:gap-0">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i}>
+                <div className="flex items-center justify-between">
+                  <div className={`h-3 w-32 rounded ${PULSE_BG_MEDIUM} animate-pulse`} />
+                  <div className={`h-3 w-12 rounded ${PULSE_BG_WEAK} animate-pulse`} />
+                </div>
+                {i < 2 && <hr className="mt-2 border-dash-border lg:mt-1.5" />}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Total projects */}
+        <div className="flex flex-1 flex-col border-t-[0.5px] border-dash-border lg:border-l-[0.5px] lg:border-t-0">
+          <div className="flex h-[30px] items-center border-b-[0.5px] border-dash-border bg-dash-bg-elevated/60 px-2.5">
+            <div className={`h-2.5 w-44 rounded ${PULSE_BG_MEDIUM} animate-pulse`} />
+          </div>
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 py-4 lg:py-0">
+            <div className={`h-7 w-16 rounded ${PULSE_BG_MEDIUM} animate-pulse`} />
+            <div className={`h-7 w-32 rounded-[4px] ${PULSE_BG_WEAK} animate-pulse`} />
+          </div>
+        </div>
+      </div>
+
+      <hr className="-mx-4 mb-10 border-dash-border-soft md:-ml-10 md:mr-0" />
+
+      {/* DeployedProjects */}
+      <div className="mb-8">
+        <div className="mb-8 flex items-center gap-4">
+          <div>
+            <div className={`mb-2 h-4 w-40 rounded ${PULSE_BG_STRONG} animate-pulse`} />
+            <div className={`h-3.5 w-full max-w-[420px] rounded ${PULSE_BG_MEDIUM} animate-pulse`} />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30 animate-pulse" />
+          ))}
+        </div>
+      </div>
+
+      <hr className="-mx-4 mb-10 border-dash-border-soft md:-ml-10 md:mr-0" />
+
+      {/* ConnectedDomains */}
+      <div className="mb-8 flex rounded-[4px] border-[0.5px] border-dash-border py-2">
+        <div className="flex flex-1 flex-col gap-3.5 px-3.5 py-3.5">
+          <div className="flex flex-col gap-2">
+            <div className={`h-4 w-44 rounded ${PULSE_BG_STRONG} animate-pulse`} />
+            <div className={`h-3.5 w-full max-w-[400px] rounded ${PULSE_BG_MEDIUM} animate-pulse`} />
+          </div>
+          <div className={`h-9 w-44 rounded-[6px] ${PULSE_BG_MEDIUM} animate-pulse`} />
+        </div>
+        <div className="hidden h-[122px] w-[169px] shrink-0 flex-col items-center justify-center border-l-[0.5px] border-dash-border pl-3.5 pr-2 sm:flex">
+          <div className="flex flex-col items-start gap-2">
+            <div className={`h-12 w-16 rounded ${PULSE_BG_STRONG} animate-pulse`} />
+            <div className={`h-3 w-28 rounded ${PULSE_BG_WEAK} animate-pulse`} />
+          </div>
+        </div>
+      </div>
+
+      <hr className="-mx-4 mb-10 border-dash-border-soft md:-ml-10 md:mr-0" />
+
+      {/* FeaturedIntegrations */}
+      <div className="mb-8">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className={`mb-2 h-5 w-24 rounded ${PULSE_BG_STRONG} animate-pulse`} />
+            <div className={`h-3.5 w-full max-w-[400px] rounded ${PULSE_BG_MEDIUM} animate-pulse`} />
+          </div>
+          <div className={`h-8 w-24 rounded-[6px] ${PULSE_BG_MEDIUM} animate-pulse`} />
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="min-h-[200px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    /projects/$projectId (overview)
 
    Mirrors the actual layout:

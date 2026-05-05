@@ -8,6 +8,7 @@ import { ConnectedDomains } from "../components/overview/connected-domains";
 import { FeaturedIntegrations } from "../components/overview/featured-integrations";
 import { TeamInviteModal } from "../components/shared/team-invite-modal";
 import { OwnershipTransferModal } from "../components/shared/ownership-transfer-modal";
+import { HomePending } from "../components/shared/route-pending";
 import { listHomeProjectsServerFn } from "@/server/projects/actions";
 import { listFrameworksServerFn } from "@/server/frameworks/actions";
 import type { FrameworkOption } from "@/backend/frameworks";
@@ -135,6 +136,7 @@ export const Route = createFileRoute("/")({
     };
   },
   component: DashboardHome,
+  pendingComponent: HomePending,
 });
 
 function DashboardHome() {
