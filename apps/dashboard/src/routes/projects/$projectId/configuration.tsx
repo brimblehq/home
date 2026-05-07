@@ -1230,6 +1230,7 @@ function ResourcesSection({
   canSave = true,
   canWrite = true,
   freePlanLocked = false,
+  freePlanStorageCap = null,
   onUpgradeClick,
 }: {
   initialValues: ResourcesConfigValues;
@@ -1241,19 +1242,18 @@ function ResourcesSection({
   canSave?: boolean;
   canWrite?: boolean;
   freePlanLocked?: boolean;
+  freePlanStorageCap?: number | null;
   onUpgradeClick?: () => void;
 }) {
-  const gatedDiskSizes = useMemo(
-    () =>
-      freePlanLocked
-        ? diskSizes.map((option) => ({
-            ...option,
-            disabled: option.id !== "10",
-            asideText: option.id === "10" ? undefined : "Upgrade to access",
-          }))
-        : diskSizes,
-    [freePlanLocked],
-  );
+  const lockedStorageId = freePlanLocked && freePlanStorageCap != null ? String(freePlanStorageCap) : null;
+  const gatedDiskSizes = useMemo(() => {
+    if (!lockedStorageId) return diskSizes;
+    return diskSizes.map((option) => ({
+      ...option,
+      disabled: option.id !== lockedStorageId,
+      asideText: option.id === lockedStorageId ? undefined : "Upgrade to access",
+    }));
+  }, [lockedStorageId]);
   return (
     <Formik
       initialValues={initialValues}
@@ -1376,7 +1376,7 @@ function ResourcesSection({
                             value={values.diskSize}
                             options={gatedDiskSizes}
                             onChange={(v) => {
-                              if (freePlanLocked && v !== "10") {
+                              if (lockedStorageId && v !== lockedStorageId) {
                                 onUpgradeClick?.();
                                 return;
                               }
@@ -2016,7 +2016,7 @@ function ConfigurationPage() {
   })();
 
   const databaseProject = isDatabaseProject(project);
-  const { planKey } = usePlanGate();
+  const { planKey, dbMaxStorage: planDbMaxStorage } = usePlanGate();
   const dbResourcesFreeLocked = databaseProject && planKey === "free";
   const [showDbUpgradeModal, setShowDbUpgradeModal] = useState(false);
   const sourceFieldsVisible = shouldShowBranchRootFrameworkFields(project);
@@ -2324,6 +2324,7 @@ function ConfigurationPage() {
                   canSave
                   canWrite={canWrite}
                   freePlanLocked={dbResourcesFreeLocked}
+                  freePlanStorageCap={planDbMaxStorage}
                   onUpgradeClick={() => setShowDbUpgradeModal(true)}
                 />
               )}

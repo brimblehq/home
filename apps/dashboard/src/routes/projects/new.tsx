@@ -17,6 +17,7 @@ import {
   Eye,
   EyeOff,
   Copy,
+  RefreshCw,
   ShieldAlert,
   HardDrive,
   ArrowUpRight,
@@ -84,11 +85,10 @@ import { usePricing } from "@/contexts/pricing-context";
 import { usePaymentMethods } from "@/hooks/use-payments";
 import { PaymentProvider } from "@/providers/payment-provider";
 
-const AddCardForm = lazy(() =>
-  import("@/components/settings/billing-form").then((m) => ({ default: m.AddCardForm })),
-);
+const AddCardForm = lazy(() => import("@/components/settings/billing-form").then((m) => ({ default: m.AddCardForm })));
 import { estimateComputeCost } from "@/utils/compute-pricing";
 import { formatUsdMonthly } from "@/utils/billing";
+import { generateStrongPassword } from "@/utils/password";
 import { NewProjectPending } from "@/components/shared/route-pending";
 import config from "@/config";
 
@@ -500,6 +500,7 @@ type DatabaseEnvDraft = {
   key: string;
   value: string;
   sensitive: boolean;
+  isPassword: boolean;
 };
 
 let dbEnvNextId = 1;
@@ -573,8 +574,8 @@ function Phase1SourceType({ onSelect }: { onSelect: (type: SourceType) => void }
     {
       type: SourceType.Database,
       icon: "/images/database.svg",
-      title: "Provision a Database",
-      desc: "Deploy a managed database instance",
+      title: "Database & Queue",
+      desc: "Provision a managed database or message queue",
     },
   ];
 
@@ -1197,8 +1198,8 @@ function Phase2DbEngine({
         exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.25, ease }}
       >
-        <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Choose a database engine</h3>
-        <p className="mb-4 text-sm text-dash-text-faded">Loading available databases...</p>
+        <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Choose an engine</h3>
+        <p className="mb-4 text-sm text-dash-text-faded">Loading available engines...</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="rounded-[4px] border-[0.5px] border-dash-border p-5">
@@ -1300,8 +1301,6 @@ function Phase2DbEngine({
       asideText: gated ? "Upgrade to access" : undefined,
     };
   });
-  const hasGatedEngine = engineOptions.some((option) => option.disabled);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -1309,23 +1308,26 @@ function Phase2DbEngine({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25, ease }}
     >
-      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Provision a database</h3>
-      <p className="mb-4 text-sm text-dash-text-faded">
-        Select a database engine, then configure compute, storage, and access in one step.
-      </p>
-      <div>
-        <div className="mb-1.5 flex items-center justify-between gap-3">
-          <label className="text-sm text-dash-text-body">Database engine</label>
-          {hasGatedEngine && (
+      <h3 className="mb-1 text-sm font-medium text-dash-text-strong">Provision a database or queue</h3>
+      <p className="mb-4 text-sm text-dash-text-faded">Select an engine, then configure compute, storage, and access in one step.</p>
+      {isFreePlan && (
+        <div className="mb-4 flex items-start gap-3 rounded-[6px] bg-[#4879f8]/[0.08] px-3.5 py-3 dark:bg-[#4879f8]/[0.12]">
+          <img src="/icons/info.svg" alt="" aria-hidden="true" className="mt-0.5 size-4 shrink-0 invert dark:invert-0" />
+          <div className="flex-1 text-sm leading-[1.4] text-dash-text-body">
+            The free plan includes one database. Need more?{" "}
             <button
               type="button"
               onClick={() => setShowUpgradeModal(true)}
-              className="text-sm font-medium text-[#4879f8] transition-colors hover:text-[#3060d0]"
+              className="font-medium text-[#4879f8] transition-colors hover:text-[#3060d0]"
             >
-              Upgrade for access
-            </button>
-          )}
+              Upgrade your plan
+            </button>{" "}
+            to provision additional databases.
+          </div>
         </div>
+      )}
+      <div>
+        <label className="mb-1.5 block text-sm text-dash-text-body">Database engine</label>
         <Dropdown
           value={selectedEngineId}
           options={engineOptions}
@@ -1377,11 +1379,15 @@ function CredentialRow({
   value,
   onChange,
   sensitive = false,
+  canRegenerate = false,
+  onRegenerate,
 }: {
   label: string;
   value: string;
   onChange: (val: string) => void;
   sensitive?: boolean;
+  canRegenerate?: boolean;
+  onRegenerate?: () => void;
 }) {
   const haptics = useHaptics();
   const [revealed, setRevealed] = useState(!sensitive);
@@ -1411,8 +1417,20 @@ function CredentialRow({
         className="min-w-0 flex-1 truncate border-0 bg-transparent font-family-mono text-sm text-dash-text-body outline-none placeholder:text-dash-text-extra-faded"
       />
       <div className="flex shrink-0 items-center gap-1">
+        {canRegenerate && onRegenerate ? (
+          <button
+            type="button"
+            onClick={onRegenerate}
+            title="Generate a strong password"
+            aria-label="Generate a strong password"
+            className="flex size-7 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
+          >
+            <RefreshCw className="size-3.5" />
+          </button>
+        ) : null}
         {sensitive && (
           <button
+            type="button"
             onClick={() => setRevealed(!revealed)}
             className="flex size-7 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
           >
@@ -1420,6 +1438,7 @@ function CredentialRow({
           </button>
         )}
         <button
+          type="button"
           onClick={handleCopy}
           className="flex size-7 items-center justify-center rounded-[4px] text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
         >
@@ -1478,46 +1497,57 @@ function Phase3DatabaseConfigure({
 
   const recommendation = engine.recommendations?.[0]?.compute;
 
-  const { planKey, projectLimit } = usePlanGate();
+  const planSpecs = usePlanGate();
+  const { planKey, projectLimit, dbMaxCpu, dbMaxMemory, dbMaxStorage } = planSpecs;
   const isFreePlan = planKey === "free";
   const pricing = usePricing();
   const limitReached = projectLimit !== null && projectCount > projectLimit;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const storageOptions = useMemo(
-    () =>
-      isFreePlan
-        ? diskSizes.map((option) => ({
-            ...option,
-            disabled: option.id !== "10",
-            asideText: option.id === "10" ? undefined : "Upgrade to access",
-          }))
-        : diskSizes,
-    [isFreePlan],
+
+  const effectiveCpuSteps = useMemo(
+    () => (isFreePlan && dbMaxCpu != null ? [dbMaxCpu] : cpuSteps),
+    [isFreePlan, dbMaxCpu],
   );
+  const effectiveMemorySteps = useMemo(
+    () => (isFreePlan && dbMaxMemory != null ? [dbMaxMemory] : memorySteps),
+    [isFreePlan, dbMaxMemory],
+  );
+  const lockedStorageId = isFreePlan && dbMaxStorage != null ? String(dbMaxStorage) : null;
+  const storageOptions = useMemo(() => {
+    if (!lockedStorageId) return diskSizes;
+    return diskSizes.map((option) => ({
+      ...option,
+      disabled: option.id !== lockedStorageId,
+      asideText: option.id === lockedStorageId ? undefined : "Upgrade to access",
+    }));
+  }, [lockedStorageId]);
 
   useEffect(() => {
     if (!isFreePlan) return;
     if (cpuIdx !== 0) setCpuIdx(0);
     if (memIdx !== 0) setMemIdx(0);
-    if (dbDiskSize !== "10") setDbDiskSize("10");
-  }, [isFreePlan, cpuIdx, memIdx, dbDiskSize]);
+    if (lockedStorageId && dbDiskSize !== lockedStorageId) setDbDiskSize(lockedStorageId);
+  }, [isFreePlan, cpuIdx, memIdx, dbDiskSize, lockedStorageId]);
   const nextPlanName = useMemo(() => {
     const currentIdx = pricing.plans.findIndex((p) => p.id === planKey || p.name.toLowerCase() === planKey);
     return currentIdx >= 0 && currentIdx < pricing.plans.length - 1 ? pricing.plans[currentIdx + 1].name : undefined;
   }, [pricing.plans, planKey]);
 
+  const effectiveCpu = effectiveCpuSteps[Math.min(cpuIdx, effectiveCpuSteps.length - 1)] ?? effectiveCpuSteps[0];
+  const effectiveMemory = effectiveMemorySteps[Math.min(memIdx, effectiveMemorySteps.length - 1)] ?? effectiveMemorySteps[0];
+  const effectiveStorage = lockedStorageId ? Number(lockedStorageId) : Number(dbDiskSize);
   const costBreakdown = useMemo(
     () =>
       estimateComputeCost(
         {
-          cpu: cpuSteps[cpuIdx],
-          memory: memorySteps[memIdx],
-          storage: Number(dbDiskSize),
+          cpu: effectiveCpu,
+          memory: effectiveMemory,
+          storage: effectiveStorage,
         },
         planKey,
         pricing.metered,
       ),
-    [cpuIdx, memIdx, dbDiskSize, planKey, pricing.metered],
+    [effectiveCpu, effectiveMemory, effectiveStorage, planKey, pricing.metered],
   );
 
   useEffect(() => {
@@ -1531,28 +1561,30 @@ function Phase3DatabaseConfigure({
       const key = env.value;
       const lowerType = (env.type ?? "").toLowerCase();
       const lowerKey = key.toLowerCase();
+      const isPassword = lowerType.includes("password") || lowerKey.includes("password") || lowerKey.includes("pass");
+      const isAuthValue = lowerType.includes("auth") || lowerKey.includes("auth");
       let value = "";
 
       if (lowerType.includes("user") || lowerKey.includes("user")) {
         value = `brimble_${generateMockCredential(6)}`;
-      } else if (lowerType.includes("password") || lowerKey.includes("password") || lowerKey.includes("pass")) {
-        value = generateSecureCredential(24);
+      } else if (isPassword) {
+        value = generateStrongPassword();
       } else if (lowerType.includes("database") || lowerKey.includes("database") || lowerKey.endsWith("_db")) {
         value = dbName.replace(/-/g, "_");
       } else if (lowerType.includes("license") || lowerKey.includes("license")) {
         value = "yes";
-      } else if (lowerType.includes("auth") || lowerKey.includes("auth")) {
+      } else if (isAuthValue) {
         value = `neo4j/${generateSecureCredential(18)}`;
       }
 
-      const sensitive =
-        lowerType.includes("password") || lowerKey.includes("password") || lowerKey.includes("pass") || lowerType.includes("auth");
+      const sensitive = isPassword || isAuthValue;
 
       return {
         id: dbEnvNextId++,
         key,
         value,
         sensitive,
+        isPassword,
       };
     });
     setEnvDrafts(generated);
@@ -1681,7 +1713,7 @@ function Phase3DatabaseConfigure({
           <ComputeSliderField
             label="CPU"
             value={cpuIdx}
-            steps={cpuSteps}
+            steps={effectiveCpuSteps}
             formatValue={formatCpu}
             onCommit={setCpuIdx}
             disabled={isFreePlan}
@@ -1690,7 +1722,7 @@ function Phase3DatabaseConfigure({
           <ComputeSliderField
             label="Memory"
             value={memIdx}
-            steps={memorySteps}
+            steps={effectiveMemorySteps}
             formatValue={formatMemory}
             onCommit={setMemIdx}
             disabled={isFreePlan}
@@ -1700,7 +1732,7 @@ function Phase3DatabaseConfigure({
             label="Storage"
             value={dbDiskSize}
             onChange={(nextId) => {
-              if (isFreePlan && nextId !== "10") {
+              if (lockedStorageId && nextId !== lockedStorageId) {
                 setShowUpgradeModal(true);
                 return;
               }
@@ -1724,9 +1756,7 @@ function Phase3DatabaseConfigure({
       {/* Credentials */}
       <div>
         <h4 className="mb-1 text-sm font-medium text-dash-text-strong">Database credentials</h4>
-        <p className="mb-4 text-sm text-dash-text-faded">
-          These values are used to connect to your database after provisioning.
-        </p>
+        <p className="mb-4 text-sm text-dash-text-faded">These values are used to connect to your database after provisioning.</p>
         <div className="rounded-[4px] border-[0.5px] border-dash-border p-4">
           <div className="flex flex-col gap-2.5">
             {envDrafts.length > 0 ? (
@@ -1737,6 +1767,8 @@ function Phase3DatabaseConfigure({
                   value={row.value}
                   onChange={(v) => updateEnvDraft(row.id, v)}
                   sensitive={row.sensitive}
+                  canRegenerate={row.isPassword}
+                  onRegenerate={() => updateEnvDraft(row.id, generateStrongPassword())}
                 />
               ))
             ) : (
@@ -1877,9 +1909,9 @@ function Phase3DatabaseConfigure({
             void onProvision({
               name: dbName.trim(),
               regionId: region,
-              cpu: cpuSteps[cpuIdx],
-              memory: memorySteps[memIdx],
-              storage: Number(dbDiskSize),
+              cpu: effectiveCpu,
+              memory: effectiveMemory,
+              storage: effectiveStorage,
               whitelistedIps: publicAccess ? ["0.0.0.0/0"] : whitelistIps.map((ip) => ip.value.trim()).filter(Boolean),
               environments: envDrafts.map((row) => ({
                 name: row.key,
