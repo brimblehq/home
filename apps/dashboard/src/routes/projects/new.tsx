@@ -1291,9 +1291,10 @@ function Phase2DbEngine({
   };
   const engineOptions = orderedEngines.map((engine) => {
     const gated = isFreePlan && !engine.free;
+    const version = engine.version?.trim();
     return {
       id: engine.id,
-      label: engine.name,
+      label: version ? `${engine.name} - v${version}` : engine.name,
       icon: getDropdownIconSrc(engine.imageUrl) || getDropdownIconSrc(engine.image),
       disabled: gated,
       asideText: gated ? "Upgrade to access" : undefined,
