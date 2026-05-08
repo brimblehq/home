@@ -91,7 +91,7 @@ function formatCardType(cardType?: string): string {
 
 function CardChip() {
   return (
-    <div className="relative h-8 w-[45px] shrink-0 overflow-hidden rounded-lg bg-[radial-gradient(circle_at_84%_10%,#5a5454_0%,#383636_55%,#1f1f1f_100%)] shadow-[0px_1px_1px_rgba(0,0,0,0.16),0px_1px_0px_rgba(0,0,0,0.11)]">
+    <div className="relative h-8 w-[45px] shrink-0 overflow-hidden rounded-[4px] bg-[radial-gradient(circle_at_84%_10%,#5a5454_0%,#383636_55%,#1f1f1f_100%)] shadow-[0px_1px_1px_rgba(0,0,0,0.16),0px_1px_0px_rgba(0,0,0,0.11)]">
       <div className="absolute left-[5px] top-[12px] h-[7px] w-[10px] rounded-[1.5px] bg-white/10" />
       <div className="absolute bottom-[5px] right-[5px] flex items-center gap-0.5">
         <span className="size-[3px] rounded-full bg-[#ea4335]" />
@@ -335,7 +335,7 @@ function BuyDomainPage() {
         </GlossyButton>
       </div>
       {showDiscountBanner && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg bg-[#34d399]/10 px-4 py-2.5 dark:bg-[#34d399]/15">
+        <div className="mb-4 flex items-center gap-3 rounded-[4px] bg-[#34d399]/10 px-4 py-2.5 dark:bg-[#34d399]/15">
           <Tag className="size-4 shrink-0 text-[#229464] dark:text-[#34d399]" />
           <p className="flex-1 text-sm text-dash-text-body dark:text-dash-text-strong">
             Domain sale is on — save up to <span className="font-medium text-[#229464] dark:text-[#34d399]">{maxDiscountPercent}%</span> on
@@ -352,7 +352,7 @@ function BuyDomainPage() {
         </div>
       )}
       {showUnavailableBanner && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg bg-[#ef2f1f]/5 px-4 py-2.5 dark:bg-[#ef2f1f]/15">
+        <div className="mb-4 flex items-center gap-3 rounded-[4px] bg-[#ef2f1f]/5 px-4 py-2.5 dark:bg-[#ef2f1f]/15">
           <AlertCircle className="size-4 shrink-0 text-[#ef2f1f]" />
           <p className="text-sm text-dash-text-body dark:text-dash-text-strong">{searchedDomain} is not available for purchase.</p>
         </div>
@@ -445,7 +445,7 @@ function BuyDomainPage() {
             <div className="flex flex-col gap-4 px-6 py-5">
               {/* Domain + price */}
               <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated px-4 py-3">
+                <div className="flex items-center justify-between rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated px-4 py-3">
                   <span className="text-sm font-medium text-dash-text-strong">{purchaseTarget.domainName}</span>
                   <span className="text-sm font-medium text-[#34d399]">{formatUsd(purchaseTarget.price ?? 0)}/yr</span>
                 </div>
@@ -461,7 +461,7 @@ function BuyDomainPage() {
                 <label className="text-sm text-dash-text-faded">Payment method</label>
                 {defaultCard ? (
                   <>
-                    <div className="flex items-center gap-3 rounded-lg border-[0.5px] border-dash-border px-3.5 py-2.5">
+                    <div className="flex items-center gap-3 rounded-[4px] border-[0.5px] border-dash-border px-3.5 py-2.5">
                       <CardChip />
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-dash-text-strong">{formatCardType(defaultCard.cardType)}</span>

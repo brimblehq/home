@@ -633,7 +633,7 @@ export function SecurityForm({
                                     setRenamingId(pk.id);
                                     setRenameValue(pk.deviceName || "");
                                   }}
-                                  className="rounded-lg border-[0.5px] border-dash-border bg-dash-bg px-2.5 py-1 text-xs font-medium text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
+                                  className="rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg px-2.5 py-1 text-xs font-medium text-dash-text-body transition-colors hover:bg-dash-bg-elevated"
                                 >
                                   Rename
                                 </button>
@@ -642,7 +642,7 @@ export function SecurityForm({
                                   disabled={deleteBlocked || deletingId === pk.id}
                                   onClick={() => void handleDeletePasskey(pk.id)}
                                   title={deleteBlocked ? "Enable 2FA or keep at least one passkey to remove this one." : undefined}
-                                  className="rounded-lg border-[0.5px] border-dash-border px-2.5 py-1 text-xs font-medium text-[#ef2f1f] transition-colors hover:bg-[#ef2f1f]/5 disabled:cursor-not-allowed disabled:opacity-40"
+                                  className="rounded-[4px] border-[0.5px] border-dash-border px-2.5 py-1 text-xs font-medium text-[#ef2f1f] transition-colors hover:bg-[#ef2f1f]/5 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                   {deletingId === pk.id ? "Removing..." : "Delete"}
                                 </button>
@@ -739,7 +739,7 @@ export function SecurityForm({
                 <img
                   src={setupData.qrCode}
                   alt="Two-factor authentication QR code"
-                  className="size-[200px] rounded-lg border border-dash-border bg-white p-2"
+                  className="size-[200px] rounded-[4px] border border-dash-border bg-white p-2"
                 />
 
                 <div className="flex w-full flex-col gap-2">

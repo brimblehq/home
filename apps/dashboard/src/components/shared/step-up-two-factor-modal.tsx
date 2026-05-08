@@ -171,7 +171,7 @@ export function StepUpTwoFactorModal({ open, requirement, onResolve, onCancel }:
             loading={submitting}
             loadingLabel="Verifying..."
             onClick={handleManualSubmit}
-            className="h-[34px] rounded-lg px-3.5 text-sm"
+            className="h-[34px] rounded-[4px] px-3.5 text-sm"
           >
             Verify
           </GlossyButton>

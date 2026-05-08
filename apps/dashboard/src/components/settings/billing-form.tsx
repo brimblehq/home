@@ -321,7 +321,7 @@ function BillingFormInner({
           <div className="flex flex-col gap-[30px]">
             {paymentMethods.length === 0 && (
               <div className="flex items-center gap-[14px]">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-dash-bg-elevated">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[4px] bg-dash-bg-elevated">
                   <CreditCard size={20} className="text-dash-text-faded" />
                 </div>
                 <div className="flex flex-col gap-[2px] py-2">
@@ -544,7 +544,7 @@ function PaymentFailureBanner({ daysSinceFailure }: { daysSinceFailure: number }
 
   return (
     <div
-      className={`rounded-lg border px-4 py-3 ${isDeactivated ? "border-[#ef2f1f]/30 bg-[#ef2f1f]/[0.06]" : "border-[#f5a623]/30 bg-[#f5a623]/[0.06]"}`}
+      className={`rounded-[4px] border px-4 py-3 ${isDeactivated ? "border-[#ef2f1f]/30 bg-[#ef2f1f]/[0.06]" : "border-[#f5a623]/30 bg-[#f5a623]/[0.06]"}`}
     >
       <p className={`text-sm font-medium leading-5 ${isDeactivated ? "text-[#ef2f1f]" : "text-[#b37a10] dark:text-[#f5a623]"}`}>
         {isDeactivated
@@ -754,7 +754,7 @@ function UsageBreakdown({ breakdown, planName, planAmount }: { breakdown: UsageB
 
 function CardChip() {
   return (
-    <div className="relative h-8 w-[45px] shrink-0 overflow-hidden rounded-lg bg-[radial-gradient(circle_at_84%_10%,#5a5454_0%,#383636_55%,#1f1f1f_100%)] shadow-[0px_1px_1px_rgba(0,0,0,0.16),0px_1px_0px_rgba(0,0,0,0.11)]">
+    <div className="relative h-8 w-[45px] shrink-0 overflow-hidden rounded-[4px] bg-[radial-gradient(circle_at_84%_10%,#5a5454_0%,#383636_55%,#1f1f1f_100%)] shadow-[0px_1px_1px_rgba(0,0,0,0.16),0px_1px_0px_rgba(0,0,0,0.11)]">
       <div className="absolute left-[5px] top-[12px] h-[7px] w-[10px] rounded-[1.5px] bg-white/10" />
       <div className="absolute bottom-[5px] right-[5px] flex items-center gap-0.5">
         <span className="size-[3px] rounded-full bg-[#ea4335]" />
@@ -828,7 +828,7 @@ function PaymentMethodRow({
           <button
             type="button"
             onClick={onChangeCard}
-            className="rounded-lg p-1.5 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-body"
+            className="rounded-[4px] p-1.5 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-body"
             title="Change card"
           >
             <PencilSimple className="h-3.5 w-3.5" weight="regular" />
@@ -847,7 +847,7 @@ function PaymentMethodRow({
                 onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to set default"),
               })
             }
-            className="rounded-lg p-1.5 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-body"
+            className="rounded-[4px] p-1.5 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-body"
             title="Set as default"
           >
             <Star className="h-3.5 w-3.5" />
@@ -863,7 +863,7 @@ function PaymentMethodRow({
               fireRemove();
             }
           }}
-          className="rounded-lg p-1.5 text-dash-text-faded transition-colors hover:bg-[#ef2f1f]/10 hover:text-[#ef2f1f] disabled:pointer-events-none disabled:opacity-40"
+          className="rounded-[4px] p-1.5 text-dash-text-faded transition-colors hover:bg-[#ef2f1f]/10 hover:text-[#ef2f1f] disabled:pointer-events-none disabled:opacity-40"
           title="Remove"
         >
           {removeMutation.isPending ? <Spinner className="size-3.5" /> : <FolderTrashIcon className="size-3.5" />}
@@ -1028,7 +1028,7 @@ export function AddCardForm({
       {showHeader && (
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-dash-text-strong">{replacePaymentMethodId ? "Change card" : "Add a new card"}</p>
-          <button type="button" onClick={onClose} className="rounded-lg p-1 text-dash-text-faded hover:text-dash-text-body">
+          <button type="button" onClick={onClose} className="rounded-[4px] p-1 text-dash-text-faded hover:text-dash-text-body">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1042,7 +1042,7 @@ export function AddCardForm({
         <button
           type="submit"
           disabled={isSubmitting || !stripe || cardError}
-          className="flex h-[34px] items-center rounded-lg border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-4 text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+          className="flex h-[34px] items-center rounded-[4px] border border-[#232931] bg-gradient-to-b from-[#545459] via-[#45454b] to-[#2d2d32] px-4 text-sm font-medium text-white shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
         >
           {isSubmitting ? (
             <span className="inline-flex items-center gap-1.5">
@@ -1057,7 +1057,7 @@ export function AddCardForm({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-[34px] items-center rounded-lg border border-dash-border bg-dash-bg px-3.5 text-sm font-medium text-dash-text-strong shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
+            className="flex h-[34px] items-center rounded-[4px] border border-dash-border bg-dash-bg px-3.5 text-sm font-medium text-dash-text-strong shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
           >
             Cancel
           </button>
@@ -1245,7 +1245,7 @@ function InvoiceReferenceCopyButton({ reference }: { reference: string }) {
           setCopied(false);
         }
       }}
-      className="shrink-0 rounded-lg p-1 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-body"
+      className="shrink-0 rounded-[4px] p-1 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-body"
       title={copied ? "Copied" : "Copy reference"}
       aria-label={copied ? "Reference copied" : "Copy reference"}
     >

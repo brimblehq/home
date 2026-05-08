@@ -128,7 +128,7 @@ function DomainsHero() {
             }}
             onSubmit={handleSubmit}
           >
-            <div className="flex w-[532px] max-w-[90vw] items-center gap-2 rounded-lg border border-[rgba(152,157,164,0.3)] bg-brimble-surface p-4 shadow-[var(--shadow-big)] dark:border-white/10 dark:bg-[#1e2023]">
+            <div className="flex w-[532px] max-w-[90vw] items-center gap-2 rounded-[4px] border border-[rgba(152,157,164,0.3)] bg-brimble-surface p-4 shadow-[var(--shadow-big)] dark:border-white/10 dark:bg-[#1e2023]">
               <Search className="size-4 shrink-0 text-[rgba(152,157,164,0.6)]" />
               <div className="flex flex-1 items-baseline font-body font-medium">
                 <input
@@ -294,7 +294,7 @@ function DomainsFaqs() {
             type="single"
             defaultValue="faq-0"
             collapsible
-            className="overflow-hidden rounded-lg border border-[rgba(152,157,164,0.3)] bg-brimble-surface shadow-[var(--shadow-big)] dark:border-white/10 dark:bg-[#1e2023]"
+            className="overflow-hidden rounded-[4px] border border-[rgba(152,157,164,0.3)] bg-brimble-surface shadow-[var(--shadow-big)] dark:border-white/10 dark:bg-[#1e2023]"
           >
             {siteConfig.domains.faqs.map((faq, i) => (
               <AccordionItem key={i} value={`faq-${i}`} className="px-4">

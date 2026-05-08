@@ -164,16 +164,16 @@ function HomeTabSkeleton() {
       <div className="mb-6 h-4 w-80 rounded bg-dash-border-soft/50" />
       {/* StatsRow */}
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="h-[88px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/40" />
-        <div className="h-[88px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/40" />
-        <div className="h-[88px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/40" />
+        <div className="h-[88px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/40" />
+        <div className="h-[88px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/40" />
+        <div className="h-[88px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/40" />
       </div>
       <hr className="-mx-4 mb-10 border-dash-border-soft md:-ml-10 md:mr-0" />
       {/* DeployedProjects */}
       <div className="mb-4 h-5 w-40 rounded bg-dash-border-soft/60" />
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="min-h-[168px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+          <div key={i} className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
         ))}
       </div>
       <hr className="-mx-4 mb-10 border-dash-border-soft md:-ml-10 md:mr-0" />
@@ -184,9 +184,9 @@ function HomeTabSkeleton() {
       {/* FeaturedIntegrations */}
       <div className="mb-4 h-5 w-48 rounded bg-dash-border-soft/60" />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="h-[200px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
-        <div className="h-[200px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
-        <div className="h-[200px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+        <div className="h-[200px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+        <div className="h-[200px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+        <div className="h-[200px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
       </div>
     </div>
   );
@@ -205,16 +205,16 @@ function ProjectsTabSkeleton() {
       </div>
       {/* SearchFilterBar */}
       <div className="mb-4 mt-4 flex items-center gap-2">
-        <div className="h-10 min-w-0 flex-1 rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
-        <div className="h-10 w-[120px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
-        <div className="h-10 w-[120px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+        <div className="h-10 min-w-0 flex-1 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+        <div className="h-10 w-[120px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+        <div className="h-10 w-[120px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
       </div>
       {/* CreateProjectCard placeholder */}
-      <div className="mb-4 h-12 rounded-lg border-[0.5px] border-dashed border-dash-border bg-dash-bg-elevated/20" />
+      <div className="mb-4 h-12 rounded-[4px] border-[0.5px] border-dashed border-dash-border bg-dash-bg-elevated/20" />
       {/* Project cards grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="min-h-[168px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+          <div key={i} className="min-h-[168px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
         ))}
       </div>
     </div>
@@ -234,7 +234,7 @@ function NewProjectTabSkeleton() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="min-h-[132px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30 p-5">
+          <div key={i} className="min-h-[132px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30 p-5">
             <div className="mb-3 h-5 w-5 rounded bg-dash-border-soft/50" />
             <div className="h-3.5 w-36 rounded bg-dash-border-soft/60" />
             <div className="mt-1.5 h-3 w-full max-w-[230px] rounded bg-dash-border-soft/45" />
@@ -251,11 +251,11 @@ function DomainsTabSkeleton() {
       <PageHeaderSkeleton />
       {/* SearchFilterBar */}
       <div className="mb-4 flex items-center gap-3">
-        <div className="h-10 min-w-0 flex-1 rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
-        <div className="h-10 w-[120px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+        <div className="h-10 min-w-0 flex-1 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+        <div className="h-10 w-[120px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
       </div>
       {/* Table */}
-      <div className="rounded-lg border-[0.5px] border-dash-border">
+      <div className="rounded-[4px] border-[0.5px] border-dash-border">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="flex h-[68px] items-center gap-3 border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
             <div className="size-[14px] rounded-[3px] bg-dash-border-soft/50" />
@@ -289,19 +289,19 @@ function DiscoverTabSkeleton() {
   return (
     <div className="animate-pulse px-4 py-8 md:px-10">
       {/* Banner */}
-      <div className="mb-6 rounded-lg border-[0.5px] border-dash-border-soft px-8 py-8">
+      <div className="mb-6 rounded-[4px] border-[0.5px] border-dash-border-soft px-8 py-8">
         <div className="mb-2 h-5 w-56 rounded bg-dash-border-soft/60" />
         <div className="mb-4 h-4 w-80 max-w-full rounded bg-dash-border-soft/40" />
         <div className="h-8 w-28 rounded-[6px] bg-dash-border-soft/50" />
       </div>
       {/* Search */}
-      <div className="mb-6 h-10 w-[320px] max-w-full rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+      <div className="mb-6 h-10 w-[320px] max-w-full rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
       {/* Section title */}
       <div className="mb-4 h-5 w-32 rounded bg-dash-border-soft/60" />
       {/* Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-[200px] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+          <div key={i} className="h-[200px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
         ))}
       </div>
     </div>
@@ -315,13 +315,13 @@ function ScalingTabSkeleton() {
       <hr className="-ml-4 mb-6 border-dash-border-soft md:-ml-10" />
       {/* Search + button row */}
       <div className="mb-5 flex items-center gap-3">
-        <div className="h-10 min-w-0 flex-1 rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+        <div className="h-10 min-w-0 flex-1 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
         <div className="h-10 w-[180px] rounded-[6px] bg-dash-border-soft/50" />
       </div>
       {/* 2-col grid of scaling cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex h-[164px] flex-col rounded-lg border-[0.5px] border-dash-border">
+          <div key={i} className="flex h-[164px] flex-col rounded-[4px] border-[0.5px] border-dash-border">
             <div className="flex items-center justify-between px-3.5 pb-1 pt-3">
               <div className="h-4 w-28 rounded bg-dash-border-soft/50" />
               <div className="h-4 w-20 rounded bg-dash-border-soft/40" />
@@ -351,15 +351,15 @@ function ProjectDetailTabSkeleton() {
   return (
     <div className="mx-auto flex w-full max-w-[1000px] animate-pulse flex-col gap-6 py-8">
       {/* Preview banner */}
-      <div className="h-[232px] overflow-clip rounded-lg border-[0.5px] border-dash-border bg-gradient-to-b from-dash-border-soft/40 to-dash-border-soft/20">
+      <div className="h-[232px] overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-gradient-to-b from-dash-border-soft/40 to-dash-border-soft/20">
         <div className="flex h-full items-end justify-center pb-4">
-          <div className="h-[180px] w-[92%] rounded-lg border-[0.5px] border-dash-border bg-dash-bg-elevated/50" />
+          <div className="h-[180px] w-[92%] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/50" />
         </div>
       </div>
       {/* 2-col cards */}
       <div className="flex flex-col gap-4 md:flex-row">
         {/* Meta card */}
-        <div className="flex-1 overflow-clip rounded-lg border-[0.5px] border-dash-border">
+        <div className="flex-1 overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
           <div className="h-10 bg-dash-bg-elevated/60" />
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex h-12 items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
@@ -369,7 +369,7 @@ function ProjectDetailTabSkeleton() {
           ))}
         </div>
         {/* Deployments card */}
-        <div className="flex-1 overflow-clip rounded-lg border-[0.5px] border-dash-border">
+        <div className="flex-1 overflow-clip rounded-[4px] border-[0.5px] border-dash-border">
           <div className="h-10 bg-dash-bg-elevated/60" />
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex h-12 items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
@@ -382,7 +382,7 @@ function ProjectDetailTabSkeleton() {
       {/* Domains section */}
       <div>
         <div className="mb-3 h-5 w-40 rounded bg-dash-border-soft/60" />
-        <div className="rounded-lg border-[0.5px] border-dash-border">
+        <div className="rounded-[4px] border-[0.5px] border-dash-border">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex h-[52px] items-center justify-between border-b-[0.5px] border-dash-border px-3.5 last:border-b-0">
               <div className="h-3 w-44 rounded bg-dash-border-soft/50" />

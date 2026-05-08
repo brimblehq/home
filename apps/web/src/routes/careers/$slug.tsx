@@ -108,7 +108,7 @@ function CareerDetailPage() {
                       href={role.applyUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brimble-black px-4 py-2 font-body text-sm font-medium text-brimble-surface shadow-[var(--shadow-button)] transition-opacity duration-150 hover:opacity-90"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-[4px] bg-brimble-black px-4 py-2 font-body text-sm font-medium text-brimble-surface shadow-[var(--shadow-button)] transition-opacity duration-150 hover:opacity-90"
                     >
                       Apply for this role
                       <ArrowUpRight className="size-3.5" />
@@ -241,7 +241,7 @@ function MobileNav({ roles, activeSlug }: { roles: CareerRole[]; activeSlug: str
         Open Roles
       </button>
       {open && (
-        <nav className="mt-3 flex flex-col gap-2 rounded-lg border border-[rgba(152,157,164,0.3)] bg-brimble-surface p-4 dark:border-white/10">
+        <nav className="mt-3 flex flex-col gap-2 rounded-[4px] border border-[rgba(152,157,164,0.3)] bg-brimble-surface p-4 dark:border-white/10">
           {roles.map((role) => (
             <Link
               key={role.slug}
@@ -260,4 +260,3 @@ function MobileNav({ roles, activeSlug }: { roles: CareerRole[]; activeSlug: str
     </div>
   );
 }
-

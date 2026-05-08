@@ -83,11 +83,7 @@ function getProjectIdentityCandidates(project: BackendProject): string[] {
     .map((value) => value.trim().toLowerCase());
 }
 
-export function clearProjectCache() {
-  projectCache.clear();
-}
-
-export function markProjectCacheStale() {
+function markProjectCacheStale() {
   for (const [key, entry] of projectCache.entries()) {
     projectCache.set(key, { ...entry, fetchedAt: 0 });
   }

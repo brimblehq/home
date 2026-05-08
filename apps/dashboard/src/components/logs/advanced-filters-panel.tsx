@@ -56,7 +56,7 @@ export function AdvancedFiltersPanel({ value, onChange }: Props) {
   }
 
   return (
-    <div className="rounded-lg border-[0.5px] border-dash-border bg-dash-bg">
+    <div className="rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg">
       <button onClick={() => setExpanded((v) => !v)} className="flex w-full items-center justify-between px-3 py-2 text-left">
         <span className="flex items-center gap-2 text-sm text-dash-text-body">
           <SlidersHorizontal className="size-3.5 text-dash-text-faded" />

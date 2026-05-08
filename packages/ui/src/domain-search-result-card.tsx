@@ -37,7 +37,7 @@ function splitDomain(domainName: string): { base: string; tld: string } {
 
 const variantClasses = {
   dashboard: {
-    root: "flex items-center justify-between rounded-lg border-[0.5px] border-dash-border px-3.5 py-3 text-left transition-colors",
+    root: "flex items-center justify-between rounded-[4px] border-[0.5px] border-dash-border px-3.5 py-3 text-left transition-colors",
     hover: "hover:bg-dash-bg-elevated",
     unavailable: "cursor-default opacity-50",
     text: "flex items-center gap-1.5 text-sm text-dash-text-body",
@@ -48,7 +48,7 @@ const variantClasses = {
     taken: "rounded-full bg-dash-bg-elevated px-2.5 py-0.5 text-xs font-medium text-dash-text-faded",
   },
   web: {
-    root: "flex items-center justify-between rounded-lg border border-[rgba(152,157,164,0.3)] bg-brimble-surface/90 px-3.5 py-3 text-left transition-colors dark:border-white/10 dark:bg-[#1e2023]",
+    root: "flex items-center justify-between rounded-[4px] border border-[rgba(152,157,164,0.3)] bg-brimble-surface/90 px-3.5 py-3 text-left transition-colors dark:border-white/10 dark:bg-[#1e2023]",
     hover: "hover:bg-brimble-air-gray dark:hover:bg-[#26292d]",
     unavailable: "cursor-default opacity-65",
     text: "flex items-center gap-1.5 text-sm text-brimble-black/60 dark:text-white/70",
