@@ -243,7 +243,9 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
     const isActive = tab.slug
       ? pathname === tabPath || pathname === `${tabPath}/`
       : pathname === `/projects/${projectId}` || pathname === `/projects/${projectId}/`;
-    const locked = (tab.slug === "observability" || tab.slug === "web-analytics") && !planSupportsAnalytics;
+    const observabilityLocked = tab.slug === "observability" && !planSupportsAnalytics && !databaseProject;
+    const webAnalyticsLocked = tab.slug === "web-analytics" && !planSupportsAnalytics;
+    const locked = observabilityLocked || webAnalyticsLocked;
 
     return {
       ...tab,
