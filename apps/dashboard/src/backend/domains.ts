@@ -133,6 +133,7 @@ export interface DomainsApi {
   add(input: AddDomainInput): Promise<DomainRecord>;
   update(input: UpdateDomainInput): Promise<DomainRecord>;
   transfer(input: { domainId: string; projectId: string; teamId?: string }): Promise<void>;
+  transferWorkspace(input: { domainId: string; targetTeamId?: string | null }): Promise<void>;
   transferOut(domainName: string, teamId?: string): Promise<{ domainName: string; authCode: string; unlocked: boolean }>;
   transferIn(input: TransferInInput): Promise<TransferInResult>;
   searchSale(domainName: string): Promise<SearchDomainResult[]>;
@@ -487,6 +488,14 @@ export function createDomainsApi(client: ApiClient): DomainsApi {
         body: {
           teamId: input.teamId,
         },
+      });
+    },
+
+    async transferWorkspace(input) {
+      const targetTeamId = typeof input.targetTeamId === "string" && input.targetTeamId.trim() ? input.targetTeamId.trim() : null;
+      await client.request<any>(`${listEndpoint}/${encodeURIComponent(input.domainId)}/transfer-workspace`, {
+        method: "POST",
+        body: targetTeamId ? { teamId: targetTeamId } : {},
       });
     },
 

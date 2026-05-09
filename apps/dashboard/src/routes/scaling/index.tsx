@@ -709,7 +709,7 @@ function ScalingPage() {
       </AnimatePresence>
 
       {rows.length === 0 ? (
-        <EmptyState onCreateClick={handleNewGroup} canWrite={canWrite} />
+        formOpen ? null : <EmptyState onCreateClick={handleNewGroup} canWrite={canWrite} />
       ) : filtered.length === 0 ? (
         <div className="py-12 text-center text-sm text-dash-text-faded">No scaling groups match your search.</div>
       ) : (

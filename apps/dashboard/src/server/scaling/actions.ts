@@ -22,17 +22,50 @@ async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
   return resolveTeamId(api, workspace);
 }
 
+async function canUseAutoscalingForWorkspace(
+  api: BackendApi,
+  input: {
+    workspace?: string;
+    teamId?: string;
+  },
+) {
+  if (input.teamId) {
+    const workspaceSlug = input.workspace?.trim().toLowerCase();
+    if (!workspaceSlug) {
+      return true;
+    }
+
+    try {
+      const team = await api.teams.getByName(workspaceSlug);
+      if (!team.subscriptionType) {
+        return true;
+      }
+
+      return supportsAutoscalingPlan(team.subscriptionType);
+    } catch {
+      return true;
+    }
+  }
+
+  return canUseAutoscaling(api);
+}
+
 export const listScalingGroupsServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
   const payload = data as { workspace?: string } | undefined;
 
   return withTokenRefresh(async (api) => {
-    if (!(await canUseAutoscaling(api))) {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    const canUse = await canUseAutoscalingForWorkspace(api, {
+      workspace: payload?.workspace,
+      teamId,
+    });
+
+    if (!canUse) {
       return { items: [], message: null };
     }
 
-    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
     return api.scaling.list({ teamId });
   });
 });
@@ -63,11 +96,16 @@ export const saveScalingGroupServerFn = createServerFn({
   }
 
   return withTokenRefresh(async (api) => {
-    if (!(await canUseAutoscaling(api))) {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload.workspace);
+    const canUse = await canUseAutoscalingForWorkspace(api, {
+      workspace: payload.workspace,
+      teamId,
+    });
+
+    if (!canUse) {
       throw new Error("Autoscaling is not available on your current plan");
     }
 
-    const teamId = await resolveTeamIdFromWorkspace(api, payload.workspace);
     const input = {
       teamId,
       name,
@@ -97,11 +135,16 @@ export const toggleScalingGroupServerFn = createServerFn({
   }
 
   return withTokenRefresh(async (api) => {
-    if (!(await canUseAutoscaling(api))) {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    const canUse = await canUseAutoscalingForWorkspace(api, {
+      workspace: payload?.workspace,
+      teamId,
+    });
+
+    if (!canUse) {
       throw new Error("Autoscaling is not available on your current plan");
     }
 
-    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
     return api.scaling.toggle(groupId, {
       active: Boolean(payload?.active),
       teamId,
@@ -119,11 +162,16 @@ export const deleteScalingGroupServerFn = createServerFn({
   }
 
   return withTokenRefresh(async (api) => {
-    if (!(await canUseAutoscaling(api))) {
+    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
+    const canUse = await canUseAutoscalingForWorkspace(api, {
+      workspace: payload?.workspace,
+      teamId,
+    });
+
+    if (!canUse) {
       throw new Error("Autoscaling is not available on your current plan");
     }
 
-    const teamId = await resolveTeamIdFromWorkspace(api, payload?.workspace);
     return api.scaling.remove(groupId, { teamId });
   });
 });

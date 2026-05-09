@@ -4,6 +4,7 @@ import type { BackendApi } from "@/backend";
 import type { DomainDetailsRecord, DomainRecord, PaginatedDomainsResponse } from "@/backend/domains";
 import type { PaginatedProjectsResponse } from "@/backend/projects";
 import config from "@/config";
+import type { TransferDomainWorkspacePayload } from "./types";
 import { withTokenRefresh, resolveTeamId } from "@/server/shared/backend";
 import { domainsLogger, domainsDnsLogger } from "@/server/shared/logger";
 import { resolveEnvironmentId } from "@/utils/environment-selection";
@@ -235,6 +236,28 @@ export const transferDomainServerFn = createServerFn({
 
     return { success: true };
   });
+});
+
+export const transferDomainWorkspaceServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as TransferDomainWorkspacePayload | undefined;
+
+  const domainId = payload?.domainId?.trim();
+  if (!domainId) {
+    throw new Error("Domain id is required");
+  }
+
+  const targetTeamId =
+    typeof payload?.targetTeamId === "string" && payload.targetTeamId.trim() ? payload.targetTeamId.trim() : null;
+
+  return withTokenRefresh(
+    async (api) => {
+      await api.domains.transferWorkspace({ domainId, targetTeamId });
+      return { success: true };
+    },
+    { stepUpToken: payload?.twoFactorToken },
+  );
 });
 
 export const deleteDomainServerFn = createServerFn({
