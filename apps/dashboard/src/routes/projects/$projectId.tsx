@@ -19,6 +19,7 @@ import { mapDeploymentRunLogsToDrawerEntries, sortDeploymentDrawerEntries } from
 import { usePushNotification } from "@/hooks/use-push-notification";
 import config from "@/config";
 import type { ProjectDetailRouteProject } from "./project-detail.types";
+import { PROJECT_CACHE_TTL, markProjectCacheStale, projectCache } from "./project-route-cache";
 
 const SUCCESS_LOG_PATTERN = /site (is )?(live|running)\b/i;
 const FAILURE_LOG_PATTERN = /deployment failed|build failed|failed to deploy/i;
@@ -86,19 +87,10 @@ function mergeDeploymentDrawerEntries(
   return sortDeploymentDrawerEntries(next);
 }
 
-const projectCache = new Map<string, { data: ProjectDetailRouteProject; fetchedAt: number }>();
-const PROJECT_CACHE_TTL = 300_000;
-
 function getProjectIdentityCandidates(project: Pick<ProjectDetailRouteProject, "slug" | "id" | "name">): string[] {
   return [project.slug, project.id, project.name]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     .map((value) => value.trim().toLowerCase());
-}
-
-function markProjectCacheStale() {
-  for (const [key, entry] of projectCache.entries()) {
-    projectCache.set(key, { ...entry, fetchedAt: 0 });
-  }
 }
 
 export const Route = createFileRoute("/projects/$projectId")({

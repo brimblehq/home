@@ -402,7 +402,10 @@ function ProjectDetailPage() {
               </div>
               {showSitePasswordRow ? (
                 <div className="flex items-center justify-between border-b-[0.5px] border-dash-border p-3.5">
-                  <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Site password enabled</span>
+                  <div className="flex items-center gap-2">
+                    <img src="/icons/lock.svg" alt="" aria-hidden="true" className="size-4 invert dark:invert-0" />
+                    <span className="text-sm font-light leading-[1.3] text-dash-text-faded">Site password enabled</span>
+                  </div>
                   <span className="font-mono text-sm leading-[1.4] text-dash-text-strong">{passwordEnabledText}</span>
                 </div>
               ) : null}

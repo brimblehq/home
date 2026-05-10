@@ -311,6 +311,10 @@ export interface ProjectsApi {
     },
   ): Promise<{ message?: string }>;
   unlinkRepo(projectId: string, input?: { teamId?: string }): Promise<{ message?: string }>;
+  setPasswordProtection(
+    projectId: string,
+    input: { teamId?: string; passwordEnabled: boolean; password?: string },
+  ): Promise<{ id: string; passwordEnabled: boolean }>;
 }
 
 export interface PaginatedProjectsResponse extends ApiListResponse<Project> {
@@ -431,7 +435,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
           const isDefault = pickBoolean(domainRecord, "default", "isDefault");
 
           return {
-            id: domainRecord.id ?? domainRecord._id,
+            id: pickString(domainRecord, "id", "_id"),
             name: String(domainRecord.name),
             isDefault,
             createdAt: asString(domainRecord.createdAt),
@@ -457,7 +461,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       const autoscalingGroupRecord = asRecord(row.autoscalingGroup) ?? {};
       autoscalingGroup = {
         ...autoscalingGroupRecord,
-        id: autoscalingGroupRecord._id ?? autoscalingGroupRecord.id,
+        id: pickString(autoscalingGroupRecord, "_id", "id"),
         name: asString(autoscalingGroupRecord.name),
       };
     }
@@ -467,7 +471,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       const dbImageRecord = asRecord(row.dbImage) ?? {};
       dbImage = {
         ...dbImageRecord,
-        id: dbImageRecord._id ?? dbImageRecord.id,
+        id: pickString(dbImageRecord, "_id", "id"),
         name: asString(dbImageRecord.name),
       };
     }
@@ -478,11 +482,11 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
     const maintenance = pickBoolean(row, "maintenance");
     const isPublicAccess = pickBoolean(row, "isPublicAccess", "publicAccess");
 
-    let specsRegion: Project["specs"]["region"] = null;
+    let specsRegion: NonNullable<Project["specs"]>["region"] = null;
     if (specsRegionRecord) {
       specsRegion = {
         ...specsRegionRecord,
-        id: specsRegionRecord._id ?? specsRegionRecord.id,
+        id: pickString(specsRegionRecord, "_id", "id"),
       };
     }
 
@@ -935,20 +939,14 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
             return null;
           }
 
-          const envs = Array.isArray(row.envs)
-            ? row.envs
-                .map((env) => {
-                  const envRow = asRecord(env) ?? {};
-                  const value = pickNonEmptyString(envRow, "value");
-                  if (!value) {
-                    return null;
-                  }
-                  return {
-                    type: pickNonEmptyString(envRow, "type"),
-                    value,
-                  };
-                })
-                .filter((env): env is { type?: string; value: string } => env !== null)
+          const envs: Array<{ type?: string; value: string }> = Array.isArray(row.envs)
+            ? row.envs.flatMap((env) => {
+                const envRow = asRecord(env) ?? {};
+                const value = pickNonEmptyString(envRow, "value");
+                if (!value) return [];
+                const type = pickNonEmptyString(envRow, "type");
+                return [type !== undefined ? { type, value } : { value }];
+              })
             : [];
 
           const recommendations = Array.isArray(row.recommendations)
@@ -967,7 +965,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
               })
             : [];
 
-          return {
+          const option: DatabaseEngineOption = {
             id,
             name,
             imageUrl: pickString(row, "image_url", "imageUrl"),
@@ -982,9 +980,10 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
             volumePath: pickString(row, "volumePath", "volume_path"),
             protocol: pickString(row, "protocol"),
             recommendations,
-          } satisfies DatabaseEngineOption;
+          };
+          return option;
         })
-        .filter((item): item is DatabaseEngineOption => item !== null);
+        .filter((item: DatabaseEngineOption | null): item is DatabaseEngineOption => item !== null);
     },
     async createDatabase(input) {
       const response = await client.request<any>("/core/v1/projects/database", {
@@ -1051,6 +1050,22 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       });
       const root = response?.data?.data ?? response?.data ?? response ?? {};
       return { message: pickString(asRecord(root), "message") };
+    },
+    async setPasswordProtection(projectId, input) {
+      const body: Record<string, unknown> = { passwordEnabled: input.passwordEnabled };
+      if (input.teamId) body.teamId = input.teamId;
+      if (input.passwordEnabled && input.password) body.password = input.password;
+
+      const response = await client.request<any>(`${listEndpoint}/password-protect/${encodeURIComponent(projectId)}`, {
+        method: "PUT",
+        body,
+      });
+
+      const data = response?.data?.data ?? response?.data;
+      return {
+        id: data.id as string,
+        passwordEnabled: data.passwordEnabled as boolean,
+      };
     },
   };
 }

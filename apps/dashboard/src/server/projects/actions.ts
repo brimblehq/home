@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { withTokenRefresh, resolveTeamId } from "@/server/shared/backend";
 import { projectsLogger } from "@/server/shared/logger";
+import type { SetProjectPasswordProtectionPayload } from "./types";
 
 function assignFiniteNumber(target: Record<string, unknown>, key: string, value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -411,6 +412,38 @@ export const transferProjectServerFn = createServerFn({
   }
 
   return withTokenRefresh((api) => api.projects.transfer(projectId, { teamId }));
+});
+
+export const setProjectPasswordProtectionServerFn = createServerFn({
+  method: "POST",
+}).handler(async ({ data }) => {
+  const payload = data as SetProjectPasswordProtectionPayload | undefined;
+
+  const projectId = payload?.projectId?.trim();
+  if (!projectId) {
+    throw new Error("Project ID is required");
+  }
+  if (typeof payload?.passwordEnabled !== "boolean") {
+    throw new Error("`passwordEnabled` is required");
+  }
+
+  let password: string | undefined;
+  if (payload.passwordEnabled) {
+    password = typeof payload.password === "string" ? payload.password : "";
+    if (password.length < 6) {
+      throw new Error("Password must be at least 6 characters");
+    }
+  }
+
+  return withTokenRefresh(async (api) => {
+    const workspaceSlug = payload?.workspace?.trim().toLowerCase();
+    const teamId = workspaceSlug ? await resolveTeamId(api, workspaceSlug) : undefined;
+    return api.projects.setPasswordProtection(projectId, {
+      teamId,
+      passwordEnabled: payload!.passwordEnabled!,
+      password,
+    });
+  });
 });
 
 export const saveProjectGeneralConfigServerFn = createServerFn({

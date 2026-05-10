@@ -86,8 +86,10 @@ import { markDeploymentHistoryForRefresh } from "@/utils/deployment-history-refr
 import { collectWatchPathEntries, deriveWatchPathSuggestions, type RootDirFetcher } from "@/utils/watch-path-suggestions";
 import { generateStrongPassword } from "@/utils/password";
 import { ProjectConfigurationPending } from "@/components/shared/route-pending";
+import { PasswordProtectionModal } from "@/components/project/password-protection-modal";
 import { useStepUpTwoFactor } from "@/hooks/use-step-up-two-factor";
 import { withStepUp } from "@/lib/auth/two-factor-step-up";
+import { markProjectCacheStale } from "@/routes/projects/project-route-cache";
 
 const parentRoute = getRouteApi("/projects/$projectId");
 
@@ -787,6 +789,10 @@ function GeneralSection({
   showMcpAuthControl,
   showBuildCacheControl,
   canWrite = true,
+  projectId,
+  workspace,
+  passwordEnabled,
+  onPasswordChanged,
 }: {
   initialValues: GeneralConfigValues;
   onSubmit: (values: GeneralConfigValues) => Promise<void>;
@@ -800,7 +806,12 @@ function GeneralSection({
   showMcpAuthControl: boolean;
   showBuildCacheControl: boolean;
   canWrite?: boolean;
+  projectId: string;
+  workspace?: string;
+  passwordEnabled: boolean;
+  onPasswordChanged: () => void | Promise<void>;
 }) {
+  const [passwordModalMode, setPasswordModalMode] = useState<"enable" | "disable" | null>(null);
   return (
     <Formik
       initialValues={initialValues}
@@ -813,6 +824,7 @@ function GeneralSection({
       enableReinitialize
     >
       {({ values, errors, touched, dirty, isSubmitting, handleSubmit, handleChange, handleBlur, setFieldValue }) => (
+        <>
         <form className="rounded-[4px] border-[0.5px] border-dash-border" onSubmit={handleSubmit}>
           {/* Row 1: Project name */}
           <div className="flex flex-col gap-1.5 px-4 py-4">
@@ -949,12 +961,42 @@ function GeneralSection({
             </>
           )}
 
+          <div className="flex flex-col gap-3 px-4 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-dash-text-strong">Password protection</span>
+                <span className="text-xs text-dash-text-faded">
+                  Require visitors to enter a password before they can access this project's domains.
+                </span>
+              </div>
+              <ToggleSwitch
+                checked={passwordEnabled}
+                onChange={(next) => setPasswordModalMode(next ? "enable" : "disable")}
+                disabled={!canWrite}
+              />
+            </div>
+          </div>
+          <hr className="border-dash-border" />
+
           <div className="flex justify-end px-4 py-4">
             <GlossyButton type="submit" disabled={!canWrite || !dirty || isSubmitting} loading={isSubmitting} loadingLabel="Saving...">
               Save
             </GlossyButton>
           </div>
         </form>
+        {passwordModalMode !== null && (
+          <PasswordProtectionModal
+            open={passwordModalMode !== null}
+            onOpenChange={(open) => {
+              if (!open) setPasswordModalMode(null);
+            }}
+            mode={passwordModalMode}
+            projectId={projectId}
+            workspace={workspace}
+            onSuccess={onPasswordChanged}
+          />
+        )}
+        </>
       )}
     </Formik>
   );
@@ -2293,6 +2335,13 @@ function ConfigurationPage() {
                       showMcpAuthControl={mcpAuthToggleVisible}
                       showBuildCacheControl={buildCacheToggleVisible}
                       canWrite={canWrite}
+                      projectId={project?.id || params.projectId}
+                      workspace={workspace}
+                      passwordEnabled={Boolean(project?.passwordEnabled)}
+                      onPasswordChanged={() => {
+                        markProjectCacheStale();
+                        return router.invalidate();
+                      }}
                     />
                   </>
                 ))}
