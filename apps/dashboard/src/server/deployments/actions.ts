@@ -1,9 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
+import { SignJWT, importPKCS8 } from "jose";
+import { addSeconds, getUnixTime } from "date-fns";
 import type { BackendApi } from "@/backend";
 import { listDeploymentRunLogsFromSupabase } from "@/backend/deployment-run-logs";
 import type { PaginatedDeploymentsResponse, DeploymentLog } from "@/backend/deployments";
 import config from "@/config";
 import { withTokenRefresh, resolveTeamId } from "@/server/shared/backend";
+
+async function mintSupabaseAccessToken(ownerId: string): Promise<string> {
+  if (!config.supabaseJwtPrivateKey || !config.supabaseJwtKid) {
+    throw new Error("Supabase signing key is not configured");
+  }
+  const privateKey = await importPKCS8(config.supabaseJwtPrivateKey, "ES256");
+  return new SignJWT({ role: "authenticated", sub: ownerId })
+    .setProtectedHeader({ alg: "ES256", kid: config.supabaseJwtKid, typ: "JWT" })
+    .setIssuedAt()
+    .setExpirationTime(getUnixTime(addSeconds(new Date(), 30)))
+    .sign(privateKey);
+}
 
 async function resolveTeamIdFromWorkspace(api: BackendApi, workspace?: string) {
   return resolveTeamId(api, workspace);
@@ -161,9 +175,12 @@ export const listDeploymentRunLogsServerFn = createServerFn({
     return resolveLogOwnerId(api, payload?.workspace);
   });
 
+  const accessToken = await mintSupabaseAccessToken(ownerId);
+
   const rows = await listDeploymentRunLogsFromSupabase({
     supabaseUrl: config.supabaseUrl,
-    supabaseKey: config.supabaseKey,
+    supabaseKey: config.supabaseAnonKey,
+    accessToken,
     tableName: config.supabaseTableName,
     filter: {
       logId,

@@ -327,6 +327,13 @@ export function createAuthApi(client: ApiClient): AuthApi {
         return { available: false, message };
       }
     },
+    async checkUsername(username) {
+      const response = await client.request<any>(`/auth/user/${encodeURIComponent(username)}`, {
+        method: "GET",
+      });
+      const data = response?.data?.data ?? response?.data;
+      return { exists: Boolean(data?.exists) };
+    },
     async refreshTokens(refreshToken) {
       const response = await client.request(endpoints.refresh, {
         method: "POST",

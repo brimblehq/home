@@ -15,7 +15,7 @@ import {
   ProjectDeploymentLogsDrawerContext,
   type ProjectDeploymentLogsDrawerContextValue,
 } from "@/contexts/project-deployment-logs-drawer-context";
-import { mapDeploymentRunLogsToDrawerEntries, sortDeploymentDrawerEntries } from "@/utils/deployment-logs";
+import { sortDeploymentDrawerEntries } from "@/utils/deployment-logs";
 import { usePushNotification } from "@/hooks/use-push-notification";
 import config from "@/config";
 import type { ProjectDetailRouteProject } from "./project-detail.types";
@@ -201,12 +201,12 @@ export const Route = createFileRoute("/projects/$projectId")({
         data: { workspace },
       }).catch(() => null),
       (
-          listHomeProjectsServerFn as unknown as (input: {
-            data: { workspace?: string; environmentId?: string };
-          }) => Promise<ApiListResponse<BackendProject>>
-        )({
-          data: { workspace, environmentId: searchEnvironmentId },
-        }),
+        listHomeProjectsServerFn as unknown as (input: {
+          data: { workspace?: string; environmentId?: string };
+        }) => Promise<ApiListResponse<BackendProject>>
+      )({
+        data: { workspace, environmentId: searchEnvironmentId },
+      }),
     ]);
 
     const environments = environmentsResult.status === "fulfilled" ? environmentsResult.value : [];
@@ -378,82 +378,50 @@ function ProjectLayout() {
   useEffect(() => {
     if (!drawerOpen || !selectedDeployment) return;
 
+    const logId = selectedDeployment.id;
     let cancelled = false;
-    let cleanup: (() => void) | null = null;
+    const lastSeenKeys = new Set<string>();
 
-    void (async () => {
-      const { getSupabaseClient } = await import("@/lib/supabase");
+    const tick = async () => {
+      if (cancelled) return;
+      await fetchLogsForDeployment(selectedDeployment, {
+        revalidate: true,
+        silent: true,
+        merge: true,
+      });
       if (cancelled) return;
 
-      const supabase = getSupabaseClient();
-      if (!supabase) return;
+      const list = drawerLogsByDeploymentIdRef.current[logId] ?? [];
+      const env = selectedDeployment.environment || "Production";
+      const name = (project as BackendProject)?.name || projectId;
 
-      const logId = selectedDeployment.id;
-      const channel = supabase
-        .channel(`deployment-logs-${logId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: config.supabaseTableName,
-          },
-          (payload) => {
-            const row = payload.new as any;
-            if (row.logId !== logId) return;
+      for (const entry of list) {
+        const key = getDrawerEntryKey(entry);
+        if (lastSeenKeys.has(key)) continue;
+        lastSeenKeys.add(key);
 
-            const [entry] = mapDeploymentRunLogsToDrawerEntries([row]);
-            if (!entry) return;
+        const msg = entry.message;
+        if (SUCCESS_LOG_PATTERN.test(msg)) {
+          sendNotification({
+            title: "Deployment Successful",
+            body: `${name} (${env}) deployed successfully.`,
+            onClick: () => window.focus(),
+          });
+        } else if (FAILURE_LOG_PATTERN.test(msg)) {
+          sendNotification({
+            title: "Deployment Failed",
+            body: `${name} (${env}) deployment failed.`,
+            onClick: () => window.focus(),
+          });
+        }
+      }
+    };
 
-            const msg = entry.message;
-            const env = selectedDeployment.environment || "Production";
-            const name = (project as BackendProject)?.name || projectId;
-            if (SUCCESS_LOG_PATTERN.test(msg)) {
-              sendNotification({
-                title: "Deployment Successful",
-                body: `${name} (${env}) deployed successfully.`,
-                onClick: () => window.focus(),
-              });
-            } else if (FAILURE_LOG_PATTERN.test(msg)) {
-              sendNotification({
-                title: "Deployment Failed",
-                body: `${name} (${env}) deployment failed.`,
-                onClick: () => window.focus(),
-              });
-            }
-
-            setDrawerLogsByDeploymentId((prev) => {
-              const existingEntries = prev[logId] ?? [];
-              const nextEntries = mergeDeploymentDrawerEntries(existingEntries, [entry]);
-              if (nextEntries.length === existingEntries.length) {
-                return prev;
-              }
-
-              return {
-                ...prev,
-                [logId]: nextEntries,
-              };
-            });
-          },
-        )
-        .subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            void fetchLogsForDeployment(selectedDeployment, {
-              revalidate: true,
-              silent: true,
-              merge: true,
-            });
-          }
-        });
-
-      cleanup = () => {
-        supabase.removeChannel(channel);
-      };
-    })();
-
+    void tick();
+    const id = setInterval(() => void tick(), 2000);
     return () => {
       cancelled = true;
-      cleanup?.();
+      clearInterval(id);
     };
   }, [drawerOpen, selectedDeployment, sendNotification, project, projectId, fetchLogsForDeployment]);
 

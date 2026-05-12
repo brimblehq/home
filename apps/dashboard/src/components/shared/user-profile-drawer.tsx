@@ -35,6 +35,7 @@ import { OtpInput } from "../auth/auth-split-layout";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { CheckCircle, XCircle, TreeStructure } from "@phosphor-icons/react";
 import {
+  checkUsernameAvailabilityServerFn,
   confirmDeleteAccountServerFn,
   getTwoFactorStatusServerFn,
   listPasskeysServerFn,
@@ -425,10 +426,41 @@ function ProfileForm({
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isAltPressed, setIsAltPressed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+
+  const checkUsername = useServerFn(checkUsernameAvailabilityServerFn as any) as (args: {
+    data: { username: string };
+  }) => Promise<{ exists: boolean }>;
+
+  useEffect(() => {
+    const trimmed = username.trim();
+    if (!trimmed || trimmed === profile.username) {
+      setUsernameStatus("idle");
+      return;
+    }
+    setUsernameStatus("checking");
+    let cancelled = false;
+    const handle = window.setTimeout(() => {
+      void checkUsername({ data: { username: trimmed } })
+        .then((result) => {
+          if (cancelled) return;
+          setUsernameStatus(result.exists ? "taken" : "available");
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setUsernameStatus("idle");
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [username, profile.username, checkUsername]);
 
   const isTextDirty = firstName !== profile.firstName || lastName !== profile.lastName || username !== profile.username;
   const isAvatarDirty = avatarUrl !== (profile.avatarUrl ?? "");
   const isDirty = isTextDirty || isAvatarDirty;
+  const isUsernameBlocking = usernameStatus === "taken" || usernameStatus === "checking";
 
   const inputClass = dashInputClassName;
   const normalizedPlanType = (profile.subscriptionPlanType ?? "").toUpperCase();
@@ -598,7 +630,16 @@ function ProfileForm({
         {/* Username */}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm leading-5 tracking-[-0.0224px] text-dash-text-body">Username</label>
-          <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className={inputClass} />
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value.replace(/[^\w.-]/g, ""))}
+            autoComplete="username"
+            spellCheck={false}
+            autoCapitalize="none"
+            className={cn(inputClass, usernameStatus === "taken" && "input-error")}
+          />
+          {usernameStatus === "taken" && <p className="text-xs text-[#ef2f1f]">This username is already taken.</p>}
         </div>
 
         {/* Unique ID */}
@@ -616,7 +657,7 @@ function ProfileForm({
       {/* Save button */}
       <GlossyButton
         onClick={handleSave}
-        disabled={!isDirty || isUploadingAvatar || Boolean(isSaving)}
+        disabled={!isDirty || isUploadingAvatar || Boolean(isSaving) || isUsernameBlocking}
         fullWidth
         loading={Boolean(isSaving)}
         loadingLabel="Saving..."
@@ -3807,9 +3848,7 @@ function MemberActionMenu({
 
 function countNonCompliantMembers(team: TeamDetails | null): number {
   if (!team?.members?.length) return 0;
-  return team.members.filter(
-    (m) => m.accepted !== false && normalizeRole(m) !== "Creator" && m.is2FACompliant === false,
-  ).length;
+  return team.members.filter((m) => m.accepted !== false && normalizeRole(m) !== "Creator" && m.is2FACompliant === false).length;
 }
 
 function WorkspaceSecuritySection({

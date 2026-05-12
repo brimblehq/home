@@ -156,6 +156,7 @@ export interface AuthApi {
   requestDeleteAccountCode(turnstileToken?: string): Promise<void>;
   confirmDeleteAccount(input: ConfirmDeleteAccountInput): Promise<void>;
   lookup(input: UserLookupInput): Promise<UserLookupResult>;
+  checkUsername(username: string): Promise<{ exists: boolean }>;
   refreshTokens(refreshToken: string): Promise<AuthSession>;
   logout(refreshToken?: string): Promise<void>;
   getCurrentSession(): Promise<AuthSession | null>;

@@ -24,13 +24,21 @@ function getErrorMeta(error: any) {
 }
 
 export const requestLoginOtpServerFn = createServerFn({ method: "POST" }).handler(async ({ data }) => {
-  const { geo, ...rest } = data as LoginInput & { geo?: ClientGeoData };
+  const payload = data as (LoginInput & { geo?: ClientGeoData }) | undefined;
+  if (!payload?.email) {
+    throw new Error("Email is required");
+  }
+  const { geo, ...rest } = payload;
   await getServerBackendApi(geo).auth.login(rest);
   return { ok: true } as const;
 });
 
 export const startSignupServerFn = createServerFn({ method: "POST" }).handler(async ({ data }) => {
-  const { geo, ...rest } = data as SignupInput & { geo?: ClientGeoData };
+  const payload = data as (SignupInput & { geo?: ClientGeoData }) | undefined;
+  if (!payload?.email || !payload?.username) {
+    throw new Error("Email and username are required");
+  }
+  const { geo, ...rest } = payload;
   await getServerBackendApi(geo).auth.signup(rest);
   return { ok: true } as const;
 });
@@ -40,8 +48,21 @@ export const lookupAuthServerFn = createServerFn({ method: "POST" }).handler(asy
   return getServerBackendApi().auth.lookup(input);
 });
 
+export const checkUsernameAvailabilityServerFn = createServerFn({ method: "GET" }).handler(async ({ data }) => {
+  const payload = data as { username?: string } | undefined;
+  const username = payload?.username?.trim();
+  if (!username) {
+    throw new Error("Username is required");
+  }
+  return getServerBackendApi().auth.checkUsername(username);
+});
+
 export const resendAuthCodeServerFn = createServerFn({ method: "POST" }).handler(async ({ data }) => {
-  const { geo, ...rest } = data as LoginInput & { geo?: ClientGeoData };
+  const payload = data as (LoginInput & { geo?: ClientGeoData }) | undefined;
+  if (!payload?.email) {
+    throw new Error("Email is required");
+  }
+  const { geo, ...rest } = payload;
   await getServerBackendApi(geo).auth.resendCode(rest.email);
   return { ok: true } as const;
 });
