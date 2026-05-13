@@ -38,6 +38,8 @@ function isRefreshTokenReuseError(error: any): boolean {
 const activeRefreshPromises = new Map<string, Promise<AuthSession>>();
 const recentRefreshSessions = new Map<string, { session: AuthSession; expiresAt: number }>();
 const RECENT_REFRESH_TTL_MS = 2 * 60 * 1000;
+const MISSING_SESSION_WARN_THROTTLE_MS = 15_000;
+let lastMissingSessionWarnAt = 0;
 
 type WorkspaceListResult = Awaited<ReturnType<BackendApi["workspaces"]["list"]>>;
 
@@ -102,6 +104,13 @@ function rememberRefreshSession(consumedRefreshToken: string, session: AuthSessi
     session,
     expiresAt: Date.now() + RECENT_REFRESH_TTL_MS,
   });
+}
+
+function createUnauthorizedError(message: string) {
+  const error = new Error(message) as Error & { status?: number; code?: string };
+  error.status = 401;
+  error.code = "UNAUTHORIZED";
+  return error;
 }
 
 function doRefresh(refreshToken: string): Promise<AuthSession> {
@@ -349,6 +358,18 @@ async function withTokenRefreshImpl<T>(fn: (api: BackendApi) => Promise<T>, opti
   const stepUpToken = options?.stepUpToken;
   const accessToken = getServerAccessToken();
   const refreshToken = getServerRefreshToken();
+
+  if (!accessToken && !refreshToken) {
+    const now = Date.now();
+    if (now - lastMissingSessionWarnAt >= MISSING_SESSION_WARN_THROTTLE_MS) {
+      authLogger.warn("withTokenRefresh skipped request: missing access and refresh tokens", {
+        hasAccessToken: false,
+        hasRefreshToken: false,
+      });
+      lastMissingSessionWarnAt = now;
+    }
+    throw createUnauthorizedError("Unauthorized");
+  }
 
   if (refreshToken) {
     const recentSession = getRecentRefreshSession(refreshToken);

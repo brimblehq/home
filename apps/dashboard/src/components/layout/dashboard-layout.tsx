@@ -39,6 +39,8 @@ import { ProfileTab, Theme } from "../../types/enums";
 import { listTooltipMessagesServerFn } from "@/server/messages/actions";
 import { getSettingsSidebarSnapshotServerFn } from "@/server/settings/actions";
 import { getWorkspaceTeamMembersServerFn } from "@/server/teams/actions";
+import { getTwoFactorStatusServerFn } from "@/server/auth/actions";
+import type { TwoFactorStatus } from "@/backend/auth/types";
 import { identifyPostHog, isPostHogEnabled } from "@/lib/posthog";
 import { useFeatureFlag, FeatureFlags } from "@/lib/feature-flags";
 
@@ -46,6 +48,9 @@ const CommandPalette = lazy(() => import("./command-palette").then((m) => ({ def
 const UserProfileDrawer = lazy(() => import("../shared/user-profile-drawer").then((m) => ({ default: m.UserProfileDrawer })));
 const OnboardingChecklist = lazy(() => import("../shared/onboarding-checklist").then((m) => ({ default: m.OnboardingChecklist })));
 const WelcomeModal = lazy(() => import("../shared/welcome-modal").then((m) => ({ default: m.WelcomeModal })));
+const TeamTwoFactorRequiredModal = lazy(() =>
+  import("../shared/team-two-factor-required-modal").then((m) => ({ default: m.TeamTwoFactorRequiredModal })),
+);
 
 const WELCOME_MODAL_STORAGE_KEY = "brimble:welcome-modal-dismissed";
 
@@ -694,13 +699,31 @@ export function DashboardLayout({
     return params.get("workspace")?.trim() || undefined;
   }, [searchStr]);
 
+  const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatus | null>(null);
+  const getTwoFactorStatus = useServerFn(getTwoFactorStatusServerFn as any) as () => Promise<TwoFactorStatus>;
+
+  useEffect(() => {
+    let cancelled = false;
+    void getTwoFactorStatus()
+      .then((status) => {
+        if (!cancelled) setTwoFactorStatus(status ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setTwoFactorStatus(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [getTwoFactorStatus]);
+
   useEffect(() => {
     if (!currentWorkspace) return;
-    if (pathname === `/teams/${currentWorkspace}/2fa-required`) return;
     const handle = (event: { type: string; query?: { state: { error: unknown } }; mutation?: { state: { error: unknown } } }) => {
       const err = event.query?.state.error ?? event.mutation?.state.error;
       if (isTeamTwoFactorSetupRequiredError(err)) {
-        void navigate({ to: "/teams/$teamName/2fa-required", params: { teamName: currentWorkspace } });
+        setTwoFactorStatus((prev) =>
+          prev ? { ...prev, enabled: false } : { enabled: false, hasRecoveryCodes: false, recoveryCodesRemaining: 0 },
+        );
       }
     };
     const unsubQ = dashboardQueryClient.getQueryCache().subscribe(handle as any);
@@ -709,7 +732,7 @@ export function DashboardLayout({
       unsubQ();
       unsubM();
     };
-  }, [currentWorkspace, navigate, pathname]);
+  }, [currentWorkspace]);
   const dashboardProjects =
     matchedProjects ?? matchedProjectSwitcherProjects ?? initialOnboardingProjects?.items ?? initialProjectSwitcherProjects?.items ?? [];
   const checklistProjects =
@@ -765,6 +788,16 @@ export function DashboardLayout({
   useEffect(() => {
     if (profileOpen && !profileEverOpened) setProfileEverOpened(true);
   }, [profileOpen, profileEverOpened]);
+
+  const prevProfileOpenRef = useRef(false);
+  useEffect(() => {
+    if (prevProfileOpenRef.current && !profileOpen) {
+      void getTwoFactorStatus()
+        .then((status) => setTwoFactorStatus(status ?? null))
+        .catch(() => {});
+    }
+    prevProfileOpenRef.current = profileOpen;
+  }, [profileOpen, getTwoFactorStatus]);
 
   const openProfileDrawer = useCallback((tab?: ProfileTab) => {
     setProfileRequestedTab(tab);
@@ -1208,6 +1241,27 @@ export function DashboardLayout({
                           <WelcomeModal />
                         </Suspense>
                       )}
+                      {(() => {
+                        const viewerNeeds2FA =
+                          isKnownWorkspace && Boolean(activeWorkspaceTeamMembers?.enforce2FA) && twoFactorStatus?.enabled === false;
+                        if (!viewerNeeds2FA) return null;
+                        const team = effectiveWorkspaces.find((w) => w.slug === currentWorkspace);
+                        const workspaceName = team?.name || activeWorkspaceTeamMembers?.name || currentWorkspace || "this workspace";
+                        return (
+                          <Suspense fallback={null}>
+                            <TeamTwoFactorRequiredModal
+                              open
+                              onOpenChange={() => {
+                                /* non-dismissible — auto-closes when 2FA becomes enabled */
+                              }}
+                              workspaceName={workspaceName}
+                              workspaceAvatarUrl={team?.avatarUrl}
+                              userFirstName={userProfile?.firstName || undefined}
+                              userAvatarUrl={userProfile?.avatarUrl || undefined}
+                            />
+                          </Suspense>
+                        );
+                      })()}
                       {shouldRenderOnboardingChecklist && (
                         <Suspense fallback={null}>
                           <OnboardingChecklist

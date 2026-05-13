@@ -199,7 +199,7 @@ function ActivitySessionSkeleton() {
             key={row}
             className={cn(
               "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-3",
-              index !== 0 && "border-t border-dash-border-soft",
+              index !== 0 && "border-t border-dashed border-dash-border-soft",
             )}
           >
             <div className="size-5 shrink-0 animate-pulse rounded-full bg-dash-bg-elevated" style={{ animationDelay: `${index * 80}ms` }} />
@@ -307,7 +307,7 @@ function ActivitySessionForm({
                       key={item._id}
                       className={cn(
                         "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-3",
-                        index !== 0 && "border-t border-dash-border-soft",
+                        index !== 0 && "border-t border-dashed border-dash-border-soft",
                       )}
                     >
                       {item.status === "success" ? (

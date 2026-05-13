@@ -13,9 +13,11 @@ interface ModalProps {
   width?: number;
   /** Extra classes merged onto the modal container */
   className?: string;
+  /** When false, ESC and click-outside are blocked. Default: true. */
+  dismissible?: boolean;
 }
 
-export function Modal({ open, onOpenChange, children, width = 500, className }: ModalProps) {
+export function Modal({ open, onOpenChange, children, width = 500, className, dismissible = true }: ModalProps) {
   const haptics = useHaptics();
   const prevOpen = useRef(false);
 
@@ -25,7 +27,13 @@ export function Modal({ open, onOpenChange, children, width = 500, className }: 
   }, [open, haptics]);
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !dismissible) return;
+        onOpenChange(next);
+      }}
+    >
       <AnimatePresence>
         {open && (
           <Dialog.Portal forceMount>
@@ -41,15 +49,24 @@ export function Modal({ open, onOpenChange, children, width = 500, className }: 
 
             <Dialog.Content
               asChild
+              onEscapeKeyDown={(e) => {
+                if (!dismissible) e.preventDefault();
+              }}
               onPointerDownOutside={(e) => {
-                // Prevent Radix from closing the dialog when clicking on portaled
-                // elements (e.g. dropdown menus) that render outside Dialog.Content
+                if (!dismissible) {
+                  e.preventDefault();
+                  return;
+                }
                 const target = e.target as HTMLElement;
                 if (target.closest("[data-dropdown-menu]")) {
                   e.preventDefault();
                 }
               }}
               onInteractOutside={(e) => {
+                if (!dismissible) {
+                  e.preventDefault();
+                  return;
+                }
                 const target = e.target as HTMLElement;
                 if (target.closest("[data-dropdown-menu]")) {
                   e.preventDefault();
