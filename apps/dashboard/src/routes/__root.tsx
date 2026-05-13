@@ -221,7 +221,7 @@ gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });
         )}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement;var t=localStorage.getItem('theme');var legacy=localStorage.getItem('brimble-theme');if(t!=='light'&&t!=='dark'&&t!=='system'){t=(legacy==='light'||legacy==='dark')?legacy:null}var sys=(t==='system'||(!t));var dark=t==='dark'||(sys&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(dark){d.classList.add('dark')}else{d.classList.remove('dark')}}catch(e){}})()`,
+            __html: `(function(){try{var d=document.documentElement;var t=localStorage.getItem('theme');var legacy=localStorage.getItem('brimble-theme');if(t!=='light'&&t!=='dark'&&t!=='system'){t=(legacy==='light'||legacy==='dark')?legacy:'light'}var sys=(t==='system');var dark=t==='dark'||(sys&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(dark){d.classList.add('dark')}else{d.classList.remove('dark')}}catch(e){}})()`,
           }}
         />
       </head>

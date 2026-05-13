@@ -14,7 +14,7 @@ function emitThemeChange() {
 
 function getStoredThemeMode(): Theme {
   if (typeof window === "undefined") {
-    return Theme.System;
+    return Theme.Light;
   }
 
   try {
@@ -31,7 +31,7 @@ function getStoredThemeMode(): Theme {
     // no-op
   }
 
-  return Theme.System;
+  return Theme.Light;
 }
 
 function hasStoredThemePreference(): boolean {
@@ -101,7 +101,7 @@ function getSnapshot(): Theme {
 }
 
 function getServerSnapshot(): Theme {
-  return Theme.System;
+  return Theme.Light;
 }
 
 function subscribe(cb: () => void) {
