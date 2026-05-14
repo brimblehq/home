@@ -292,45 +292,6 @@ const frameworks = [
 
 /* ─── Database Config ─── */
 
-interface DbEngine {
-  id: string;
-  name: string;
-  description: string;
-  defaultPort: number;
-  envPrefix: string;
-}
-
-const fallbackDbEngines: DbEngine[] = [
-  {
-    id: "postgresql",
-    name: "PostgreSQL",
-    description: "Relational, ACID-compliant",
-    defaultPort: 5432,
-    envPrefix: "POSTGRES",
-  },
-  {
-    id: "mysql",
-    name: "MySQL",
-    description: "Popular relational database",
-    defaultPort: 3306,
-    envPrefix: "MYSQL",
-  },
-  {
-    id: "mongodb",
-    name: "MongoDB",
-    description: "Document-oriented NoSQL",
-    defaultPort: 27017,
-    envPrefix: "MONGO",
-  },
-  {
-    id: "redis",
-    name: "Redis",
-    description: "In-memory key-value store",
-    defaultPort: 6379,
-    envPrefix: "REDIS",
-  },
-];
-
 const cpuSteps = [0.5, 1, 2, 4, 8];
 const memorySteps = [0.5, 1, 1.5, 2, 4, 8, 12, 16];
 function formatCpu(val: number): string {
@@ -2118,18 +2079,19 @@ function Phase3Configure({
 
     const detectedSlug = detectedFramework?.slug?.trim();
     const matchedFramework = detectedSlug ? frameworkOptions.find((f) => f.id === detectedSlug) : undefined;
-    const fallbackFramework = matchedFramework ?? frameworkOptions[0];
 
     if (matchedFramework?.id) {
       setFramework(matchedFramework.id);
-    } else if (fallbackFramework?.id) {
-      setFramework(fallbackFramework.id);
+      setBuildCmd(detectedFramework?.buildCommand ?? matchedFramework.buildCmd ?? "");
+      setStartCmd(detectedFramework?.startCommand ?? matchedFramework.start ?? "");
+      setOutputDir(detectedFramework?.outputDirectory ?? matchedFramework.output ?? "");
+      setInstallCmd(detectedFramework?.installCommand ?? matchedFramework.install ?? "");
+    } else if (detectedFramework) {
+      setBuildCmd(detectedFramework.buildCommand ?? "");
+      setStartCmd(detectedFramework.startCommand ?? "");
+      setOutputDir(detectedFramework.outputDirectory ?? "");
+      setInstallCmd(detectedFramework.installCommand ?? "");
     }
-
-    setBuildCmd(detectedFramework?.buildCommand ?? matchedFramework?.buildCmd ?? fallbackFramework?.buildCmd ?? "");
-    setStartCmd(detectedFramework?.startCommand ?? matchedFramework?.start ?? fallbackFramework?.start ?? "");
-    setOutputDir(detectedFramework?.outputDirectory ?? matchedFramework?.output ?? fallbackFramework?.output ?? "");
-    setInstallCmd(detectedFramework?.installCommand ?? matchedFramework?.install ?? fallbackFramework?.install ?? "");
 
     lastAppliedSourceRef.current = sourceName;
   }, [detectedFramework, frameworkOptions, isGit, sourceName]);
@@ -2871,23 +2833,7 @@ function NewProjectPage() {
   );
   const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
   const [databaseRegionOptions, setDatabaseRegionOptions] = useState<RegionOption[]>([]);
-  const [databaseEngineOptions, setDatabaseEngineOptions] = useState<DatabaseEngineOption[]>(() =>
-    fallbackDbEngines.map((engine) => ({
-      id: engine.id,
-      name: engine.name,
-      imageUrl: undefined,
-      image: undefined,
-      version: "latest",
-      envs: [],
-      isAvailable: true,
-      isDefault: false,
-      hasPort: true,
-      port: engine.defaultPort,
-      volumePath: undefined,
-      protocol: undefined,
-      recommendations: [],
-    })),
-  );
+  const [databaseEngineOptions, setDatabaseEngineOptions] = useState<DatabaseEngineOption[]>([]);
   const [databaseEnginesLoading, setDatabaseEnginesLoading] = useState(false);
 
   const handleProviderConnected = useCallback((providerId: string) => {
@@ -2990,42 +2936,42 @@ function NewProjectPage() {
 
     void listRegions({ data: { type: "web", enabled: true, workspace } })
       .then((items) => {
-        if (!active || !Array.isArray(items) || items.length === 0) return;
+        if (!active || !Array.isArray(items)) return;
         const mapped = items
           .filter((region) => region.enabled !== false)
           .map((region) => ({
             id: region.id,
             label: buildRegionLabel(region),
           }));
-        if (mapped.length) {
-          setRegionOptions(mapped);
-        }
+        setRegionOptions(mapped);
       })
       .catch(() => {
-        // Keep existing options.
+        if (active) {
+          setRegionOptions([]);
+        }
       });
 
     void listRegions({ data: { type: "database", enabled: true, workspace } })
       .then((items) => {
-        if (!active || !Array.isArray(items) || items.length === 0) return;
+        if (!active || !Array.isArray(items)) return;
         const mapped = items
           .filter((region) => region.enabled !== false)
           .map((region) => ({
             id: region.id,
             label: buildRegionLabel(region),
           }));
-        if (mapped.length) {
-          setDatabaseRegionOptions(mapped);
-        }
+        setDatabaseRegionOptions(mapped);
       })
       .catch(() => {
-        // Keep UI fallback options.
+        if (active) {
+          setDatabaseRegionOptions([]);
+        }
       });
 
     setDatabaseEnginesLoading(true);
     void listAvailableDatabases()
       .then((items) => {
-        if (!active || !Array.isArray(items) || items.length === 0) return;
+        if (!active || !Array.isArray(items)) return;
         const sorted = [...items].sort((a, b) => {
           if (a.isDefault && !b.isDefault) return -1;
           if (!a.isDefault && b.isDefault) return 1;
@@ -3034,7 +2980,9 @@ function NewProjectPage() {
         setDatabaseEngineOptions(sorted);
       })
       .catch(() => {
-        // Keep UI fallback options.
+        if (active) {
+          setDatabaseEngineOptions([]);
+        }
       })
       .finally(() => {
         if (active) {
