@@ -6,7 +6,7 @@ export const listRegionsServerFn = createServerFn({
 }).handler(async ({ data }) => {
   const payload = data as
     | {
-        type?: "web" | "database";
+        type?: "web" | "database" | "sandbox";
         enabled?: boolean;
         teamId?: string;
         workspace?: string;

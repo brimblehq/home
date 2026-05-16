@@ -2449,7 +2449,7 @@ function Phase3Configure({
           <button onClick={() => setEnvExpanded(!envExpanded)} className="flex w-full items-start justify-between gap-4 text-sm">
             <div className="flex flex-col gap-[2px] text-left">
               <span className="font-medium text-dash-text-strong">Secrets</span>
-              <span className="text-xs text-dash-text-faded">Stored securely on Brimble and injected at runtime.</span>
+              <span className="text-xs text-dash-text-faded">Stored securely on Brimble and injected on sandbox.</span>
             </div>
             <span className="flex shrink-0 items-center gap-2 pt-0.5 text-xs text-dash-text-faded">
               {envVars.length} secret{envVars.length !== 1 ? "s" : ""}

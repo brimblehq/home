@@ -27,7 +27,6 @@ export const SANDBOX_TEMPLATES: { id: string; label: string; icon?: string }[] =
   { id: "bun-1", label: "Bun 1.x" },
   { id: "deno-2", label: "Deno 2" },
   { id: "ubuntu-24", label: "Ubuntu 24.04" },
-  { id: "ai-agent", label: "AI Agent (Python + LangGraph)" },
 ];
 
 export const SANDBOX_REGIONS: { id: string; label: string }[] = [
@@ -45,6 +44,13 @@ export const IDLE_TIMEOUTS: { id: string; label: string; minutes: number }[] = [
   { id: "1h", label: "1 hour", minutes: 60 },
   { id: "4h", label: "4 hours", minutes: 240 },
   { id: "never", label: "Never", minutes: 0 },
+];
+
+export const DESTROY_TIMEOUTS: { id: string; label: string; minutes: number }[] = [
+  { id: "7d", label: "7 days", minutes: 10080 },
+  { id: "30d", label: "30 days", minutes: 43200 },
+  { id: "60d", label: "60 days", minutes: 86400 },
+  { id: "90d", label: "90 days", minutes: 129600 },
 ];
 
 export const MOCK_SANDBOXES: Sandbox[] = [
