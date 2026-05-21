@@ -72,7 +72,7 @@ const DEFAULT_ROOT_LOADER_DATA: RootLoaderData = {
   pricing: DEFAULT_PRICING,
 };
 
-const GLOBAL_ROOT_DATA_ROUTE_PATTERN = /^\/(projects|domains|addons|scaling|workspace|teams)(\/|$)/;
+const GLOBAL_ROOT_DATA_ROUTE_PATTERN = /^\/(projects|domains|addons|scaling|workspace|teams|volumes)(\/|$)/;
 
 function createRootLoaderData(overrides: Partial<RootLoaderData> = {}): RootLoaderData {
   return {
@@ -124,7 +124,7 @@ export const Route = createRootRoute({
   },
   loader: (async ({ location, deps }: any) => {
     const isAuthRoute = /^\/(login|signup|2fa)$/.test(location.pathname);
-    const knownPrefixes = /^\/(login|signup|2fa|projects|domains|addons|scaling|workspace|teams|sandboxes)?(\/|$)/;
+    const knownPrefixes = /^\/(login|signup|2fa|projects|domains|addons|scaling|workspace|teams|sandboxes|volumes)?(\/|$)/;
     const isCatchAll = location.pathname !== "/" && !knownPrefixes.test(location.pathname);
     const shouldLoadGlobalRootData = location.pathname === "/" || GLOBAL_ROOT_DATA_ROUTE_PATTERN.test(location.pathname);
 

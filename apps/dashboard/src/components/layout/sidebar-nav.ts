@@ -25,8 +25,14 @@ export const mainNav = [
     comingSoon: true,
   },
   {
+    label: "Volumes & Snapshots",
+    icon: "/icons/storage-menu.svg",
+    href: "/volumes",
+    flag: FeatureFlags.ENABLE_SANDBOX,
+  },
+  {
     label: "Sandboxes",
-    icon: "/icons/sandbox.svg",
+    icon: "/icons/sandbox-sidebar.svg",
     href: "/sandboxes",
     flag: FeatureFlags.ENABLE_SANDBOX,
   },

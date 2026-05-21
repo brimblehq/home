@@ -1,56 +1,88 @@
-import { useEffect, useState } from "react";
-import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ChevronDown, ChevronUp, Plus, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { GlossyButton } from "@/components/shared/glossy-button";
-import { DashInput, dashInputClassName } from "@/components/shared/dash-input";
+import { DashInput } from "@/components/shared/dash-input";
 import { Dropdown } from "@/components/shared/dropdown";
 import { ToggleSwitch } from "@/components/shared/toggle-switch";
 import { RangeSlider } from "@/components/shared/range-slider";
-import { DiskSizeSelect } from "@/components/shared/disk-size-select";
+import { DestroyTimeout, SnapshotMode, SnapshotStatus } from "@/backend/sandboxes";
+import type { CreateSandboxInput, SandboxTemplate, SnapshotResponse } from "@/backend/sandboxes";
+import { buildRegionLabel } from "@/lib/regions/format";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
-import { DESTROY_TIMEOUTS, IDLE_TIMEOUTS, SANDBOX_TEMPLATES, SNAPSHOT_FREQUENCIES } from "@/lib/sandboxes/mock-data";
-import { MOCK_VOLUMES } from "@/lib/sandboxes/volumes-mock-data";
 import { listRegionsServerFn } from "@/server/regions/actions";
-import type { Region } from "@/backend/regions";
+import { createSandboxServerFn, listSandboxSnapshotsServerFn, listSandboxTemplatesServerFn } from "@/server/sandboxes/actions";
+import { listVolumesServerFn } from "@/server/volumes/actions";
 
 export const Route = createFileRoute("/sandboxes/new")({
   component: NewSandboxPage,
 });
 
+const DESTROY_TIMEOUT_OPTIONS = [
+  { id: DestroyTimeout.ThirtyMinutes, label: "30 minutes" },
+  { id: DestroyTimeout.OneHour, label: "1 hour" },
+  { id: DestroyTimeout.ThreeHours, label: "3 hours" },
+  { id: DestroyTimeout.SixHours, label: "6 hours" },
+  { id: DestroyTimeout.TwelveHours, label: "12 hours" },
+  { id: DestroyTimeout.EighteenHours, label: "18 hours" },
+] as const;
+
+const SNAPSHOT_MODE_OPTIONS = [
+  { id: SnapshotMode.Manual, label: "Manual" },
+  { id: SnapshotMode.Automatic, label: "Automatic" },
+] as const;
+
+const SNAPSHOT_FREQUENCY_OPTIONS = [
+  { id: "*/30 * * * *", label: "Every 30 minutes" },
+  { id: "0 */2 * * *", label: "Every 2 hours" },
+  { id: "0 */6 * * *", label: "Every 6 hours" },
+  { id: "0 0 * * *", label: "Daily" },
+] as const;
+
+const PERSISTENT_DISK_OPTIONS = [10, 15, 20, 30, 40, 50].map((value) => ({
+  id: String(value),
+  label: `${value} GB`,
+}));
+
 interface SandboxFormValues {
   name: string;
+  useSnapshot: boolean;
   template: string;
+  fromSnapshot: string;
   region: string;
   cpu: number;
-  memoryGb: number;
-  persistentDiskEnabled: boolean;
-  diskSize: string;
-  autoStop: boolean;
-  idleTimeoutId: string;
-  autoDestroy: boolean;
-  destroyTimeoutId: string;
+  memory: number;
+  disk: number;
+  useExistingVolume: boolean;
+  volumeId: string;
+  persistent: boolean;
+  persistentDiskGB: number;
+  destroyTimeout: DestroyTimeout;
   oneShot: boolean;
-  snapshotsEnabled: boolean;
-  snapshotFrequencyId: string;
   blockOutbound: boolean;
-  envVars: { key: string; value: string }[];
-  mountedVolumes: { volumeId: string; mountPath: string }[];
+  snapshotMode: SnapshotMode;
+  snapshotFrequency: string;
 }
 
-type RegionOption = { id: string; label: string; isDefault: boolean };
+interface RegionOption {
+  id: string;
+  label: string;
+  isDefault: boolean;
+}
 
-function buildRegionLabel(region: Region) {
-  const country = region.country?.trim();
-  if (country) {
-    return `${region.name} (${country})`;
-  }
-  return region.name;
+interface VolumeOption {
+  id: string;
+  label: string;
+  regionId: string;
+  regionLabel: string;
+  attachedSandboxId: string | null;
+  attachedProjectId: string | null;
 }
 
 const sandboxFormSchema = Yup.object({
@@ -58,45 +90,110 @@ const sandboxFormSchema = Yup.object({
     .trim()
     .min(3, "Name should be at least 3 characters")
     .max(48, "Name should be less than 49 characters")
-    .matches(/^[a-zA-Z][a-zA-Z0-9 _-]*$/, "Letters, numbers, spaces, hyphens, and underscores only")
     .required("Sandbox name is required"),
-  template: Yup.string().required("Template is required"),
-  region: Yup.string().required("Region is required"),
-  cpu: Yup.number().min(0.25).max(8).required(),
-  memoryGb: Yup.number().min(0.5).max(16).required(),
-  persistentDiskEnabled: Yup.boolean(),
-  diskSize: Yup.string(),
-  autoStop: Yup.boolean(),
-  idleTimeoutId: Yup.string(),
-  autoDestroy: Yup.boolean(),
-  destroyTimeoutId: Yup.string(),
-  oneShot: Yup.boolean(),
-  snapshotsEnabled: Yup.boolean(),
-  snapshotFrequencyId: Yup.string(),
-  blockOutbound: Yup.boolean(),
-});
+  useSnapshot: Yup.boolean().required(),
+  template: Yup.string().trim(),
+  fromSnapshot: Yup.string().trim(),
+  region: Yup.string().trim().required("Region is required"),
+  cpu: Yup.number().integer().min(1).max(2000).required(),
+  memory: Yup.number().integer().min(1).max(2048).required(),
+  disk: Yup.number().integer().min(1).max(5).required(),
+  useExistingVolume: Yup.boolean().required(),
+  volumeId: Yup.string().trim(),
+  persistent: Yup.boolean().required(),
+  persistentDiskGB: Yup.number().integer().min(10).max(50).required(),
+  destroyTimeout: Yup.mixed<DestroyTimeout>().oneOf(Object.values(DestroyTimeout)).required(),
+  oneShot: Yup.boolean().required(),
+  blockOutbound: Yup.boolean().required(),
+  snapshotMode: Yup.mixed<SnapshotMode>().oneOf(Object.values(SnapshotMode)).required(),
+  snapshotFrequency: Yup.string().trim(),
+})
+  .test("storage-rule", "Storage settings are invalid", (value) => {
+    if (!value) {
+      return true;
+    }
+
+    if (value.useExistingVolume && value.persistent) {
+      return false;
+    }
+
+    if (value.useExistingVolume) {
+      return Boolean(value.volumeId);
+    }
+
+    return true;
+  })
+  .test("base-image-rule", "Pick a template or a snapshot", (value) => {
+    if (!value) {
+      return true;
+    }
+
+    if (value.useSnapshot) {
+      return Boolean(value.fromSnapshot);
+    }
+
+    return Boolean(value.template);
+  })
+  .test("snapshot-frequency-rule", "Snapshot frequency is required for automatic snapshots", (value) => {
+    if (!value) {
+      return true;
+    }
+
+    if (value.snapshotMode === SnapshotMode.Automatic) {
+      return Boolean(value.snapshotFrequency);
+    }
+
+    return !value.snapshotFrequency;
+  });
 
 const initialValues: SandboxFormValues = {
   name: "",
-  template: SANDBOX_TEMPLATES[0]?.id ?? "",
+  useSnapshot: false,
+  template: "",
+  fromSnapshot: "",
   region: "",
-  cpu: 1,
-  memoryGb: 2,
-  persistentDiskEnabled: false,
-  diskSize: "10",
-  autoStop: true,
-  idleTimeoutId: "30m",
-  autoDestroy: false,
-  destroyTimeoutId: "30d",
+  cpu: 500,
+  memory: 512,
+  disk: 2,
+  useExistingVolume: false,
+  volumeId: "",
+  persistent: false,
+  persistentDiskGB: 20,
+  destroyTimeout: DestroyTimeout.ThirtyMinutes,
   oneShot: false,
-  snapshotsEnabled: false,
-  snapshotFrequencyId: "daily",
   blockOutbound: false,
-  envVars: [],
-  mountedVolumes: [],
+  snapshotMode: SnapshotMode.Manual,
+  snapshotFrequency: "",
 };
 
+function parseLifecycleErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return "Failed to create sandbox";
+  }
+
+  const lower = error.message.toLowerCase();
+
+  if (lower.includes("plan") && lower.includes("sandbox")) {
+    return "Sandbox creation is not available on your current plan.";
+  }
+
+  if (lower.includes("spending") && lower.includes("paused")) {
+    return "Sandbox creation is paused for this workspace due to spending limits.";
+  }
+
+  if (lower.includes("region") && lower.includes("allowed")) {
+    return "This region is not available for your current plan.";
+  }
+
+  if (lower.includes("volume") && lower.includes("region")) {
+    return "The selected volume is in a different region. Pick a volume in the same region as the sandbox.";
+  }
+
+  return error.message;
+}
+
 function NewSandboxPage() {
+  const router = useRouter();
   const navigate = useNavigate();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const workspace = (() => {
@@ -104,13 +201,21 @@ function NewSandboxPage() {
     const value = params.get("workspace")?.trim();
     return value || undefined;
   })();
-  const listRegions = useServerFn(listRegionsServerFn as any) as (args: {
-    data?: { type?: "web" | "database" | "sandbox"; enabled?: boolean; workspace?: string };
-  }) => Promise<Region[]>;
+
+  const listRegions = useServerFn(listRegionsServerFn);
+  const listTemplates = useServerFn(listSandboxTemplatesServerFn);
+  const listVolumes = useServerFn(listVolumesServerFn);
+  const listSnapshots = useServerFn(listSandboxSnapshotsServerFn);
+  const createSandbox = useServerFn(createSandboxServerFn);
+
   const haptics = useHaptics();
   const [submitting, setSubmitting] = useState(false);
-  const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [templateOptions, setTemplateOptions] = useState<SandboxTemplate[]>([]);
+  const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
+  const [volumeOptions, setVolumeOptions] = useState<VolumeOption[]>([]);
+  const [snapshotOptions, setSnapshotOptions] = useState<SnapshotResponse[]>([]);
 
   const formik = useFormik<SandboxFormValues>({
     initialValues,
@@ -118,124 +223,220 @@ function NewSandboxPage() {
     onSubmit: async (values) => {
       setSubmitting(true);
       haptics.medium();
-      await new Promise((resolve) => setTimeout(resolve, 700));
-      toast.success(`Sandbox "${values.name}" queued (mock)`);
-      setSubmitting(false);
-      void navigate({ to: withWorkspaceQuery({ pathname: "/sandboxes", searchStr }) as any });
+
+      try {
+        const useSnapshot = values.useSnapshot && Boolean(values.fromSnapshot);
+        const payload: CreateSandboxInput & { workspace?: string } = {
+          name: values.name,
+          region: values.region,
+          ...(useSnapshot ? { fromSnapshot: values.fromSnapshot } : values.template ? { template: values.template } : {}),
+          specs: {
+            cpu: values.cpu,
+            memory: values.memory,
+            disk: values.disk,
+          },
+          autoDestroy: true,
+          destroyTimeout: values.destroyTimeout,
+          oneShot: values.oneShot,
+          blockOutbound: values.blockOutbound,
+          ...(values.persistent
+            ? {
+                persistent: true,
+                persistentDiskGB: values.persistentDiskGB,
+              }
+            : {}),
+          ...(values.useExistingVolume && values.volumeId
+            ? {
+                volumeId: values.volumeId,
+              }
+            : {}),
+          snapshotMode: values.snapshotMode,
+          ...(values.snapshotMode === SnapshotMode.Automatic ? { snapshotFrequency: values.snapshotFrequency } : {}),
+          ...(workspace ? { workspace } : {}),
+        };
+
+        const created = await createSandbox({ data: payload });
+
+        if (!created.id) {
+          throw new Error("Sandbox id missing from create response");
+        }
+
+        toast.success("Sandbox provisioning started");
+        await router.invalidate({ filter: (route) => route.routeId === "/sandboxes/" });
+        await navigate({
+          to: "/sandboxes",
+          search: workspace ? { workspace } : {},
+        });
+      } catch (error) {
+        toast.error(parseLifecycleErrorMessage(error));
+      } finally {
+        setSubmitting(false);
+      }
     },
   });
 
-  const { values, errors, touched, setFieldValue, handleChange, handleBlur, handleSubmit } = formik;
+  const { values, errors, touched, setFieldValue, handleSubmit, handleChange, handleBlur } = formik;
 
   useEffect(() => {
     let active = true;
 
-    void listRegions({ data: { type: "sandbox", enabled: true, workspace } })
-      .then((items) => {
-        if (!active || !Array.isArray(items)) {
+    void Promise.all([
+      listTemplates(),
+      listRegions({ data: { type: "sandbox", enabled: true, workspace } }),
+      listVolumes({ data: { workspace, page: 1, limit: 50 } }),
+      listSnapshots({ data: { page: 1, limit: 50, workspace } }),
+    ])
+      .then(([templates, regions, volumes, snapshots]) => {
+        if (!active) {
           return;
         }
 
-        const mapped = items
+        const mappedRegions = regions
           .filter((region) => region.enabled !== false)
           .map((region) => ({
             id: region.id,
             label: buildRegionLabel(region),
             isDefault: Boolean(region.default),
           }));
-        setRegionOptions(mapped);
+
+        const mappedVolumes = volumes.items.map((volume) => ({
+          id: volume.id,
+          label: `${volume.name} (${volume.sizeGB} GB)`,
+          regionId: volume.region?.id ?? "",
+          regionLabel: volume.region ? buildRegionLabel(volume.region) : "—",
+          attachedSandboxId: volume.attachedSandboxId,
+          attachedProjectId: volume.attachedProjectId,
+        }));
+
+        setTemplateOptions(templates);
+        setRegionOptions(mappedRegions);
+        setVolumeOptions(mappedVolumes);
+        setSnapshotOptions(snapshots.items);
       })
-      .catch(() => {
+      .catch((error) => {
         if (active) {
+          toast.error(error instanceof Error ? error.message : "Failed to load sandbox options");
+          setTemplateOptions([]);
           setRegionOptions([]);
+          setVolumeOptions([]);
+          setSnapshotOptions([]);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
         }
       });
 
     return () => {
       active = false;
     };
-  }, [listRegions, workspace]);
+  }, [listRegions, listSnapshots, listTemplates, listVolumes, workspace]);
+
+  useEffect(() => {
+    if (!templateOptions.length || values.template) {
+      return;
+    }
+
+    void setFieldValue("template", templateOptions[0].name);
+  }, [setFieldValue, templateOptions, values.template]);
 
   useEffect(() => {
     if (!regionOptions.length) {
       return;
     }
 
-    if (!values.region || !regionOptions.some((option) => option.id === values.region)) {
-      const defaultRegion = regionOptions.find((option) => option.isDefault) ?? regionOptions[0];
-      void setFieldValue("region", defaultRegion.id);
+    const hasSelectedRegion = values.region && regionOptions.some((option) => option.id === values.region);
+    if (hasSelectedRegion) {
+      return;
     }
+
+    const defaultRegion = regionOptions.find((option) => option.isDefault) ?? regionOptions[0];
+    void setFieldValue("region", defaultRegion.id);
   }, [regionOptions, setFieldValue, values.region]);
 
-  function addEnvVar() {
-    haptics.selection();
-    void setFieldValue("envVars", [...values.envVars, { key: "", value: "" }]);
-  }
+  useEffect(() => {
+    if (!values.useExistingVolume || !values.volumeId || !values.region) {
+      return;
+    }
 
-  function updateEnvVar(index: number, field: "key" | "value", next: string) {
-    const draft = values.envVars.map((entry, i) => (i === index ? { ...entry, [field]: next } : entry));
-    void setFieldValue("envVars", draft);
-  }
+    const selectedVolume = volumeOptions.find((volume) => volume.id === values.volumeId);
+    if (!selectedVolume) {
+      void setFieldValue("volumeId", "");
+      return;
+    }
 
-  function removeEnvVar(index: number) {
-    haptics.selection();
-    void setFieldValue(
-      "envVars",
-      values.envVars.filter((_, i) => i !== index),
-    );
-  }
+    if (selectedVolume.regionId !== values.region) {
+      void setFieldValue("volumeId", "");
+    }
+  }, [setFieldValue, values.region, values.useExistingVolume, values.volumeId, volumeOptions]);
 
-  const mountableVolumes = MOCK_VOLUMES.filter((v) => v.status !== "DELETING");
-  const usedVolumeIds = new Set(values.mountedVolumes.map((m) => m.volumeId));
-  const firstAvailableVolume = mountableVolumes.find((v) => !usedVolumeIds.has(v.id));
+  const attachableVolumes = useMemo(
+    () =>
+      volumeOptions.filter((volume) => {
+        return !volume.attachedSandboxId && !volume.attachedProjectId;
+      }),
+    [volumeOptions],
+  );
 
-  function addVolumeMount() {
-    if (!firstAvailableVolume) return;
-    haptics.selection();
-    void setFieldValue("mountedVolumes", [
-      ...values.mountedVolumes,
-      { volumeId: firstAvailableVolume.id, mountPath: `/mnt/${firstAvailableVolume.name}` },
-    ]);
-  }
-
-  function updateVolumeMount(index: number, field: "volumeId" | "mountPath", next: string) {
-    const draft = values.mountedVolumes.map((entry, i) => {
-      if (i !== index) return entry;
-      if (field === "volumeId") {
-        const picked = mountableVolumes.find((v) => v.id === next);
+  const volumeDropdownOptions = useMemo(
+    () =>
+      attachableVolumes.map((volume) => {
+        const mismatchedRegion = Boolean(values.region) && volume.regionId !== values.region;
         return {
-          ...entry,
-          volumeId: next,
-          mountPath: picked ? `/mnt/${picked.name}` : entry.mountPath,
+          id: volume.id,
+          label: volume.label,
+          disabled: mismatchedRegion,
+          asideText: mismatchedRegion ? volume.regionLabel : undefined,
         };
-      }
-      return { ...entry, mountPath: next };
-    });
-    void setFieldValue("mountedVolumes", draft);
-  }
+      }),
+    [attachableVolumes, values.region],
+  );
 
-  function removeVolumeMount(index: number) {
-    haptics.selection();
-    void setFieldValue(
-      "mountedVolumes",
-      values.mountedVolumes.filter((_, i) => i !== index),
+  const snapshotDropdownOptions = useMemo(
+    () =>
+      snapshotOptions.map((snapshot) => {
+        const ready = snapshot.status === SnapshotStatus.Ready;
+        return {
+          id: snapshot.id,
+          label: snapshot.name,
+          disabled: !ready,
+          asideText: ready ? snapshot.sourceTemplate : snapshot.status,
+        };
+      }),
+    [snapshotOptions],
+  );
+
+  useEffect(() => {
+    if (!values.useSnapshot || !values.fromSnapshot) return;
+    const stillReady = snapshotOptions.some(
+      (snapshot) => snapshot.id === values.fromSnapshot && snapshot.status === SnapshotStatus.Ready,
     );
-  }
+    if (!stillReady) {
+      void setFieldValue("fromSnapshot", "");
+    }
+  }, [setFieldValue, snapshotOptions, values.useSnapshot, values.fromSnapshot]);
 
   return (
     <div className="px-6 py-8">
       <div className="mx-auto max-w-[680px]">
         <div className="mb-8">
           <Link
-            to={withWorkspaceQuery({ pathname: "/sandboxes", searchStr }) as any}
+            to={withWorkspaceQuery({ pathname: "/sandboxes", searchStr })}
             className="mb-4 inline-flex items-center gap-1.5 text-sm text-dash-text-faded transition-colors hover:text-dash-text-strong"
           >
             <ArrowLeft className="size-4" />
             Back to sandboxes
           </Link>
-          <h1 className="text-xl font-medium text-dash-text-strong">New sandbox</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-xl font-medium text-dash-text-strong">New sandbox</h1>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#4879f8]/15 px-2.5 py-1 text-xs font-medium text-[#4879f8] dark:bg-[#4879f8]/20">
+              <Clock className="size-3" />
+              Time to live: {DESTROY_TIMEOUT_OPTIONS.find((opt) => opt.id === values.destroyTimeout)?.label ?? "—"}
+            </span>
+          </div>
           <p className="mt-1 text-sm text-dash-text-faded">
-            Configure a fresh environment for your code or AI agent. You can change resources and configuration after creation.
+            Pick a template and region, configure lifecycle settings, then wait for the sandbox to become ready.
           </p>
         </div>
 
@@ -249,65 +450,95 @@ function NewSandboxPage() {
                 onBlur={handleBlur}
                 placeholder="research-agent"
                 autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
               />
             </Field>
           </Section>
 
           <Divider />
 
-          <Section title="Runtime" description="Pick a base image and where it runs.">
-            <Field label="Template">
-              <Dropdown
-                value={values.template}
-                options={SANDBOX_TEMPLATES.map((entry) => ({ id: entry.id, label: entry.label }))}
-                onChange={(id) => void setFieldValue("template", id)}
-              />
-            </Field>
+          <Section title="Runtime" description="Choose the base image and where this sandbox will run.">
+            <ToggleRow
+              title="Restore from snapshot"
+              description="Skip the fresh template and boot from a snapshot you've already taken."
+              checked={values.useSnapshot}
+              onChange={(next) => {
+                void setFieldValue("useSnapshot", next);
+                if (next) {
+                  void setFieldValue("template", "");
+                } else {
+                  void setFieldValue("fromSnapshot", "");
+                }
+              }}
+            />
 
-            <Field label="Region">
+            {values.useSnapshot ? (
+              <Field
+                label="Snapshot"
+                hint="Only ready snapshots can be restored. The new sandbox uses the snapshot's source template."
+                error={touched.fromSnapshot ? errors.fromSnapshot : undefined}
+              >
+                <Dropdown
+                  value={values.fromSnapshot}
+                  options={snapshotDropdownOptions}
+                  onChange={(id) => void setFieldValue("fromSnapshot", id)}
+                  searchable
+                  placeholder={loading ? "Loading snapshots..." : snapshotDropdownOptions.length === 0 ? "No snapshots available" : "Select snapshot"}
+                />
+              </Field>
+            ) : (
+              <Field label="Template" error={touched.template ? errors.template : undefined}>
+                <Dropdown
+                  value={values.template}
+                  options={templateOptions.map((template) => ({ id: template.name, label: template.displayName }))}
+                  onChange={(id) => void setFieldValue("template", id)}
+                  placeholder={loading ? "Loading templates..." : "Select template"}
+                />
+              </Field>
+            )}
+
+            <Field label="Region" error={touched.region ? errors.region : undefined}>
               <Dropdown
                 value={values.region}
                 options={regionOptions}
                 onChange={(id) => void setFieldValue("region", id)}
                 searchable
+                placeholder={loading ? "Loading regions..." : "Select region"}
               />
             </Field>
           </Section>
 
           <Divider />
 
-          <Section title="Resources" description="Allocate compute, memory, and storage.">
-            <Field label="vCPU">
+          <Section title="Resources" description="Set compute and ephemeral storage limits.">
+            <Field label="CPU (MHz)">
               <RangeSlider
                 value={values.cpu}
                 onChange={(next) => void setFieldValue("cpu", next)}
-                min={0.25}
-                max={8}
-                step={0.25}
-                unit=" vCPU"
+                min={1}
+                max={2000}
+                step={25}
+                unit=" MHz"
               />
             </Field>
 
-            <Field label="Memory">
+            <Field label="Memory (MB)">
               <RangeSlider
-                value={values.memoryGb}
-                onChange={(next) => void setFieldValue("memoryGb", next)}
-                min={0.5}
-                max={16}
-                step={0.5}
-                unit=" GB"
+                value={values.memory}
+                onChange={(next) => void setFieldValue("memory", next)}
+                min={1}
+                max={2048}
+                step={64}
+                unit=" MB"
               />
             </Field>
 
-            <ToggleRow
-              title="Persistent disk"
-              description="Attach disk storage that survives across sandbox restarts. Recommended for big workloads or datasets that need to stick around."
-              checked={values.persistentDiskEnabled}
-              onChange={(next) => void setFieldValue("persistentDiskEnabled", next)}
-            />
-            {values.persistentDiskEnabled ? (
-              <DiskSizeSelect label="Disk size" value={values.diskSize} onChange={(id) => void setFieldValue("diskSize", id)} />
-            ) : null}
+            <Field label="Ephemeral disk (GB)">
+              <RangeSlider value={values.disk} onChange={(next) => void setFieldValue("disk", next)} min={1} max={5} step={1} unit=" GB" />
+            </Field>
           </Section>
 
           <div className="mt-6 flex justify-center">
@@ -315,7 +546,7 @@ function NewSandboxPage() {
               type="button"
               onClick={() => {
                 haptics.selection();
-                setShowAdvanced((v) => !v);
+                setShowAdvanced((value) => !value);
               }}
               className="flex items-center gap-1.5 text-sm text-dash-text-faded transition-colors hover:text-dash-text-strong"
             >
@@ -334,195 +565,133 @@ function NewSandboxPage() {
                 transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                 style={{ overflow: "hidden" }}
               >
-              <Divider />
+                <div className="px-px">
+                  <Divider />
 
-              <Section title="Volumes" description="Mount existing persistent volumes onto this sandbox.">
-            {values.mountedVolumes.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {values.mountedVolumes.map((entry, i) => {
-                  const dropdownOptions = mountableVolumes
-                    .filter((v) => v.id === entry.volumeId || !values.mountedVolumes.some((m) => m.volumeId === v.id))
-                    .map((v) => ({ id: v.id, label: `${v.name} (${v.sizeGb} GB)` }));
-                  return (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="flex-1">
+                  <Section title="Storage" description="Attach existing storage or provision a new persistent disk.">
+                    <ToggleRow
+                      title="Attach existing volume"
+                      description="Use a detached volume in the same region as this sandbox."
+                      checked={values.useExistingVolume}
+                      onChange={(next) => {
+                        void setFieldValue("useExistingVolume", next);
+                        if (!next) {
+                          void setFieldValue("volumeId", "");
+                          return;
+                        }
+
+                        void setFieldValue("persistent", false);
+                      }}
+                    />
+
+                    {values.useExistingVolume ? (
+                      <Field label="Volume" error={touched.volumeId ? errors.volumeId : undefined}>
                         <Dropdown
-                          value={entry.volumeId}
-                          options={dropdownOptions}
-                          onChange={(id) => updateVolumeMount(i, "volumeId", id)}
+                          value={values.volumeId}
+                          options={volumeDropdownOptions}
+                          onChange={(id) => void setFieldValue("volumeId", id)}
+                          placeholder={attachableVolumes.length > 0 ? "Select volume" : "No detached volumes available"}
                         />
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="/mnt/path"
-                        value={entry.mountPath}
-                        onChange={(event) => updateVolumeMount(i, "mountPath", event.target.value)}
-                        className={`${dashInputClassName} flex-1 font-family-mono text-[13px]`}
+                      </Field>
+                    ) : null}
+
+                    <ToggleRow
+                      title="Provision persistent disk"
+                      description="Create a fresh persistent disk for this sandbox."
+                      checked={values.persistent}
+                      onChange={(next) => {
+                        void setFieldValue("persistent", next);
+                        if (next) {
+                          void setFieldValue("useExistingVolume", false);
+                          void setFieldValue("volumeId", "");
+                        }
+                      }}
+                    />
+
+                    {values.persistent ? (
+                      <Field label="Persistent disk size">
+                        <Dropdown
+                          value={String(values.persistentDiskGB)}
+                          options={PERSISTENT_DISK_OPTIONS}
+                          onChange={(id) => {
+                            const next = Number(id);
+                            if (!Number.isNaN(next)) {
+                              void setFieldValue("persistentDiskGB", next);
+                            }
+                          }}
+                        />
+                      </Field>
+                    ) : null}
+                  </Section>
+
+                  <Divider />
+
+                  <Section title="Lifecycle" description="Sandboxes are ephemeral and always auto-destroy after the chosen timeout.">
+                    <Field label="Destroy after" error={touched.destroyTimeout ? errors.destroyTimeout : undefined}>
+                      <Dropdown
+                        value={values.destroyTimeout}
+                        options={DESTROY_TIMEOUT_OPTIONS.map((option) => ({ id: option.id, label: option.label }))}
+                        onChange={(id) => void setFieldValue("destroyTimeout", id)}
                       />
-                      <button
-                        type="button"
-                        onClick={() => removeVolumeMount(i)}
-                        aria-label="Remove volume"
-                        className="flex size-7 shrink-0 items-center justify-center rounded-[6px] text-dash-text-faded transition-colors hover:text-dash-text-strong"
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-            {firstAvailableVolume ? (
-              <button
-                type="button"
-                onClick={addVolumeMount}
-                className="flex items-center gap-1.5 self-start text-sm text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
-              >
-                <Plus className="size-3.5" />
-                Mount volume
-              </button>
-            ) : (
-              <p className="text-xs text-dash-text-faded">
-                {mountableVolumes.length === 0
-                  ? "You don't have any volumes yet. Create one from the Volumes tab to mount it here."
-                  : "All available volumes are already mounted."}
-              </p>
-            )}
-          </Section>
+                    </Field>
 
-          <Divider />
+                    <ToggleRow
+                      title="One-shot sandbox"
+                      description="Auto-destroy as soon as the main process exits."
+                      checked={values.oneShot}
+                      onChange={(next) => void setFieldValue("oneShot", next)}
+                    />
+                  </Section>
 
-          <Section title="Secrets" description="Stored securely on Brimble and injected on sandbox.">
-            <div className="flex flex-col gap-2">
-              {values.envVars.map((entry, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="KEY"
-                    value={entry.key}
-                    onChange={(event) => updateEnvVar(i, "key", event.target.value)}
-                    className={`${dashInputClassName} flex-1 font-family-mono text-[13px] uppercase`}
-                  />
-                  <input
-                    type="text"
-                    placeholder="value"
-                    value={entry.value}
-                    onChange={(event) => updateEnvVar(i, "value", event.target.value)}
-                    className={`${dashInputClassName} flex-1 font-family-mono text-[13px]`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeEnvVar(i)}
-                    aria-label="Remove secret"
-                    className="flex size-7 shrink-0 items-center justify-center rounded-[6px] text-dash-text-faded transition-colors hover:text-dash-text-strong"
-                  >
-                    <X className="size-3.5" />
-                  </button>
+                  <Divider />
+
+                  <Section title="Snapshots" description="Choose manual or scheduled snapshots.">
+                    <Dropdown
+                      value={values.snapshotMode}
+                      options={SNAPSHOT_MODE_OPTIONS.map((option) => ({ id: option.id, label: option.label }))}
+                      onChange={(id) => {
+                        const mode = id === SnapshotMode.Automatic ? SnapshotMode.Automatic : SnapshotMode.Manual;
+                        void setFieldValue("snapshotMode", mode);
+                        if (mode === SnapshotMode.Manual) {
+                          void setFieldValue("snapshotFrequency", "");
+                        }
+                      }}
+                    />
+
+                    {values.snapshotMode === SnapshotMode.Automatic ? (
+                      <Field label="Snapshot frequency" error={touched.snapshotFrequency ? errors.snapshotFrequency : undefined}>
+                        <Dropdown
+                          value={values.snapshotFrequency}
+                          options={SNAPSHOT_FREQUENCY_OPTIONS.map((option) => ({ id: option.id, label: option.label }))}
+                          onChange={(id) => void setFieldValue("snapshotFrequency", id)}
+                        />
+                      </Field>
+                    ) : null}
+                  </Section>
+
+                  <Divider />
+
+                  <Section title="Network" description="Restrict outbound network access if required.">
+                    <ToggleRow
+                      title="Block outbound network"
+                      description="Deny all outbound internet traffic from this sandbox."
+                      checked={values.blockOutbound}
+                      onChange={(next) => void setFieldValue("blockOutbound", next)}
+                    />
+                  </Section>
                 </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={addEnvVar}
-              className="flex items-center gap-1.5 self-start text-sm text-[#4879f8] transition-colors hover:text-[#3a6ae6]"
-            >
-              <Plus className="size-3.5" />
-              Add secret
-            </button>
-          </Section>
-
-          <Divider />
-
-          <Section title="Lifecycle" description="Control how this sandbox sleeps and gets cleaned up.">
-            <ToggleRow
-              title="Stop when idle"
-              description="Pause the sandbox after a period of inactivity."
-              checked={values.autoStop}
-              onChange={(next) => void setFieldValue("autoStop", next)}
-            />
-            {values.autoStop ? (
-              <Field label="Idle timeout">
-                <Dropdown
-                  value={values.idleTimeoutId}
-                  options={IDLE_TIMEOUTS.map((entry) => ({ id: entry.id, label: entry.label }))}
-                  onChange={(id) => void setFieldValue("idleTimeoutId", id)}
-                />
-              </Field>
-            ) : null}
-
-            <ToggleRow
-              title="Auto-destroy"
-              description="Permanently delete the sandbox after extended inactivity."
-              checked={values.autoDestroy}
-              onChange={(next) => void setFieldValue("autoDestroy", next)}
-            />
-            {values.autoDestroy ? (
-              <Field label="Destroy after">
-                <Dropdown
-                  value={values.destroyTimeoutId}
-                  options={DESTROY_TIMEOUTS.map((entry) => ({ id: entry.id, label: entry.label }))}
-                  onChange={(id) => void setFieldValue("destroyTimeoutId", id)}
-                />
-              </Field>
-            ) : null}
-
-            <ToggleRow
-              title="One-shot sandbox"
-              description="Delete this sandbox the first time it stops."
-              checked={values.oneShot}
-              onChange={(next) => void setFieldValue("oneShot", next)}
-            />
-          </Section>
-
-          <Divider />
-
-          <Section title="Snapshots" description="Capture point-in-time copies of this sandbox's disk.">
-            <ToggleRow
-              title="Enable snapshots"
-              description="Save restorable snapshots of this sandbox on a schedule or on demand."
-              checked={values.snapshotsEnabled}
-              onChange={(next) => void setFieldValue("snapshotsEnabled", next)}
-            />
-            {values.snapshotsEnabled ? (
-              <Field
-                label="Snapshot schedule"
-                hint={
-                  values.snapshotFrequencyId === "manual"
-                    ? "Snapshots will only run when you trigger them from the sandbox page."
-                    : "You can still trigger a snapshot manually at any time."
-                }
-              >
-                <Dropdown
-                  value={values.snapshotFrequencyId}
-                  options={SNAPSHOT_FREQUENCIES.map((entry) => ({ id: entry.id, label: entry.label }))}
-                  onChange={(id) => void setFieldValue("snapshotFrequencyId", id)}
-                />
-              </Field>
-            ) : null}
-          </Section>
-
-          <Divider />
-
-          <Section title="Network" description="Lock down how this sandbox is reached.">
-            <ToggleRow
-              title="Block outbound network"
-              description="Disable all outgoing internet access from this sandbox."
-              checked={values.blockOutbound}
-              onChange={(next) => void setFieldValue("blockOutbound", next)}
-            />
-          </Section>
               </motion.div>
             ) : null}
           </AnimatePresence>
 
           <div className="mt-8 flex items-center justify-end gap-3">
             <Link
-              to={withWorkspaceQuery({ pathname: "/sandboxes", searchStr }) as any}
+              to={withWorkspaceQuery({ pathname: "/sandboxes", searchStr })}
               className="text-sm text-dash-text-faded transition-colors hover:text-dash-text-strong"
             >
               Cancel
             </Link>
-            <GlossyButton type="submit" disabled={submitting} loading={submitting} loadingLabel="Creating…">
+            <GlossyButton type="submit" disabled={submitting || loading} loading={submitting} loadingLabel="Creating...">
               Create sandbox
             </GlossyButton>
           </div>

@@ -10,6 +10,7 @@ import {
   Globe,
   Users,
   Box,
+  HardDrive,
   Menu,
   X,
   ArrowRightLeft,
@@ -47,7 +48,7 @@ import { WarningModal } from "../shared/warning-modal";
 import { Dropdown } from "../shared/dropdown";
 import { toTitleCase } from "@/utils/dashboard";
 import { Theme } from "@/types/enums";
-import { buildProjectSwitchUrl, buildWorkspaceSwitchUrl, setPendingDomainsAction, withWorkspaceQuery } from "@/utils/topbar-navigation";
+import { buildProjectSwitchUrl, buildWorkspaceSwitchUrl, setPendingDomainsAction, setPendingVolumesAction, withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { invalidateActiveMatches } from "@/utils/router-invalidate";
 
 function getWorkspaceSearch(searchStr?: string) {
@@ -1053,6 +1054,7 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
 const defaultCreateMenuItems = [
   { label: "Create project", icon: Plus },
   { label: "Create sandbox", icon: Box },
+  { label: "Create volume", icon: HardDrive },
   { label: "Register domain", icon: Globe },
   { label: "New workspace", icon: Users },
 ];
@@ -1073,6 +1075,7 @@ function CreateDropdown() {
 
   const isDomainsPage = /^\/domains(\/|$)/.test(pathname);
   const isDomainsListPage = pathname === "/domains" || pathname === "/domains/";
+  const isVolumesListPage = pathname === "/volumes" || pathname === "/volumes/";
   const menuItems = isDomainsPage ? domainsCreateMenuItems : defaultCreateMenuItems;
 
   useEffect(() => {
@@ -1145,6 +1148,18 @@ function CreateDropdown() {
           searchStr,
         }),
       });
+    } else if (label === "Create volume") {
+      if (isVolumesListPage) {
+        window.dispatchEvent(new CustomEvent("brimble:create-volume"));
+      } else {
+        setPendingVolumesAction("create-volume");
+        void navigate({
+          to: withWorkspaceQuery({
+            pathname: "/volumes",
+            searchStr,
+          }),
+        });
+      }
     } else if (label === "Register domain") {
       void navigate({
         to: withWorkspaceQuery({

@@ -48,7 +48,6 @@ import { listProjectEnvironmentsServerFn } from "@/server/environments/actions";
 import type { ProjectEnvironment } from "@/backend/environments";
 import type { ActivityLogsResponse, ActivityLogGroup } from "@/backend/activity-logs";
 import {
-  createSettingsApiKeyServerFn,
   decryptSettingsApiKeyServerFn,
   disconnectGitProviderServerFn,
   getSettingsSidebarSnapshotServerFn,
@@ -388,7 +387,6 @@ function ProfileForm({
   onSave,
   onBuildsChange,
   onHapticsChange,
-  onCreateApiKey,
   onResetApiKey,
   onDecryptApiKey,
   gitConnections,
@@ -405,8 +403,7 @@ function ProfileForm({
   onSave?: (data: { firstName: string; lastName: string; username: string; avatarUrl?: string }) => void | Promise<void>;
   onBuildsChange?: (enabled: boolean) => Promise<void> | void;
   onHapticsChange?: (enabled: boolean) => Promise<void> | void;
-  onCreateApiKey?: () => Promise<string | undefined> | string | undefined;
-  onResetApiKey?: () => Promise<string | undefined> | string | undefined;
+  onResetApiKey?: (hadKey: boolean) => Promise<string | undefined> | string | undefined;
   onDecryptApiKey?: (encryptedApiKey: string) => Promise<string | null | undefined>;
   gitConnections: { id: string; name: string; connected: boolean }[];
   onDisconnectGitProvider?: (providerId: string) => Promise<void> | void;
@@ -726,7 +723,6 @@ function ProfileForm({
         initialApiKey={profile.apiKey}
         isFreePlan={isFreePlan}
         onUpgradePlan={onOpenBilling}
-        onCreate={onCreateApiKey}
         onReset={onResetApiKey}
         onDecrypt={onDecryptApiKey}
       />
@@ -1082,15 +1078,13 @@ function ApiKeySection({
   initialApiKey,
   isFreePlan = false,
   onUpgradePlan,
-  onCreate,
   onReset,
   onDecrypt,
 }: {
   initialApiKey?: string;
   isFreePlan?: boolean;
   onUpgradePlan?: () => void;
-  onCreate?: () => Promise<string | undefined> | string | undefined;
-  onReset?: () => Promise<string | undefined> | string | undefined;
+  onReset?: (hadKey: boolean) => Promise<string | undefined> | string | undefined;
   onDecrypt?: (encryptedApiKey: string) => Promise<string | null | undefined>;
 }) {
   const [encryptedApiKey, setEncryptedApiKey] = useState(initialApiKey ?? "");
@@ -1198,7 +1192,23 @@ function ApiKeySection({
             )}
 
             <button
-              onClick={() => setRerollOpen(true)}
+              onClick={async () => {
+                if (hasApiKey) {
+                  setRerollOpen(true);
+                  return;
+                }
+                setIsSubmitting(true);
+                try {
+                  const nextKey = await onReset?.(false);
+                  if (nextKey) {
+                    setEncryptedApiKey(nextKey);
+                    setDecryptedApiKey(null);
+                    setRevealed(false);
+                  }
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
               disabled={isSubmitting}
               className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-[6px] border border-dash-border bg-dash-bg px-3 text-sm font-medium text-dash-text-body shadow-[0px_1px_2px_rgba(18,18,23,0.05)] transition-colors hover:bg-dash-bg-elevated"
             >
@@ -1217,7 +1227,7 @@ function ApiKeySection({
             onConfirm={async () => {
               setIsSubmitting(true);
               try {
-                const nextKey = encryptedApiKey ? await onReset?.() : await onCreate?.();
+                const nextKey = await onReset?.(true);
                 if (nextKey) {
                   setEncryptedApiKey(nextKey);
                   setDecryptedApiKey(null);
@@ -1777,7 +1787,6 @@ export function UserProfileDrawer({
   const updateHaptics = useServerFn(updateSettingsHapticsServerFn as any) as (args: {
     data: { haptics: boolean };
   }) => Promise<{ ok: true }>;
-  const createApiKey = useServerFn(createSettingsApiKeyServerFn);
   const resetApiKey = useServerFn(resetSettingsApiKeyServerFn);
   const disconnectGitProvider = useServerFn(disconnectGitProviderServerFn as any) as (args: {
     data: { provider: string };
@@ -2305,35 +2314,7 @@ export function UserProfileDrawer({
                       throw error;
                     }
                   }}
-                  onCreateApiKey={async () => {
-                    try {
-                      const result = await createApiKey();
-                      const apiKeyValue = result.apiKey;
-
-                      if (apiKeyValue) {
-                        setSnapshot((prev) => {
-                          if (!prev) {
-                            return prev;
-                          }
-
-                          return {
-                            ...prev,
-                            profile: {
-                              ...prev.profile,
-                              apiKey: apiKeyValue,
-                            },
-                          };
-                        });
-                        toast.success("API key created");
-                      }
-
-                      return apiKeyValue;
-                    } catch (error) {
-                      toast.error(error instanceof Error ? error.message : "Failed to create API key");
-                      return undefined;
-                    }
-                  }}
-                  onResetApiKey={async () => {
+                  onResetApiKey={async (hadKey) => {
                     try {
                       const result = await resetApiKey();
                       const apiKeyValue = result.apiKey;
@@ -2352,12 +2333,12 @@ export function UserProfileDrawer({
                             },
                           };
                         });
-                        toast.success("API key reset");
+                        toast.success(hadKey ? "API key reset" : "API key created");
                       }
 
                       return apiKeyValue;
                     } catch (error) {
-                      toast.error(error instanceof Error ? error.message : "Failed to reset API key");
+                      toast.error(error instanceof Error ? error.message : hadKey ? "Failed to reset API key" : "Failed to create API key");
                       return undefined;
                     }
                   }}

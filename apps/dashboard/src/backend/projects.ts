@@ -39,6 +39,12 @@ export interface Project {
   watchPaths?: string[];
   diskSize?: number;
   volumeMount?: string;
+  volume?: {
+    id: string;
+    name: string;
+    sizeGB: number;
+    mountPath: string | null;
+  } | null;
   whiteListedIps?: string[];
   autoscalingGroup?: {
     id?: string;
@@ -482,6 +488,22 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
     const maintenance = pickBoolean(row, "maintenance");
     const isPublicAccess = pickBoolean(row, "isPublicAccess", "publicAccess");
 
+    let volume: Project["volume"] = null;
+    const volumeRecord = asRecord(row.volume);
+    if (volumeRecord) {
+      const volumeId = pickNonEmptyString(volumeRecord, "id", "_id");
+      const volumeName = pickNonEmptyString(volumeRecord, "name");
+      const volumeSize = pickNumber(volumeRecord, "size", "sizeGB");
+      if (volumeId && volumeName && volumeSize !== undefined) {
+        volume = {
+          id: volumeId,
+          name: volumeName,
+          sizeGB: volumeSize,
+          mountPath: pickString(volumeRecord, "mount_path", "mountPath") ?? null,
+        };
+      }
+    }
+
     let specsRegion: NonNullable<Project["specs"]>["region"] = null;
     if (specsRegionRecord) {
       specsRegion = {
@@ -548,6 +570,7 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
       watchPaths,
       diskSize: pickNumber(row, "diskSize"),
       volumeMount: pickString(row, "volumeMount"),
+      volume,
       whiteListedIps,
       autoscalingGroup,
       dbImage,

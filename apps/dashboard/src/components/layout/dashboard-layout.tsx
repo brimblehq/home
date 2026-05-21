@@ -79,7 +79,7 @@ const dashboardQueryClient = new QueryClient({
   },
 });
 
-const mobileNavItemBase = "flex w-full items-center gap-3 px-5 py-4 text-sm tracking-[-0.09px] transition-colors";
+const mobileNavItemBase = "flex w-full items-center gap-3 whitespace-nowrap px-5 py-4 text-sm tracking-[-0.09px] transition-colors";
 const DISMISSED_SNACKBARS_STORAGE_PREFIX = "brimble:dismissed-snackbars:";
 
 function mapSnackbarVariant(level: AppTooltipMessage["level"]): "info" | "warning" | "error" {
@@ -662,7 +662,7 @@ export function DashboardLayout({
   });
   const navigate = useNavigate();
   const isAuthRoute = /^\/(login|signup)$/.test(layoutPathname) || /^\/(login|signup)$/.test(pathname);
-  const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace|teams|sandboxes)?(\/|$)/;
+  const knownPrefixes = /^\/(login|signup|projects|domains|addons|scaling|workspace|teams|sandboxes|volumes)?(\/|$)/;
   const isCatchAll = layoutPathname !== "/" && !knownPrefixes.test(layoutPathname);
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const resolvedSearchStr = useRouterState({

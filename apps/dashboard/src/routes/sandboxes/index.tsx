@@ -1,48 +1,138 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import { Cube } from "@phosphor-icons/react";
+import { SandboxStatus } from "@/backend/sandboxes";
+import type { PaginatedSandboxesResponse, SandboxResponse } from "@/backend/sandboxes";
 import { SearchFilterBar } from "@/components/shared/search-filter-bar";
 import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
 import { CreateSandboxCard } from "@/components/sandboxes/create-sandbox-card";
 import { SandboxCard } from "@/components/sandboxes/sandbox-card";
-import { SandboxDrawer } from "@/components/sandboxes/sandbox-drawer";
-import { MOCK_SANDBOXES, type Sandbox, type SandboxStatus } from "@/lib/sandboxes/mock-data";
+import type { Region } from "@/backend/regions";
+import { buildRegionLabel } from "@/lib/regions/format";
+import { listRegionsServerFn } from "@/server/regions/actions";
+import { listSandboxesServerFn } from "@/server/sandboxes/actions";
+import { parseWorkspaceSearchValue, workspaceLoaderDeps } from "@/utils/workspace-route-search";
 
 export const Route = createFileRoute("/sandboxes/")({
   staleTime: 300_000,
   preloadStaleTime: 300_000,
+  validateSearch: (search: Record<string, unknown>) => {
+    const workspace = parseWorkspaceSearchValue(search.workspace);
+    return workspace ? { workspace } : {};
+  },
+  loaderDeps: ({ search }) => workspaceLoaderDeps(search),
+  loader: async ({ deps }) => {
+    const workspace = deps.workspace;
+
+    const [sandboxesResult, regions] = await Promise.all([
+      (
+        listSandboxesServerFn as unknown as (input: {
+          data: { page?: number; limit?: number; workspace?: string };
+        }) => Promise<PaginatedSandboxesResponse>
+      )({
+        data: { page: 1, limit: 15, workspace },
+      }),
+      (listRegionsServerFn as unknown as (input: { data: { type: "sandbox"; enabled: boolean; workspace?: string } }) => Promise<Region[]>)({
+        data: { type: "sandbox", enabled: true, workspace },
+      }),
+    ]);
+
+    const regionLabels: Record<string, string> = {};
+    for (const region of regions) {
+      if (region.id) {
+        regionLabels[region.id] = buildRegionLabel(region);
+      }
+    }
+
+    return {
+      workspace,
+      sandboxes: sandboxesResult.items,
+      regionLabels,
+    };
+  },
   component: SandboxesListPage,
 });
 
 const STATUS_OPTIONS: FilterOption[] = [
-  { label: "All Sandboxes", value: "all" },
-  { label: "Running", value: "ACTIVE", dot: "#13d282" },
-  { label: "Building", value: "BUILDING", dot: "#ff7a00" },
-  { label: "Stopped", value: "STOPPED", dot: "#9ca3af" },
-  { label: "Failed", value: "FAILED", dot: "#fc391e" },
+  { label: "All statuses", value: "all" },
+  { label: "Ready", value: SandboxStatus.Ready, dot: "#13d282" },
+  { label: "Starting", value: SandboxStatus.Starting, dot: "#4879f8" },
+  { label: "Paused", value: SandboxStatus.Paused, dot: "#ff7a00" },
+  { label: "Pausing", value: SandboxStatus.Pausing, dot: "#ff7a00" },
+  { label: "Resuming", value: SandboxStatus.Resuming, dot: "#ff7a00" },
+  { label: "Failed", value: SandboxStatus.Failed, dot: "#fc391e" },
+  { label: "Destroyed", value: SandboxStatus.Destroyed, dot: "#ef4444" },
 ];
 
+type StatusFilter = "all" | SandboxStatus;
+
 function SandboxesListPage() {
+  const loaderData = Route.useLoaderData();
+  const workspace = loaderData.workspace;
+
+  const listSandboxes = useServerFn(listSandboxesServerFn);
+
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [active, setActive] = useState<Sandbox | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sandboxes, setSandboxes] = useState<SandboxResponse[]>(loaderData.sandboxes);
+  const [regionLabels, setRegionLabels] = useState<Record<string, string>>(loaderData.regionLabels);
+
+  useEffect(() => {
+    setSandboxes(loaderData.sandboxes);
+    setRegionLabels(loaderData.regionLabels);
+  }, [loaderData.regionLabels, loaderData.sandboxes]);
+
+  useEffect(() => {
+    let active = true;
+
+    const poll = async () => {
+      if (!active || document.visibilityState !== "visible") {
+        return;
+      }
+
+      try {
+        const sandboxResult = await listSandboxes({ data: { page: 1, limit: 15, workspace } });
+        if (!active) {
+          return;
+        }
+
+        setSandboxes(sandboxResult.items);
+      } catch {
+        // polling failures are non-blocking; keep cached rows visible
+      }
+    };
+
+    const interval = window.setInterval(() => {
+      void poll();
+    }, 30_000);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [listSandboxes, workspace]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return MOCK_SANDBOXES.filter((sandbox) => {
-      if (statusFilter !== "all" && sandbox.status !== (statusFilter as SandboxStatus)) {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return sandboxes.filter((sandbox) => {
+      if (statusFilter !== "all" && sandbox.status !== statusFilter) {
         return false;
       }
-      if (!q) return true;
-      return (
-        sandbox.name.toLowerCase().includes(q) ||
-        sandbox.template.toLowerCase().includes(q) ||
-        sandbox.region.toLowerCase().includes(q) ||
-        (sandbox.description ?? "").toLowerCase().includes(q)
-      );
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const name = sandbox.name;
+      const template = sandbox.template.toLowerCase();
+      const region = (regionLabels[sandbox.region] ?? sandbox.region).toLowerCase();
+
+      return name.toLowerCase().includes(normalizedQuery) || template.includes(normalizedQuery) || region.includes(normalizedQuery);
     });
-  }, [query, statusFilter]);
+  }, [query, regionLabels, sandboxes, statusFilter]);
 
   let emptyMessage = "No sandboxes yet — spin one up to get started.";
   if (query.trim()) {
@@ -59,13 +149,13 @@ function SandboxesListPage() {
           onChange={setQuery}
           placeholder="Search sandboxes"
           rightSlot={
-            <FilterDropdown
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={STATUS_OPTIONS}
-              placeholder="All Statuses"
-              dropdownWidth={180}
-            />
+              <FilterDropdown
+                value={statusFilter}
+                onChange={(value) => setStatusFilter(value as StatusFilter)}
+                options={STATUS_OPTIONS}
+                placeholder="All Statuses"
+                dropdownWidth={180}
+              />
           }
         />
       </div>
@@ -85,7 +175,7 @@ function SandboxesListPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((sandbox) => (
               <motion.div layout key={sandbox.id}>
-                <SandboxCard sandbox={sandbox} onOpen={() => setActive(sandbox)} />
+                <SandboxCard sandbox={sandbox} regionLabel={regionLabels[sandbox.region]} />
               </motion.div>
             ))}
           </div>
@@ -98,14 +188,6 @@ function SandboxesListPage() {
           ) : null}
         </motion.div>
       </AnimatePresence>
-
-      <SandboxDrawer
-        sandbox={active}
-        open={Boolean(active)}
-        onOpenChange={(open) => {
-          if (!open) setActive(null);
-        }}
-      />
     </>
   );
 }
