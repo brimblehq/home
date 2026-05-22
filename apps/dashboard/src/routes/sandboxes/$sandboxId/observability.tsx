@@ -11,21 +11,34 @@ import { formatTimeLabel, hoursAgoForInterval, toKbps } from "@/utils/observabil
 import { MetricChart } from "@/types/enums";
 import { getSandboxObservabilityMetricsServerFn } from "@/server/sandboxes/observability-actions";
 import type { ResourceObservabilityMetrics } from "@/backend/observability";
-import type { SandboxResponse } from "@/backend/sandboxes";
+import { SandboxStatus, type SandboxResponse } from "@/backend/sandboxes";
+
+const ZERO_METRICS: ResourceObservabilityMetrics = {
+  average: {
+    memory: { totalInPercentage: 0, size: 0 },
+    cpu: { totalInPercentage: 0, size: 0 },
+    network: { value: 0, bytesPerSecond: 0 },
+  },
+  results: [],
+};
 
 export const Route = createFileRoute("/sandboxes/$sandboxId/observability")({
   staleTime: 300_000,
   preloadStaleTime: 300_000,
   loader: async ({ params }) => {
-    const metrics = await (
-      getSandboxObservabilityMetricsServerFn as unknown as (input: {
-        data: { sandboxId: string; hrsAgo?: number };
-      }) => Promise<ResourceObservabilityMetrics>
-    )({
-      data: { sandboxId: params.sandboxId, hrsAgo: 1 },
-    });
-
-    return { metrics };
+    try {
+      const metrics = await (
+        getSandboxObservabilityMetricsServerFn as unknown as (input: {
+          data: { sandboxId: string; hrsAgo?: number };
+        }) => Promise<ResourceObservabilityMetrics>
+      )({
+        data: { sandboxId: params.sandboxId, hrsAgo: 1 },
+      });
+      return { metrics };
+    } catch {
+      // Sandbox may be destroyed — fall back to zeroed metrics instead of crashing the route.
+      return { metrics: ZERO_METRICS };
+    }
   },
   component: SandboxObservabilityPanel,
   pendingComponent: ObservabilityPending,
@@ -42,16 +55,20 @@ function SandboxObservabilityPanel() {
   }) => Promise<ResourceObservabilityMetrics>;
   const haptics = useHaptics();
 
+  const isDestroyed = sandbox.status === SandboxStatus.Destroyed;
+
   const [activeChart, setActiveChart] = useState<MetricChart>(MetricChart.MemoryUsage);
   const [timeInterval, setTimeInterval] = useState("Last 1 Hour");
-  const [metrics, setMetrics] = useState<ResourceObservabilityMetrics>(initialMetrics);
+  const [metrics, setMetrics] = useState<ResourceObservabilityMetrics>(isDestroyed ? ZERO_METRICS : initialMetrics);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
 
   useEffect(() => {
-    setMetrics(initialMetrics);
-  }, [initialMetrics]);
+    setMetrics(isDestroyed ? ZERO_METRICS : initialMetrics);
+  }, [initialMetrics, isDestroyed]);
 
   useEffect(() => {
+    if (isDestroyed) return;
+
     let cancelled = false;
 
     async function loadMetricsForRange() {
@@ -61,6 +78,10 @@ function SandboxObservabilityPanel() {
         const next = await fetchMetrics({ data: { sandboxId: sandbox.id, hrsAgo } });
         if (!cancelled) {
           setMetrics(next);
+        }
+      } catch {
+        if (!cancelled) {
+          setMetrics(ZERO_METRICS);
         }
       } finally {
         if (!cancelled) {
@@ -74,9 +95,11 @@ function SandboxObservabilityPanel() {
     return () => {
       cancelled = true;
     };
-  }, [timeInterval, fetchMetrics, sandbox.id]);
+  }, [timeInterval, fetchMetrics, sandbox.id, isDestroyed]);
 
   useEffect(() => {
+    if (isDestroyed) return;
+
     let intervalId: number | undefined;
 
     const refetch = async () => {
@@ -119,7 +142,7 @@ function SandboxObservabilityPanel() {
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [fetchMetrics, sandbox.id, timeInterval]);
+  }, [fetchMetrics, sandbox.id, timeInterval, isDestroyed]);
 
   const aggregateSeries = useMemo(() => {
     const results = Array.isArray(metrics?.results) ? metrics.results : [];

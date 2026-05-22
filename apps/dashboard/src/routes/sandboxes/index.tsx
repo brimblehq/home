@@ -13,11 +13,12 @@ import type { Region } from "@/backend/regions";
 import { buildRegionLabel } from "@/lib/regions/format";
 import { listRegionsServerFn } from "@/server/regions/actions";
 import { listSandboxesServerFn } from "@/server/sandboxes/actions";
+import { usePlanGate } from "@/hooks/use-plan-gate";
 import { parseWorkspaceSearchValue, workspaceLoaderDeps } from "@/utils/workspace-route-search";
 
 export const Route = createFileRoute("/sandboxes/")({
-  staleTime: 300_000,
-  preloadStaleTime: 300_000,
+  staleTime: 0,
+  preloadStaleTime: 0,
   validateSearch: (search: Record<string, unknown>) => {
     const workspace = parseWorkspaceSearchValue(search.workspace);
     return workspace ? { workspace } : {};
@@ -67,17 +68,25 @@ const STATUS_OPTIONS: FilterOption[] = [
 ];
 
 type StatusFilter = "all" | SandboxStatus;
+const SANDBOX_LIST_REFRESH_INTERVAL_MS = 30_000;
 
 function SandboxesListPage() {
   const loaderData = Route.useLoaderData();
   const workspace = loaderData.workspace;
 
   const listSandboxes = useServerFn(listSandboxesServerFn);
+  const { sandboxMaxCount } = usePlanGate();
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sandboxes, setSandboxes] = useState<SandboxResponse[]>(loaderData.sandboxes);
   const [regionLabels, setRegionLabels] = useState<Record<string, string>>(loaderData.regionLabels);
+
+  const provisionedCount = useMemo(
+    () => sandboxes.filter((sandbox) => sandbox.status !== SandboxStatus.Destroyed).length,
+    [sandboxes],
+  );
+  const atLimit = sandboxMaxCount > 0 && provisionedCount >= sandboxMaxCount;
 
   useEffect(() => {
     setSandboxes(loaderData.sandboxes);
@@ -104,13 +113,28 @@ function SandboxesListPage() {
       }
     };
 
+    void poll();
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void poll();
+      }
+    };
+    const onFocus = () => {
+      void poll();
+    };
+
     const interval = window.setInterval(() => {
       void poll();
-    }, 30_000);
+    }, SANDBOX_LIST_REFRESH_INTERVAL_MS);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onFocus);
 
     return () => {
       active = false;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onFocus);
     };
   }, [listSandboxes, workspace]);
 
@@ -161,7 +185,15 @@ function SandboxesListPage() {
       </div>
 
       <div className="mb-4">
-        <CreateSandboxCard className="col-span-full" />
+        <CreateSandboxCard
+          className="col-span-full"
+          disabled={atLimit}
+          disabledMessage={
+            atLimit
+              ? `You've reached the maximum sandboxes for your plan (${provisionedCount}/${sandboxMaxCount}). Destroy one to create another.`
+              : undefined
+          }
+        />
       </div>
 
       <AnimatePresence mode="wait" initial={false}>

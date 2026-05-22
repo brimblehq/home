@@ -109,6 +109,16 @@ const listOneSandboxSnapshotsSchema = Yup.object({
   teamId: Yup.string().trim(),
 });
 
+const listSandboxActivitySchema = Yup.object({
+  sandboxId: Yup.string().trim().required("Sandbox id is required"),
+  page: Yup.number().integer().min(1),
+  limit: Yup.number().integer().min(1).max(100),
+  since: Yup.string().trim(),
+  until: Yup.string().trim(),
+  workspace: Yup.string().trim(),
+  teamId: Yup.string().trim(),
+});
+
 const createSnapshotSchema = Yup.object({
   sandboxId: Yup.string().trim().required("Sandbox id is required"),
   name: Yup.string()
@@ -277,6 +287,15 @@ export const destroySandboxServerFn = createServerFn({
 type ListOneSandboxSnapshotsPayload = { sandboxId: string; page?: number; limit?: number; workspace?: string; teamId?: string };
 type CreateSnapshotPayload = { sandboxId: string; name: string; workspace?: string; teamId?: string };
 type DeleteSnapshotPayload = { snapshotId: string; workspace?: string; teamId?: string };
+type ListSandboxActivityPayload = {
+  sandboxId: string;
+  page?: number;
+  limit?: number;
+  since?: string;
+  until?: string;
+  workspace?: string;
+  teamId?: string;
+};
 
 export const listOneSandboxSnapshotsServerFn = createServerFn({
   method: "GET",
@@ -313,6 +332,27 @@ export const deleteSandboxSnapshotServerFn = createServerFn({
   return withTokenRefresh(async (api) => {
     await api.sandboxes.deleteSnapshot(payload.snapshotId);
     return { success: true as const };
+  });
+});
+
+export const listSandboxActivityServerFn = createServerFn({
+  method: "GET",
+}).inputValidator((input: ListSandboxActivityPayload | undefined) => {
+  return listSandboxActivitySchema.validateSync(input ?? {}, { stripUnknown: true }) as ListSandboxActivityPayload;
+}).handler(async ({ data: payload }) => {
+  const workspaceSlug = payload.workspace?.trim().toLowerCase();
+  const explicitTeamId = payload.teamId?.trim();
+
+  return withTokenRefresh(async (api) => {
+    const teamId = explicitTeamId || (workspaceSlug ? await resolveTeamId(api, workspaceSlug) : undefined);
+
+    return api.sandboxes.listSandboxActivity(payload.sandboxId, {
+      page: payload.page ?? 1,
+      limit: payload.limit ?? 15,
+      since: payload.since,
+      until: payload.until,
+      teamId,
+    });
   });
 });
 

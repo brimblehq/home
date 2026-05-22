@@ -71,7 +71,7 @@ export function SandboxSubnav({ sandbox, status, onStatusChange }: SandboxSubnav
   const isDestroyed = status === SandboxStatus.Destroyed;
   const canUpload = status === SandboxStatus.Ready;
   const canSnapshot = status === SandboxStatus.Ready;
-  const destroyDisabled = isDestroyed || destroyRequested;
+  const destroyDisabled = destroyRequested;
 
   function handlePauseClick() {
     haptics.selection();
@@ -174,10 +174,10 @@ export function SandboxSubnav({ sandbox, status, onStatusChange }: SandboxSubnav
         ) : null}
         <SimpleTooltip
           content={
-            isDestroyed
-              ? "Sandbox already destroyed"
-              : destroyRequested
-                ? "Destroy in progress…"
+            destroyRequested
+              ? "Destroy in progress…"
+              : isDestroyed
+                ? "Permanently destroy sandbox"
                 : "Destroy sandbox"
           }
         >
@@ -211,6 +211,7 @@ export function SandboxSubnav({ sandbox, status, onStatusChange }: SandboxSubnav
         sandboxName={sandbox.name}
         template={sandbox.template}
         persistent={sandbox.persistent}
+        isDestroyed={isDestroyed}
         onDestroyRequested={() => setDestroyRequested(true)}
       />
 

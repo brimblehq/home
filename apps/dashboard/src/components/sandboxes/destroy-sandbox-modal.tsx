@@ -12,6 +12,7 @@ interface DestroySandboxModalProps {
   sandboxName: string;
   template: string;
   persistent: boolean;
+  isDestroyed?: boolean;
   onDestroyRequested: () => void;
 }
 
@@ -22,6 +23,7 @@ export function DestroySandboxModal({
   sandboxName,
   template,
   persistent,
+  isDestroyed = false,
   onDestroyRequested,
 }: DestroySandboxModalProps) {
   const destroySandbox = useServerFn(destroySandboxServerFn);
@@ -46,18 +48,27 @@ export function DestroySandboxModal({
     }
   }
 
-  const description = persistent
-    ? `This permanently shuts down ${template} and kills running processes. Files in /workspace remain on the attached volume and can be re-attached to a new sandbox.`
-    : `This permanently shuts down ${template} and kills running processes. All data outside the attached volume will be lost.`;
+  let description: string;
+  if (isDestroyed) {
+    description = "Permanently removes this sandbox. This can't be undone.";
+  } else if (persistent) {
+    description = `Shuts down ${template} and kills running processes. Volume data is preserved.`;
+  } else {
+    description = `Shuts down ${template} and kills running processes. All data will be lost.`;
+  }
+
+  const title = isDestroyed ? `Permanently delete "${sandboxName}"?` : `Destroy sandbox "${sandboxName}"?`;
+  const confirmLabel = isDestroyed ? "Delete sandbox" : "Destroy sandbox";
+  const confirmLoadingLabel = isDestroyed ? "Deleting..." : "Destroying...";
 
   return (
     <WarningModal
       open={open}
       onOpenChange={onOpenChange}
-      title={`Destroy sandbox "${sandboxName}"?`}
+      title={title}
       description={description}
-      confirmLabel="Destroy sandbox"
-      confirmLoadingLabel="Destroying..."
+      confirmLabel={confirmLabel}
+      confirmLoadingLabel={confirmLoadingLabel}
       confirmDisabled={confirmName !== sandboxName}
       onConfirm={handleConfirm}
     >

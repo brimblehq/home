@@ -28,6 +28,12 @@ export enum SnapshotStatus {
   Failed = "failed",
 }
 
+export enum SandboxActivityStatus {
+  Running = "running",
+  Succeeded = "succeeded",
+  Failed = "failed",
+}
+
 export enum SandboxDestroyReason {
   User = "user",
   IdleTtl = "idle_ttl",
@@ -40,5 +46,6 @@ export enum SandboxDestroyReason {
 export const SANDBOX_STATUS_VALUES = Object.values(SandboxStatus);
 export const SNAPSHOT_MODE_VALUES = Object.values(SnapshotMode);
 export const SNAPSHOT_STATUS_VALUES = Object.values(SnapshotStatus);
+export const SANDBOX_ACTIVITY_STATUS_VALUES = Object.values(SandboxActivityStatus);
 export const DESTROY_TIMEOUT_VALUES = Object.values(DestroyTimeout);
 export const SANDBOX_DESTROY_REASON_VALUES = Object.values(SandboxDestroyReason);

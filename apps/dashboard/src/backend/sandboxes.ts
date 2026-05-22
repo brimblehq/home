@@ -2,11 +2,13 @@ import { asRecord, pickBoolean, pickNonEmptyString, pickNumber, pickString } fro
 import type { ApiClient } from "./types";
 import {
   DESTROY_TIMEOUT_VALUES,
+  SANDBOX_ACTIVITY_STATUS_VALUES,
   SANDBOX_DESTROY_REASON_VALUES,
   SANDBOX_STATUS_VALUES,
   SNAPSHOT_MODE_VALUES,
   SNAPSHOT_STATUS_VALUES,
   DestroyTimeout,
+  SandboxActivityStatus,
   SandboxDestroyReason,
   SandboxStatus,
   SnapshotMode,
@@ -16,10 +18,13 @@ import type {
   CreateSandboxInput,
   CreateSandboxResponse,
   CreateSnapshotInput,
+  ListSandboxActivityInput,
   ListSandboxesInput,
   ListSnapshotsInput,
+  PaginatedSandboxActivityResponse,
   PaginatedSandboxesResponse,
   PaginatedSnapshotsResponse,
+  SandboxActivityResponse,
   SandboxResponse,
   SandboxSpecs,
   SandboxTemplate,
@@ -41,6 +46,7 @@ export interface SandboxesApi {
   listSandboxSnapshots(sandboxId: string, input?: ListSnapshotsInput): Promise<PaginatedSnapshotsResponse>;
   createSnapshot(sandboxId: string, input: CreateSnapshotInput): Promise<SnapshotResponse>;
   deleteSnapshot(snapshotId: string): Promise<void>;
+  listSandboxActivity(sandboxId: string, input?: ListSandboxActivityInput): Promise<PaginatedSandboxActivityResponse>;
 }
 
 function getRootPayload(value: unknown): unknown {
@@ -115,6 +121,40 @@ function mapSnapshotResponse(value: unknown): SnapshotResponse | null {
     failureReason: pickString(row, "failure_reason") ?? null,
     sizeBytes: pickNumber(row, "size_bytes") ?? null,
     createdAt,
+  };
+}
+
+function mapSandboxActivityStatus(value: unknown): SandboxActivityStatus {
+  if (SANDBOX_ACTIVITY_STATUS_VALUES.includes(value as SandboxActivityStatus)) {
+    return value as SandboxActivityStatus;
+  }
+
+  throw new Error("Invalid sandbox activity status from API");
+}
+
+function mapSandboxActivityResponse(value: unknown): SandboxActivityResponse | null {
+  const row = asRecord(value);
+  if (!row) {
+    return null;
+  }
+
+  const id = pickNonEmptyString(row, "id");
+  const command = pickString(row, "command");
+  const startedAt = pickString(row, "started_at");
+
+  if (!id || command === undefined || !startedAt) {
+    return null;
+  }
+
+  return {
+    id,
+    command,
+    status: mapSandboxActivityStatus(row.status),
+    startedAt,
+    endedAt: pickString(row, "ended_at") ?? null,
+    durationMs: pickNumber(row, "duration_ms") ?? null,
+    exitCode: pickNumber(row, "exit_code") ?? null,
+    error: pickString(row, "error") ?? null,
   };
 }
 
@@ -422,6 +462,41 @@ export function createSandboxesApi(client: ApiClient): SandboxesApi {
 
     async deleteSnapshot(snapshotId) {
       await client.request<unknown>(`/core/v1/sandboxes/snapshots/${encodeURIComponent(snapshotId)}`, { method: "DELETE" });
+    },
+
+    async listSandboxActivity(sandboxId, input) {
+      const response = await client.request<unknown>(`/core/v1/sandboxes/${encodeURIComponent(sandboxId)}/activity`, {
+        method: "GET",
+        query: {
+          page: input?.page,
+          limit: input?.limit,
+          since: input?.since,
+          until: input?.until,
+          teamId: input?.teamId,
+        },
+      });
+
+      const root = asRecord(getRootPayload(response));
+      if (!root) {
+        throw new Error("Invalid list sandbox activity response from API");
+      }
+
+      const rows = Array.isArray(root.data) ? root.data : [];
+      const items = rows
+        .map(mapSandboxActivityResponse)
+        .filter((item): item is SandboxActivityResponse => item !== null);
+      const totalCount = pickNumber(root, "totalCount") ?? 0;
+      const currentPage = pickNumber(root, "currentPage") ?? 1;
+      const totalPages = pickNumber(root, "totalPages") ?? 1;
+      const limit = pickNumber(root, "limit") ?? (input?.limit ?? 15);
+
+      return {
+        items,
+        totalCount,
+        currentPage,
+        totalPages,
+        limit,
+      };
     },
   };
 }

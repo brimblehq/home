@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { StatusChip } from "@/components/shared/status-chip";
+import { TabHeader } from "@/components/shared/tab-header";
 import { SandboxSubnav } from "@/components/sandboxes/sandbox-subnav";
+import { SandboxTerminal } from "@/components/sandboxes/sandbox-terminal";
 import { getSandboxScopedAblyOptions } from "@/lib/ably-auth";
 import { snapshotEventBus } from "@/lib/sandboxes/snapshot-event-bus";
 import { getSandboxServerFn } from "@/server/sandboxes/actions";
@@ -10,6 +12,7 @@ import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { workspaceLoaderDeps } from "@/utils/workspace-route-search";
 import { SandboxStatus } from "@/backend/sandboxes";
 import type { SandboxResponse } from "@/backend/sandboxes";
+import { getTemplateIcon } from "@/lib/sandboxes/template-icon";
 
 export const Route = createFileRoute("/sandboxes/$sandboxId")({
   staleTime: 60_000,
@@ -38,26 +41,28 @@ export const Route = createFileRoute("/sandboxes/$sandboxId")({
   component: SandboxDetailLayout,
 });
 
-function templateIcon(template: string): string | null {
-  const t = template.toLowerCase();
-  if (t.includes("python")) return "/icons/python.svg";
-  if (t.includes("node")) return "/icons/nodejs.svg";
-  if (t.includes("ubuntu")) return "/icons/ubuntu.svg";
-  if (t.includes("bun")) return "/icons/bun.svg";
-  return null;
-}
-
 function SandboxDetailLayout() {
   const { sandbox } = Route.useLoaderData();
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isTerminalRoute = pathname.endsWith("/terminal") || pathname.endsWith("/terminal/");
   const router = useRouter();
-  const icon = templateIcon(sandbox.template);
+  const icon = getTemplateIcon(sandbox.template);
 
   const [status, setStatus] = useState<SandboxStatus>(sandbox.status);
+  const [hasMountedTerminalPanel, setHasMountedTerminalPanel] = useState(
+    isTerminalRoute && sandbox.status === SandboxStatus.Ready,
+  );
 
   useEffect(() => {
     setStatus(sandbox.status);
   }, [sandbox.status]);
+
+  useEffect(() => {
+    if (isTerminalRoute && status === SandboxStatus.Ready) {
+      setHasMountedTerminalPanel(true);
+    }
+  }, [isTerminalRoute, status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,8 +160,35 @@ function SandboxDetailLayout() {
       <SandboxSubnav sandbox={sandbox} status={status} onStatusChange={setStatus} />
 
       <div className="pt-6">
-        <Outlet />
+        <div style={{ display: isTerminalRoute ? "block" : "none" }}>
+          {status === SandboxStatus.Ready ? (
+            isTerminalRoute || hasMountedTerminalPanel ? (
+              <PersistentTerminalPanel sandbox={sandbox} isVisible={isTerminalRoute} />
+            ) : null
+          ) : (
+            <div className="flex flex-col gap-4">
+              <TabHeader title="Terminal">Interactive shell into your sandbox.</TabHeader>
+              <div className="flex flex-col items-center justify-center gap-2 rounded-[4px] border-[0.5px] border-dashed border-dash-border-soft py-16">
+                <p className="text-sm text-dash-text-faded">
+                  Terminal is available when the sandbox is ready (current status: {status}).
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ display: isTerminalRoute ? "none" : "block" }}>
+          <Outlet />
+        </div>
       </div>
+    </div>
+  );
+}
+
+function PersistentTerminalPanel({ sandbox, isVisible }: { sandbox: SandboxResponse; isVisible: boolean }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <TabHeader title="Terminal">Interactive shell into your sandbox.</TabHeader>
+      <SandboxTerminal sandbox={sandbox} isVisible={isVisible} />
     </div>
   );
 }

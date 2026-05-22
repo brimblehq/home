@@ -18,13 +18,6 @@ export const mainNav = [
     tourId: "scaling",
   },
   {
-    label: "Buckets",
-    icon: "/icons/bucket.svg",
-    href: "/buckets",
-    flag: FeatureFlags.ENABLE_BUCKETS,
-    comingSoon: true,
-  },
-  {
     label: "Volumes & Snapshots",
     icon: "/icons/storage-menu.svg",
     href: "/volumes",
@@ -35,6 +28,13 @@ export const mainNav = [
     icon: "/icons/sandbox-sidebar.svg",
     href: "/sandboxes",
     flag: FeatureFlags.ENABLE_SANDBOX,
+  },
+  {
+    label: "Buckets",
+    icon: "/icons/bucket.svg",
+    href: "/buckets",
+    flag: FeatureFlags.ENABLE_BUCKETS,
+    comingSoon: true,
   },
 ];
 

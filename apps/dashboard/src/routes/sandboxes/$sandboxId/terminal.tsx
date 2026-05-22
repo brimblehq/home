@@ -1,17 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Terminal } from "@phosphor-icons/react";
 
 export const Route = createFileRoute("/sandboxes/$sandboxId/terminal")({
   staleTime: 60_000,
   preloadStaleTime: 60_000,
-  component: SandboxTerminalPanel,
+  // The parent layout (routes/sandboxes/$sandboxId.tsx) renders the persistent
+  // terminal panel directly so its xterm state survives tab switches. This
+  // route only exists so the /terminal URL resolves; the Outlet is hidden when
+  // it matches, and this component renders nothing.
+  component: () => null,
 });
-
-function SandboxTerminalPanel() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-[4px] border-[0.5px] border-dashed border-dash-border-soft py-16">
-      <Terminal size={40} weight="fill" className="text-dash-text-faded/50" />
-      <p className="text-sm text-dash-text-faded">Terminal is coming soon.</p>
-    </div>
-  );
-}

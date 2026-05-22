@@ -1,4 +1,4 @@
-import type { DestroyTimeout, SandboxDestroyReason, SandboxStatus, SnapshotMode, SnapshotStatus } from "./enums";
+import type { DestroyTimeout, SandboxActivityStatus, SandboxDestroyReason, SandboxStatus, SnapshotMode, SnapshotStatus } from "./enums";
 
 export interface SandboxTemplate {
   name: string;
@@ -107,6 +107,33 @@ export interface ListSnapshotsInput {
 
 export interface CreateSnapshotInput {
   name: string;
+}
+
+export interface SandboxActivityResponse {
+  id: string;
+  command: string;
+  status: SandboxActivityStatus;
+  startedAt: string;
+  endedAt: string | null;
+  durationMs: number | null;
+  exitCode: number | null;
+  error: string | null;
+}
+
+export interface ListSandboxActivityInput {
+  page?: number;
+  limit?: number;
+  since?: string;
+  until?: string;
+  teamId?: string;
+}
+
+export interface PaginatedSandboxActivityResponse {
+  items: SandboxActivityResponse[];
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+  limit: number;
 }
 
 export interface PaginatedSnapshotsResponse {

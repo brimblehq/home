@@ -7,21 +7,13 @@ import { StatusChip } from "@/components/shared/status-chip";
 import type { SandboxResponse } from "@/backend/sandboxes";
 import { formatRelativeTime } from "@/utils/dashboard";
 import { withWorkspaceQuery } from "@/utils/topbar-navigation";
+import { getTemplateIcon } from "@/lib/sandboxes/template-icon";
 
 const cardMetaIconClass = "size-3.5 shrink-0 opacity-60 invert dark:invert-0";
 
 interface SandboxCardProps {
   sandbox: SandboxResponse;
   regionLabel?: string;
-}
-
-function templateIcon(template: string): string | null {
-  const t = template.toLowerCase();
-  if (t.includes("python")) return "/icons/python.svg";
-  if (t.includes("node")) return "/icons/nodejs.svg";
-  if (t.includes("ubuntu")) return "/icons/ubuntu.svg";
-  if (t.includes("bun")) return "/icons/bun.svg";
-  return null;
 }
 
 function formatCountdown(targetMs: number, nowMs: number): string {
@@ -107,7 +99,7 @@ export function SandboxCard({ sandbox, regionLabel }: SandboxCardProps) {
           <div className="flex items-start justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
               {(() => {
-                const icon = templateIcon(sandbox.template);
+                const icon = getTemplateIcon(sandbox.template);
                 if (icon) {
                   return <img src={icon} alt="" className="size-5 shrink-0 object-contain" />;
                 }
@@ -146,10 +138,7 @@ export function SandboxCard({ sandbox, regionLabel }: SandboxCardProps) {
         </div>
 
         <div className="flex h-10 shrink-0 items-center justify-between gap-3 border-t-[0.5px] border-dash-border px-3.5">
-          <span
-            className="text-xs leading-[18px] tracking-[-0.02px] text-dash-text-extra-faded"
-            title={lastActivityAbsolute}
-          >
+          <span className="text-xs leading-[18px] tracking-[-0.02px] text-dash-text-extra-faded" title={lastActivityAbsolute}>
             {lastActivityLabel}
           </span>
           {destroyCountdown ? (

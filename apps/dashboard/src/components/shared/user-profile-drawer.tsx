@@ -1787,7 +1787,9 @@ export function UserProfileDrawer({
   const updateHaptics = useServerFn(updateSettingsHapticsServerFn as any) as (args: {
     data: { haptics: boolean };
   }) => Promise<{ ok: true }>;
-  const resetApiKey = useServerFn(resetSettingsApiKeyServerFn);
+  const resetApiKey = useServerFn(resetSettingsApiKeyServerFn as any) as (args?: {
+    data?: { twoFactorToken?: string };
+  }) => Promise<{ apiKey?: string }>;
   const disconnectGitProvider = useServerFn(disconnectGitProviderServerFn as any) as (args: {
     data: { provider: string };
   }) => Promise<{ ok: true }>;
@@ -1811,8 +1813,9 @@ export function UserProfileDrawer({
   const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatus | null>(null);
   const [prefetchedPasskeys, setPrefetchedPasskeys] = useState<PasskeySummary[] | undefined>(undefined);
   const decryptApiKey = useServerFn(decryptSettingsApiKeyServerFn as any) as (args: {
-    data: { encryptedApiKey: string };
+    data: { encryptedApiKey: string; twoFactorToken?: string };
   }) => Promise<string | null>;
+  const { requestStepUp: requestApiKeyStepUp } = useStepUpTwoFactor();
   const updateWebhooks = useServerFn(updateSettingsWebhooksServerFn as any) as (args: {
     data: {
       webhookUrl: string | null;
@@ -2316,7 +2319,21 @@ export function UserProfileDrawer({
                   }}
                   onResetApiKey={async (hadKey) => {
                     try {
-                      const result = await resetApiKey();
+                      let twoFactorToken: string | undefined;
+                      if (twoFactorStatus?.enabled) {
+                        const token = await requestApiKeyStepUp({
+                          action: hadKey ? "reset_api_key" : "create_api_key",
+                          resourceId: "api_key",
+                        });
+                        if (!token) {
+                          return undefined;
+                        }
+                        twoFactorToken = token;
+                      }
+
+                      const result = await resetApiKey({
+                        data: twoFactorToken ? { twoFactorToken } : undefined,
+                      });
                       const apiKeyValue = result.apiKey;
 
                       if (apiKeyValue) {
@@ -2344,8 +2361,17 @@ export function UserProfileDrawer({
                   }}
                   onDecryptApiKey={async (encryptedApiKey) => {
                     try {
+                      let twoFactorToken: string | undefined;
+                      if (twoFactorStatus?.enabled) {
+                        const token = await requestApiKeyStepUp({ action: "view_api_key", resourceId: "api_key" });
+                        if (!token) {
+                          return null;
+                        }
+                        twoFactorToken = token;
+                      }
+
                       return await decryptApiKey({
-                        data: { encryptedApiKey },
+                        data: { encryptedApiKey, ...(twoFactorToken ? { twoFactorToken } : {}) },
                       });
                     } catch (error) {
                       toast.error(error instanceof Error ? error.message : "Failed to decrypt API key");

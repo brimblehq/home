@@ -746,7 +746,7 @@ export function DashboardLayout({
   const settingsScopeKey = currentWorkspace ?? "__personal__";
   const [stableWorkspaces, setStableWorkspaces] = useState<Workspace[]>(initialWorkspaces?.items ?? []);
   const [settingsSnapshotCache, setSettingsSnapshotCache] = useState<Record<string, SettingsSidebarSnapshot | null>>(() => ({
-    [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot ?? null,
+    ...(initialSettingsSnapshot ? { [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot } : {}),
   }));
   const [workspaceTeamMembersCache, setWorkspaceTeamMembersCache] = useState<Record<string, TeamDetails | null>>(() =>
     initialWorkspaceSlug && initialWorkspaceTeamMembers ? { [initialWorkspaceSlug]: initialWorkspaceTeamMembers } : {},
@@ -922,9 +922,13 @@ export function DashboardLayout({
   const activeWorkspaceTeamMembers = currentWorkspace && isKnownWorkspace ? (workspaceTeamMembersCache[currentWorkspace] ?? null) : null;
 
   useEffect(() => {
+    if (!initialSettingsSnapshot) {
+      return;
+    }
+
     setSettingsSnapshotCache((prev) => ({
       ...prev,
-      [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot ?? null,
+      [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot,
     }));
   }, [initialSettingsSnapshot, initialWorkspaceSlug]);
 
@@ -940,16 +944,13 @@ export function DashboardLayout({
   }, [initialWorkspaceSlug, initialWorkspaceTeamMembers]);
 
   useEffect(() => {
-    if (Object.prototype.hasOwnProperty.call(settingsSnapshotCache, settingsScopeKey)) {
-      return;
-    }
-
     let cancelled = false;
 
-    void getSettingsSnapshot({
-      data: { workspace: currentWorkspace },
-    })
-      .then((result) => {
+    const fetchSnapshot = async () => {
+      try {
+        const result = await getSettingsSnapshot({
+          data: { workspace: currentWorkspace },
+        });
         if (cancelled) {
           return;
         }
@@ -958,8 +959,7 @@ export function DashboardLayout({
           ...prev,
           [settingsScopeKey]: result ?? null,
         }));
-      })
-      .catch(() => {
+      } catch {
         if (cancelled) {
           return;
         }
@@ -968,10 +968,36 @@ export function DashboardLayout({
           ...prev,
           [settingsScopeKey]: null,
         }));
-      });
+      }
+    };
+
+    if (!Object.prototype.hasOwnProperty.call(settingsSnapshotCache, settingsScopeKey)) {
+      void fetchSnapshot();
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      if (settingsSnapshotCache[settingsScopeKey] === null) {
+        void fetchSnapshot();
+      }
+    };
+
+    const onFocus = () => {
+      if (settingsSnapshotCache[settingsScopeKey] === null) {
+        void fetchSnapshot();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onFocus);
 
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onFocus);
     };
   }, [currentWorkspace, getSettingsSnapshot, settingsScopeKey, settingsSnapshotCache]);
 
@@ -1058,7 +1084,7 @@ export function DashboardLayout({
   }, [dismissedSnackbarKeys, tooltipMessages]);
 
   const pricing = initialPricing ?? DEFAULT_PRICING;
-  const planType = activeSettingsSnapshot?.profile?.subscription?.planType;
+  const planType = activeSettingsSnapshot?.profile?.subscription?.planType ?? userProfile?.subscription?.planType;
 
   const workspaceRoleValue = useMemo(() => {
     const inWorkspace = Boolean(currentWorkspace && isKnownWorkspace);

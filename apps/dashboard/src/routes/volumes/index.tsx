@@ -9,6 +9,7 @@ import { VolumesPending } from "@/components/shared/route-pending";
 import { consumePendingVolumesAction } from "@/utils/topbar-navigation";
 import { SearchFilterBar } from "@/components/shared/search-filter-bar";
 import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
+import { NumberPagination } from "@/components/shared/pagination";
 import { useHaptics } from "@/hooks/use-haptics";
 import { VolumeRow } from "@/components/volumes/volume-row";
 import { CreateVolumeModal } from "@/components/volumes/create-volume-modal";
@@ -27,6 +28,9 @@ const FOCUS_HIGHLIGHT_MS = 2000;
 
 type TabKey = "volumes" | "snapshots";
 
+const VOLUMES_PAGE_SIZE = 10;
+const SNAPSHOTS_PAGE_SIZE = 10;
+
 interface VolumesSearch {
   workspace?: string;
   focus?: string;
@@ -34,6 +38,8 @@ interface VolumesSearch {
   type?: VolumeType;
   region?: string;
   tab?: TabKey;
+  page?: number;
+  snapshotsPage?: number;
 }
 
 const volumesSearchSchema = Yup.object({
@@ -43,6 +49,8 @@ const volumesSearchSchema = Yup.object({
   type: Yup.mixed<VolumeType>().oneOf(Object.values(VolumeType)),
   region: Yup.string().trim(),
   tab: Yup.mixed<TabKey>().oneOf(["volumes", "snapshots"]),
+  page: Yup.number().integer().min(1),
+  snapshotsPage: Yup.number().integer().min(1),
 });
 
 type StatusFilter = "all" | "attached" | "detached";
@@ -67,7 +75,11 @@ export const Route = createFileRoute("/volumes/")({
   preloadStaleTime: 300_000,
   validateSearch: (search: Record<string, unknown>): VolumesSearch =>
     volumesSearchSchema.validateSync(search, { stripUnknown: true }) as VolumesSearch,
-  loaderDeps: ({ search }) => workspaceLoaderDeps(search),
+  loaderDeps: ({ search }) => ({
+    ...workspaceLoaderDeps(search),
+    page: search.page ?? 1,
+    snapshotsPage: search.snapshotsPage ?? 1,
+  }),
   loader: async ({ deps }) => {
     const workspace = deps.workspace;
 
@@ -75,7 +87,7 @@ export const Route = createFileRoute("/volumes/")({
       (listVolumesServerFn as unknown as (input: {
         data: { workspace?: string; page?: number; limit?: number };
       }) => Promise<PaginatedVolumesResponse>)({
-        data: { workspace, page: 1, limit: 15 },
+        data: { workspace, page: deps.page, limit: VOLUMES_PAGE_SIZE },
       }),
       (listRegionsServerFn as unknown as (input: { data: { type: "sandbox"; enabled: boolean; workspace?: string } }) => Promise<Region[]>)({
         data: { type: "sandbox", enabled: true, workspace },
@@ -83,15 +95,15 @@ export const Route = createFileRoute("/volumes/")({
       (listSandboxSnapshotsServerFn as unknown as (input: {
         data: { workspace?: string; page?: number; limit?: number };
       }) => Promise<PaginatedSnapshotsResponse>)({
-        data: { workspace, page: 1, limit: 50 },
+        data: { workspace, page: deps.snapshotsPage, limit: SNAPSHOTS_PAGE_SIZE },
       }),
     ]);
 
     return {
       workspace,
-      volumes: volumesResult.items,
+      volumesPage: volumesResult,
       regions,
-      snapshots: snapshotsResult.items,
+      snapshotsPage: snapshotsResult,
     };
   },
   component: VolumesListPage,
@@ -112,14 +124,19 @@ function VolumesListPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [snapshotQuery, setSnapshotQuery] = useState("");
   const [snapshotStatusFilter, setSnapshotStatusFilter] = useState<SnapshotStatusFilter>("all");
-  const [volumes, setVolumes] = useState<VolumeResponse[]>(loaderData.volumes);
+  const [volumes, setVolumes] = useState<VolumeResponse[]>(loaderData.volumesPage.items);
+  const [volumesTotalPages, setVolumesTotalPages] = useState<number>(loaderData.volumesPage.totalPages);
   const [regions, setRegions] = useState<Region[]>(loaderData.regions);
-  const [snapshots, setSnapshots] = useState<SnapshotResponse[]>(loaderData.snapshots);
+  const [snapshots, setSnapshots] = useState<SnapshotResponse[]>(loaderData.snapshotsPage.items);
+  const [snapshotsTotalPages, setSnapshotsTotalPages] = useState<number>(loaderData.snapshotsPage.totalPages);
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<VolumeResponse | null>(null);
   const [deleteSnapshotTarget, setDeleteSnapshotTarget] = useState<SnapshotResponse | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const volumesPage = search.page ?? 1;
+  const snapshotsPage = search.snapshotsPage ?? 1;
 
   function switchTab(next: TabKey) {
     if (next === activeTab) return;
@@ -130,11 +147,29 @@ function VolumesListPage() {
     });
   }
 
+  function handleVolumesPageChange(nextPage: number) {
+    if (nextPage < 1 || nextPage === volumesPage || nextPage > volumesTotalPages) return;
+    void navigate({
+      to: "/volumes",
+      search: { ...search, page: nextPage === 1 ? undefined : nextPage } as VolumesSearch,
+    });
+  }
+
+  function handleSnapshotsPageChange(nextPage: number) {
+    if (nextPage < 1 || nextPage === snapshotsPage || nextPage > snapshotsTotalPages) return;
+    void navigate({
+      to: "/volumes",
+      search: { ...search, snapshotsPage: nextPage === 1 ? undefined : nextPage } as VolumesSearch,
+    });
+  }
+
   useEffect(() => {
-    setVolumes(loaderData.volumes);
+    setVolumes(loaderData.volumesPage.items);
+    setVolumesTotalPages(loaderData.volumesPage.totalPages);
     setRegions(loaderData.regions);
-    setSnapshots(loaderData.snapshots);
-  }, [loaderData.volumes, loaderData.regions, loaderData.snapshots]);
+    setSnapshots(loaderData.snapshotsPage.items);
+    setSnapshotsTotalPages(loaderData.snapshotsPage.totalPages);
+  }, [loaderData.volumesPage, loaderData.regions, loaderData.snapshotsPage]);
 
   useEffect(() => {
     if (search.create || consumePendingVolumesAction() === "create-volume") {
@@ -174,11 +209,12 @@ function VolumesListPage() {
       }
 
       try {
-        const result = await listVolumes({ data: { workspace, page: 1, limit: 15 } });
+        const result = await listVolumes({ data: { workspace, page: volumesPage, limit: VOLUMES_PAGE_SIZE } });
         if (!active) {
           return;
         }
         setVolumes(result.items);
+        setVolumesTotalPages(result.totalPages);
       } catch {
         // polling failures are non-blocking; keep cached rows visible
       }
@@ -192,7 +228,7 @@ function VolumesListPage() {
       active = false;
       window.clearInterval(interval);
     };
-  }, [listVolumes, workspace]);
+  }, [listVolumes, workspace, volumesPage]);
 
   useEffect(() => {
     let active = true;
@@ -200,9 +236,10 @@ function VolumesListPage() {
     const poll = async () => {
       if (!active || document.visibilityState !== "visible") return;
       try {
-        const result = await listSnapshots({ data: { workspace, page: 1, limit: 50 } });
+        const result = await listSnapshots({ data: { workspace, page: snapshotsPage, limit: SNAPSHOTS_PAGE_SIZE } });
         if (!active) return;
         setSnapshots(result.items);
+        setSnapshotsTotalPages(result.totalPages);
       } catch {
         // keep last-good snapshots on transient failures
       }
@@ -216,7 +253,7 @@ function VolumesListPage() {
       active = false;
       window.clearInterval(interval);
     };
-  }, [listSnapshots, workspace]);
+  }, [listSnapshots, workspace, snapshotsPage]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -362,6 +399,16 @@ function VolumesListPage() {
               </motion.div>
             </AnimatePresence>
           )}
+
+          {volumesTotalPages > 1 ? (
+            <div className="mt-6 flex justify-end">
+              <NumberPagination
+                currentPage={volumesPage}
+                totalPages={volumesTotalPages}
+                onPageChange={handleVolumesPageChange}
+              />
+            </div>
+          ) : null}
         </>
       ) : (
         <>
@@ -415,6 +462,16 @@ function VolumesListPage() {
               </motion.div>
             </AnimatePresence>
           )}
+
+          {snapshotsTotalPages > 1 ? (
+            <div className="mt-6 flex justify-end">
+              <NumberPagination
+                currentPage={snapshotsPage}
+                totalPages={snapshotsTotalPages}
+                onPageChange={handleSnapshotsPageChange}
+              />
+            </div>
+          ) : null}
         </>
       )}
 
