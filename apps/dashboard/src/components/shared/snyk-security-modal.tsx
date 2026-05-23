@@ -6,9 +6,10 @@ export interface SnykSecurityModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   vulnerabilities: any[];
+  onAiDebug?: () => void;
 }
 
-export function SnykSecurityModal({ open, onOpenChange, vulnerabilities }: SnykSecurityModalProps) {
+export function SnykSecurityModal({ open, onOpenChange, vulnerabilities, onAiDebug }: SnykSecurityModalProps) {
   const [expandedSeverities, setExpandedSeverities] = useState<Set<string>>(new Set(["critical", "high"]));
 
   const toggleSeverity = (severity: string) => {
@@ -88,7 +89,19 @@ export function SnykSecurityModal({ open, onOpenChange, vulnerabilities }: SnykS
           );
         })}
       </div>
-      <div className="flex items-center justify-end p-4 border-t border-dash-border">
+      <div className="flex items-center justify-between p-4 border-t border-dash-border">
+        {onAiDebug ? (
+          <button
+            type="button"
+            onClick={onAiDebug}
+            className="inline-flex items-center gap-1.5 rounded-md bg-[#4879f8] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#3b66d8]"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
+            Debug with A.I
+          </button>
+        ) : (
+          <div />
+        )}
         <ModalCancelButton />
       </div>
     </Modal>

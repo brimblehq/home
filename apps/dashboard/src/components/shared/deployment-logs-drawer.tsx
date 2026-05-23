@@ -164,148 +164,6 @@ export function DeploymentLogsDrawer({
   const haptics = useHaptics();
   const downloadFromApi = useServerFn(downloadDeploymentLogsServerFn as any) as (args: {
     data: { projectId: string; logId: string; workspace?: string };
-import { SnykSecurityModal } from "./snyk-security-modal";
-
-interface DeploymentLogsDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  environment: string;
-  status: "Successful" | "Failed" | "Pending";
-  deploymentStatus?: string;
-  logs?: DeploymentDrawerLogEntry[];
-  loading?: boolean;
-  emptyMessage?: string;
-  projectId?: string;
-  deploymentId?: string;
-  workspace?: string;
-}
-
-interface AiDebugSelection {
-  message: string;
-  messageId: string;
-}
-
-const statusDotColor = {
-  Successful: "bg-[#13d282]",
-  Failed: "bg-[#fc391e]",
-  Pending: "bg-[#ff7a00]",
-} as const;
-
-const urlPattern = /(https?:\/\/[^\s]+)/g;
-const errorPattern = /\b(error|failed|failure|fatal|panic|exception|timed out|timeout|context canceled|cancelled)\b/i;
-const warningPattern = /\bwarning|deprecated\b/i;
-
-function getLogLineTone(message: string): "error" | "warning" | "default" {
-  if (errorPattern.test(message)) {
-    return "error";
-  }
-
-  if (warningPattern.test(message)) {
-    return "warning";
-  }
-
-  return "default";
-}
-
-function getDetailToneClasses(tone: "error" | "warning" | "default") {
-  if (tone === "error") {
-    return {
-      row: "bg-[#fc391e]/6",
-      text: "text-[#ff8f80]",
-      timestamp: "text-[#ffb0a6]",
-      link: "hover:text-[#ffe0db]",
-    };
-  }
-
-  if (tone === "warning") {
-    return {
-      row: "bg-[#ff7a00]/6",
-      text: "text-[#ffc07a]",
-      timestamp: "text-[#ffd19f]",
-      link: "hover:text-[#ffe5c4]",
-    };
-  }
-
-  return {
-    row: "",
-    text: "text-dash-text-faded",
-    timestamp: "text-dash-text-faded",
-    link: "hover:text-dash-text-strong",
-  };
-}
-
-function renderLogTextWithLinks(text: string, linkHoverClass = "hover:text-dash-text-strong") {
-  const parts = text.split(urlPattern);
-
-  return parts.map((part, index) => {
-    if (/^https?:\/\/[^\s]+$/i.test(part)) {
-      return (
-        <a
-          key={`${part}-${index}`}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`underline underline-offset-2 ${linkHoverClass}`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {part}
-        </a>
-      );
-    }
-
-    return <span key={`${index}-${part}`}>{part}</span>;
-  });
-}
-
-function triggerFileDownload(content: string, filename: string) {
-  const blob = new Blob([content], { type: "text/plain" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function downloadLogsClientFallback(logs: DeploymentDrawerLogEntry[]) {
-  const text = logs.map((l) => `[${l.timestamp}] ${l.message}`).join("\n");
-  triggerFileDownload(text, `deployment-logs-${Date.now()}.log`);
-}
-
-function isBuildInProgress(status?: string): boolean {
-  const value = status?.trim().toLowerCase();
-  return value === "inprogress" || value === "pending";
-}
-
-function formatPhaseDuration(ms: number): string {
-  if (ms < 1000) {
-    return "<1s";
-  }
-  const totalSeconds = Math.round(ms / 1000);
-  if (totalSeconds < 60) {
-    return `${totalSeconds}s`;
-  }
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
-}
-
-export function DeploymentLogsDrawer({
-  open,
-  onOpenChange,
-  environment,
-  status,
-  deploymentStatus,
-  logs = [],
-  loading = false,
-  emptyMessage = "No logs available for this deployment yet.",
-  projectId,
-  deploymentId,
-  workspace,
-}: DeploymentLogsDrawerProps) {
-  const haptics = useHaptics();
-  const downloadFromApi = useServerFn(downloadDeploymentLogsServerFn as any) as (args: {
-    data: { projectId: string; logId: string; workspace?: string };
   }) => Promise<{ content: string; filename: string }>;
   const [collapsedSections, setCollapsedSections] = useState<Set<number>>(new Set());
   const [aiDebugSelection, setAiDebugSelection] = useState<AiDebugSelection | null>(null);
@@ -319,6 +177,7 @@ export function DeploymentLogsDrawer({
 
   const [securityModalOpen, setSecurityModalOpen] = useState(false);
   const [securityVulnerabilities, setSecurityVulnerabilities] = useState<any[]>([]);
+  const [securityLogContext, setSecurityLogContext] = useState<DeploymentDrawerLogEntry | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -714,6 +573,7 @@ export function DeploymentLogsDrawer({
                                       type="button"
                                       onClick={(event) => {
                                         event.stopPropagation();
+                                        setSecurityLogContext(log);
                                         setSecurityVulnerabilities(log.securityData.vulnerabilities);
                                         setSecurityModalOpen(true);
                                       }}
@@ -803,6 +663,17 @@ export function DeploymentLogsDrawer({
         open={securityModalOpen}
         onOpenChange={setSecurityModalOpen}
         vulnerabilities={securityVulnerabilities}
+        onAiDebug={() => {
+          if (!securityLogContext || !securityLogContext.messageId) return;
+          
+          const aiMessage = "Snyk Security Vulnerabilities:\n" + securityVulnerabilities.map(v => `- ${v.packageName}@${v.version}: ${v.title} (${v.severity})`).join('\n');
+          
+          setAiDebugSelection({
+            message: aiMessage,
+            messageId: securityLogContext.messageId,
+          });
+          setSecurityModalOpen(false);
+        }}
       />
     </Drawer.Root>
   );
