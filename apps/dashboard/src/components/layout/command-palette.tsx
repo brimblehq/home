@@ -595,12 +595,12 @@ export function CommandPalette() {
                               value="logout sign out"
                               onSelect={() =>
                                 runAction(() => {
-                                  logoutServerFn()
+                                  void logoutServerFn()
                                     .catch(() => {})
                                     .then(() => {
                                       posthog.reset();
                                       invalidateSessionCache();
-                                      window.location.href = "/login";
+                                      void navigate({ to: "/login", replace: true });
                                     });
                                 })
                               }

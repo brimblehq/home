@@ -2119,12 +2119,12 @@ export function UserProfileDrawer({
 
     setIsSigningOut(true);
 
-    logoutServerFn()
+    void logoutServerFn()
       .catch(() => {})
       .then(() => {
         posthog.reset();
         invalidateSessionCache();
-        window.location.href = "/login";
+        void router.navigate({ to: "/login", replace: true });
       });
   }
 
