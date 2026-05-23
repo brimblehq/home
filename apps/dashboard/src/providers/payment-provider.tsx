@@ -9,5 +9,5 @@ export function PaymentProvider({ children }: { children: React.ReactNode }) {
     return import("@stripe/stripe-js").then(({ loadStripe }) => loadStripe(config.stripePublishableKey!));
   }, []);
 
-  return stripePromise ? <Elements stripe={stripePromise}>{children}</Elements> : <>{children}</>;
+  return <Elements stripe={stripePromise}>{children}</Elements>;
 }

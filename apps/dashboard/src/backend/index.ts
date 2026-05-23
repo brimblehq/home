@@ -23,6 +23,7 @@ import { createRegionsApi, type RegionsApi } from "./regions";
 import { createScalingApi, type ScalingApi } from "./scaling";
 import { createTagsApi, type TagsApi } from "./tags";
 import { createWorkspacesApi, type WorkspacesApi } from "./workspaces";
+import { createStorageApi, type StorageApi } from "./storage";
 
 export * from "./activity-logs";
 export * from "./analytics";
@@ -51,6 +52,7 @@ export * from "./tags";
 export * from "./teams";
 export * from "./types";
 export * from "./workspaces";
+export * from "./storage";
 
 export interface BackendApi {
   client: BackendClient;
@@ -78,6 +80,7 @@ export interface BackendApi {
   regions: RegionsApi;
   scaling: ScalingApi;
   tags: TagsApi;
+  storage: StorageApi;
 }
 
 export function createBackendApi(config: BackendClientConfig): BackendApi {
@@ -109,5 +112,6 @@ export function createBackendApi(config: BackendClientConfig): BackendApi {
     regions: createRegionsApi(client),
     scaling: createScalingApi(client),
     tags: createTagsApi(client),
+    storage: createStorageApi(client),
   };
 }

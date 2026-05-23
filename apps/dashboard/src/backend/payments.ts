@@ -99,11 +99,15 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
 
   return {
     async listPaymentMethods(): Promise<PaymentMethod[]> {
-      const res = await client.request<any>(`${base}/payment/payment-methods`, {
-        method: "GET",
-      });
-      const data = unwrapData<any>(res);
-      return Array.isArray(data) ? data : (data?.payment_methods ?? []);
+      try {
+        const res = await client.request<any>(`${base}/payment/payment-methods`, {
+          method: "GET",
+        });
+        const data = unwrapData<any>(res);
+        return Array.isArray(data) ? data : (data?.payment_methods ?? []);
+      } catch {
+        return [];
+      }
     },
 
     async createSetupIntent(): Promise<SetupIntentResult> {
@@ -379,20 +383,24 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
     },
 
     async getSubscriptionStats(teamId?: string): Promise<SubscriptionStats> {
-      const res = await client.request<any>(`${base}/subscription/stats`, {
-        method: "GET",
-        query: teamId ? { team_id: teamId } : undefined,
-      });
-      const data = unwrapData<SubscriptionStats>(res);
-      return {
-        total: data?.total ?? "$0.00",
-        raw_total: data?.raw_total,
-        next_payment_date: data?.next_payment_date ?? null,
-        usage_breakdown: data?.usage_breakdown,
-        outstanding_invoice_count: data?.outstanding_invoice_count,
-        outstanding_amount_due: data?.outstanding_amount_due,
-        outstanding_invoices: data?.outstanding_invoices,
-      };
+      try {
+        const res = await client.request<any>(`${base}/subscription/stats`, {
+          method: "GET",
+          query: teamId ? { team_id: teamId } : undefined,
+        });
+        const data = unwrapData<SubscriptionStats>(res);
+        return {
+          total: data?.total ?? "$0.00",
+          raw_total: data?.raw_total,
+          next_payment_date: data?.next_payment_date ?? null,
+          usage_breakdown: data?.usage_breakdown,
+          outstanding_invoice_count: data?.outstanding_invoice_count,
+          outstanding_amount_due: data?.outstanding_amount_due,
+          outstanding_invoices: data?.outstanding_invoices,
+        };
+      } catch {
+        return { total: "$0.00", next_payment_date: null };
+      }
     },
 
     async getSubscriptionSpecs(): Promise<any> {
@@ -403,22 +411,36 @@ export function createPaymentsApi(client: ApiClient): PaymentsApi {
     },
 
     async getSpendingLimitStatus(teamId?: string): Promise<SpendingLimitStatus> {
-      const res = await client.request<any>(`${base}/payment/spending-limit`, {
-        method: "GET",
-        query: teamId ? { team_id: teamId } : undefined,
-      });
-      const data = unwrapData<any>(res);
-      return {
-        spending_limit: Number(data?.spending_limit ?? 0),
-        current_usage: Number(data?.current_usage ?? 0),
-        plan_base_cost: Number(data?.plan_base_cost ?? 0),
-        metered_usage: Number(data?.metered_usage ?? 0),
-        usage_percentage: Number(data?.usage_percentage ?? 0),
-        builds_disabled: Boolean(data?.builds_disabled),
-        builds_disabled_by: String(data?.builds_disabled_by ?? "system"),
-        has_subscription: Boolean(data?.has_subscription),
-        stripe_alerts_active: Number(data?.stripe_alerts_active ?? 0),
-      };
+      try {
+        const res = await client.request<any>(`${base}/payment/spending-limit`, {
+          method: "GET",
+          query: teamId ? { team_id: teamId } : undefined,
+        });
+        const data = unwrapData<any>(res);
+        return {
+          spending_limit: Number(data?.spending_limit ?? 0),
+          current_usage: Number(data?.current_usage ?? 0),
+          plan_base_cost: Number(data?.plan_base_cost ?? 0),
+          metered_usage: Number(data?.metered_usage ?? 0),
+          usage_percentage: Number(data?.usage_percentage ?? 0),
+          builds_disabled: Boolean(data?.builds_disabled),
+          builds_disabled_by: String(data?.builds_disabled_by ?? "system"),
+          has_subscription: Boolean(data?.has_subscription),
+          stripe_alerts_active: Number(data?.stripe_alerts_active ?? 0),
+        };
+      } catch {
+        return {
+          spending_limit: 0,
+          current_usage: 0,
+          plan_base_cost: 0,
+          metered_usage: 0,
+          usage_percentage: 0,
+          builds_disabled: false,
+          builds_disabled_by: "system",
+          has_subscription: false,
+          stripe_alerts_active: 0,
+        };
+      }
     },
   };
 }

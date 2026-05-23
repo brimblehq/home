@@ -22,7 +22,6 @@ export const mainNav = [
     icon: "/icons/bucket.svg",
     href: "/buckets",
     flag: FeatureFlags.ENABLE_BUCKETS,
-    comingSoon: true,
   },
   {
     label: "Sandboxes",

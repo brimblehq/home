@@ -117,7 +117,24 @@ export function createBackendClient(config: BackendClientConfig): BackendClient 
     if (path.startsWith("http")) {
       url = new URL(path);
     } else if (path.startsWith("/")) {
-      url = new URL(path, config.baseUrl);
+      const isServer = typeof process !== "undefined" && process.env;
+      const authApiUrl = isServer ? (process.env.VITE_AUTH_API_URL || import.meta.env.VITE_AUTH_API_URL) : import.meta.env.VITE_AUTH_API_URL;
+      const coreApiUrl = isServer ? (process.env.VITE_API_URL || import.meta.env.VITE_API_URL) : import.meta.env.VITE_API_URL;
+
+      if (path.startsWith("/auth") && authApiUrl) {
+        // Example: /auth/beta/login -> /auth/beta/login on https://api.brimble.io
+        // Wait, if authApiUrl is https://api.brimble.io/auth, and path is /auth/beta/login,
+        // we might end up with https://api.brimble.io/auth/beta/login which is correct.
+        // Let's just use authApiUrl as the base, and strip /auth if authApiUrl already ends with /auth, or just let URL constructor handle it.
+        // Actually, if authApiUrl is https://api.brimble.io, then new URL("/auth/...", "https://api.brimble.io") works.
+        const base = authApiUrl.endsWith('/auth') ? authApiUrl.replace(/\/auth$/, '') : authApiUrl;
+        url = new URL(path, base);
+      } else if (path.startsWith("/core") && coreApiUrl) {
+        const base = coreApiUrl.endsWith('/v1') ? coreApiUrl.replace(/\/v1$/, '') : coreApiUrl;
+        url = new URL(path.replace(/^\/core/, ""), base);
+      } else {
+        url = new URL(path, config.baseUrl);
+      }
     } else {
       url = new URL(path, `${config.baseUrl.replace(/\/$/, "")}/`);
     }

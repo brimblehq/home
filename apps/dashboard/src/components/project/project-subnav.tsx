@@ -20,6 +20,7 @@ import {
   GitBranch,
   ArrowsClockwise,
   Tag,
+  Database,
 } from "@phosphor-icons/react";
 import { SimpleTooltip } from "../shared/tooltip";
 import { usePlanGate } from "@/hooks/use-plan-gate";
@@ -57,6 +58,7 @@ const baseTabs = [
   { label: "Configuration", slug: "configuration", Icon: GearSix },
   { label: "Observability", slug: "observability", Icon: ChartBar },
   { label: "Web analytics", slug: "web-analytics", Icon: Pulse },
+  { label: "Storage", slug: "storage", Icon: Database },
   { label: "Domains", slug: "domains", Icon: FileText },
   { label: "Secrets", slug: "environment", Icon: LockKey },
   {
