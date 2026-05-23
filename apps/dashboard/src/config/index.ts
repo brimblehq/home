@@ -15,10 +15,10 @@ const gatewayUrl = readEnv("VITE_GATEWAY_URL") ?? "https://api.brimble.io";
 
 export const config = {
   gatewayUrl,
-  apiUrl: readEnv("VITE_API_URL") ?? `${gatewayUrl}/core`,
-  authApiUrl: readEnv("VITE_AUTH_API_URL") ?? `${gatewayUrl}/auth`,
-  paymentApiUrl: readEnv("VITE_PAYMENT_API_URL") ?? `${gatewayUrl}/payment/api`,
-  logsSocketUrl: readEnv("VITE_LOGS_SOCKET_URL") ?? `${gatewayUrl}/core`,
+  apiUrl: `${gatewayUrl}/core`,
+  authApiUrl: `${gatewayUrl}/auth`,
+  paymentApiUrl: `${gatewayUrl}/payment/api`,
+  logsSocketUrl: `${gatewayUrl}/core`,
   avatarUrl: readEnv("VITE_AVATAR_URL") ?? "https://api.dicebear.com/7.x",
   uploadUrl: readEnv("VITE_UPLOAD_URL") ?? "https://api.cloudinary.com/v1_1/dgqfojhx4/image/upload",
   accessTokenCookie: "brimble_access_token",
