@@ -30,7 +30,7 @@ export function PauseSandboxModal({ open, onOpenChange, sandboxId, sandboxName, 
       open={open}
       onOpenChange={onOpenChange}
       title={`Pause sandbox "${sandboxName}"?`}
-      description="Pausing stops the sandbox's compute. Files under /workspace will be preserved, but running processes, RAM state, and open connections will be terminated. You can resume later — code in /workspace will be exactly where you left it."
+      description="Stops compute and terminates running processes."
       confirmLabel="Pause sandbox"
       confirmLoadingLabel="Pausing..."
       onConfirm={handleConfirm}

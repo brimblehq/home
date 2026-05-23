@@ -32,6 +32,7 @@ export interface CreateSandboxInput {
   persistent?: boolean;
   persistentDiskGB?: number;
   volumeId?: string;
+  mountPath?: string;
   fromSnapshot?: string;
   snapshotMode?: SnapshotMode;
   snapshotFrequency?: string;

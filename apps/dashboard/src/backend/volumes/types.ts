@@ -21,7 +21,6 @@ export interface VolumeResponse {
   csiVolumeId: string | null;
   sizeGB: number;
   region: RegionSummary | null;
-  mountPath: string | null;
   attachedSandboxId: string | null;
   attachedProjectId: string | null;
   lastAttachedAt: string | null;

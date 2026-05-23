@@ -43,7 +43,6 @@ export interface Project {
     id: string;
     name: string;
     sizeGB: number;
-    mountPath: string | null;
   } | null;
   whiteListedIps?: string[];
   autoscalingGroup?: {
@@ -499,7 +498,6 @@ export function createProjectsApi(client: ApiClient): ProjectsApi {
           id: volumeId,
           name: volumeName,
           sizeGB: volumeSize,
-          mountPath: pickString(volumeRecord, "mount_path", "mountPath") ?? null,
         };
       }
     }

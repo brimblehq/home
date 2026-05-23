@@ -19,6 +19,7 @@ import { withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { listRegionsServerFn } from "@/server/regions/actions";
 import { createSandboxServerFn, listSandboxSnapshotsServerFn, listSandboxTemplatesServerFn } from "@/server/sandboxes/actions";
 import { listVolumesServerFn } from "@/server/volumes/actions";
+import { MOUNT_PATH_ERROR, MOUNT_PATH_PATTERN, MOUNT_PATH_ROOT_ERROR } from "@/lib/mount-path";
 
 export const Route = createFileRoute("/sandboxes/new")({
   component: NewSandboxPage,
@@ -63,6 +64,7 @@ interface SandboxFormValues {
   volumeId: string;
   persistent: boolean;
   persistentDiskGB: number;
+  mountPath: string;
   destroyTimeout: DestroyTimeout;
   oneShot: boolean;
   blockOutbound: boolean;
@@ -102,6 +104,12 @@ const sandboxFormSchema = Yup.object({
   volumeId: Yup.string().trim(),
   persistent: Yup.boolean().required(),
   persistentDiskGB: Yup.number().integer().min(10).max(50).required(),
+  mountPath: Yup.string().trim().test("mount-path-format", "", function (value) {
+    if (!value) return true;
+    if (!MOUNT_PATH_PATTERN.test(value)) return this.createError({ message: MOUNT_PATH_ERROR });
+    if (value === "/") return this.createError({ message: MOUNT_PATH_ROOT_ERROR });
+    return true;
+  }),
   destroyTimeout: Yup.mixed<DestroyTimeout>().oneOf(Object.values(DestroyTimeout)).required(),
   oneShot: Yup.boolean().required(),
   blockOutbound: Yup.boolean().required(),
@@ -119,6 +127,22 @@ const sandboxFormSchema = Yup.object({
 
     if (value.useExistingVolume) {
       return Boolean(value.volumeId);
+    }
+
+    return true;
+  })
+  .test("mountPath-rule", "", function (value) {
+    if (!value) return true;
+
+    const wantsPersistent = value.persistent || (value.useExistingVolume && Boolean(value.volumeId));
+    const hasMount = Boolean(value.mountPath?.trim());
+
+    if (wantsPersistent && !hasMount) {
+      return this.createError({ path: "mountPath", message: "mountPath is required when using persistent storage" });
+    }
+
+    if (!wantsPersistent && hasMount) {
+      return this.createError({ path: "mountPath", message: "mountPath requires persistent storage or an attached volume" });
     }
 
     return true;
@@ -159,6 +183,7 @@ const initialValues: SandboxFormValues = {
   volumeId: "",
   persistent: false,
   persistentDiskGB: 20,
+  mountPath: "",
   destroyTimeout: DestroyTimeout.ThirtyMinutes,
   oneShot: false,
   blockOutbound: false,
@@ -249,6 +274,9 @@ function NewSandboxPage() {
             ? {
                 volumeId: values.volumeId,
               }
+            : {}),
+          ...((values.persistent || (values.useExistingVolume && values.volumeId)) && values.mountPath
+            ? { mountPath: values.mountPath.trim() }
             : {}),
           snapshotMode: values.snapshotMode,
           ...(values.snapshotMode === SnapshotMode.Automatic ? { snapshotFrequency: values.snapshotFrequency } : {}),
@@ -619,6 +647,25 @@ function NewSandboxPage() {
                               void setFieldValue("persistentDiskGB", next);
                             }
                           }}
+                        />
+                      </Field>
+                    ) : null}
+
+                    {values.persistent || values.useExistingVolume ? (
+                      <Field
+                        label="Mount path"
+                        error={touched.mountPath ? errors.mountPath : undefined}
+                      >
+                        <DashInput
+                          name="mountPath"
+                          value={values.mountPath}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          placeholder="/workspace"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
                         />
                       </Field>
                     ) : null}

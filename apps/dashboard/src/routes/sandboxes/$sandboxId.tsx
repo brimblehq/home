@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, Copy } from "lucide-react";
+import { hapticToast as toast } from "@/utils/haptic-toast";
+import { SimpleTooltip } from "@/components/shared/tooltip";
 import { StatusChip } from "@/components/shared/status-chip";
 import { TabHeader } from "@/components/shared/tab-header";
 import { SandboxSubnav } from "@/components/sandboxes/sandbox-subnav";
@@ -53,10 +55,21 @@ function SandboxDetailLayout() {
   const [hasMountedTerminalPanel, setHasMountedTerminalPanel] = useState(
     isTerminalRoute && sandbox.status === SandboxStatus.Ready,
   );
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setStatus(sandbox.status);
   }, [sandbox.status]);
+
+  async function copyName() {
+    try {
+      await navigator.clipboard.writeText(sandbox.name);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Couldn't copy to clipboard");
+    }
+  }
 
   useEffect(() => {
     if (isTerminalRoute && status === SandboxStatus.Ready) {
@@ -151,6 +164,16 @@ function SandboxDetailLayout() {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h1 className="truncate text-base font-medium tracking-[-0.03px] text-dash-text-strong">{sandbox.name}</h1>
+            <SimpleTooltip content={copied ? "Copied" : "Copy name"}>
+              <button
+                type="button"
+                onClick={() => void copyName()}
+                className="shrink-0 rounded-[3px] p-1 text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
+                aria-label="Copy sandbox name"
+              >
+                {copied ? <Check className="size-3.5 text-[#22c55e]" /> : <Copy className="size-3.5" />}
+              </button>
+            </SimpleTooltip>
             <StatusChip status={status} className="origin-left scale-[0.92]" />
           </div>
           <p className="mt-1 truncate text-sm font-light text-dash-text-faded">{sandbox.template}</p>

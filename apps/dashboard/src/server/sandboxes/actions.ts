@@ -3,6 +3,7 @@ import * as Yup from "yup";
 import { DestroyTimeout, SnapshotMode } from "@/backend";
 import type { CreateSandboxInput } from "@/backend";
 import { resolveTeamId, withTokenRefresh } from "@/server/shared/backend";
+import { MOUNT_PATH_ERROR, MOUNT_PATH_PATTERN, MOUNT_PATH_ROOT_ERROR } from "@/lib/mount-path";
 
 const DESTROY_TIMEOUT_OPTIONS = Object.values(DestroyTimeout);
 const SNAPSHOT_MODE_OPTIONS = Object.values(SnapshotMode);
@@ -28,6 +29,12 @@ const createSandboxSchema = Yup.object({
   persistent: Yup.boolean(),
   persistentDiskGB: Yup.number().integer().min(10).max(50),
   volumeId: Yup.string().trim(),
+  mountPath: Yup.string().trim().test("mount-path-format", "", function (value) {
+    if (!value) return true;
+    if (!MOUNT_PATH_PATTERN.test(value)) return this.createError({ message: MOUNT_PATH_ERROR });
+    if (value === "/") return this.createError({ message: MOUNT_PATH_ROOT_ERROR });
+    return true;
+  }),
   fromSnapshot: Yup.string().trim(),
   snapshotMode: Yup.mixed<SnapshotMode>().oneOf(SNAPSHOT_MODE_OPTIONS),
   snapshotFrequency: Yup.string().trim(),
@@ -60,6 +67,23 @@ const createSandboxSchema = Yup.object({
 
   if (value.volumeId && value.persistent) {
     return false;
+  }
+
+  return true;
+}).test("mountPath-rule", "", function (value) {
+  if (!value) {
+    return true;
+  }
+
+  const wantsPersistent = value.persistent || Boolean(value.volumeId);
+  const hasMount = Boolean(value.mountPath?.trim());
+
+  if (wantsPersistent && !hasMount) {
+    return this.createError({ message: "mountPath is required when using persistent storage" });
+  }
+
+  if (!wantsPersistent && hasMount) {
+    return this.createError({ message: "mountPath requires persistent=true or volumeId" });
   }
 
   return true;
@@ -190,6 +214,7 @@ export const createSandboxServerFn = createServerFn({
       ...(payload.persistent !== undefined ? { persistent: payload.persistent } : {}),
       ...(payload.persistentDiskGB !== undefined ? { persistentDiskGB: payload.persistentDiskGB } : {}),
       ...(payload.volumeId ? { volumeId: payload.volumeId } : {}),
+      ...(payload.mountPath ? { mountPath: payload.mountPath.trim() } : {}),
       ...(payload.fromSnapshot ? { fromSnapshot: payload.fromSnapshot } : {}),
       ...(payload.snapshotMode ? { snapshotMode: payload.snapshotMode } : {}),
       ...(payload.snapshotFrequency ? { snapshotFrequency: payload.snapshotFrequency } : {}),

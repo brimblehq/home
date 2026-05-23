@@ -92,7 +92,6 @@ function mapVolumeResponse(value: unknown): VolumeResponse | null {
     team: pickString(row, "team") ?? null,
     csiVolumeId: pickString(row, "csi_volume_id") ?? null,
     region: mapRegionSummary(row.region),
-    mountPath: pickString(row, "mount_path") ?? null,
     attachedSandboxId: pickString(row, "attached_sandbox_id") ?? null,
     attachedProjectId: pickString(row, "attached_project_id") ?? null,
     lastAttachedAt: pickString(row, "last_attached_at") ?? null,

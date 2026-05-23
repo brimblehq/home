@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import { Cube } from "@phosphor-icons/react";
@@ -7,6 +7,7 @@ import { SandboxStatus } from "@/backend/sandboxes";
 import type { PaginatedSandboxesResponse, SandboxResponse } from "@/backend/sandboxes";
 import { SearchFilterBar } from "@/components/shared/search-filter-bar";
 import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dropdown";
+import { NumberPagination } from "@/components/shared/pagination";
 import { CreateSandboxCard } from "@/components/sandboxes/create-sandbox-card";
 import { SandboxCard } from "@/components/sandboxes/sandbox-card";
 import type { Region } from "@/backend/regions";
@@ -14,16 +15,26 @@ import { buildRegionLabel } from "@/lib/regions/format";
 import { listRegionsServerFn } from "@/server/regions/actions";
 import { listSandboxesServerFn } from "@/server/sandboxes/actions";
 import { usePlanGate } from "@/hooks/use-plan-gate";
-import { parseWorkspaceSearchValue, workspaceLoaderDeps } from "@/utils/workspace-route-search";
+import {
+  parsePositivePageSearchValue,
+  parseWorkspaceSearchValue,
+  workspacePageLoaderDeps,
+} from "@/utils/workspace-route-search";
+
+const SANDBOXES_PAGE_LIMIT = 9;
 
 export const Route = createFileRoute("/sandboxes/")({
   staleTime: 0,
   preloadStaleTime: 0,
   validateSearch: (search: Record<string, unknown>) => {
+    const next: { page?: number; workspace?: string } = {};
     const workspace = parseWorkspaceSearchValue(search.workspace);
-    return workspace ? { workspace } : {};
+    const page = parsePositivePageSearchValue(search.page);
+    if (workspace) next.workspace = workspace;
+    if (page) next.page = page;
+    return next;
   },
-  loaderDeps: ({ search }) => workspaceLoaderDeps(search),
+  loaderDeps: ({ search }) => workspacePageLoaderDeps(search),
   loader: async ({ deps }) => {
     const workspace = deps.workspace;
 
@@ -33,7 +44,7 @@ export const Route = createFileRoute("/sandboxes/")({
           data: { page?: number; limit?: number; workspace?: string };
         }) => Promise<PaginatedSandboxesResponse>
       )({
-        data: { page: 1, limit: 15, workspace },
+        data: { page: deps.page, limit: SANDBOXES_PAGE_LIMIT, workspace },
       }),
       (listRegionsServerFn as unknown as (input: { data: { type: "sandbox"; enabled: boolean; workspace?: string } }) => Promise<Region[]>)({
         data: { type: "sandbox", enabled: true, workspace },
@@ -51,6 +62,10 @@ export const Route = createFileRoute("/sandboxes/")({
       workspace,
       sandboxes: sandboxesResult.items,
       regionLabels,
+      pagination: {
+        currentPage: sandboxesResult.currentPage,
+        totalPages: sandboxesResult.totalPages,
+      },
     };
   },
   component: SandboxesListPage,
@@ -72,7 +87,18 @@ const SANDBOX_LIST_REFRESH_INTERVAL_MS = 30_000;
 
 function SandboxesListPage() {
   const loaderData = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/sandboxes/" });
   const workspace = loaderData.workspace;
+  const currentPage = loaderData.pagination.currentPage;
+
+  const isRouterLoading = useRouterState({ select: (s) => s.isLoading });
+  const pendingPage = useRouterState({
+    select: (s) => {
+      const activeSearch = (s.location.search ?? s.resolvedLocation?.search) as Record<string, unknown> | undefined;
+      return parsePositivePageSearchValue(activeSearch?.page) ?? 1;
+    },
+  });
 
   const listSandboxes = useServerFn(listSandboxesServerFn);
   const { sandboxMaxCount } = usePlanGate();
@@ -81,6 +107,7 @@ function SandboxesListPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sandboxes, setSandboxes] = useState<SandboxResponse[]>(loaderData.sandboxes);
   const [regionLabels, setRegionLabels] = useState<Record<string, string>>(loaderData.regionLabels);
+  const [pagination, setPagination] = useState(loaderData.pagination);
 
   const provisionedCount = useMemo(
     () => sandboxes.filter((sandbox) => sandbox.status !== SandboxStatus.Destroyed).length,
@@ -91,7 +118,8 @@ function SandboxesListPage() {
   useEffect(() => {
     setSandboxes(loaderData.sandboxes);
     setRegionLabels(loaderData.regionLabels);
-  }, [loaderData.regionLabels, loaderData.sandboxes]);
+    setPagination(loaderData.pagination);
+  }, [loaderData.pagination, loaderData.regionLabels, loaderData.sandboxes]);
 
   useEffect(() => {
     let active = true;
@@ -102,12 +130,13 @@ function SandboxesListPage() {
       }
 
       try {
-        const sandboxResult = await listSandboxes({ data: { page: 1, limit: 15, workspace } });
+        const sandboxResult = await listSandboxes({ data: { page: currentPage, limit: SANDBOXES_PAGE_LIMIT, workspace } });
         if (!active) {
           return;
         }
 
         setSandboxes(sandboxResult.items);
+        setPagination({ currentPage: sandboxResult.currentPage, totalPages: sandboxResult.totalPages });
       } catch {
         // polling failures are non-blocking; keep cached rows visible
       }
@@ -136,7 +165,21 @@ function SandboxesListPage() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", onFocus);
     };
-  }, [listSandboxes, workspace]);
+  }, [currentPage, listSandboxes, workspace]);
+
+  function handlePageChange(nextPage: number) {
+    if (nextPage < 1 || nextPage === pagination.currentPage || nextPage > pagination.totalPages) {
+      return;
+    }
+
+    void navigate({
+      to: "/sandboxes",
+      search: {
+        ...(search.workspace ? { workspace: search.workspace } : {}),
+        ...(nextPage > 1 ? { page: nextPage } : {}),
+      },
+    });
+  }
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -220,6 +263,16 @@ function SandboxesListPage() {
           ) : null}
         </motion.div>
       </AnimatePresence>
+
+      <div className="mt-6 flex justify-end">
+        <NumberPagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          onPageChange={handlePageChange}
+          isLoading={isRouterLoading}
+          loadingPage={isRouterLoading ? pendingPage : null}
+        />
+      </div>
     </>
   );
 }

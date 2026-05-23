@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "motion/react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
+import { MOUNT_PATH_ERROR, MOUNT_PATH_PATTERN, MOUNT_PATH_ROOT_ERROR } from "@/lib/mount-path";
 import {
   ArrowLeft,
   Search,
@@ -1932,6 +1933,11 @@ function Phase3Configure({
   const [branch, setBranch] = useState(branchOptions?.[0] ?? "main");
   const [rootDir, setRootDir] = useState("./");
   const [rootDirDrawerOpen, setRootDirDrawerOpen] = useState(false);
+  const [diskEnabled, setDiskEnabled] = useState(false);
+  const [useExistingVolume, setUseExistingVolume] = useState(false);
+  const [diskSize, setDiskSize] = useState("10");
+  const [mountPath, setMountPath] = useState("/mnt/data");
+  const [volumeId, setVolumeId] = useState("");
   const isGit = isGitSource(sourceType);
   const { planKey, projectLimit } = usePlanGate();
   const pricing = usePricing();
@@ -1947,12 +1953,42 @@ function Phase3Configure({
           .matches(/^[a-z-]+$/, "Project name can only contain lowercase letters and hyphens."),
         region: Yup.string().required("Please select a region."),
         limitReached: Yup.boolean().oneOf([false], "You have reached your project limit. Upgrade your plan to create more."),
+        diskEnabled: Yup.boolean(),
+        useExistingVolume: Yup.boolean(),
+        diskSize: Yup.string(),
+        volumeId: Yup.string(),
+        mountPath: Yup.string().test("mount-path-format", "", function (value) {
+          if (!value) return true;
+          if (!MOUNT_PATH_PATTERN.test(value)) return this.createError({ message: MOUNT_PATH_ERROR });
+          if (value === "/") return this.createError({ message: MOUNT_PATH_ROOT_ERROR });
+          return true;
+        }),
+      }).test("storage-rule", "", function (value) {
+        if (!value?.diskEnabled) return true;
+
+        const hasMount = Boolean(value.mountPath?.trim());
+        if (!hasMount) {
+          return this.createError({ path: "mountPath", message: "mountPath is required when using persistent storage" });
+        }
+
+        if (value.useExistingVolume) {
+          if (!value.volumeId?.trim()) {
+            return this.createError({ path: "volumeId", message: "Select a volume to attach" });
+          }
+          return true;
+        }
+
+        if (!value.diskSize?.trim()) {
+          return this.createError({ path: "diskSize", message: "Select a disk size" });
+        }
+
+        return true;
       }),
     [],
   );
 
   const deployFormik = useFormik({
-    initialValues: { projectName, region, limitReached },
+    initialValues: { projectName, region, limitReached, diskEnabled, useExistingVolume, diskSize, mountPath, volumeId },
     enableReinitialize: true,
     validateOnMount: true,
     validationSchema: deployValidationSchema,
@@ -1961,6 +1997,7 @@ function Phase3Configure({
 
   const projectNameError = projectName.trim() && deployFormik.errors.projectName ? deployFormik.errors.projectName : null;
   const hasProjectNameError = projectNameError !== null;
+  const mountPathError = diskEnabled && mountPath.trim() ? deployFormik.errors.mountPath : null;
   const canSubmit = deployFormik.isValid;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const nextPlanName = useMemo(() => {
@@ -2029,11 +2066,6 @@ function Phase3Configure({
   const [memIdx, setMemIdx] = useState(0);
   const effectiveCpu = cpuSteps[Math.min(cpuIdx, cpuSteps.length - 1)] ?? cpuSteps[0];
   const effectiveMemory = memorySteps[Math.min(memIdx, memorySteps.length - 1)] ?? memorySteps[0];
-  const [diskEnabled, setDiskEnabled] = useState(false);
-  const [useExistingVolume, setUseExistingVolume] = useState(false);
-  const [diskSize, setDiskSize] = useState("10");
-  const [mountPath, setMountPath] = useState("/mnt/data");
-  const [volumeId, setVolumeId] = useState("");
   const [serviceTypeManuallySelected, setServiceTypeManuallySelected] = useState(false);
   const [serviceType, setServiceType] = useState<string>(() => getLegacyServiceType(sourceType, defaultFrameworkId));
   const [mcpAuthEnabled, setMcpAuthEnabled] = useState(false);
@@ -2203,7 +2235,7 @@ function Phase3Configure({
       diskEnabled,
       useExistingVolume: diskEnabled && useExistingVolume,
       diskSizeGb: diskEnabled && !useExistingVolume ? Number(diskSize) : undefined,
-      mountPath: diskEnabled && !useExistingVolume ? mountPath.trim() : undefined,
+      mountPath: diskEnabled ? mountPath.trim() : undefined,
       volumeId: diskEnabled && useExistingVolume ? volumeId : undefined,
     };
   }
@@ -2586,12 +2618,28 @@ function Phase3Configure({
                   <div className="mt-4 flex flex-col gap-3">
                     {useExistingVolume ? (
                       <>
-                        <VolumePicker
-                          value={volumeId}
-                          onChange={setVolumeId}
-                          regionId={region}
-                          volumeType={VolumeType.Web}
-                        />
+                        <div className="grid grid-cols-1 gap-3 px-px pb-px sm:grid-cols-2">
+                          <div>
+                            <label className="mb-1.5 block text-xs text-dash-text-faded">Volume</label>
+                            <VolumePicker
+                              value={volumeId}
+                              onChange={setVolumeId}
+                              regionId={region}
+                              volumeType={VolumeType.Web}
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1.5 block text-xs text-dash-text-faded">Mount path</label>
+                            <input
+                              type="text"
+                              value={mountPath}
+                              onChange={(e) => setMountPath(e.target.value)}
+                              placeholder="/mnt/data"
+                              className={`${inputClass} font-family-mono text-[13px]`}
+                            />
+                            {mountPathError ? <p className="mt-1 text-xs text-[#fc391e]">{mountPathError}</p> : null}
+                          </div>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setUseExistingVolume(false)}
@@ -2613,6 +2661,7 @@ function Phase3Configure({
                               placeholder="/mnt/data"
                               className={`${inputClass} font-family-mono text-[13px]`}
                             />
+                            {mountPathError ? <p className="mt-1 text-xs text-[#fc391e]">{mountPathError}</p> : null}
                           </div>
                         </div>
 
@@ -3276,12 +3325,10 @@ function NewProjectPage() {
 
     if (input.diskEnabled && input.useExistingVolume && input.volumeId) {
       payload.volumeId = input.volumeId;
+      payload.mountPath = input.mountPath;
     } else if (input.diskEnabled && input.mountPath && input.diskSizeGb) {
-      payload.volumeMount = input.mountPath;
       payload.diskSize = input.diskSizeGb;
-    } else {
-      payload.volumeMount = "";
-      payload.diskSize = 10;
+      payload.mountPath = input.mountPath;
     }
     payload.deploy = deploy;
 

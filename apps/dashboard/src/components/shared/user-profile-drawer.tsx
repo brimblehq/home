@@ -73,6 +73,7 @@ import {
   getPaymentMethodsServerFn,
   getSpendingLimitStatusServerFn,
   getSubscriptionServerFn,
+  getSubscriptionStatsServerFn,
 } from "@/server/payments/actions";
 import { paymentKeys } from "@/hooks/use-payments";
 import {
@@ -1942,6 +1943,10 @@ export function UserProfileDrawer({
           queryFn: () => getSubscriptionServerFn(),
         }),
         queryClient.prefetchQuery({
+          queryKey: paymentKeys.subscriptionStats(teamId),
+          queryFn: () => getSubscriptionStatsServerFn({ data: teamId ? { team_id: teamId } : {} } as any),
+        }),
+        queryClient.prefetchQuery({
           queryKey: paymentKeys.spendingLimitStatus(teamId),
           queryFn: spendingLimitQueryFn,
         }),
@@ -2161,9 +2166,15 @@ export function UserProfileDrawer({
               <Drawer.Title className="text-base font-medium leading-[25px] tracking-[-0.0256px] text-dash-text-strong capitalize">
                 {drawerTitle}
               </Drawer.Title>
-              <button className="flex size-8 items-center justify-center rounded-full border border-dash-border-soft text-dash-text-faded transition-colors hover:text-dash-text-strong">
+              <a
+                href="https://brimble.io/faq"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Help & FAQ"
+                className="flex size-8 items-center justify-center rounded-full border border-dash-border-soft text-dash-text-faded transition-colors hover:text-dash-text-strong"
+              >
                 <HelpCircle className="size-4" />
-              </button>
+              </a>
             </div>
 
             {/* Form */}
