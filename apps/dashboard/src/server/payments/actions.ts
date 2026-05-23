@@ -47,11 +47,10 @@ export const getPaymentInvoicesServerFn = createServerFn({
 export const getSubscriptionStatsServerFn = createServerFn({
   method: "GET",
 }).handler(async ({ data }) => {
-  const payload = data as unknown as { workspace?: string; team_id?: string } | undefined;
+  const payload = data as unknown as { workspace?: string } | undefined;
 
   return withTokenRefresh(async (api) => {
-    const explicitTeamId = payload?.team_id?.trim();
-    const teamId = explicitTeamId ? explicitTeamId : await resolveTeamId(api, payload?.workspace);
+    const teamId = await resolveTeamId(api, payload?.workspace);
     return api.payments.getSubscriptionStats(teamId);
   });
 });

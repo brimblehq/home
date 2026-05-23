@@ -18,22 +18,16 @@ export const mainNav = [
     tourId: "scaling",
   },
   {
-    label: "Volumes & Snapshots",
-    icon: "/icons/storage-menu.svg",
-    href: "/volumes",
-    flag: FeatureFlags.ENABLE_SANDBOX,
-  },
-  {
-    label: "Sandboxes",
-    icon: "/icons/sandbox-sidebar.svg",
-    href: "/sandboxes",
-    flag: FeatureFlags.ENABLE_SANDBOX,
-  },
-  {
     label: "Buckets",
     icon: "/icons/bucket.svg",
     href: "/buckets",
     flag: FeatureFlags.ENABLE_BUCKETS,
+  },
+  {
+    label: "Sandboxes",
+    icon: "/icons/sandbox.svg",
+    href: "/sandboxes",
+    flag: FeatureFlags.ENABLE_SANDBOX,
     comingSoon: true,
   },
 ];

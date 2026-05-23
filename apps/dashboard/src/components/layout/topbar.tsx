@@ -9,8 +9,6 @@ import {
   Plus,
   Globe,
   Users,
-  Box,
-  HardDrive,
   Menu,
   X,
   ArrowRightLeft,
@@ -48,7 +46,7 @@ import { WarningModal } from "../shared/warning-modal";
 import { Dropdown } from "../shared/dropdown";
 import { toTitleCase } from "@/utils/dashboard";
 import { Theme } from "@/types/enums";
-import { buildProjectSwitchUrl, buildWorkspaceSwitchUrl, setPendingDomainsAction, setPendingVolumesAction, withWorkspaceQuery } from "@/utils/topbar-navigation";
+import { buildProjectSwitchUrl, buildWorkspaceSwitchUrl, setPendingDomainsAction, withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { invalidateActiveMatches } from "@/utils/router-invalidate";
 
 function getWorkspaceSearch(searchStr?: string) {
@@ -1053,8 +1051,6 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
 
 const defaultCreateMenuItems = [
   { label: "Create project", icon: Plus },
-  { label: "Create sandbox", icon: Box },
-  { label: "Create volume", icon: HardDrive },
   { label: "Register domain", icon: Globe },
   { label: "New workspace", icon: Users },
 ];
@@ -1075,7 +1071,6 @@ function CreateDropdown() {
 
   const isDomainsPage = /^\/domains(\/|$)/.test(pathname);
   const isDomainsListPage = pathname === "/domains" || pathname === "/domains/";
-  const isVolumesListPage = pathname === "/volumes" || pathname === "/volumes/";
   const menuItems = isDomainsPage ? domainsCreateMenuItems : defaultCreateMenuItems;
 
   useEffect(() => {
@@ -1096,18 +1091,18 @@ function CreateDropdown() {
       window.dispatchEvent(new CustomEvent("brimble:add-domain"));
     } else if (isDomainsPage) {
       setPendingDomainsAction("add-domain");
-      void navigate({
+      navigate({
         to: withWorkspaceQuery({
           pathname: "/domains",
           searchStr,
-        }),
+        }) as any,
       });
     } else {
-      void navigate({
+      navigate({
         to: withWorkspaceQuery({
           pathname: "/projects/new",
           searchStr,
-        }),
+        }) as any,
       });
     }
   }
@@ -1116,59 +1111,40 @@ function CreateDropdown() {
     haptics.light();
     setOpen(false);
     if (label === "Buy domain") {
-      void navigate({
+      navigate({
         to: withWorkspaceQuery({
           pathname: "/domains/buy",
           searchStr,
-        }),
+        }) as any,
       });
     } else if (label === "Transfer in") {
       if (isDomainsListPage) {
         window.dispatchEvent(new CustomEvent("brimble:transfer-in"));
       } else {
         setPendingDomainsAction("transfer-in");
-        void navigate({
+        navigate({
           to: withWorkspaceQuery({
             pathname: "/domains",
             searchStr,
-          }),
+          }) as any,
         });
       }
     } else if (label === "Create project") {
-      void navigate({
+      navigate({
         to: withWorkspaceQuery({
           pathname: "/projects/new",
           searchStr,
-        }),
+        }) as any,
       });
-    } else if (label === "Create sandbox") {
-      void navigate({
-        to: withWorkspaceQuery({
-          pathname: "/sandboxes/new",
-          searchStr,
-        }),
-      });
-    } else if (label === "Create volume") {
-      if (isVolumesListPage) {
-        window.dispatchEvent(new CustomEvent("brimble:create-volume"));
-      } else {
-        setPendingVolumesAction("create-volume");
-        void navigate({
-          to: withWorkspaceQuery({
-            pathname: "/volumes",
-            searchStr,
-          }),
-        });
-      }
     } else if (label === "Register domain") {
-      void navigate({
+      navigate({
         to: withWorkspaceQuery({
           pathname: "/domains/buy",
           searchStr,
-        }),
+        }) as any,
       });
     } else if (label === "New workspace") {
-      void navigate({ to: "/workspace/new" });
+      navigate({ to: "/workspace/new" });
     }
   }
 

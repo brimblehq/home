@@ -25,8 +25,6 @@ export interface PlanSpecs {
   customDomain: boolean;
   deployPrivateOrganization: boolean;
   autoscalingEnabled: boolean;
-  sandboxEnabled: boolean;
-  sandboxMaxCount: number;
   analytics: boolean;
   pullRequestPreview: boolean;
   buildMinutes: number;

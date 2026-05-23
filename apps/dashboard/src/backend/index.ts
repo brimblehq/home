@@ -26,6 +26,7 @@ import { createScalingApi, type ScalingApi } from "./scaling";
 import { createTagsApi, type TagsApi } from "./tags";
 import { createVolumesApi, type VolumesApi } from "./volumes";
 import { createWorkspacesApi, type WorkspacesApi } from "./workspaces";
+import { createStorageApi, type StorageApi } from "./storage";
 
 export * from "./activity-logs";
 export * from "./ably";
@@ -57,6 +58,7 @@ export * from "./teams";
 export * from "./types";
 export * from "./volumes";
 export * from "./workspaces";
+export * from "./storage";
 
 export interface BackendApi {
   client: BackendClient;
@@ -87,6 +89,7 @@ export interface BackendApi {
   scaling: ScalingApi;
   tags: TagsApi;
   volumes: VolumesApi;
+  storage: StorageApi;
 }
 
 export function createBackendApi(config: BackendClientConfig): BackendApi {
@@ -121,5 +124,6 @@ export function createBackendApi(config: BackendClientConfig): BackendApi {
     scaling: createScalingApi(client),
     tags: createTagsApi(client),
     volumes: createVolumesApi(client),
+    storage: createStorageApi(client),
   };
 }

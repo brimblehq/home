@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getPaymentMethodsServerFn,
   getSubscriptionServerFn,
-  getSubscriptionStatsServerFn,
   getPaymentInvoicesServerFn,
   addPaymentMethodServerFn,
   confirmPaymentMethodServerFn,
@@ -17,7 +16,7 @@ import {
   updateTeamSpendingLimitServerFn,
   getSpendingLimitStatusServerFn,
 } from "@/server/payments/actions";
-import type { AddPaymentMethodResult, PurchaseResult, SubscriptionMutationResult, SubscriptionStats } from "@/backend/payments";
+import type { AddPaymentMethodResult, PurchaseResult, SubscriptionMutationResult } from "@/backend/payments";
 
 /* ── Query key factory ── */
 
@@ -25,7 +24,6 @@ export const paymentKeys = {
   all: ["payments"] as const,
   methods: () => [...paymentKeys.all, "methods"] as const,
   subscription: () => [...paymentKeys.all, "subscription"] as const,
-  subscriptionStats: (teamId?: string) => [...paymentKeys.all, "subscription-stats", teamId ?? "personal"] as const,
   spendingLimitStatus: (teamId?: string) => [...paymentKeys.all, "spending-limit-status", teamId ?? "personal"] as const,
   invoices: (cursor: string | null, teamId?: string) => [...paymentKeys.all, "invoices", cursor ?? "first", teamId ?? "personal"] as const,
 };
@@ -77,10 +75,6 @@ const getSpendingLimitStatus = getSpendingLimitStatusServerFn as unknown as (arg
   data?: { team_id?: string };
 }) => Promise<any>;
 
-const getSubscriptionStats = getSubscriptionStatsServerFn as unknown as (args?: {
-  data?: { workspace?: string; team_id?: string };
-}) => Promise<SubscriptionStats>;
-
 /* ── Queries ── */
 
 export function usePaymentMethods(initialData?: any[]) {
@@ -95,16 +89,6 @@ export function useSubscription() {
   return useQuery({
     queryKey: paymentKeys.subscription(),
     queryFn: () => getSubscriptionServerFn(),
-  });
-}
-
-export function useSubscriptionStats(teamId?: string, initialData?: SubscriptionStats) {
-  const hasInitialData = Boolean(initialData);
-
-  return useQuery({
-    queryKey: paymentKeys.subscriptionStats(teamId),
-    queryFn: () => getSubscriptionStats({ data: teamId ? { team_id: teamId } : {} }),
-    ...(hasInitialData ? { initialData } : {}),
   });
 }
 

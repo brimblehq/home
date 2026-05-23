@@ -55,7 +55,6 @@ function TwoFactorChallengePage() {
   const [now, setNow] = useState(0);
   const didExpireRef = useRef(false);
   const didParseHashRef = useRef(false);
-  const autoSubmittedCodeRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (didParseHashRef.current) return;
@@ -140,18 +139,6 @@ function TwoFactorChallengePage() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    if (mode !== "totp" || !/^\d{6}$/.test(totpCode) || autoSubmittedCodeRef.current === totpCode) {
-      return;
-    }
-    if (!challengeToken || loading) {
-      return;
-    }
-
-    autoSubmittedCodeRef.current = totpCode;
-    void handleVerify();
-  }, [mode, totpCode, challengeToken, loading]);
 
   return (
     <AuthSplitLayout
