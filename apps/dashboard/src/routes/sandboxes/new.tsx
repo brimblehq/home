@@ -5,8 +5,11 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, ChevronDown, ChevronUp, Clock } from "lucide-react";
+import { ArrowsClockwise } from "@phosphor-icons/react";
+import { uniqueNamesGenerator, adjectives, animals } from "unique-names-generator";
 import { GlossyButton } from "@/components/shared/glossy-button";
 import { DashInput } from "@/components/shared/dash-input";
+import { SimpleTooltip } from "@/components/shared/tooltip";
 import { Dropdown } from "@/components/shared/dropdown";
 import { ToggleSwitch } from "@/components/shared/toggle-switch";
 import { RangeSlider } from "@/components/shared/range-slider";
@@ -24,6 +27,15 @@ import { MOUNT_PATH_ERROR, MOUNT_PATH_PATTERN, MOUNT_PATH_ROOT_ERROR } from "@/l
 export const Route = createFileRoute("/sandboxes/new")({
   component: NewSandboxPage,
 });
+
+function generateSandboxName(): string {
+  return uniqueNamesGenerator({
+    dictionaries: [adjectives, animals],
+    separator: "-",
+    length: 2,
+    style: "lowerCase",
+  });
+}
 
 const DESTROY_TIMEOUT_OPTIONS = [
   { id: DestroyTimeout.ThirtyMinutes, label: "30 minutes" },
@@ -59,7 +71,6 @@ interface SandboxFormValues {
   region: string;
   cpu: number;
   memory: number;
-  disk: number;
   useExistingVolume: boolean;
   volumeId: string;
   persistent: boolean;
@@ -99,17 +110,18 @@ const sandboxFormSchema = Yup.object({
   region: Yup.string().trim().required("Region is required"),
   cpu: Yup.number().integer().min(1).max(2000).required(),
   memory: Yup.number().integer().min(1).max(2048).required(),
-  disk: Yup.number().integer().min(1).max(5).required(),
   useExistingVolume: Yup.boolean().required(),
   volumeId: Yup.string().trim(),
   persistent: Yup.boolean().required(),
   persistentDiskGB: Yup.number().integer().min(10).max(50).required(),
-  mountPath: Yup.string().trim().test("mount-path-format", "", function (value) {
-    if (!value) return true;
-    if (!MOUNT_PATH_PATTERN.test(value)) return this.createError({ message: MOUNT_PATH_ERROR });
-    if (value === "/") return this.createError({ message: MOUNT_PATH_ROOT_ERROR });
-    return true;
-  }),
+  mountPath: Yup.string()
+    .trim()
+    .test("mount-path-format", "", function (value) {
+      if (!value) return true;
+      if (!MOUNT_PATH_PATTERN.test(value)) return this.createError({ message: MOUNT_PATH_ERROR });
+      if (value === "/") return this.createError({ message: MOUNT_PATH_ROOT_ERROR });
+      return true;
+    }),
   destroyTimeout: Yup.mixed<DestroyTimeout>().oneOf(Object.values(DestroyTimeout)).required(),
   oneShot: Yup.boolean().required(),
   blockOutbound: Yup.boolean().required(),
@@ -178,7 +190,6 @@ const initialValues: SandboxFormValues = {
   region: "",
   cpu: 500,
   memory: 512,
-  disk: 2,
   useExistingVolume: false,
   volumeId: "",
   persistent: false,
@@ -235,6 +246,7 @@ function NewSandboxPage() {
 
   const haptics = useHaptics();
   const [submitting, setSubmitting] = useState(false);
+  const [nameSpin, setNameSpin] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [templateOptions, setTemplateOptions] = useState<SandboxTemplate[]>([]);
@@ -242,8 +254,10 @@ function NewSandboxPage() {
   const [volumeOptions, setVolumeOptions] = useState<VolumeOption[]>([]);
   const [snapshotOptions, setSnapshotOptions] = useState<SnapshotResponse[]>([]);
 
+  const defaultValues = useMemo<SandboxFormValues>(() => ({ ...initialValues, name: generateSandboxName() }), []);
+
   const formik = useFormik<SandboxFormValues>({
-    initialValues,
+    initialValues: defaultValues,
     validationSchema: sandboxFormSchema,
     onSubmit: async (values) => {
       setSubmitting(true);
@@ -258,7 +272,6 @@ function NewSandboxPage() {
           specs: {
             cpu: values.cpu,
             memory: values.memory,
-            disk: values.disk,
           },
           autoDestroy: true,
           destroyTimeout: values.destroyTimeout,
@@ -437,9 +450,7 @@ function NewSandboxPage() {
 
   useEffect(() => {
     if (!values.useSnapshot || !values.fromSnapshot) return;
-    const stillReady = snapshotOptions.some(
-      (snapshot) => snapshot.id === values.fromSnapshot && snapshot.status === SnapshotStatus.Ready,
-    );
+    const stillReady = snapshotOptions.some((snapshot) => snapshot.id === values.fromSnapshot && snapshot.status === SnapshotStatus.Ready);
     if (!stillReady) {
       void setFieldValue("fromSnapshot", "");
     }
@@ -471,18 +482,38 @@ function NewSandboxPage() {
         <form onSubmit={handleSubmit}>
           <Section title="Basics" description="Identify this sandbox for your team.">
             <Field label="Sandbox name" error={touched.name ? errors.name : undefined}>
-              <DashInput
-                name="name"
-                value={values.name}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="research-agent"
-                autoFocus
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-              />
+              <div className="relative">
+                <DashInput
+                  name="name"
+                  value={values.name}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="research-agent"
+                  autoFocus
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  className="pr-10"
+                />
+                <SimpleTooltip content="Generate a name">
+                  <button
+                    type="button"
+                    aria-label="Generate a random sandbox name"
+                    onClick={() => {
+                      haptics.selection();
+                      setNameSpin((s) => s + 1);
+                      void setFieldValue("name", generateSandboxName());
+                    }}
+                    className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-dash-text-faded transition-colors hover:bg-dash-bg-elevated hover:text-dash-text-strong"
+                  >
+                    <ArrowsClockwise
+                      className="size-4 transition-transform duration-300 ease-out"
+                      style={{ transform: `rotate(${nameSpin * 180}deg)` }}
+                    />
+                  </button>
+                </SimpleTooltip>
+              </div>
             </Field>
           </Section>
 
@@ -514,7 +545,9 @@ function NewSandboxPage() {
                   options={snapshotDropdownOptions}
                   onChange={(id) => void setFieldValue("fromSnapshot", id)}
                   searchable
-                  placeholder={loading ? "Loading snapshots..." : snapshotDropdownOptions.length === 0 ? "No snapshots available" : "Select snapshot"}
+                  placeholder={
+                    loading ? "Loading snapshots..." : snapshotDropdownOptions.length === 0 ? "No snapshots available" : "Select snapshot"
+                  }
                 />
               </Field>
             ) : (
@@ -562,10 +595,6 @@ function NewSandboxPage() {
                 step={64}
                 unit=" MB"
               />
-            </Field>
-
-            <Field label="Ephemeral disk (GB)">
-              <RangeSlider value={values.disk} onChange={(next) => void setFieldValue("disk", next)} min={1} max={5} step={1} unit=" GB" />
             </Field>
           </Section>
 
@@ -652,10 +681,7 @@ function NewSandboxPage() {
                     ) : null}
 
                     {values.persistent || values.useExistingVolume ? (
-                      <Field
-                        label="Mount path"
-                        error={touched.mountPath ? errors.mountPath : undefined}
-                      >
+                      <Field label="Mount path" error={touched.mountPath ? errors.mountPath : undefined}>
                         <DashInput
                           name="mountPath"
                           value={values.mountPath}
@@ -726,6 +752,20 @@ function NewSandboxPage() {
                       onChange={(next) => void setFieldValue("blockOutbound", next)}
                     />
                   </Section>
+
+                  <Divider />
+
+                  <p className="text-xs text-dash-text-faded">
+                    Environment variables aren't set here — pass them per call when you run code.{" "}
+                    <a
+                      href="https://paper.brimble.io/sandboxes/sdks#per-call-environment-variables"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-dash-text-body underline underline-offset-2 transition-colors hover:text-dash-text-strong"
+                    >
+                      See how
+                    </a>
+                  </p>
                 </div>
               </motion.div>
             ) : null}

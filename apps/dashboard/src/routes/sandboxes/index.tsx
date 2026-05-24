@@ -10,16 +10,13 @@ import { FilterDropdown, type FilterOption } from "@/components/shared/filter-dr
 import { NumberPagination } from "@/components/shared/pagination";
 import { CreateSandboxCard } from "@/components/sandboxes/create-sandbox-card";
 import { SandboxCard } from "@/components/sandboxes/sandbox-card";
+import { SandboxIntroModal } from "@/components/sandboxes/sandbox-intro-modal";
 import type { Region } from "@/backend/regions";
 import { buildRegionLabel } from "@/lib/regions/format";
 import { listRegionsServerFn } from "@/server/regions/actions";
 import { listSandboxesServerFn } from "@/server/sandboxes/actions";
 import { usePlanGate } from "@/hooks/use-plan-gate";
-import {
-  parsePositivePageSearchValue,
-  parseWorkspaceSearchValue,
-  workspacePageLoaderDeps,
-} from "@/utils/workspace-route-search";
+import { parsePositivePageSearchValue, parseWorkspaceSearchValue, workspacePageLoaderDeps } from "@/utils/workspace-route-search";
 
 const SANDBOXES_PAGE_LIMIT = 9;
 
@@ -46,9 +43,11 @@ export const Route = createFileRoute("/sandboxes/")({
       )({
         data: { page: deps.page, limit: SANDBOXES_PAGE_LIMIT, workspace },
       }),
-      (listRegionsServerFn as unknown as (input: { data: { type: "sandbox"; enabled: boolean; workspace?: string } }) => Promise<Region[]>)({
-        data: { type: "sandbox", enabled: true, workspace },
-      }),
+      (listRegionsServerFn as unknown as (input: { data: { type: "sandbox"; enabled: boolean; workspace?: string } }) => Promise<Region[]>)(
+        {
+          data: { type: "sandbox", enabled: true, workspace },
+        },
+      ),
     ]);
 
     const regionLabels: Record<string, string> = {};
@@ -109,10 +108,7 @@ function SandboxesListPage() {
   const [regionLabels, setRegionLabels] = useState<Record<string, string>>(loaderData.regionLabels);
   const [pagination, setPagination] = useState(loaderData.pagination);
 
-  const provisionedCount = useMemo(
-    () => sandboxes.filter((sandbox) => sandbox.status !== SandboxStatus.Destroyed).length,
-    [sandboxes],
-  );
+  const provisionedCount = useMemo(() => sandboxes.filter((sandbox) => sandbox.status !== SandboxStatus.Destroyed).length, [sandboxes]);
   const atLimit = sandboxMaxCount > 0 && provisionedCount >= sandboxMaxCount;
 
   useEffect(() => {
@@ -216,13 +212,13 @@ function SandboxesListPage() {
           onChange={setQuery}
           placeholder="Search sandboxes"
           rightSlot={
-              <FilterDropdown
-                value={statusFilter}
-                onChange={(value) => setStatusFilter(value as StatusFilter)}
-                options={STATUS_OPTIONS}
-                placeholder="All Statuses"
-                dropdownWidth={180}
-              />
+            <FilterDropdown
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value as StatusFilter)}
+              options={STATUS_OPTIONS}
+              placeholder="All Statuses"
+              dropdownWidth={180}
+            />
           }
         />
       </div>
@@ -273,6 +269,8 @@ function SandboxesListPage() {
           loadingPage={isRouterLoading ? pendingPage : null}
         />
       </div>
+
+      <SandboxIntroModal />
     </>
   );
 }

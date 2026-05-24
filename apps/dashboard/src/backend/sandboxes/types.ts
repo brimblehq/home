@@ -15,7 +15,6 @@ export interface SandboxSpecs {
 export interface CreateSandboxSpecs {
   cpu?: number;
   memory?: number;
-  disk?: number;
 }
 
 export interface CreateSandboxInput {
