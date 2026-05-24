@@ -446,13 +446,20 @@ function buildStarterSnippet(sandbox: SandboxResponse): string {
   return [
     `import { Sandbox } from "@brimble/sandbox";`,
     ``,
-    `const sandbox = await Sandbox.create({`,
+    `// Tip: set BRIMBLE_SANDBOX_KEY in your environment to skip this`,
+    `const client = new Sandbox({`,
+    `  apiKey: process.env.BRIMBLE_SANDBOX_KEY!,`,
+    `});`,
+    ``,
+    `const sandbox = await client.sandboxes.createReady({`,
     `  template: "${template}",`,
     `  region: "${region}",`,
     `});`,
     ``,
     `const result = await sandbox.exec({ cmd: "echo 'Hello, world!'" });`,
     `console.log(result.stdout);`,
+    ``,
+    `await sandbox.destroy();`,
   ].join("\n");
 }
 

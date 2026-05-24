@@ -556,6 +556,7 @@ function NewSandboxPage() {
                   value={values.template}
                   options={templateOptions.map((template) => ({ id: template.name, label: template.displayName }))}
                   onChange={(id) => void setFieldValue("template", id)}
+                  searchable
                   placeholder={loading ? "Loading templates..." : "Select template"}
                 />
               </Field>

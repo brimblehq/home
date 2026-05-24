@@ -18,21 +18,19 @@ export function CreateSandboxCard({ className, disabled = false, disabledMessage
       className={`flex h-full min-h-[120px] flex-col items-center justify-center gap-2 overflow-clip rounded-[4px] border-[0.5px] border-dash-border p-4 text-center ${className ?? ""}`}
       style={{
         backgroundImage:
-          "repeating-linear-gradient(135deg, transparent, transparent 10px, rgba(217,218,221,0.35) 10px, rgba(217,218,221,0.35) 11px)",
+          "repeating-linear-gradient(135deg, transparent, transparent 10px, rgba(140,143,150,0.2) 10px, rgba(140,143,150,0.2) 11px)",
       }}
     >
       {disabled ? (
         <>
           <span
             aria-disabled
-            className="flex items-center gap-2 rounded-lg border border-dash-border bg-dash-bg px-4 py-2 text-sm font-medium text-dash-text-faded opacity-60"
+            className="flex items-center gap-2 rounded-lg border border-dash-border bg-dash-bg px-4 py-2 text-sm font-medium text-dash-text-faded"
           >
             <Lock className="size-4" />
             Create new sandbox
           </span>
-          {disabledMessage ? (
-            <p className="max-w-[420px] text-xs leading-[1.4] text-dash-text-faded">{disabledMessage}</p>
-          ) : null}
+          {disabledMessage ? <p className="max-w-[420px] text-xs leading-[1.4] text-dash-text-body">{disabledMessage}</p> : null}
         </>
       ) : (
         <Link

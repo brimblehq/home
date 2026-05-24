@@ -19,6 +19,6 @@ export function getTemplateIcon(template: string): TemplateIcon | null {
   if (t.includes("opencode")) return { src: "/icons/opencode.svg", shouldInvert: false };
   if (t.includes("claude")) return { src: "/icons/claude.svg", shouldInvert: false };
   if (t.includes("codex")) return { src: "/icons/codex.svg", shouldInvert: true };
-  if (t.includes("deno")) return { src: "/icons/deno.svg", shouldInvert: false };
+  if (t.includes("deno")) return { src: "/icons/deno.svg", shouldInvert: true };
   return null;
 }
