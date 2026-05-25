@@ -18,7 +18,7 @@ export const mainNav = [
     tourId: "scaling",
   },
   {
-    label: "Volumes & Snapshots",
+    label: "Volumes",
     icon: "/icons/storage-menu.svg",
     href: "/volumes",
     flag: FeatureFlags.ENABLE_SANDBOX,
