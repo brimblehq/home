@@ -55,16 +55,7 @@ export function BucketCard({ bucket, onDelete }: { bucket: Bucket; onDelete?: ()
               <span className="min-w-0 shrink font-medium leading-5 text-dash-text-strong">{bucket.name}</span>
             </div>
           </div>
-          <span 
-            className="line-clamp-1 text-dash-text-faded"
-            style={{
-              fontFamily: "ABC Marfa Variable Unlicensed Trial, sans-serif",
-              fontWeight: 300,
-              fontSize: "14px",
-              lineHeight: "22px",
-              letterSpacing: "-0.0016em",
-            }}
-          >
+          <span className="line-clamp-1 font-light leading-[22px] text-dash-text-faded">
             {fileCount} {fileCount === 1 ? "file" : "files"}
           </span>
         </div>

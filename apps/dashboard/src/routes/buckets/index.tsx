@@ -3,9 +3,12 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { hapticToast as toast } from "@/utils/haptic-toast";
 import { useWorkspaceRole } from "@/contexts/workspace-role-context";
+import { Plus } from "lucide-react";
 import { BucketList, type Bucket } from "../../components/shared/bucket-list";
 import { AddBucketModal } from "../../components/shared/add-bucket-modal";
 import { BucketStatsRow } from "../../components/shared/bucket-stats-row";
+import { PageHeader } from "../../components/shared/page-header";
+import { GlossyButton } from "../../components/shared/glossy-button";
 import { formatRelativeTime } from "@/utils/dashboard";
 import { parseTextSearchValue, parseWorkspaceSearchValue, workspacePageLoaderDeps } from "@/utils/workspace-route-search";
 import { invalidateActiveMatches } from "@/utils/router-invalidate";
@@ -159,86 +162,25 @@ function BucketsPage() {
 
   if (isEmptyState) {
     return (
-      <div className="flex max-w-[1000px] flex-col gap-4 py-8">
-        <div className="mb-8">
-          <h2
-            className="text-dash-text-strong"
-            style={{
-              fontFamily: "ABC Marfa Variable Unlicensed Trial, sans-serif",
-              fontWeight: 500,
-              fontSize: "16px",
-              lineHeight: "20px",
-              letterSpacing: "-0.0016em",
-            }}
-          >
-            Object Storage
-          </h2>
-          <p
-            className="mt-2 max-w-[560px] text-dash-text-extra-faded"
-            style={{
-              fontFamily: "ABC Marfa Variable Unlicensed Trial, sans-serif",
-              fontWeight: 300,
-              fontSize: "14px",
-              lineHeight: "150%",
-              letterSpacing: "0%",
-            }}
-          >
-            Store, organize, and manage application assets, user uploads, media files, and static content from a unified object storage
-            system.
-          </p>
-        </div>
+      <div className="max-w-[1000px]">
+        <PageHeader title="Object Storage" image="/images/lamp.svg">
+          Store, organize, and manage application assets, user uploads, media files, and static content from a unified object storage
+          system.
+        </PageHeader>
+
+        <hr className="border-dash-border-soft mb-8 -mx-4 md:-mx-10" />
 
         <div className="mt-16 flex flex-col items-center justify-center text-center">
-          <h3
-            className="text-dash-text-strong"
-            style={{
-              fontFamily: "ABC Marfa Variable Unlicensed Trial, sans-serif",
-              fontWeight: 500,
-              fontSize: "16px",
-              lineHeight: "20px",
-              letterSpacing: "-0.0016em",
-            }}
-          >
-            Object storage
-          </h3>
-          <p
-            className="mt-2 text-dash-text-extra-faded"
-            style={{
-              fontFamily: "ABC Marfa Variable Unlicensed Trial, sans-serif",
-              fontWeight: 300,
-              fontSize: "14px",
-              lineHeight: "150%",
-              letterSpacing: "0%",
-              textAlign: "center",
-            }}
-          >
+          <h3 className="text-base font-medium leading-5 tracking-[-0.03px] text-dash-text-strong">Object storage</h3>
+          <p className="mt-2 text-center text-sm font-light leading-[1.5] text-dash-text-extra-faded">
             Store, organize, and manage application <br />
             assets, user uploads,
           </p>
 
           {canWrite && (
-            <button
-              onClick={() => setAddBucketOpen(true)}
-              className="mt-6 flex items-center justify-center bg-[#3c6ce7] text-white transition-colors hover:bg-[#345cc7]"
-              style={{
-                width: "146px",
-                height: "34px",
-                gap: "4px",
-                padding: "5px 8px 5px 12px",
-                borderTopLeftRadius: "4px",
-                borderBottomLeftRadius: "4px",
-                borderTopRightRadius: "4px",
-                borderBottomRightRadius: "4px",
-                borderWidth: "1px",
-                borderColor: "#3c6ce7",
-                fontFamily: "ABC Marfa Variable Unlicensed Trial, sans-serif",
-                fontWeight: 500,
-                fontSize: "14px",
-              }}
-            >
-              <span className="text-lg leading-none">+</span>
-              <span>Create bucket</span>
-            </button>
+            <GlossyButton className="mt-6" onClick={() => setAddBucketOpen(true)}>
+              Create bucket
+            </GlossyButton>
           )}
         </div>
 
@@ -248,49 +190,26 @@ function BucketsPage() {
   }
 
   return (
-    <div className="flex max-w-[1000px] flex-col gap-4 py-8">
+    <div className="max-w-[1000px]">
       <div className="flex items-center justify-between">
-        <div className="flex flex-col">
-          <h2
-            className="text-dash-text-strong"
-            style={{
-              fontFamily: "ABC Marfa Variable Unlicensed Trial, sans-serif",
-              fontWeight: 500,
-              fontSize: "16px",
-              lineHeight: "20px",
-              letterSpacing: "-0.0016em",
-            }}
-          >
-            Storage Bucket
-          </h2>
-          <p
-            className="mt-2 max-w-[560px] text-dash-text-extra-faded"
-            style={{
-              fontFamily: "ABC Marfa Variable Unlicensed Trial, sans-serif",
-              fontWeight: 300,
-              fontSize: "14px",
-              lineHeight: "150%",
-              letterSpacing: "0%",
-            }}
-          >
-            Store, organize, and manage application assets, user uploads, media files, and static content from a unified object storage
-            system.
-          </p>
-        </div>
+        <PageHeader title="Object Storage" image="/images/lamp.svg">
+          Store, organize, and manage application assets, user uploads, media files, and static content from a unified object storage
+          system.
+        </PageHeader>
 
         {canWrite && (
-          <button
-            onClick={() => setAddBucketOpen(true)}
-            className="flex items-center gap-2 rounded-[4px] bg-[#3c6ce7] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#345cc7]"
-          >
+          <GlossyButton onClick={() => setAddBucketOpen(true)}>
+            <Plus className="size-4" />
             Create Bucket
-          </button>
+          </GlossyButton>
         )}
       </div>
 
+      <hr className="border-dash-border-soft mb-8 -mx-4 md:-mx-10" />
+
       <BucketStatsRow totalBuckets={rows.length} totalFiles={totalFiles} totalStorageUsed={totalStorageUsed} quota={maxQuota} />
 
-      <div>
+      <div className="mt-4">
         <BucketList
           buckets={rows}
           searchQuery={searchQuery}

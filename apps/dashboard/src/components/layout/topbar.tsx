@@ -9,6 +9,8 @@ import {
   Plus,
   Globe,
   Users,
+  Box,
+  HardDrive,
   Menu,
   X,
   ArrowRightLeft,
@@ -16,7 +18,7 @@ import {
   Check,
   Newspaper,
 } from "lucide-react";
-import { House, ShoppingBag, Desktop } from "@phosphor-icons/react";
+import { House, ShoppingBag, Desktop, PaintBucket } from "@phosphor-icons/react";
 import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Moon, Sun } from "lucide-react";
@@ -46,8 +48,9 @@ import { WarningModal } from "../shared/warning-modal";
 import { Dropdown } from "../shared/dropdown";
 import { toTitleCase } from "@/utils/dashboard";
 import { Theme } from "@/types/enums";
-import { buildProjectSwitchUrl, buildWorkspaceSwitchUrl, setPendingDomainsAction, withWorkspaceQuery } from "@/utils/topbar-navigation";
+import { buildProjectSwitchUrl, buildWorkspaceSwitchUrl, setPendingDomainsAction, setPendingVolumesAction, withWorkspaceQuery } from "@/utils/topbar-navigation";
 import { invalidateActiveMatches } from "@/utils/router-invalidate";
+import { useFeatureFlag, FeatureFlags } from "@/lib/feature-flags";
 
 function getWorkspaceSearch(searchStr?: string) {
   const params = new URLSearchParams(searchStr || "");
@@ -1051,6 +1054,8 @@ function NotificationsDropdown({ haptics }: { haptics?: ReturnType<typeof useHap
 
 const defaultCreateMenuItems = [
   { label: "Create project", icon: Plus },
+  { label: "Create sandbox", icon: Box },
+  { label: "Create volume", icon: HardDrive },
   { label: "Register domain", icon: Globe },
   { label: "New workspace", icon: Users },
 ];
@@ -1059,6 +1064,13 @@ const domainsCreateMenuItems = [
   { label: "Buy domain", icon: ShoppingBag },
   { label: "Transfer in", icon: ArrowRightLeft },
 ];
+
+function buildDefaultCreateMenuItems(bucketsEnabled: boolean) {
+  if (!bucketsEnabled) return defaultCreateMenuItems;
+  return defaultCreateMenuItems.flatMap((item) =>
+    item.label === "Create project" ? [item, { label: "Create storage bucket", icon: PaintBucket }] : [item],
+  );
+}
 
 function CreateDropdown() {
   const { canWrite } = useWorkspaceRole();
@@ -1069,9 +1081,11 @@ function CreateDropdown() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
 
+  const bucketsEnabled = useFeatureFlag(FeatureFlags.ENABLE_BUCKETS);
   const isDomainsPage = /^\/domains(\/|$)/.test(pathname);
   const isDomainsListPage = pathname === "/domains" || pathname === "/domains/";
-  const menuItems = isDomainsPage ? domainsCreateMenuItems : defaultCreateMenuItems;
+  const isVolumesListPage = pathname === "/volumes" || pathname === "/volumes/";
+  const menuItems = isDomainsPage ? domainsCreateMenuItems : buildDefaultCreateMenuItems(bucketsEnabled);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -1136,6 +1150,32 @@ function CreateDropdown() {
           searchStr,
         }) as any,
       });
+    } else if (label === "Create storage bucket") {
+      navigate({
+        to: withWorkspaceQuery({
+          pathname: "/buckets",
+          searchStr,
+        }) as any,
+      });
+    } else if (label === "Create sandbox") {
+      navigate({
+        to: withWorkspaceQuery({
+          pathname: "/sandboxes/new",
+          searchStr,
+        }) as any,
+      });
+    } else if (label === "Create volume") {
+      if (isVolumesListPage) {
+        window.dispatchEvent(new CustomEvent("brimble:create-volume"));
+      } else {
+        setPendingVolumesAction("create-volume");
+        navigate({
+          to: withWorkspaceQuery({
+            pathname: "/volumes",
+            searchStr,
+          }) as any,
+        });
+      }
     } else if (label === "Register domain") {
       navigate({
         to: withWorkspaceQuery({

@@ -15,6 +15,7 @@ import {
   deleteBucketServerFn,
 } from "@/server/storage/actions";
 import { Plus } from "lucide-react";
+import { GlossyButton } from "../../../../components/shared/glossy-button";
 import { formatRelativeTime } from "@/utils/dashboard";
 
 const parentRoute = getRouteApi("/projects/$projectId");
@@ -132,13 +133,10 @@ function ProjectStoragePage() {
         </TabHeader>
 
         {canWrite && (
-          <button
-            onClick={() => setAddBucketOpen(true)}
-            className="flex items-center gap-2 rounded-[4px] bg-[#3c6ce7] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#345cc7]"
-          >
+          <GlossyButton onClick={() => setAddBucketOpen(true)}>
             <Plus className="size-4" />
             Create Bucket
-          </button>
+          </GlossyButton>
         )}
       </div>
 

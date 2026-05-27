@@ -402,6 +402,118 @@ function ProjectDetailTabSkeleton() {
   );
 }
 
+function SandboxListTabSkeleton() {
+  return (
+    <div className="max-w-[1000px] animate-pulse">
+      <PageHeaderSkeleton />
+      <div className="mb-4 flex items-center gap-3">
+        <div className="h-10 min-w-0 flex-1 rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+        <div className="h-10 w-[180px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30" />
+      </div>
+      <div className="mb-8 flex h-[120px] items-center justify-end rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/20 px-10">
+        <div className="h-10 w-52 rounded-[4px] bg-dash-border-soft/50" />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="min-h-[168px] overflow-clip rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/30">
+            <div className="flex min-h-[126px] flex-col gap-5 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="size-7 shrink-0 rounded bg-dash-border-soft/50" />
+                  <div className="min-w-0">
+                    <div className="mb-2 h-4 w-40 rounded bg-dash-border-soft/70" />
+                    <div className="h-3 w-24 rounded bg-dash-border-soft/50" />
+                  </div>
+                </div>
+                <div className="h-7 w-24 shrink-0 rounded bg-dash-border-soft/50" />
+              </div>
+              <div className="flex flex-wrap gap-5">
+                <div className="h-3.5 w-20 rounded bg-dash-border-soft/30" />
+                <div className="h-3.5 w-20 rounded bg-dash-border-soft/30" />
+                <div className="h-3.5 w-20 rounded bg-dash-border-soft/30" />
+              </div>
+              <div className="h-3.5 w-36 rounded bg-dash-border-soft/30" />
+            </div>
+            <div className="flex h-10 items-center border-t-[0.5px] border-dash-border px-5">
+              <div className="h-3.5 w-16 rounded bg-dash-border-soft/30" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SandboxDetailTabSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-[1000px] animate-pulse py-8">
+      <div className="mb-4 h-3.5 w-24 rounded bg-dash-border-soft/30" />
+      <div className="mb-6 flex items-start gap-3">
+        <div className="size-10 shrink-0 rounded bg-dash-border-soft/50" />
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex items-center gap-2">
+            <div className="h-4 w-44 rounded bg-dash-border-soft/70" />
+            <div className="h-5 w-24 rounded bg-dash-border-soft/50" />
+          </div>
+          <div className="h-3.5 w-28 rounded bg-dash-border-soft/30" />
+        </div>
+      </div>
+      <div className="mb-6 flex flex-wrap gap-2 border-b-[0.5px] border-dash-border">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-9 w-24 rounded-t bg-dash-border-soft/30" />
+        ))}
+      </div>
+      <div className="flex flex-col gap-6">
+        <div className="h-[118px] rounded-[4px] border-[0.5px] border-dash-border bg-dash-bg-elevated/40" />
+        <div>
+          <div className="mb-3 h-5 w-28 rounded bg-dash-border-soft/70" />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="h-[66px] rounded-[4px] bg-dash-bg-elevated" />
+            <div className="h-[66px] rounded-[4px] bg-dash-bg-elevated" />
+            <div className="h-[66px] rounded-[4px] bg-dash-bg-elevated" />
+          </div>
+        </div>
+        <div>
+          <div className="mb-3 h-5 w-24 rounded bg-dash-border-soft/70" />
+          <div className="grid grid-cols-1 rounded-[4px] border-[0.5px] border-dash-border sm:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, columnIndex) => (
+              <div
+                key={columnIndex}
+                className={cn("flex flex-col px-4", columnIndex === 0 && "sm:border-r-[0.5px] sm:border-dash-border-soft")}
+              >
+                {Array.from({ length: 5 }).map((_, rowIndex) => (
+                  <div
+                    key={rowIndex}
+                    className="flex items-center justify-between border-b-[0.5px] border-dash-border-soft py-3 last:border-b-0"
+                  >
+                    <div className="h-3.5 w-32 rounded bg-dash-border-soft/50" />
+                    <div className="h-3.5 w-24 rounded bg-dash-border-soft/30" />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="mb-3 h-5 w-24 rounded bg-dash-border-soft/70" />
+          <div className="rounded-[4px] border-[0.5px] border-dash-border">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex h-[62px] items-center gap-3 border-b-[0.5px] border-dash-border px-4 last:border-b-0">
+                <div className="size-3 rounded-full bg-dash-border-soft/50" />
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 h-3.5 w-40 rounded bg-dash-border-soft/50" />
+                  <div className="h-3 w-64 max-w-full rounded bg-dash-border-soft/30" />
+                </div>
+                <div className="h-3 w-16 rounded bg-dash-border-soft/30" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RouteTransitionSkeleton({ pathname, fullWidth }: { pathname: string; fullWidth?: boolean }) {
   if (/^\/projects\/new(?:\/|$)/.test(pathname)) {
     return <NewProjectTabSkeleton />;
@@ -417,6 +529,14 @@ function RouteTransitionSkeleton({ pathname, fullWidth }: { pathname: string; fu
 
   if (pathname.startsWith("/projects")) {
     return <ProjectsTabSkeleton />;
+  }
+
+  if (/^\/sandboxes\/[^/]+(?:\/|$)/.test(pathname) && !/^\/sandboxes\/new(?:\/|$)/.test(pathname)) {
+    return <SandboxDetailTabSkeleton />;
+  }
+
+  if (pathname.startsWith("/sandboxes")) {
+    return <SandboxListTabSkeleton />;
   }
 
   if (pathname.startsWith("/domains")) {
@@ -746,7 +866,7 @@ export function DashboardLayout({
   const settingsScopeKey = currentWorkspace ?? "__personal__";
   const [stableWorkspaces, setStableWorkspaces] = useState<Workspace[]>(initialWorkspaces?.items ?? []);
   const [settingsSnapshotCache, setSettingsSnapshotCache] = useState<Record<string, SettingsSidebarSnapshot | null>>(() => ({
-    [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot ?? null,
+    ...(initialSettingsSnapshot ? { [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot } : {}),
   }));
   const [workspaceTeamMembersCache, setWorkspaceTeamMembersCache] = useState<Record<string, TeamDetails | null>>(() =>
     initialWorkspaceSlug && initialWorkspaceTeamMembers ? { [initialWorkspaceSlug]: initialWorkspaceTeamMembers } : {},
@@ -864,6 +984,9 @@ export function DashboardLayout({
     if (p && (p.firstName || p.lastName || p.username || p.email)) {
       setUserProfile((prev) => {
         if (!prev || (!prev.firstName && !prev.lastName && p.firstName)) return p;
+        if (p.subscription?.planType && p.subscription.planType !== prev.subscription?.planType) {
+          return { ...prev, subscription: p.subscription };
+        }
         return prev;
       });
     }
@@ -922,9 +1045,13 @@ export function DashboardLayout({
   const activeWorkspaceTeamMembers = currentWorkspace && isKnownWorkspace ? (workspaceTeamMembersCache[currentWorkspace] ?? null) : null;
 
   useEffect(() => {
+    if (!initialSettingsSnapshot) {
+      return;
+    }
+
     setSettingsSnapshotCache((prev) => ({
       ...prev,
-      [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot ?? null,
+      [initialWorkspaceSlug ?? "__personal__"]: initialSettingsSnapshot,
     }));
   }, [initialSettingsSnapshot, initialWorkspaceSlug]);
 
@@ -940,16 +1067,13 @@ export function DashboardLayout({
   }, [initialWorkspaceSlug, initialWorkspaceTeamMembers]);
 
   useEffect(() => {
-    if (Object.prototype.hasOwnProperty.call(settingsSnapshotCache, settingsScopeKey)) {
-      return;
-    }
-
     let cancelled = false;
 
-    void getSettingsSnapshot({
-      data: { workspace: currentWorkspace },
-    })
-      .then((result) => {
+    const fetchSnapshot = async () => {
+      try {
+        const result = await getSettingsSnapshot({
+          data: { workspace: currentWorkspace },
+        });
         if (cancelled) {
           return;
         }
@@ -958,8 +1082,7 @@ export function DashboardLayout({
           ...prev,
           [settingsScopeKey]: result ?? null,
         }));
-      })
-      .catch(() => {
+      } catch {
         if (cancelled) {
           return;
         }
@@ -968,10 +1091,36 @@ export function DashboardLayout({
           ...prev,
           [settingsScopeKey]: null,
         }));
-      });
+      }
+    };
+
+    if (!Object.prototype.hasOwnProperty.call(settingsSnapshotCache, settingsScopeKey)) {
+      void fetchSnapshot();
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      if (settingsSnapshotCache[settingsScopeKey] === null) {
+        void fetchSnapshot();
+      }
+    };
+
+    const onFocus = () => {
+      if (settingsSnapshotCache[settingsScopeKey] === null) {
+        void fetchSnapshot();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onFocus);
 
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onFocus);
     };
   }, [currentWorkspace, getSettingsSnapshot, settingsScopeKey, settingsSnapshotCache]);
 
@@ -1058,7 +1207,7 @@ export function DashboardLayout({
   }, [dismissedSnackbarKeys, tooltipMessages]);
 
   const pricing = initialPricing ?? DEFAULT_PRICING;
-  const planType = activeSettingsSnapshot?.profile?.subscription?.planType;
+  const planType = activeSettingsSnapshot?.profile?.subscription?.planType ?? userProfile?.subscription?.planType;
 
   const workspaceRoleValue = useMemo(() => {
     const inWorkspace = Boolean(currentWorkspace && isKnownWorkspace);
