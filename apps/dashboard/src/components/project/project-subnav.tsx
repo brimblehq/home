@@ -20,6 +20,7 @@ import {
   GitBranch,
   ArrowsClockwise,
   Tag,
+  ArrowUpRight,
 } from "@phosphor-icons/react";
 import { SimpleTooltip } from "../shared/tooltip";
 import { usePlanGate } from "@/hooks/use-plan-gate";
@@ -554,8 +555,9 @@ export function ProjectSubnav({ projectId }: { projectId: string }) {
               href={visitHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden items-center gap-1.5 text-sm font-light text-dash-text-body transition-colors hover:text-dash-text-strong md:flex"
+              className="hidden items-center gap-1.5 text-sm text-dash-text-strong transition-opacity hover:opacity-70 md:flex"
             >
+              <ArrowUpRight className="size-4" />
               <span>Visit site</span>
             </a>
           )}

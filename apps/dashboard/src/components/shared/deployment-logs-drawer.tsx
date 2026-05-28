@@ -348,7 +348,9 @@ export function DeploymentLogsDrawer({
             <div className="flex shrink-0 flex-col gap-2 border-b-[0.5px] border-[#e5e5e5] px-3.5 pb-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:border-dash-border">
               <div className="flex items-center gap-2">
                 <Clock className="size-4 text-dash-text-faded" />
-                <span className="text-sm leading-[1.3] tracking-[-0.0224px] text-dash-text-strong">Build History</span>
+                <Drawer.Title asChild>
+                  <span className="text-sm leading-[1.3] tracking-[-0.0224px] text-dash-text-strong">Build History</span>
+                </Drawer.Title>
               </div>
 
               <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:flex-1 sm:justify-end sm:gap-6">
