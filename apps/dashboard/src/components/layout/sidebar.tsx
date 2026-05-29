@@ -28,6 +28,7 @@ export function Sidebar({ onProfileOpenChange }: { onProfileOpenChange: (open: b
 
   const bucketsStrict = useFeatureFlagStrict(FeatureFlags.ENABLE_BUCKETS);
   const sandboxStrict = useFeatureFlagStrict(FeatureFlags.ENABLE_SANDBOX);
+  const mcpServersStrict = useFeatureFlagStrict(FeatureFlags.ENABLE_MCP_SERVERS);
 
   const flagValues: Record<string, boolean> = useMemo(
     () => ({
@@ -35,16 +36,18 @@ export function Sidebar({ onProfileOpenChange }: { onProfileOpenChange: (open: b
       [FeatureFlags.ENABLE_AUTO_SCALING]: scalingEnabled,
       [FeatureFlags.ENABLE_BUCKETS]: bucketsEnabled,
       [FeatureFlags.ENABLE_SANDBOX]: sandboxEnabled,
+      [FeatureFlags.ENABLE_MCP_SERVERS]: mcpServersStrict,
     }),
-    [domainsEnabled, scalingEnabled, bucketsEnabled, sandboxEnabled],
+    [domainsEnabled, scalingEnabled, bucketsEnabled, sandboxEnabled, mcpServersStrict],
   );
 
   const strictFlagValues: Record<string, boolean> = useMemo(
     () => ({
       [FeatureFlags.ENABLE_BUCKETS]: bucketsStrict,
       [FeatureFlags.ENABLE_SANDBOX]: sandboxStrict,
+      [FeatureFlags.ENABLE_MCP_SERVERS]: mcpServersStrict,
     }),
-    [bucketsStrict, sandboxStrict],
+    [bucketsStrict, sandboxStrict, mcpServersStrict],
   );
 
   const filteredMainNav = useMemo(
@@ -64,6 +67,17 @@ export function Sidebar({ onProfileOpenChange }: { onProfileOpenChange: (open: b
           }
           return item;
         }),
+    [flagValues, strictFlagValues],
+  );
+  const filteredMoreNav = useMemo(
+    () =>
+      moreNav.filter((item) => {
+        if (item.flag === FeatureFlags.ENABLE_MCP_SERVERS) {
+          return strictFlagValues[item.flag] === true;
+        }
+
+        return !item.flag || flagValues[item.flag] !== false;
+      }),
     [flagValues, strictFlagValues],
   );
 
@@ -124,7 +138,7 @@ export function Sidebar({ onProfileOpenChange }: { onProfileOpenChange: (open: b
               <span className="text-xs font-medium tracking-[-0.09px] text-dash-text-extra-faded">MORE</span>
             </div>
             <div className="flex flex-col gap-1">
-              {moreNav.map((item) => {
+              {filteredMoreNav.map((item) => {
                 if (item.external) {
                   return (
                     <a

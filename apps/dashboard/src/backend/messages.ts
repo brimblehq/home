@@ -57,8 +57,11 @@ export function parseAnnouncement(msg: AppTooltipMessage): AnnouncementContent |
   if (msg.type && msg.type !== "announcement") return null;
 
   const meta = msg.meta ?? {};
+
   const id = pickNonEmptyString(meta, "id");
+
   const title = pickNonEmptyString(meta, "title");
+
   if (!id || !title) return null;
 
   return {

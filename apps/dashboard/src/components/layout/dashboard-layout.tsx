@@ -45,6 +45,7 @@ import { getTwoFactorStatusServerFn } from "@/server/auth/actions";
 import type { TwoFactorStatus } from "@/backend/auth/types";
 import { identifyPostHog, isPostHogEnabled } from "@/lib/posthog";
 import { useFeatureFlag, useFeatureFlagStrict, FeatureFlags } from "@/lib/feature-flags";
+import { AddonDetailPending } from "@/components/shared/route-pending";
 
 const CommandPalette = lazy(() => import("./command-palette").then((m) => ({ default: m.CommandPalette })));
 const UserProfileDrawer = lazy(() => import("../shared/user-profile-drawer").then((m) => ({ default: m.UserProfileDrawer })));
@@ -466,6 +467,10 @@ function RouteTransitionSkeleton({ pathname, fullWidth }: { pathname: string; fu
     return <ScalingTabSkeleton />;
   }
 
+  if (/^\/addons\/[^/]+(?:\/|$)/.test(pathname)) {
+    return <AddonDetailPending />;
+  }
+
   if (pathname.startsWith("/addons")) {
     return <DiscoverTabSkeleton />;
   }
@@ -501,6 +506,7 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
   const sandboxEnabled = useFeatureFlag(FeatureFlags.ENABLE_SANDBOX);
   const bucketsStrict = useFeatureFlagStrict(FeatureFlags.ENABLE_BUCKETS);
   const sandboxStrict = useFeatureFlagStrict(FeatureFlags.ENABLE_SANDBOX);
+  const mcpServersStrict = useFeatureFlagStrict(FeatureFlags.ENABLE_MCP_SERVERS);
 
   const flagValues: Record<string, boolean> = useMemo(
     () => ({
@@ -508,16 +514,18 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
       [FeatureFlags.ENABLE_AUTO_SCALING]: scalingEnabled,
       [FeatureFlags.ENABLE_BUCKETS]: bucketsEnabled,
       [FeatureFlags.ENABLE_SANDBOX]: sandboxEnabled,
+      [FeatureFlags.ENABLE_MCP_SERVERS]: mcpServersStrict,
     }),
-    [domainsEnabled, scalingEnabled, bucketsEnabled, sandboxEnabled],
+    [domainsEnabled, scalingEnabled, bucketsEnabled, sandboxEnabled, mcpServersStrict],
   );
 
   const strictFlagValues: Record<string, boolean> = useMemo(
     () => ({
       [FeatureFlags.ENABLE_BUCKETS]: bucketsStrict,
       [FeatureFlags.ENABLE_SANDBOX]: sandboxStrict,
+      [FeatureFlags.ENABLE_MCP_SERVERS]: mcpServersStrict,
     }),
-    [bucketsStrict, sandboxStrict],
+    [bucketsStrict, sandboxStrict, mcpServersStrict],
   );
 
   const allNav = useMemo(
@@ -525,6 +533,10 @@ function MobileNavMenu({ onSettingsClick }: { onSettingsClick: () => void }) {
       [...mainNav, ...moreNav]
         .filter((item) => {
           if ("flag" in item && item.flag === FeatureFlags.ENABLE_SANDBOX) {
+            return strictFlagValues[item.flag] === true;
+          }
+
+          if ("flag" in item && item.flag === FeatureFlags.ENABLE_MCP_SERVERS) {
             return strictFlagValues[item.flag] === true;
           }
 
